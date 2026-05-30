@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend guideline index for review"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Quality and test expectations for sticky-session redesign"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Review retry and error behavior against project conventions"}
+{"file": ".trellis/spec/backend/logging-guidelines.md", "reason": "Review sticky routing logs and diagnostics"}
