@@ -369,6 +369,9 @@ func (p *PersistentOutboundTransformer) TransformRequest(ctx context.Context, ll
 
 	p.state.CurrentCandidate = candidate
 	p.state.StreamCompleted = false
+	p.state.StickyResponseID = ""
+	p.state.StickyPreviousResponseID = ""
+	p.state.StickyResponseMessage = nil
 
 	p.wrapped = selectOutboundForCandidate(candidate)
 

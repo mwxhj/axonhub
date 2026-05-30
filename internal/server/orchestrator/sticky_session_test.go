@@ -148,6 +148,29 @@ func TestDefaultStickyKeyExtractor_AcceptsExplicitCacheSignals(t *testing.T) {
 	require.Equal(t, "prompt cache key", result.Reason)
 }
 
+func TestDefaultStickyKeyExtractor_UsesCodexSessionBeforeTranscript(t *testing.T) {
+	extractor := NewDefaultStickyKeyExtractor()
+	req := &httpclient.Request{Headers: make(map[string][]string)}
+	req.Headers.Set("Session_id", "codex-session-1")
+
+	result := extractor.Extract(context.Background(), nil, &llm.Request{
+		Model:      "gpt-4",
+		RawRequest: req,
+		Messages: []llm.Message{
+			stickyTestMessage("user", "first turn with enough content to be independently cacheable and recognizable"),
+			stickyTestMessage("assistant", "tool call"),
+			stickyTestMessage("tool", "tool result"),
+			stickyTestMessage("user", "next turn"),
+		},
+		APIFormat: llm.APIFormatOpenAIResponse,
+	})
+
+	require.True(t, result.OK)
+	require.NotEmpty(t, result.Lookups)
+	require.Equal(t, "session", result.Lookups[0].Kind)
+	require.Equal(t, "codex session", result.Lookups[0].Reason)
+}
+
 func TestStickySessionBindingStore_TTLAndLatestWriteWins(t *testing.T) {
 	now := time.Date(2026, 5, 30, 12, 0, 0, 0, time.UTC)
 	store := NewStickySessionBindingStore(5 * time.Minute)
@@ -223,6 +246,89 @@ func TestStickySessionRouter_PrefersBoundFallbackUntilTTLExpires(t *testing.T) {
 		LoadBalancer: stickyTestLoadBalancer(true),
 	})
 	require.Contains(t, []int{1, 2}, ordered[0].Channel.ID)
+}
+
+func TestStickySessionRouter_UsesResponsesPreviousResponseIDBeforePrefix(t *testing.T) {
+	store := NewStickySessionBindingStore(5 * time.Minute)
+	previousResponseID := "resp_1"
+	extractor := NewDefaultStickyKeyExtractor()
+	req := &llm.Request{
+		Model:              "gpt-4",
+		PreviousResponseID: &previousResponseID,
+		Messages: []llm.Message{
+			stickyTestMessage("user", "first turn with enough stable content to create a transcript prefix binding"),
+			stickyTestMessage("assistant", "first answer"),
+			stickyTestMessage("user", "second turn"),
+		},
+		APIFormat: llm.APIFormatOpenAIResponse,
+	}
+	extraction := extractor.Extract(context.Background(), nil, req)
+	require.True(t, extraction.OK)
+	require.NotEmpty(t, extraction.Lookups)
+	require.Equal(t, "responses", extraction.Lookups[0].Kind)
+	store.Bind(extraction.Lookups[0].Key, 2)
+
+	router := NewStickySessionRouter(store, extractor)
+	ordered := router.Order(context.Background(), StickySessionOrderRequest{
+		Request: req,
+		State:   &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 1}}},
+		Candidates: []*ChannelModelsCandidate{
+			stickyTestCandidate(1, 0, 100),
+			stickyTestCandidate(2, 0, 100),
+		},
+		LoadBalancer: stickyTestLoadBalancer(true),
+	})
+
+	require.NotEmpty(t, ordered)
+	require.Equal(t, 2, ordered[0].Channel.ID)
+}
+
+func TestStickySessionRouter_TranscriptPrefixMatchesGrowingChat(t *testing.T) {
+	store := NewStickySessionBindingStore(5 * time.Minute)
+	extractor := NewDefaultStickyKeyExtractor()
+	round1Request := &llm.Request{
+		Model: "gpt-4",
+		Messages: []llm.Message{
+			stickyTestMessage("user", "please analyze this large project context and keep the answer grounded in the exact files"),
+		},
+		APIFormat: llm.APIFormatOpenAIChatCompletion,
+	}
+	round1State := &PersistenceState{
+		LlmRequest:      round1Request,
+		StickyKeyOK:     true,
+		StickyKeyReason: "pending transcript prefix",
+		StickyBindings:  nil,
+		StickyResponseMessage: &llm.Message{
+			Role:    "assistant",
+			Content: llm.MessageContent{Content: ptrString("first answer")},
+		},
+	}
+	bindings := stickyBindingAliases(round1State)
+	require.NotEmpty(t, bindings)
+	store.Bind(bindings[0].Key, 1)
+
+	round2Request := &llm.Request{
+		Model: "gpt-4",
+		Messages: []llm.Message{
+			round1Request.Messages[0],
+			*round1State.StickyResponseMessage,
+			stickyTestMessage("user", "now continue with the next part"),
+		},
+		APIFormat: llm.APIFormatOpenAIChatCompletion,
+	}
+	router := NewStickySessionRouter(store, extractor)
+	ordered := router.Order(context.Background(), StickySessionOrderRequest{
+		Request: round2Request,
+		State:   &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 1}}},
+		Candidates: []*ChannelModelsCandidate{
+			stickyTestCandidate(1, 0, 100),
+			stickyTestCandidate(2, 0, 100),
+		},
+		LoadBalancer: stickyTestLoadBalancer(true),
+	})
+
+	require.NotEmpty(t, ordered)
+	require.Equal(t, 1, ordered[0].Channel.ID)
 }
 
 func TestStickySessionRouter_StaleBindingIgnoredAndDeleted(t *testing.T) {
@@ -331,6 +437,47 @@ func TestStickySessionBindingMiddleware_BindsSuccessfulFallbackChannel(t *testin
 	require.Equal(t, 3, channelID)
 }
 
+func TestStickySessionBindingMiddleware_BindsResponsesIDAndMigratesActiveAliases(t *testing.T) {
+	store := NewStickySessionBindingStore(5 * time.Minute)
+	previousResponseID := "resp_1"
+	req := &llm.Request{
+		Model:              "gpt-4",
+		PreviousResponseID: &previousResponseID,
+		APIFormat:          llm.APIFormatOpenAIResponse,
+	}
+	extraction := NewDefaultStickyKeyExtractor().Extract(context.Background(), nil, req)
+	require.True(t, extraction.OK)
+	require.NotEmpty(t, extraction.Bindings)
+	store.Bind(extraction.Bindings[0].Key, 1)
+
+	state := &PersistenceState{
+		LlmRequest:               req,
+		StickyKeyOK:              true,
+		StickyKeyReason:          extraction.Reason,
+		StickyBindings:           extraction.Bindings,
+		StickyResponseID:         "resp_2",
+		StickyPreviousResponseID: previousResponseID,
+		CurrentCandidate:         stickyTestCandidate(2, 0, 100),
+		CurrentModelIndex:        0,
+	}
+	middleware := &stickySessionBindingMiddleware{
+		outbound: &PersistentOutboundTransformer{state: state},
+		store:    store,
+		strategy: biz.LoadBalancerStrategyStickySession,
+	}
+
+	middleware.bindCurrentChannel(context.Background())
+
+	channelID, ok := store.Get(extraction.Bindings[0].Key)
+	require.True(t, ok)
+	require.Equal(t, 2, channelID)
+
+	responseLookup := stickyValueLookup(stickyKindResponse, "resp_2", stickyStrengthResponse, "response id", stickyBasePayload(state, req))
+	channelID, ok = store.Get(responseLookup.Key)
+	require.True(t, ok)
+	require.Equal(t, 2, channelID)
+}
+
 func TestStickySessionBindingMiddleware_StreamCloseBindsOnlyForOriginalStreamingRequest(t *testing.T) {
 	for _, tt := range []struct {
 		name           string
@@ -374,4 +521,38 @@ func TestStickySessionBindingMiddleware_StreamCloseBindsOnlyForOriginalStreaming
 			}
 		})
 	}
+}
+
+func TestStickySessionBindingMiddleware_StreamCloseDoesNotBindIncompleteStream(t *testing.T) {
+	store := NewStickySessionBindingStore(5 * time.Minute)
+	originalStream := true
+	state := &PersistenceState{
+		StickyKey:             "key",
+		StickyKeyOK:           true,
+		StickyKeyReason:       "test",
+		CurrentCandidate:      stickyTestCandidate(3, 1, 50),
+		CurrentModelIndex:     0,
+		CurrentCandidateIndex: 0,
+		StreamCompleted:       false,
+		OriginalRequestStream: &originalStream,
+	}
+	middleware := &stickySessionBindingMiddleware{
+		outbound: &PersistentOutboundTransformer{state: state},
+		store:    store,
+		strategy: biz.LoadBalancerStrategyStickySession,
+	}
+
+	stream, err := middleware.OnInboundRawStream(
+		context.Background(),
+		streams.SliceStream([]*httpclient.StreamEvent{}),
+	)
+	require.NoError(t, err)
+	require.NoError(t, stream.Close())
+
+	_, ok := store.Get("key")
+	require.False(t, ok)
+}
+
+func ptrString(value string) *string {
+	return &value
 }
