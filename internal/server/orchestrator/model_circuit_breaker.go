@@ -37,7 +37,7 @@ func (m *modelCircuitBreakerTracker) Name() string {
 }
 
 func (m *modelCircuitBreakerTracker) OnOutboundRawRequest(ctx context.Context, request *httpclient.Request) (*httpclient.Request, error) {
-	if m.strategy != biz.LoadBalancerStrategyCircuitBreaker || m.modelCircuitBreaker == nil {
+	if (m.strategy != biz.LoadBalancerStrategyCircuitBreaker && m.strategy != biz.LoadBalancerStrategyStickySession) || m.modelCircuitBreaker == nil {
 		return request, nil
 	}
 
@@ -90,6 +90,10 @@ func (m *modelCircuitBreakerTracker) OnOutboundRawError(ctx context.Context, err
 	m.releaseProbeLease()
 
 	if errors.Is(err, context.Canceled) {
+		return
+	}
+
+	if errors.Is(err, errSkipCandidateByCircuitBreaker) {
 		return
 	}
 

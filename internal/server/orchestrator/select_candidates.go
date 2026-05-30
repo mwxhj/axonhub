@@ -67,10 +67,6 @@ func selectCandidates(inbound *PersistentInboundTransformer, quotaProvider Provi
 		quotaSelector := WithProviderQuotaSelector(selector, quotaProvider, systemService)
 		selector = quotaSelector
 
-		if inbound.state.LoadBalancer != nil {
-			selector = WithLoadBalancedSelector(selector, inbound.state.LoadBalancer, inbound.state.RetryPolicyProvider)
-		}
-
 		candidates, err := selector.Select(ctx, llmRequest)
 		if err != nil {
 			return nil, err
@@ -117,6 +113,52 @@ func selectCandidates(inbound *PersistentInboundTransformer, quotaProvider Provi
 
 		// Store candidates directly (no need to extract channels)
 		inbound.state.ChannelModelsCandidates = candidates
+
+		return llmRequest, nil
+	})
+}
+
+func orderCandidates(
+	inbound *PersistentInboundTransformer,
+	strategy string,
+	stickyRouter *StickySessionRouter,
+) pipeline.Middleware {
+	return pipeline.OnLlmRequest("order-candidates", func(ctx context.Context, llmRequest *llm.Request) (*llm.Request, error) {
+		candidates := inbound.state.ChannelModelsCandidates
+		if len(candidates) == 0 || inbound.state.LoadBalancer == nil {
+			return llmRequest, nil
+		}
+
+		var ordered []*ChannelModelsCandidate
+		if strategy == biz.LoadBalancerStrategyStickySession && stickyRouter != nil {
+			ordered = stickyRouter.Order(ctx, StickySessionOrderRequest{
+				Request:      llmRequest,
+				State:        inbound.state,
+				Candidates:   candidates,
+				LoadBalancer: inbound.state.LoadBalancer,
+			})
+		} else {
+			ordered = loadBalancedCandidates(ctx, candidates, llmRequest, inbound.state.LoadBalancer, inbound.state.RetryPolicyProvider)
+		}
+
+		if len(ordered) > 0 {
+			inbound.state.ChannelModelsCandidates = ordered
+		}
+
+		if log.DebugEnabled(ctx) {
+			log.Debug(ctx, "ordered candidates",
+				log.Int("candidate_count", len(inbound.state.ChannelModelsCandidates)),
+				log.String("model", llmRequest.Model),
+				log.String("load_balance_strategy", strategy),
+				log.Any("candidates", lo.Map(inbound.state.ChannelModelsCandidates, func(candidate *ChannelModelsCandidate, _ int) map[string]any {
+					return map[string]any{
+						"channel_name": candidate.Channel.Name,
+						"channel_id":   candidate.Channel.ID,
+						"priority":     candidate.Priority,
+						"weight":       candidate.Channel.OrderingWeight,
+					}
+				})))
+		}
 
 		return llmRequest, nil
 	})

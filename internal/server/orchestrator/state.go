@@ -43,6 +43,12 @@ type PersistenceState struct {
 
 	// ChannelModelsCandidates is the primary state for channel selection
 	ChannelModelsCandidates []*ChannelModelsCandidate
+	// StickyKey stores the extracted sticky-session key for successful binding refresh.
+	StickyKey string
+	// StickyKeyOK is true when StickyKey is suitable for sticky-session binding.
+	StickyKeyOK bool
+	// StickyKeyReason explains why sticky extraction did or did not produce a key.
+	StickyKeyReason string
 	// Candidate state - current candidate index of ChannelModelsCandidates
 	CurrentCandidateIndex int
 	// CurrentCandidate is the currently selected candidate of ChannelModelsCandidates

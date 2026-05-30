@@ -64,6 +64,9 @@ func NewChatCompletionOrchestrator(
 	circuitBreakerLoadBalancer := NewLoadBalancer(systemService, channelService,
 		NewWeightStrategy(), NewModelAwareCircuitBreakerStrategy(modelCircuitBreaker), rateLimitStrategy, quotaStrategy)
 
+	stickySessionStore := NewStickySessionBindingStore(stickySessionBindingTTL)
+	stickySessionRouter := NewStickySessionRouter(stickySessionStore, NewDefaultStickyKeyExtractor(), modelCircuitBreaker)
+
 	return &ChatCompletionOrchestrator{
 		Inbound:            inbound,
 		RequestService:     requestService,
@@ -87,6 +90,8 @@ func NewChatCompletionOrchestrator(
 		adaptiveLoadBalancer:       adaptiveLoadBalancer,
 		failoverLoadBalancer:       failoverLoadBalancer,
 		circuitBreakerLoadBalancer: circuitBreakerLoadBalancer,
+		stickySessionStore:         stickySessionStore,
+		stickySessionRouter:        stickySessionRouter,
 		modelCircuitBreaker:        modelCircuitBreaker,
 		quotaProvider:              quotaProvider,
 		proxy:                      nil,
@@ -115,6 +120,8 @@ type ChatCompletionOrchestrator struct {
 	adaptiveLoadBalancer       *LoadBalancer
 	failoverLoadBalancer       *LoadBalancer
 	circuitBreakerLoadBalancer *LoadBalancer
+	stickySessionStore         StickySessionStore
+	stickySessionRouter        *StickySessionRouter
 	// channelLimiterManager owns per-channel concurrency admission control and
 	// supplies in-flight / queue stats to the rate-limit-aware load-balancer strategy.
 	channelLimiterManager *ChannelLimiterManager
@@ -188,6 +195,8 @@ func (processor *ChatCompletionOrchestrator) Process(ctx context.Context, reques
 		loadBalancer = processor.failoverLoadBalancer
 	case biz.LoadBalancerStrategyCircuitBreaker:
 		loadBalancer = processor.circuitBreakerLoadBalancer
+	case biz.LoadBalancerStrategyStickySession:
+		loadBalancer = processor.failoverLoadBalancer
 	default:
 		// Default to adaptive load balancer
 	}
@@ -238,6 +247,7 @@ func (processor *ChatCompletionOrchestrator) Process(ctx context.Context, reques
 		selectCandidates(inbound, processor.quotaProvider, processor.SystemService),
 		injectPrompts(inbound),
 		protectPrompts(inbound),
+		orderCandidates(inbound, strategy, processor.stickySessionRouter),
 		// Response pass-through middlewares run before persistRequest so the raw provider
 		// response is saved when pass-through is enabled.
 		applyPassThroughResponse(outbound, processor.SystemService),
@@ -260,6 +270,7 @@ func (processor *ChatCompletionOrchestrator) Process(ctx context.Context, reques
 		withPerformanceRecording(outbound),
 
 		withModelCircuitBreaker(outbound, processor.modelCircuitBreaker, strategy),
+		withStickySessionBinding(outbound, processor.stickySessionStore, strategy),
 
 		// The request execution middleware must be the final middleware
 		// to ensure that the request execution is created with the correct request bodys.

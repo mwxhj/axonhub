@@ -646,12 +646,44 @@ func (s *LoadBalancedSelector) Select(ctx context.Context, req *llm.Request) ([]
 		return candidates, nil
 	}
 
-	// Get retry policy to determine the required number of candidates
-	retryPolicy := s.policy.RetryPolicyOrDefault(ctx)
+	return loadBalancedCandidates(ctx, candidates, req, s.loadBalancer, s.policy), nil
+}
 
+func loadBalancedCandidates(
+	ctx context.Context,
+	candidates []*ChannelModelsCandidate,
+	req *llm.Request,
+	loadBalancer *LoadBalancer,
+	policy RetryPolicyProvider,
+) []*ChannelModelsCandidate {
+	return loadBalancedCandidatesWithTracking(ctx, candidates, req, loadBalancer, policy, true)
+}
+
+func loadBalancedCandidatesWithoutTracking(
+	ctx context.Context,
+	candidates []*ChannelModelsCandidate,
+	req *llm.Request,
+	loadBalancer *LoadBalancer,
+	policy RetryPolicyProvider,
+) []*ChannelModelsCandidate {
+	return loadBalancedCandidatesWithTracking(ctx, candidates, req, loadBalancer, policy, false)
+}
+
+func loadBalancedCandidatesWithTracking(
+	ctx context.Context,
+	candidates []*ChannelModelsCandidate,
+	req *llm.Request,
+	loadBalancer *LoadBalancer,
+	policy RetryPolicyProvider,
+	trackSelection bool,
+) []*ChannelModelsCandidate {
+	// Get retry policy to determine the required number of candidates
 	requiredCount := 1
-	if retryPolicy.Enabled {
-		requiredCount = 1 + retryPolicy.MaxChannelRetries
+	if policy != nil {
+		retryPolicy := policy.RetryPolicyOrDefault(ctx)
+		if retryPolicy.Enabled {
+			requiredCount = 1 + retryPolicy.MaxChannelRetries
+		}
 	}
 
 	// Group candidates by priority first (lower priority value = higher priority)
@@ -676,7 +708,12 @@ func (s *LoadBalancedSelector) Select(ctx context.Context, req *llm.Request) ([]
 		// Apply load balancing to sort candidates within this priority group.
 		useStream := req.Stream != nil && *req.Stream
 		ctx = contextWithQuotaLimitType(ctx, string(provider_quota.RequestModality(req.Image != nil)))
-		sortedCandidates := s.loadBalancer.Sort(ctx, group, req.Model, useStream)
+		var sortedCandidates []*ChannelModelsCandidate
+		if trackSelection {
+			sortedCandidates = loadBalancer.Sort(ctx, group, req.Model, useStream)
+		} else {
+			sortedCandidates = loadBalancer.SortWithoutTracking(ctx, group, req.Model, useStream)
+		}
 
 		// Add candidates, but stop if we have enough
 		remaining := requiredCount - len(result)
@@ -700,7 +737,7 @@ func (s *LoadBalancedSelector) Select(ctx context.Context, req *llm.Request) ([]
 			log.Int("required_count", requiredCount))
 	}
 
-	return result, nil
+	return result
 }
 
 // TagsFilterSelector is a decorator that filters candidates by allowed channel tags.

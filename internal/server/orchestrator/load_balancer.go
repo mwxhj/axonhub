@@ -154,6 +154,14 @@ type candidateScore struct {
 // Returns a new slice with top k candidates sorted by descending priority.
 // The top k value is calculated internally based on the retry policy.
 func (lb *LoadBalancer) Sort(ctx context.Context, candidates []*ChannelModelsCandidate, model string, stream bool) []*ChannelModelsCandidate {
+	return lb.sort(ctx, candidates, model, stream, true)
+}
+
+func (lb *LoadBalancer) SortWithoutTracking(ctx context.Context, candidates []*ChannelModelsCandidate, model string, stream bool) []*ChannelModelsCandidate {
+	return lb.sort(ctx, candidates, model, stream, false)
+}
+
+func (lb *LoadBalancer) sort(ctx context.Context, candidates []*ChannelModelsCandidate, model string, stream bool, trackSelection bool) []*ChannelModelsCandidate {
 	if len(candidates) <= 1 {
 		return candidates
 	}
@@ -168,16 +176,59 @@ func (lb *LoadBalancer) Sort(ctx context.Context, candidates []*ChannelModelsCan
 	// Use debug path if debug mode is enabled
 	debugEnabled := IsDebugEnabled(ctx)
 	if lb.debug || debugEnabled {
-		return lb.sortWithDebug(ctx, candidates, model, topK)
+		return lb.sortWithDebug(ctx, candidates, model, topK, trackSelection)
 	}
 
 	// Production path - minimal overhead
-	return lb.sortProduction(ctx, candidates, topK)
+	return lb.sortProduction(ctx, candidates, topK, trackSelection)
+}
+
+func (lb *LoadBalancer) RequiredCandidateCount(ctx context.Context, candidates []*ChannelModelsCandidate) int {
+	if lb == nil {
+		if len(candidates) == 0 {
+			return 0
+		}
+		return 1
+	}
+
+	return lb.calculateTopK(ctx, candidates)
+}
+
+func (lb *LoadBalancer) TrackSelection(candidates []*ChannelModelsCandidate) {
+	if lb == nil {
+		return
+	}
+
+	lb.trackSelection(candidates)
+}
+
+func (lb *LoadBalancer) IsStickyPrimaryEligible(ctx context.Context, candidate *ChannelModelsCandidate, model string, stream bool) bool {
+	if lb == nil || candidate == nil || candidate.Channel == nil {
+		return false
+	}
+
+	ctx = contextWithRequestedModel(ctx, model)
+	ctx = contextWithRequestStream(ctx, stream)
+
+	for _, strategy := range lb.strategies {
+		score := strategy.Score(ctx, candidate.Channel)
+		if score <= rateLimitExhaustedScore || score <= quotaExhaustedScore {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (lb *LoadBalancer) trackSelection(candidates []*ChannelModelsCandidate) {
+	if len(candidates) > 0 && candidates[0] != nil && candidates[0].Channel != nil && lb.selectionTracker != nil {
+		lb.selectionTracker.IncrementChannelSelection(candidates[0].Channel.ID)
+	}
 }
 
 // sortProduction is the fast path without debug overhead.
 // Uses partial sorting to efficiently get only the top k candidates.
-func (lb *LoadBalancer) sortProduction(ctx context.Context, candidates []*ChannelModelsCandidate, topK int) []*ChannelModelsCandidate {
+func (lb *LoadBalancer) sortProduction(ctx context.Context, candidates []*ChannelModelsCandidate, topK int, shouldTrackSelection bool) []*ChannelModelsCandidate {
 	scored := make([]candidateScore, len(candidates))
 	for i, c := range candidates {
 		totalScore := 0.0
@@ -220,8 +271,8 @@ func (lb *LoadBalancer) sortProduction(ctx context.Context, candidates []*Channe
 
 	// Increment selection count for the top candidate to ensure subsequent
 	// concurrent requests see the updated count and select different channels
-	if len(result) > 0 && result[0] != nil && result[0].Channel != nil && lb.selectionTracker != nil {
-		lb.selectionTracker.IncrementChannelSelection(result[0].Channel.ID)
+	if shouldTrackSelection {
+		lb.trackSelection(result)
 	}
 
 	return result
@@ -229,7 +280,7 @@ func (lb *LoadBalancer) sortProduction(ctx context.Context, candidates []*Channe
 
 // sortWithDebug is the debug path with detailed logging.
 // Uses partial sorting to efficiently get only the top k candidates.
-func (lb *LoadBalancer) sortWithDebug(ctx context.Context, candidates []*ChannelModelsCandidate, model string, topK int) []*ChannelModelsCandidate {
+func (lb *LoadBalancer) sortWithDebug(ctx context.Context, candidates []*ChannelModelsCandidate, model string, topK int, shouldTrackSelection bool) []*ChannelModelsCandidate {
 	startTime := time.Now()
 
 	// Calculate detailed scores for each candidate
@@ -299,8 +350,8 @@ func (lb *LoadBalancer) sortWithDebug(ctx context.Context, candidates []*Channel
 
 	// Increment selection count for the top candidate to ensure subsequent
 	// concurrent requests see the updated count and select different channels
-	if len(result) > 0 && result[0] != nil && result[0].Channel != nil && lb.selectionTracker != nil {
-		lb.selectionTracker.IncrementChannelSelection(result[0].Channel.ID)
+	if shouldTrackSelection {
+		lb.trackSelection(result)
 	}
 
 	return result
@@ -308,15 +359,16 @@ func (lb *LoadBalancer) sortWithDebug(ctx context.Context, candidates []*Channel
 
 // calculateTopK determines how many candidates to select based on retry policy.
 func (lb *LoadBalancer) calculateTopK(ctx context.Context, candidates []*ChannelModelsCandidate) int {
-	retryPolicy := lb.systemService.RetryPolicyOrDefault(ctx)
-
 	// Calculate topK based on retry policy
 	// If retry is enabled, we need 1 + MaxChannelRetries candidates
 	// (1 for initial attempt + MaxChannelRetries for retries)
 	// If retry is disabled, we only need 1 candidate
 	topK := 1
-	if retryPolicy.Enabled {
-		topK = 1 + retryPolicy.MaxChannelRetries
+	if lb.systemService != nil {
+		retryPolicy := lb.systemService.RetryPolicyOrDefault(ctx)
+		if retryPolicy.Enabled {
+			topK = 1 + retryPolicy.MaxChannelRetries
+		}
 	}
 
 	// Normalize topK: if topK <= 0 or topK >= len(candidates), sort all
@@ -333,12 +385,18 @@ func (lb *LoadBalancer) logDecision(ctx context.Context, candidates []*ChannelMo
 	// Log summary
 	if len(decisions) > 0 {
 		topChannel := decisions[0]
-		retryPolicy := lb.systemService.RetryPolicyOrDefault(ctx)
+		retryEnabled := false
+		maxChannelRetries := 0
+		if lb.systemService != nil {
+			retryPolicy := lb.systemService.RetryPolicyOrDefault(ctx)
+			retryEnabled = retryPolicy.Enabled
+			maxChannelRetries = retryPolicy.MaxChannelRetries
+		}
 		log.Info(ctx, "Load balancing decision completed",
 			log.Int("total_channels", len(candidates)),
 			log.Int("selected_channels", topK),
-			log.Bool("retry_enabled", retryPolicy.Enabled),
-			log.Int("max_channel_retries", retryPolicy.MaxChannelRetries),
+			log.Bool("retry_enabled", retryEnabled),
+			log.Int("max_channel_retries", maxChannelRetries),
 			log.Duration("duration", totalDuration),
 			log.Int("top_channel_id", topChannel.Channel.ID),
 			log.String("top_channel_name", topChannel.Channel.Name),

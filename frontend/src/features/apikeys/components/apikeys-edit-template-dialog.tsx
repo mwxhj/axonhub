@@ -211,6 +211,8 @@ export function ApiKeyEditTemplateDialog({ open, onOpenChange, template }: ApiKe
                                 ? t('system.retry.loadBalancerStrategy.documentation.failover')
                                 : field.value === 'circuit-breaker'
                                   ? t('system.retry.loadBalancerStrategy.documentation.circuit-breaker')
+                                  : field.value === 'sticky-session'
+                                    ? t('system.retry.loadBalancerStrategy.documentation.sticky-session')
                                   : t('apikeys.profiles.loadBalancerStrategyDescription')}
                           </FormDescription>
                         </div>
@@ -228,6 +230,9 @@ export function ApiKeyEditTemplateDialog({ open, onOpenChange, template }: ApiKe
                               <SelectItem value='failover'>{t('system.retry.loadBalancerStrategy.options.failover')}</SelectItem>
                               <SelectItem value='circuit-breaker'>
                                 {t('system.retry.loadBalancerStrategy.options.circuitBreaker')}
+                              </SelectItem>
+                              <SelectItem value='sticky-session'>
+                                {t('system.retry.loadBalancerStrategy.options.stickySession')}
                               </SelectItem>
                             </SelectContent>
                           </Select>
