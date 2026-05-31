@@ -13,6 +13,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/channel"
 	"github.com/looplj/axonhub/internal/ent/project"
 	"github.com/looplj/axonhub/internal/ent/request"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
 	"github.com/looplj/axonhub/internal/objects"
 )
@@ -34,8 +35,12 @@ type UsageLog struct {
 	ProjectID int `json:"project_id,omitempty"`
 	// Channel ID used for the request
 	ChannelID int `json:"channel_id,omitempty"`
+	// Upstream credential ID used for this request when known
+	CredentialID int `json:"credential_id,omitempty"`
 	// Model identifier used for the request
 	ModelID string `json:"model_id,omitempty"`
+	// Safe upstream credential identity used for this request; never stores the raw secret
+	CredentialFingerprint string `json:"credential_fingerprint,omitempty"`
 	// Number of tokens in the prompt
 	PromptTokens int64 `json:"prompt_tokens,omitempty"`
 	// Number of tokens in the completion
@@ -84,11 +89,13 @@ type UsageLogEdges struct {
 	Project *Project `json:"project,omitempty"`
 	// Channel holds the value of the channel edge.
 	Channel *Channel `json:"channel,omitempty"`
+	// Credential holds the value of the credential edge.
+	Credential *UpstreamCredential `json:"credential,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 	// totalCount holds the count of the edges above.
-	totalCount [3]map[string]int
+	totalCount [4]map[string]int
 }
 
 // RequestOrErr returns the Request value or an error if the edge
@@ -124,6 +131,17 @@ func (e UsageLogEdges) ChannelOrErr() (*Channel, error) {
 	return nil, &NotLoadedError{edge: "channel"}
 }
 
+// CredentialOrErr returns the Credential value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UsageLogEdges) CredentialOrErr() (*UpstreamCredential, error) {
+	if e.Credential != nil {
+		return e.Credential, nil
+	} else if e.loadedTypes[3] {
+		return nil, &NotFoundError{label: upstreamcredential.Label}
+	}
+	return nil, &NotLoadedError{edge: "credential"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*UsageLog) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -133,9 +151,9 @@ func (*UsageLog) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case usagelog.FieldTotalCost:
 			values[i] = new(sql.NullFloat64)
-		case usagelog.FieldID, usagelog.FieldRequestID, usagelog.FieldAPIKeyID, usagelog.FieldProjectID, usagelog.FieldChannelID, usagelog.FieldPromptTokens, usagelog.FieldCompletionTokens, usagelog.FieldTotalTokens, usagelog.FieldPromptAudioTokens, usagelog.FieldPromptCachedTokens, usagelog.FieldPromptWriteCachedTokens, usagelog.FieldPromptWriteCachedTokens5m, usagelog.FieldPromptWriteCachedTokens1h, usagelog.FieldCompletionAudioTokens, usagelog.FieldCompletionReasoningTokens, usagelog.FieldCompletionAcceptedPredictionTokens, usagelog.FieldCompletionRejectedPredictionTokens:
+		case usagelog.FieldID, usagelog.FieldRequestID, usagelog.FieldAPIKeyID, usagelog.FieldProjectID, usagelog.FieldChannelID, usagelog.FieldCredentialID, usagelog.FieldPromptTokens, usagelog.FieldCompletionTokens, usagelog.FieldTotalTokens, usagelog.FieldPromptAudioTokens, usagelog.FieldPromptCachedTokens, usagelog.FieldPromptWriteCachedTokens, usagelog.FieldPromptWriteCachedTokens5m, usagelog.FieldPromptWriteCachedTokens1h, usagelog.FieldCompletionAudioTokens, usagelog.FieldCompletionReasoningTokens, usagelog.FieldCompletionAcceptedPredictionTokens, usagelog.FieldCompletionRejectedPredictionTokens:
 			values[i] = new(sql.NullInt64)
-		case usagelog.FieldModelID, usagelog.FieldSource, usagelog.FieldFormat, usagelog.FieldCostPriceReferenceID:
+		case usagelog.FieldModelID, usagelog.FieldCredentialFingerprint, usagelog.FieldSource, usagelog.FieldFormat, usagelog.FieldCostPriceReferenceID:
 			values[i] = new(sql.NullString)
 		case usagelog.FieldCreatedAt, usagelog.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -196,11 +214,23 @@ func (_m *UsageLog) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.ChannelID = int(value.Int64)
 			}
+		case usagelog.FieldCredentialID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field credential_id", values[i])
+			} else if value.Valid {
+				_m.CredentialID = int(value.Int64)
+			}
 		case usagelog.FieldModelID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field model_id", values[i])
 			} else if value.Valid {
 				_m.ModelID = value.String
+			}
+		case usagelog.FieldCredentialFingerprint:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field credential_fingerprint", values[i])
+			} else if value.Valid {
+				_m.CredentialFingerprint = value.String
 			}
 		case usagelog.FieldPromptTokens:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -335,6 +365,11 @@ func (_m *UsageLog) QueryChannel() *ChannelQuery {
 	return NewUsageLogClient(_m.config).QueryChannel(_m)
 }
 
+// QueryCredential queries the "credential" edge of the UsageLog entity.
+func (_m *UsageLog) QueryCredential() *UpstreamCredentialQuery {
+	return NewUsageLogClient(_m.config).QueryCredential(_m)
+}
+
 // Update returns a builder for updating this UsageLog.
 // Note that you need to call UsageLog.Unwrap() before calling this method if this UsageLog
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -376,8 +411,14 @@ func (_m *UsageLog) String() string {
 	builder.WriteString("channel_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.ChannelID))
 	builder.WriteString(", ")
+	builder.WriteString("credential_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.CredentialID))
+	builder.WriteString(", ")
 	builder.WriteString("model_id=")
 	builder.WriteString(_m.ModelID)
+	builder.WriteString(", ")
+	builder.WriteString("credential_fingerprint=")
+	builder.WriteString(_m.CredentialFingerprint)
 	builder.WriteString(", ")
 	builder.WriteString("prompt_tokens=")
 	builder.WriteString(fmt.Sprintf("%v", _m.PromptTokens))

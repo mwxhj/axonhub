@@ -32,6 +32,7 @@ import { Route as AuthenticatedPermissionDemoIndexRouteImport } from './routes/_
 import { Route as AuthenticatedModelsIndexRouteImport } from './routes/_authenticated/models/index'
 import { Route as AuthenticatedHelpCenterIndexRouteImport } from './routes/_authenticated/help-center/index'
 import { Route as AuthenticatedDataStoragesIndexRouteImport } from './routes/_authenticated/data-storages/index'
+import { Route as AuthenticatedCredentialsIndexRouteImport } from './routes/_authenticated/credentials/index'
 import { Route as AuthenticatedChatsIndexRouteImport } from './routes/_authenticated/chats/index'
 import { Route as AuthenticatedChannelsIndexRouteImport } from './routes/_authenticated/channels/index'
 import { Route as AuthenticatedApiKeysIndexRouteImport } from './routes/_authenticated/api-keys/index'
@@ -175,6 +176,12 @@ const AuthenticatedDataStoragesIndexRoute =
   AuthenticatedDataStoragesIndexRouteImport.update({
     id: '/data-storages/',
     path: '/data-storages/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCredentialsIndexRoute =
+  AuthenticatedCredentialsIndexRouteImport.update({
+    id: '/credentials/',
+    path: '/credentials/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedChatsIndexRoute = AuthenticatedChatsIndexRouteImport.update({
@@ -325,6 +332,7 @@ export interface FileRoutesByFullPath {
   '/api-keys/': typeof AuthenticatedApiKeysIndexRoute
   '/channels/': typeof AuthenticatedChannelsIndexRoute
   '/chats/': typeof AuthenticatedChatsIndexRoute
+  '/credentials/': typeof AuthenticatedCredentialsIndexRoute
   '/data-storages/': typeof AuthenticatedDataStoragesIndexRoute
   '/help-center/': typeof AuthenticatedHelpCenterIndexRoute
   '/models/': typeof AuthenticatedModelsIndexRoute
@@ -369,6 +377,7 @@ export interface FileRoutesByTo {
   '/api-keys': typeof AuthenticatedApiKeysIndexRoute
   '/channels': typeof AuthenticatedChannelsIndexRoute
   '/chats': typeof AuthenticatedChatsIndexRoute
+  '/credentials': typeof AuthenticatedCredentialsIndexRoute
   '/data-storages': typeof AuthenticatedDataStoragesIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
   '/models': typeof AuthenticatedModelsIndexRoute
@@ -416,6 +425,7 @@ export interface FileRoutesById {
   '/_authenticated/api-keys/': typeof AuthenticatedApiKeysIndexRoute
   '/_authenticated/channels/': typeof AuthenticatedChannelsIndexRoute
   '/_authenticated/chats/': typeof AuthenticatedChatsIndexRoute
+  '/_authenticated/credentials/': typeof AuthenticatedCredentialsIndexRoute
   '/_authenticated/data-storages/': typeof AuthenticatedDataStoragesIndexRoute
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
   '/_authenticated/models/': typeof AuthenticatedModelsIndexRoute
@@ -463,6 +473,7 @@ export interface FileRouteTypes {
     | '/api-keys/'
     | '/channels/'
     | '/chats/'
+    | '/credentials/'
     | '/data-storages/'
     | '/help-center/'
     | '/models/'
@@ -507,6 +518,7 @@ export interface FileRouteTypes {
     | '/api-keys'
     | '/channels'
     | '/chats'
+    | '/credentials'
     | '/data-storages'
     | '/help-center'
     | '/models'
@@ -553,6 +565,7 @@ export interface FileRouteTypes {
     | '/_authenticated/api-keys/'
     | '/_authenticated/channels/'
     | '/_authenticated/chats/'
+    | '/_authenticated/credentials/'
     | '/_authenticated/data-storages/'
     | '/_authenticated/help-center/'
     | '/_authenticated/models/'
@@ -760,6 +773,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedChatsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/credentials/': {
+      id: '/_authenticated/credentials/'
+      path: '/credentials'
+      fullPath: '/credentials/'
+      preLoaderRoute: typeof AuthenticatedCredentialsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/channels/': {
       id: '/_authenticated/channels/'
       path: '/channels'
@@ -935,6 +955,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedApiKeysIndexRoute: typeof AuthenticatedApiKeysIndexRoute
   AuthenticatedChannelsIndexRoute: typeof AuthenticatedChannelsIndexRoute
   AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
+  AuthenticatedCredentialsIndexRoute: typeof AuthenticatedCredentialsIndexRoute
   AuthenticatedDataStoragesIndexRoute: typeof AuthenticatedDataStoragesIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
   AuthenticatedModelsIndexRoute: typeof AuthenticatedModelsIndexRoute
@@ -967,6 +988,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedApiKeysIndexRoute: AuthenticatedApiKeysIndexRoute,
   AuthenticatedChannelsIndexRoute: AuthenticatedChannelsIndexRoute,
   AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,
+  AuthenticatedCredentialsIndexRoute: AuthenticatedCredentialsIndexRoute,
   AuthenticatedDataStoragesIndexRoute: AuthenticatedDataStoragesIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
   AuthenticatedModelsIndexRoute: AuthenticatedModelsIndexRoute,

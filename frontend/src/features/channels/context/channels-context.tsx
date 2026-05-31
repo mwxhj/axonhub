@@ -32,6 +32,7 @@ type ChannelsDialogType =
   | 'rateLimit'
   | 'testAPIKeys'
   | 'disabledAPIKeys'
+  | 'credentials'
   | 'endpoints';
 
 interface ChannelsContextType {

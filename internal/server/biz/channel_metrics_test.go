@@ -352,9 +352,11 @@ func TestChannelService_RecordPerformance(t *testing.T) {
 			},
 			Cache: xcache.NewFromConfig[ent.System](xcache.Config{Mode: xcache.ModeMemory}),
 		},
-		channelPerfMetrics: make(map[int]*channelMetrics),
-		channelErrorCounts: make(map[int]map[int]int),
-		perfWindowSeconds:  600,
+		channelPerfMetrics:    make(map[int]*channelMetrics),
+		channelErrorCounts:    make(map[int]map[int]int),
+		apiKeyErrorCounts:     make(map[int]map[string]map[int]int),
+		credentialErrorCounts: make(map[string]map[int]int),
+		perfWindowSeconds:     600,
 	}
 
 	now := time.Now()

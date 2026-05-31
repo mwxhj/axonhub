@@ -2,6 +2,8 @@ package biz
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -59,6 +61,111 @@ func TestTraceStickyKeyProvider_MultipleKeys_WithTrace_Sticky(t *testing.T) {
 	require.Contains(t, keys, key1)
 }
 
+func TestTraceStickyKeyProvider_StickySeedStoresCredentialFingerprint(t *testing.T) {
+	keys := []string{"key-1", "key-2", "key-3"}
+	ch := &Channel{
+		Channel: &ent.Channel{
+			Type:    channel.TypeOpenai,
+			BaseURL: "https://api.openai.com/v1/",
+			Credentials: objects.ChannelCredentials{
+				APIKeys: keys,
+			},
+		},
+		cachedEnabledAPIKeys: keys,
+	}
+
+	provider := NewTraceStickyKeyProvider(ch)
+	ctx := contexts.WithCredentialSelectionSeed(context.Background(), "sticky-session-1")
+
+	key1 := provider.Get(ctx)
+	key2 := provider.Get(ctx)
+	fingerprint, ok := contexts.GetChannelCredentialFingerprint(ctx)
+
+	require.Equal(t, key1, key2)
+	require.True(t, ok)
+	require.Equal(t, ch.CredentialFingerprintForAPIKey(key1), fingerprint)
+}
+
+func TestTraceStickyKeyProvider_PrefersCredentialFingerprint(t *testing.T) {
+	keys := []string{"key-1", "key-2", "key-3"}
+	ch := &Channel{
+		Channel: &ent.Channel{
+			Type:    channel.TypeOpenai,
+			BaseURL: "https://api.openai.com/v1",
+			Credentials: objects.ChannelCredentials{
+				APIKeys: keys,
+			},
+		},
+		cachedEnabledAPIKeys: keys,
+	}
+
+	targetFingerprint := ch.CredentialFingerprintForAPIKey("key-2")
+	ctx := contexts.WithPreferredCredentialFingerprint(context.Background(), targetFingerprint)
+
+	key := NewTraceStickyKeyProvider(ch).Get(ctx)
+	fingerprint, ok := contexts.GetChannelCredentialFingerprint(ctx)
+
+	require.Equal(t, "key-2", key)
+	require.True(t, ok)
+	require.Equal(t, targetFingerprint, fingerprint)
+}
+
+func TestChannelCredentialFingerprintForAPIKey_DeduplicatesByCredentialScope(t *testing.T) {
+	fp1 := ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://api.openai.com/v1/", "shared-key")
+	fp2 := ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://api.openai.com/v1", "shared-key")
+	differentKey := ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://api.openai.com/v1", "other-key")
+	differentBase := ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://proxy.example.com/v1", "shared-key")
+
+	require.NotEmpty(t, fp1)
+	require.Equal(t, fp1, fp2)
+	require.NotEqual(t, fp1, differentKey)
+	require.NotEqual(t, fp1, differentBase)
+	require.NotContains(t, fp1, "shared-key")
+}
+
+func TestChannelCredentialFingerprintForSecret_LegacyOAuthJSONDoesNotCollapseToEmptyMaterial(t *testing.T) {
+	rawOne := `{"access_token":"access-one","refresh_token":"refresh-one"}`
+	rawTwo := `{"access_token":"access-two","refresh_token":"refresh-two"}`
+
+	fp1 := ChannelCredentialFingerprintForSecret(channel.TypeCodex.String(), "https://chatgpt.com/backend-api/codex/", channelCredentialAuthKindOAuth, objects.UpstreamCredentialSecret{APIKey: rawOne})
+	fp2 := ChannelCredentialFingerprintForSecret(channel.TypeCodex.String(), "https://chatgpt.com/backend-api/codex", channelCredentialAuthKindOAuth, objects.UpstreamCredentialSecret{APIKey: rawOne})
+	different := ChannelCredentialFingerprintForSecret(channel.TypeCodex.String(), "https://chatgpt.com/backend-api/codex", channelCredentialAuthKindOAuth, objects.UpstreamCredentialSecret{APIKey: rawTwo})
+
+	require.NotEmpty(t, fp1)
+	require.Equal(t, fp1, fp2)
+	require.NotEqual(t, fp1, different)
+	require.NotContains(t, fp1, "refresh-one")
+}
+
+func TestChannelCredentialFingerprintForSecret_OAuthJWTAccountIdentitySurvivesTokenRefresh(t *testing.T) {
+	oldToken := unsignedTestJWT(t, map[string]any{
+		"https://api.openai.com/auth": map[string]any{
+			"chatgpt_account_id": "acct-stable",
+		},
+	})
+	newToken := unsignedTestJWT(t, map[string]any{
+		"https://api.openai.com/auth": map[string]any{
+			"chatgpt_account_id": "acct-stable",
+		},
+	})
+
+	fp1 := ChannelCredentialFingerprintForSecret(channel.TypeCodex.String(), "https://chatgpt.com/backend-api/codex", channelCredentialAuthKindOAuth, objects.UpstreamCredentialSecret{
+		OAuth: &objects.OAuthCredentials{
+			AccessToken:  oldToken,
+			RefreshToken: "old-refresh",
+		},
+	})
+	fp2 := ChannelCredentialFingerprintForSecret(channel.TypeCodex.String(), "https://chatgpt.com/backend-api/codex", channelCredentialAuthKindOAuth, objects.UpstreamCredentialSecret{
+		OAuth: &objects.OAuthCredentials{
+			AccessToken:  newToken,
+			RefreshToken: "new-refresh",
+		},
+	})
+
+	require.NotEmpty(t, fp1)
+	require.Equal(t, fp1, fp2)
+}
+
 func TestTraceStickyKeyProvider_DifferentTraces_MaySelectDifferentKeys(t *testing.T) {
 	keys := []string{"key-1", "key-2", "key-3", "key-4", "key-5"}
 	ch := &Channel{
@@ -99,6 +206,51 @@ func TestTraceStickyKeyProvider_EmptyEnabledKeys_FallbackToFirst(t *testing.T) {
 
 	key := provider.Get(ctx)
 	require.Equal(t, "fallback-key", key)
+}
+
+func TestTraceStickyKeyProvider_EmptyEnabledKeys_FallbackToLegacyAPIKey(t *testing.T) {
+	ch := &Channel{
+		Channel: &ent.Channel{
+			Type:    channel.TypeOpenai,
+			BaseURL: "https://api.openai.com/v1",
+			Credentials: objects.ChannelCredentials{
+				APIKey: "legacy-fallback-key",
+			},
+		},
+		cachedEnabledAPIKeys: []string{},
+	}
+
+	provider := NewTraceStickyKeyProvider(ch)
+	ctx := contexts.WithCredentialSelectionSeed(context.Background(), "sticky-session-1")
+
+	key := provider.Get(ctx)
+	fingerprint, ok := contexts.GetChannelCredentialFingerprint(ctx)
+
+	require.Equal(t, "legacy-fallback-key", key)
+	require.True(t, ok)
+	require.Equal(t, ch.CredentialFingerprintForAPIKey(key), fingerprint)
+}
+
+func TestTraceStickyKeyProvider_EmptyEnabledKeysAndNoCredentialsReturnsEmpty(t *testing.T) {
+	ch := &Channel{
+		Channel: &ent.Channel{
+			Credentials: objects.ChannelCredentials{},
+		},
+		cachedEnabledAPIKeys: []string{},
+	}
+
+	key := NewTraceStickyKeyProvider(ch).Get(context.Background())
+	require.Empty(t, key)
+}
+
+func unsignedTestJWT(t *testing.T, claims map[string]any) string {
+	t.Helper()
+
+	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"none","typ":"JWT"}`))
+	payload, err := json.Marshal(claims)
+	require.NoError(t, err)
+
+	return header + "." + base64.RawURLEncoding.EncodeToString(payload) + "."
 }
 
 func TestTraceStickyKeyProvider_AddKey_MinimalRemapping(t *testing.T) {

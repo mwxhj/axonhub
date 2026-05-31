@@ -15,6 +15,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/apikey"
 	"github.com/looplj/axonhub/internal/ent/apikeyprofiletemplate"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/channelmodelprice"
 	"github.com/looplj/axonhub/internal/ent/channelmodelpriceversion"
 	"github.com/looplj/axonhub/internal/ent/channeloverridetemplate"
@@ -32,6 +33,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/system"
 	"github.com/looplj/axonhub/internal/ent/thread"
 	"github.com/looplj/axonhub/internal/ent/trace"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
 	"github.com/looplj/axonhub/internal/ent/user"
 	"github.com/looplj/axonhub/internal/ent/userproject"
@@ -99,6 +101,7 @@ func checkColumn(t, c string) error {
 			apikey.Table:                   apikey.ValidColumn,
 			apikeyprofiletemplate.Table:    apikeyprofiletemplate.ValidColumn,
 			channel.Table:                  channel.ValidColumn,
+			channelcredentialref.Table:     channelcredentialref.ValidColumn,
 			channelmodelprice.Table:        channelmodelprice.ValidColumn,
 			channelmodelpriceversion.Table: channelmodelpriceversion.ValidColumn,
 			channeloverridetemplate.Table:  channeloverridetemplate.ValidColumn,
@@ -116,6 +119,7 @@ func checkColumn(t, c string) error {
 			system.Table:                   system.ValidColumn,
 			thread.Table:                   thread.ValidColumn,
 			trace.Table:                    trace.ValidColumn,
+			upstreamcredential.Table:       upstreamcredential.ValidColumn,
 			usagelog.Table:                 usagelog.ValidColumn,
 			user.Table:                     user.ValidColumn,
 			userproject.Table:              userproject.ValidColumn,

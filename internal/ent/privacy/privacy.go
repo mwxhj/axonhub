@@ -183,6 +183,30 @@ func (f ChannelMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutatio
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ChannelMutation", m)
 }
 
+// The ChannelCredentialRefQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type ChannelCredentialRefQueryRuleFunc func(context.Context, *ent.ChannelCredentialRefQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f ChannelCredentialRefQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.ChannelCredentialRefQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.ChannelCredentialRefQuery", q)
+}
+
+// The ChannelCredentialRefMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type ChannelCredentialRefMutationRuleFunc func(context.Context, *ent.ChannelCredentialRefMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f ChannelCredentialRefMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.ChannelCredentialRefMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ChannelCredentialRefMutation", m)
+}
+
 // The ChannelModelPriceQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type ChannelModelPriceQueryRuleFunc func(context.Context, *ent.ChannelModelPriceQuery) error
@@ -591,6 +615,30 @@ func (f TraceMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation)
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.TraceMutation", m)
 }
 
+// The UpstreamCredentialQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type UpstreamCredentialQueryRuleFunc func(context.Context, *ent.UpstreamCredentialQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f UpstreamCredentialQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.UpstreamCredentialQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.UpstreamCredentialQuery", q)
+}
+
+// The UpstreamCredentialMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type UpstreamCredentialMutationRuleFunc func(context.Context, *ent.UpstreamCredentialMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f UpstreamCredentialMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.UpstreamCredentialMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.UpstreamCredentialMutation", m)
+}
+
 // The UsageLogQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type UsageLogQueryRuleFunc func(context.Context, *ent.UsageLogQuery) error
@@ -728,6 +776,8 @@ func queryFilter(q ent.Query) (Filter, error) {
 		return q.Filter(), nil
 	case *ent.ChannelQuery:
 		return q.Filter(), nil
+	case *ent.ChannelCredentialRefQuery:
+		return q.Filter(), nil
 	case *ent.ChannelModelPriceQuery:
 		return q.Filter(), nil
 	case *ent.ChannelModelPriceVersionQuery:
@@ -762,6 +812,8 @@ func queryFilter(q ent.Query) (Filter, error) {
 		return q.Filter(), nil
 	case *ent.TraceQuery:
 		return q.Filter(), nil
+	case *ent.UpstreamCredentialQuery:
+		return q.Filter(), nil
 	case *ent.UsageLogQuery:
 		return q.Filter(), nil
 	case *ent.UserQuery:
@@ -782,6 +834,8 @@ func mutationFilter(m ent.Mutation) (Filter, error) {
 	case *ent.APIKeyProfileTemplateMutation:
 		return m.Filter(), nil
 	case *ent.ChannelMutation:
+		return m.Filter(), nil
+	case *ent.ChannelCredentialRefMutation:
 		return m.Filter(), nil
 	case *ent.ChannelModelPriceMutation:
 		return m.Filter(), nil
@@ -816,6 +870,8 @@ func mutationFilter(m ent.Mutation) (Filter, error) {
 	case *ent.ThreadMutation:
 		return m.Filter(), nil
 	case *ent.TraceMutation:
+		return m.Filter(), nil
+	case *ent.UpstreamCredentialMutation:
 		return m.Filter(), nil
 	case *ent.UsageLogMutation:
 		return m.Filter(), nil

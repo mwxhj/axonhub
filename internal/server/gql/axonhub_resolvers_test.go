@@ -12,7 +12,9 @@ import (
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/channel"
 	"github.com/looplj/axonhub/internal/ent/enttest"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/objects"
+	"github.com/looplj/axonhub/internal/server/biz"
 )
 
 func setupTestQueryResolver(t *testing.T) (*queryResolver, context.Context, *ent.Client) {
@@ -75,6 +77,95 @@ func TestQueryResolver_AllChannelSummarys_ProjectProfileUsesIntersection(t *test
 	require.NoError(t, err)
 	require.Len(t, channels, 1)
 	require.Equal(t, matchingChannel.ID, channels[0].ID)
+}
+
+func TestQueryResolver_UpstreamCredentialsIncludesChannelRefs(t *testing.T) {
+	resolver, ctx, client := setupTestQueryResolver(t)
+	defer client.Close()
+
+	ch, err := client.Channel.Create().
+		SetType(channel.TypeOpenai).
+		SetName("Credential Channel").
+		SetBaseURL("https://api.openai.com/v1").
+		SetCredentials(objects.ChannelCredentials{}).
+		SetSupportedModels([]string{"gpt-4"}).
+		SetDefaultTestModel("gpt-4").
+		SetStatus(channel.StatusEnabled).
+		Save(ctx)
+	require.NoError(t, err)
+
+	fingerprint := biz.ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), ch.BaseURL, "test-upstream-key")
+	credential, err := client.UpstreamCredential.Create().
+		SetName("test credential").
+		SetProviderType(channel.TypeOpenai.String()).
+		SetBaseURL(ch.BaseURL).
+		SetAuthKind(upstreamcredential.AuthKindAPIKey).
+		SetSecretPayload(objects.UpstreamCredentialSecretFromAPIKey("test-upstream-key")).
+		SetFingerprint(fingerprint).
+		SetStatus(upstreamcredential.StatusEnabled).
+		SetWeight(100).
+		Save(ctx)
+	require.NoError(t, err)
+
+	ref, err := client.ChannelCredentialRef.Create().
+		SetChannelID(ch.ID).
+		SetCredentialID(credential.ID).
+		SetEnabled(true).
+		Save(ctx)
+	require.NoError(t, err)
+
+	first := 10
+	conn, err := resolver.UpstreamCredentials(ctx, nil, &first, nil, nil, nil, &ent.UpstreamCredentialWhereInput{})
+	require.NoError(t, err)
+	require.Equal(t, 1, conn.TotalCount)
+	require.Len(t, conn.Edges, 1)
+
+	node := conn.Edges[0].Node
+	require.Equal(t, credential.ID, node.ID)
+
+	nodeID, err := (&upstreamCredentialResolver{resolver.Resolver}).ID(ctx, node)
+	require.NoError(t, err)
+	require.Equal(t, ent.TypeUpstreamCredential, nodeID.Type)
+	require.Equal(t, credential.ID, nodeID.ID)
+
+	loadedRef, err := client.ChannelCredentialRef.Get(ctx, ref.ID)
+	require.NoError(t, err)
+
+	refResolver := &channelCredentialRefResolver{resolver.Resolver}
+	refID, err := refResolver.ID(ctx, loadedRef)
+	require.NoError(t, err)
+	require.Equal(t, ent.TypeChannelCredentialRef, refID.Type)
+	require.Equal(t, ref.ID, refID.ID)
+
+	refChannelID, err := refResolver.ChannelID(ctx, loadedRef)
+	require.NoError(t, err)
+	require.Equal(t, ent.TypeChannel, refChannelID.Type)
+	require.Equal(t, ch.ID, refChannelID.ID)
+
+	refCredentialID, err := refResolver.CredentialID(ctx, loadedRef)
+	require.NoError(t, err)
+	require.Equal(t, ent.TypeUpstreamCredential, refCredentialID.Type)
+	require.Equal(t, credential.ID, refCredentialID.ID)
+
+	refChannel, err := refResolver.Channel(ctx, loadedRef)
+	require.NoError(t, err)
+	require.Equal(t, ch.ID, refChannel.ID)
+
+	refCredential, err := refResolver.Credential(ctx, loadedRef)
+	require.NoError(t, err)
+	require.Equal(t, credential.ID, refCredential.ID)
+
+	fetchedCredential, err := resolver.Node(ctx, objects.GUID{Type: ent.TypeUpstreamCredential, ID: credential.ID})
+	require.NoError(t, err)
+	require.Equal(t, credential.ID, fetchedCredential.(*ent.UpstreamCredential).ID)
+
+	fetchedRef, err := resolver.Node(ctx, objects.GUID{Type: ent.TypeChannelCredentialRef, ID: ref.ID})
+	require.NoError(t, err)
+	require.Equal(t, ref.ID, fetchedRef.(*ent.ChannelCredentialRef).ID)
+
+	refConn, err := resolver.ChannelCredentialRefs(ctx, nil, &first, nil, nil, nil, &ent.ChannelCredentialRefWhereInput{})
+	require.NoError(t, err)
+	require.Equal(t, 1, refConn.TotalCount)
 }
 
 func TestQueryResolver_AllChannelTags_ProjectProfileFiltersVisibleTags(t *testing.T) {

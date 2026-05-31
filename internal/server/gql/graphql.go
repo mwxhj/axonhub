@@ -22,18 +22,21 @@ import (
 	"github.com/looplj/axonhub/internal/ent/apikey"
 	"github.com/looplj/axonhub/internal/ent/apikeyprofiletemplate"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/channeloverridetemplate"
 	"github.com/looplj/axonhub/internal/ent/channelprobe"
 	"github.com/looplj/axonhub/internal/ent/datastorage"
 	"github.com/looplj/axonhub/internal/ent/model"
 	"github.com/looplj/axonhub/internal/ent/project"
 	"github.com/looplj/axonhub/internal/ent/prompt"
+	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/request"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
 	"github.com/looplj/axonhub/internal/ent/role"
 	"github.com/looplj/axonhub/internal/ent/system"
 	"github.com/looplj/axonhub/internal/ent/thread"
 	"github.com/looplj/axonhub/internal/ent/trace"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
 	"github.com/looplj/axonhub/internal/ent/user"
 	"github.com/looplj/axonhub/internal/ent/userproject"
@@ -57,6 +60,7 @@ type Dependencies struct {
 	UserService                    *biz.UserService
 	SystemService                  *biz.SystemService
 	ChannelService                 *biz.ChannelService
+	UpstreamCredentialService      *biz.UpstreamCredentialService
 	RequestService                 *biz.RequestService
 	ProjectService                 *biz.ProjectService
 	DataStorageService             *biz.DataStorageService
@@ -95,6 +99,7 @@ func NewGraphqlHandlers(deps Dependencies) *GraphqlHandler {
 			deps.UserService,
 			deps.SystemService,
 			deps.ChannelService,
+			deps.UpstreamCredentialService,
 			deps.RequestService,
 			deps.ProjectService,
 			deps.DataStorageService,
@@ -181,13 +186,16 @@ var guidTypeToNodeType = map[string]string{
 	ent.TypeAPIKeyProfileTemplate:   apikeyprofiletemplate.Table,
 	ent.TypeModel:                   model.Table,
 	ent.TypeChannel:                 channel.Table,
+	ent.TypeChannelCredentialRef:    channelcredentialref.Table,
 	ent.TypeChannelProbe:            channelprobe.Table,
 	ent.TypeChannelOverrideTemplate: channeloverridetemplate.Table,
+	ent.TypeProviderQuotaStatus:     providerquotastatus.Table,
 	ent.TypeRequest:                 request.Table,
 	ent.TypeRequestExecution:        requestexecution.Table,
 	ent.TypeRole:                    role.Table,
 	ent.TypeSystem:                  system.Table,
 	ent.TypeUsageLog:                usagelog.Table,
+	ent.TypeUpstreamCredential:      upstreamcredential.Table,
 	ent.TypeProject:                 project.Table,
 	ent.TypeUserProject:             userproject.Table,
 	ent.TypeUserRole:                userrole.Table,
@@ -216,6 +224,27 @@ func getNilableChannel(ctx context.Context, client *ent.Client, channelID int) (
 	}
 
 	return ch, nil
+}
+
+func getNilableUpstreamCredential(ctx context.Context, client *ent.Client, credentialID int) (*ent.UpstreamCredential, error) {
+	if credentialID == 0 {
+		return nil, nil
+	}
+
+	credential, err := client.UpstreamCredential.Query().Where(upstreamcredential.ID(credentialID)).First(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil
+		}
+
+		if errors.Is(err, privacy.Deny) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("failed to load upstream credential: %w", err)
+	}
+
+	return credential, nil
 }
 
 func getNilableUser(ctx context.Context, client *ent.Client, userID int) (*ent.User, error) {

@@ -99,7 +99,8 @@ func (s *QuotaAwareStrategy) score(ctx context.Context, channel *biz.Channel, de
 		details["mode"] = settings.Mode
 	}
 
-	quotaStatus := s.provider.GetQuotaStatus(channel.ID)
+	limitType := provider_quota.QuotaLimitType(quotaLimitTypeFromContext(ctx))
+	quotaStatus := quotaStatusForChannel(s.provider, channel, limitType)
 
 	if quotaStatus == nil {
 		if details != nil {
@@ -108,7 +109,6 @@ func (s *QuotaAwareStrategy) score(ctx context.Context, channel *biz.Channel, de
 		return 0, "no_quota_data"
 	}
 
-	limitType := provider_quota.QuotaLimitType(quotaLimitTypeFromContext(ctx))
 	effectiveStatus, _ := quotaStatus.EffectiveStatus(limitType)
 
 	if details != nil {

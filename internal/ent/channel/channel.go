@@ -71,6 +71,8 @@ const (
 	EdgeChannelProbes = "channel_probes"
 	// EdgeChannelModelPrices holds the string denoting the channel_model_prices edge name in mutations.
 	EdgeChannelModelPrices = "channel_model_prices"
+	// EdgeCredentialRefs holds the string denoting the credential_refs edge name in mutations.
+	EdgeCredentialRefs = "credential_refs"
 	// EdgeProviderQuotaStatus holds the string denoting the provider_quota_status edge name in mutations.
 	EdgeProviderQuotaStatus = "provider_quota_status"
 	// Table holds the table name of the channel in the database.
@@ -110,6 +112,13 @@ const (
 	ChannelModelPricesInverseTable = "channel_model_prices"
 	// ChannelModelPricesColumn is the table column denoting the channel_model_prices relation/edge.
 	ChannelModelPricesColumn = "channel_id"
+	// CredentialRefsTable is the table that holds the credential_refs relation/edge.
+	CredentialRefsTable = "channel_credential_refs"
+	// CredentialRefsInverseTable is the table name for the ChannelCredentialRef entity.
+	// It exists in this package in order to avoid circular dependency with the "channelcredentialref" package.
+	CredentialRefsInverseTable = "channel_credential_refs"
+	// CredentialRefsColumn is the table column denoting the credential_refs relation/edge.
+	CredentialRefsColumn = "channel_id"
 	// ProviderQuotaStatusTable is the table that holds the provider_quota_status relation/edge.
 	ProviderQuotaStatusTable = "provider_quota_status"
 	// ProviderQuotaStatusInverseTable is the table name for the ProviderQuotaStatus entity.
@@ -438,6 +447,20 @@ func ByChannelModelPrices(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOptio
 	}
 }
 
+// ByCredentialRefsCount orders the results by credential_refs count.
+func ByCredentialRefsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCredentialRefsStep(), opts...)
+	}
+}
+
+// ByCredentialRefs orders the results by credential_refs terms.
+func ByCredentialRefs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCredentialRefsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByProviderQuotaStatusField orders the results by provider_quota_status field.
 func ByProviderQuotaStatusField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -477,6 +500,13 @@ func newChannelModelPricesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ChannelModelPricesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, ChannelModelPricesTable, ChannelModelPricesColumn),
+	)
+}
+func newCredentialRefsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CredentialRefsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CredentialRefsTable, CredentialRefsColumn),
 	)
 }
 func newProviderQuotaStatusStep() *sqlgraph.Step {

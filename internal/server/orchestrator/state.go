@@ -63,6 +63,17 @@ type PersistenceState struct {
 	StickyPreviousResponseID string
 	// StickyResponseMessage stores the completed assistant message when available for transcript-prefix binding.
 	StickyResponseMessage *llm.Message
+	// CurrentCredentialID stores the upstream credential row selected for the current attempt when known.
+	CurrentCredentialID int
+	// CurrentCredentialFingerprint stores the safe upstream credential identity selected for the current attempt.
+	CurrentCredentialFingerprint string
+	// PreferredCredentialID stores the sticky credential row selected by routing when known.
+	PreferredCredentialID int
+	// PreferredCredentialFingerprint stores the sticky credential identity selected by routing.
+	PreferredCredentialFingerprint string
+	// CurrentCredentialAPIKey stores the raw upstream API key selected for the current attempt.
+	// It is used only for existing auto-disable logic and must not be logged in full.
+	CurrentCredentialAPIKey string
 	// Candidate state - current candidate index of ChannelModelsCandidates
 	CurrentCandidateIndex int
 	// CurrentCandidate is the currently selected candidate of ChannelModelsCandidates

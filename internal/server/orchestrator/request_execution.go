@@ -7,6 +7,7 @@ import (
 
 	"github.com/tidwall/gjson"
 
+	"github.com/looplj/axonhub/internal/contexts"
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/pkg/xcontext"
 	"github.com/looplj/axonhub/internal/pkg/xerrors"
@@ -81,6 +82,13 @@ func (m *persistRequestExecutionMiddleware) OnOutboundRawRequest(ctx context.Con
 	candidate := state.ChannelModelsCandidates[state.CurrentCandidateIndex]
 	entry := candidate.Models[state.CurrentModelIndex]
 
+	if state.CurrentCredentialID > 0 {
+		ctx = contexts.WithChannelCredentialID(ctx, state.CurrentCredentialID)
+	}
+	if state.CurrentCredentialFingerprint != "" {
+		ctx = contexts.WithChannelCredentialFingerprint(ctx, state.CurrentCredentialFingerprint)
+	}
+
 	requestExec, err := state.RequestService.CreateRequestExecution(
 		ctx,
 		channel,
@@ -91,6 +99,12 @@ func (m *persistRequestExecutionMiddleware) OnOutboundRawRequest(ctx context.Con
 	)
 	if err != nil {
 		return nil, err
+	}
+	if state.CurrentCredentialID > 0 {
+		requestExec.CredentialID = state.CurrentCredentialID
+	}
+	if state.CurrentCredentialFingerprint != "" {
+		requestExec.CredentialFingerprint = state.CurrentCredentialFingerprint
 	}
 
 	// Update request with channel ID after channel selection

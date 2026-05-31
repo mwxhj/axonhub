@@ -15,6 +15,9 @@ type APIKeyProfileTemplate func(*sql.Selector)
 // Channel is the predicate function for channel builders.
 type Channel func(*sql.Selector)
 
+// ChannelCredentialRef is the predicate function for channelcredentialref builders.
+type ChannelCredentialRef func(*sql.Selector)
+
 // ChannelModelPrice is the predicate function for channelmodelprice builders.
 type ChannelModelPrice func(*sql.Selector)
 
@@ -65,6 +68,9 @@ type Thread func(*sql.Selector)
 
 // Trace is the predicate function for trace builders.
 type Trace func(*sql.Selector)
+
+// UpstreamCredential is the predicate function for upstreamcredential builders.
+type UpstreamCredential func(*sql.Selector)
 
 // UsageLog is the predicate function for usagelog builders.
 type UsageLog func(*sql.Selector)

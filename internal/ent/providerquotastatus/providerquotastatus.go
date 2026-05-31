@@ -26,6 +26,10 @@ const (
 	FieldDeletedAt = "deleted_at"
 	// FieldChannelID holds the string denoting the channel_id field in the database.
 	FieldChannelID = "channel_id"
+	// FieldCredentialID holds the string denoting the credential_id field in the database.
+	FieldCredentialID = "credential_id"
+	// FieldCredentialFingerprint holds the string denoting the credential_fingerprint field in the database.
+	FieldCredentialFingerprint = "credential_fingerprint"
 	// FieldProviderType holds the string denoting the provider_type field in the database.
 	FieldProviderType = "provider_type"
 	// FieldStatus holds the string denoting the status field in the database.
@@ -40,6 +44,8 @@ const (
 	FieldNextCheckAt = "next_check_at"
 	// EdgeChannel holds the string denoting the channel edge name in mutations.
 	EdgeChannel = "channel"
+	// EdgeCredential holds the string denoting the credential edge name in mutations.
+	EdgeCredential = "credential"
 	// Table holds the table name of the providerquotastatus in the database.
 	Table = "provider_quota_status"
 	// ChannelTable is the table that holds the channel relation/edge.
@@ -49,6 +55,13 @@ const (
 	ChannelInverseTable = "channels"
 	// ChannelColumn is the table column denoting the channel relation/edge.
 	ChannelColumn = "channel_id"
+	// CredentialTable is the table that holds the credential relation/edge.
+	CredentialTable = "provider_quota_status"
+	// CredentialInverseTable is the table name for the UpstreamCredential entity.
+	// It exists in this package in order to avoid circular dependency with the "upstreamcredential" package.
+	CredentialInverseTable = "upstream_credentials"
+	// CredentialColumn is the table column denoting the credential relation/edge.
+	CredentialColumn = "credential_id"
 )
 
 // Columns holds all SQL columns for providerquotastatus fields.
@@ -58,6 +71,8 @@ var Columns = []string{
 	FieldUpdatedAt,
 	FieldDeletedAt,
 	FieldChannelID,
+	FieldCredentialID,
+	FieldCredentialFingerprint,
 	FieldProviderType,
 	FieldStatus,
 	FieldQuotaData,
@@ -92,6 +107,8 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 	// DefaultDeletedAt holds the default value on creation for the "deleted_at" field.
 	DefaultDeletedAt int
+	// CredentialFingerprintValidator is a validator for the "credential_fingerprint" field. It is called by the builders before save.
+	CredentialFingerprintValidator func(string) error
 	// DefaultReady holds the default value on creation for the "ready" field.
 	DefaultReady bool
 )
@@ -177,6 +194,16 @@ func ByChannelID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldChannelID, opts...).ToFunc()
 }
 
+// ByCredentialID orders the results by the credential_id field.
+func ByCredentialID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCredentialID, opts...).ToFunc()
+}
+
+// ByCredentialFingerprint orders the results by the credential_fingerprint field.
+func ByCredentialFingerprint(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCredentialFingerprint, opts...).ToFunc()
+}
+
 // ByProviderType orders the results by the provider_type field.
 func ByProviderType(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldProviderType, opts...).ToFunc()
@@ -208,11 +235,25 @@ func ByChannelField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newChannelStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByCredentialField orders the results by credential field.
+func ByCredentialField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCredentialStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newChannelStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ChannelInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2O, true, ChannelTable, ChannelColumn),
+	)
+}
+func newCredentialStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CredentialInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, CredentialTable, CredentialColumn),
 	)
 }
 

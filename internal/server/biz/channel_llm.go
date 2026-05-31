@@ -113,6 +113,12 @@ func (svc *ChannelService) getHttpClient(channelSettings *objects.ChannelSetting
 
 // buildChannel creates a Channel with precomputed caches (transformer is set separately).
 func buildChannel(c *ent.Channel, httpClient *httpclient.HttpClient) *Channel {
+	credentialViews := credentialViewsFromRefs(c)
+	if len(credentialViews) == 0 {
+		credentialViews = legacyCredentialViews(c)
+	}
+	credentialViews = dedupeCredentialViews(credentialViews)
+
 	// Precompute disabled key set for O(1) lookup
 	disabledKeySet := make(map[string]struct{}, len(c.DisabledAPIKeys))
 	for _, dk := range c.DisabledAPIKeys {
@@ -122,11 +128,12 @@ func buildChannel(c *ent.Channel, httpClient *httpclient.HttpClient) *Channel {
 	}
 
 	ch := &Channel{
-		Channel:              c,
-		HTTPClient:           httpClient,
-		cachedDisabledKeySet: disabledKeySet,
-		cachedEnabledAPIKeys: c.Credentials.GetEnabledAPIKeys(c.DisabledAPIKeys),
+		Channel:               c,
+		HTTPClient:            httpClient,
+		cachedDisabledKeySet:  disabledKeySet,
+		cachedCredentialViews: credentialViews,
 	}
+	ch.cachedEnabledAPIKeys = enabledAPIKeysFromCredentialViews(credentialViews)
 
 	// Precompute other caches
 	entries := ch.GetModelEntries()
@@ -153,12 +160,8 @@ func buildChannel(c *ent.Channel, httpClient *httpclient.HttpClient) *Channel {
 // buildChannelWithTransformer should validate channel credentials before constructing transformers.
 func getAPIKeyProvider(ch *Channel) auth.APIKeyProvider {
 	enabled := ch.cachedEnabledAPIKeys
-	if len(enabled) > 1 {
+	if len(enabled) >= 1 {
 		return NewTraceStickyKeyProvider(ch)
-	}
-
-	if len(enabled) == 1 {
-		return auth.NewStaticKeyProvider(enabled[0])
 	}
 
 	panic(fmt.Errorf("no enabled api key configured for channel %s", ch.Name))
@@ -192,8 +195,12 @@ func (svc *ChannelService) buildChannelWithOutbounds(c *ent.Channel) (*Channel, 
 		return nil, err
 	}
 
-	defaultEndpoints := DefaultEndpointsForChannelType(c.Type)
-	userEndpoints := c.Endpoints
+	channelEntity := ch.Channel
+	if channelEntity == nil {
+		channelEntity = c
+	}
+	defaultEndpoints := DefaultEndpointsForChannelType(channelEntity.Type)
+	userEndpoints := channelEntity.Endpoints
 
 	if len(defaultEndpoints) == 0 && len(userEndpoints) == 0 {
 		return ch, nil
@@ -213,7 +220,7 @@ func (svc *ChannelService) buildChannelWithOutbounds(c *ent.Channel) (*Channel, 
 		if ep.APIFormat == "" {
 			continue
 		}
-		out, err := svc.buildNonDefaultEndpointOutbound(c, ch, ep)
+		out, err := svc.buildNonDefaultEndpointOutbound(channelEntity, ch, ep)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build outbound for api_format %q on channel %s: %w", ep.APIFormat, c.Name, err)
 		}
@@ -309,7 +316,7 @@ func (svc *ChannelService) buildCodexOutbound(
 		p := codex.NewTokenProvider(codex.TokenProviderParams{
 			Credentials: creds,
 			HTTPClient:  httpClient,
-			OnRefreshed: svc.onTokenRefreshed(c),
+			OnRefreshed: svc.onTokenRefreshed(c, primaryCredentialViewForAuthKind(ch, channelCredentialAuthKindOAuth)),
 		})
 
 		if ch != nil && ch.startTokenProvider == nil {
@@ -425,25 +432,35 @@ func (svc *ChannelService) buildNonDefaultEndpointOutbound(
 
 //nolint:maintidx // Checked.
 func (svc *ChannelService) buildChannelWithTransformer(c *ent.Channel) (*Channel, error) {
+	credentialViews := credentialViewsFromRefs(c)
+	if len(credentialViews) == 0 {
+		credentialViews = legacyCredentialViews(c)
+	}
+	credentialViews = dedupeCredentialViews(credentialViews)
+	resolvedCredentials := credentialsFromViews(credentialViews, c.Credentials)
+
 	// Validate credentials early so we can fail fast without constructing HTTP clients/transformers.
 	//
 	// NOTE: "enabled" keys excludes keys that were explicitly disabled for this channel.
-	enabledKeys := c.Credentials.GetEnabledAPIKeys(c.DisabledAPIKeys)
+	enabledKeys := enabledAPIKeysFromCredentialViews(credentialViews)
+	if len(enabledKeys) == 0 {
+		enabledKeys = resolvedCredentials.GetEnabledAPIKeys(c.DisabledAPIKeys)
+	}
 
 	//nolint:exhaustive // Checked.
 	switch c.Type {
 	case channel.TypeCodex, channel.TypeClaudecode:
-		if !c.Credentials.IsOAuth() && len(enabledKeys) == 0 {
+		if !resolvedCredentials.IsOAuth() && len(enabledKeys) == 0 {
 			return nil, fmt.Errorf("missing credentials: oauth or api key required for channel %s", c.Name)
 		}
 	case channel.TypeGithubCopilot:
 		// GitHub Copilot requires OAuth credentials with device flow (strict OAuth only)
-		if !c.Credentials.IsOAuth() {
+		if !resolvedCredentials.IsOAuth() {
 			return nil, fmt.Errorf("missing oauth credentials for channel %s", c.Name)
 		}
 	case channel.TypeAntigravity:
 		// Antigravity transformer currently consumes the single legacy APIKey field directly.
-		if strings.TrimSpace(c.Credentials.APIKey) == "" {
+		if strings.TrimSpace(resolvedCredentials.APIKey) == "" {
 			return nil, fmt.Errorf("missing api key for channel %s", c.Name)
 		}
 	case channel.TypeAnthropicGcp, channel.TypeAnthropicFake, channel.TypeOpenaiFake:
@@ -457,6 +474,11 @@ func (svc *ChannelService) buildChannelWithTransformer(c *ent.Channel) (*Channel
 	}
 
 	httpClient := svc.getHttpClient(c.Settings)
+	if len(credentialViews) > 0 {
+		clone := *c
+		clone.Credentials = resolvedCredentials
+		c = &clone
+	}
 	ch := buildChannel(c, httpClient)
 
 	switch c.Type {
@@ -637,7 +659,7 @@ func (svc *ChannelService) buildChannelWithTransformer(c *ent.Channel) (*Channel
 			tokens := claudecode.NewTokenProvider(oauth.TokenProviderParams{
 				Credentials: creds,
 				HTTPClient:  httpClient,
-				OnRefreshed: svc.onTokenRefreshed(c),
+				OnRefreshed: svc.onTokenRefreshed(c, primaryCredentialViewForAuthKind(ch, channelCredentialAuthKindOAuth)),
 			})
 
 			transformer, err := claudecode.NewOutboundTransformer(claudecode.Params{
@@ -888,7 +910,7 @@ func (svc *ChannelService) buildChannelWithTransformer(c *ent.Channel) (*Channel
 		p, err := copilot.NewTokenProvider(copilot.TokenProviderParams{
 			Credentials: creds,
 			HTTPClient:  httpClient,
-			OnRefreshed: svc.onTokenRefreshed(c),
+			OnRefreshed: svc.onTokenRefreshed(c, primaryCredentialViewForAuthKind(ch, channelCredentialAuthKindOAuth)),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create CopilotTokenProvider: %w", err)
@@ -979,7 +1001,7 @@ func (svc *ChannelService) buildChannelWithTransformer(c *ent.Channel) (*Channel
 		transformer, err := antigravity.NewTransformer(
 			antigravity.Config{BaseURL: c.BaseURL, APIKey: c.Credentials.APIKey},
 			antigravity.WithHTTPClient(httpClient),
-			antigravity.WithOnTokenRefreshed(svc.onTokenRefreshed(c)),
+			antigravity.WithOnTokenRefreshed(svc.onTokenRefreshed(c, primaryCredentialViewForAuthKind(ch, channelCredentialAuthKindAPIKey))),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create antigravity outbound transformer: %w", err)
@@ -1028,26 +1050,53 @@ func extractProjectIDFromAntigravityCreds(apiKey string) (string, error) {
 	return "", errors.New("api key does not contain project ID (expected format: \"<refreshToken>|<projectID>\")")
 }
 
-func (svc *ChannelService) refreshOAuthToken(ctx context.Context, ch *ent.Channel, refreshed *oauth.OAuthCredentials) error {
+func (svc *ChannelService) refreshOAuthToken(ctx context.Context, ch *ent.Channel, credentialView ChannelCredentialView, refreshed *oauth.OAuthCredentials) error {
 	if refreshed == nil {
 		return nil
 	}
 
-	updated := ch.Credentials
+	updatedSecret, err := refreshedCredentialSecret(ch, credentialView.Secret, refreshed)
+	if err != nil {
+		return err
+	}
 
-	if ch.Type == channel.TypeAntigravity {
-		projectID, err := extractProjectIDFromAntigravityCreds(ch.Credentials.APIKey)
+	if credentialView.CredentialID > 0 {
+		_, err := svc.entFromContext(ctx).UpstreamCredential.UpdateOneID(credentialView.CredentialID).
+			SetSecretPayload(updatedSecret).
+			Save(ctx)
+
+		return err
+	}
+
+	updated := ch.Credentials
+	updated.APIKey = updatedSecret.APIKey
+	updated.OAuth = updatedSecret.OAuth
+
+	_, err = svc.entFromContext(ctx).Channel.UpdateOneID(ch.ID).SetCredentials(updated).Save(ctx)
+
+	return err
+}
+
+func refreshedCredentialSecret(ch *ent.Channel, current objects.UpstreamCredentialSecret, refreshed *oauth.OAuthCredentials) (objects.UpstreamCredentialSecret, error) {
+	if refreshed == nil {
+		return current, nil
+	}
+
+	updated := current
+
+	if ch != nil && ch.Type == channel.TypeAntigravity {
+		projectID, err := extractProjectIDFromAntigravityCreds(current.APIKey)
+		if err != nil && ch.Credentials.APIKey != current.APIKey {
+			projectID, err = extractProjectIDFromAntigravityCreds(ch.Credentials.APIKey)
+		}
 		if err != nil {
-			log.Warn(ctx, "failed to extract project ID from antigravity credentials",
-				log.Cause(err),
-				log.String("channel", ch.Name))
-			return fmt.Errorf("failed to extract project ID from antigravity credentials: %w", err)
+			return objects.UpstreamCredentialSecret{}, fmt.Errorf("failed to extract project ID from antigravity credentials: %w", err)
 		}
 		updated.APIKey = fmt.Sprintf("%s|%s", refreshed.RefreshToken, projectID)
 	} else {
 		credJSON, err := refreshed.ToJSON()
 		if err != nil {
-			return fmt.Errorf("failed to serialize refreshed credentials: %w", err)
+			return objects.UpstreamCredentialSecret{}, fmt.Errorf("failed to serialize refreshed credentials: %w", err)
 		}
 		// NOTE：必须是使用 APIKey 字段，不能使用 API Keys 字段
 		updated.APIKey = credJSON
@@ -1055,9 +1104,7 @@ func (svc *ChannelService) refreshOAuthToken(ctx context.Context, ch *ent.Channe
 
 	updated.OAuth = refreshed
 
-	_, err := svc.entFromContext(ctx).Channel.UpdateOneID(ch.ID).SetCredentials(updated).Save(ctx)
-
-	return err
+	return updated, nil
 }
 
 // GetModelEntries returns all models this channel can handle, RequestModel -> Entry

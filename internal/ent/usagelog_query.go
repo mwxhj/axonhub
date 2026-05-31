@@ -16,21 +16,23 @@ import (
 	"github.com/looplj/axonhub/internal/ent/predicate"
 	"github.com/looplj/axonhub/internal/ent/project"
 	"github.com/looplj/axonhub/internal/ent/request"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
 )
 
 // UsageLogQuery is the builder for querying UsageLog entities.
 type UsageLogQuery struct {
 	config
-	ctx         *QueryContext
-	order       []usagelog.OrderOption
-	inters      []Interceptor
-	predicates  []predicate.UsageLog
-	withRequest *RequestQuery
-	withProject *ProjectQuery
-	withChannel *ChannelQuery
-	loadTotal   []func(context.Context, []*UsageLog) error
-	modifiers   []func(*sql.Selector)
+	ctx            *QueryContext
+	order          []usagelog.OrderOption
+	inters         []Interceptor
+	predicates     []predicate.UsageLog
+	withRequest    *RequestQuery
+	withProject    *ProjectQuery
+	withChannel    *ChannelQuery
+	withCredential *UpstreamCredentialQuery
+	loadTotal      []func(context.Context, []*UsageLog) error
+	modifiers      []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -126,6 +128,28 @@ func (_q *UsageLogQuery) QueryChannel() *ChannelQuery {
 			sqlgraph.From(usagelog.Table, usagelog.FieldID, selector),
 			sqlgraph.To(channel.Table, channel.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, usagelog.ChannelTable, usagelog.ChannelColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCredential chains the current query on the "credential" edge.
+func (_q *UsageLogQuery) QueryCredential() *UpstreamCredentialQuery {
+	query := (&UpstreamCredentialClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(usagelog.Table, usagelog.FieldID, selector),
+			sqlgraph.To(upstreamcredential.Table, upstreamcredential.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, usagelog.CredentialTable, usagelog.CredentialColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -320,14 +344,15 @@ func (_q *UsageLogQuery) Clone() *UsageLogQuery {
 		return nil
 	}
 	return &UsageLogQuery{
-		config:      _q.config,
-		ctx:         _q.ctx.Clone(),
-		order:       append([]usagelog.OrderOption{}, _q.order...),
-		inters:      append([]Interceptor{}, _q.inters...),
-		predicates:  append([]predicate.UsageLog{}, _q.predicates...),
-		withRequest: _q.withRequest.Clone(),
-		withProject: _q.withProject.Clone(),
-		withChannel: _q.withChannel.Clone(),
+		config:         _q.config,
+		ctx:            _q.ctx.Clone(),
+		order:          append([]usagelog.OrderOption{}, _q.order...),
+		inters:         append([]Interceptor{}, _q.inters...),
+		predicates:     append([]predicate.UsageLog{}, _q.predicates...),
+		withRequest:    _q.withRequest.Clone(),
+		withProject:    _q.withProject.Clone(),
+		withChannel:    _q.withChannel.Clone(),
+		withCredential: _q.withCredential.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -365,6 +390,17 @@ func (_q *UsageLogQuery) WithChannel(opts ...func(*ChannelQuery)) *UsageLogQuery
 		opt(query)
 	}
 	_q.withChannel = query
+	return _q
+}
+
+// WithCredential tells the query-builder to eager-load the nodes that are connected to
+// the "credential" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UsageLogQuery) WithCredential(opts ...func(*UpstreamCredentialQuery)) *UsageLogQuery {
+	query := (&UpstreamCredentialClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCredential = query
 	return _q
 }
 
@@ -452,10 +488,11 @@ func (_q *UsageLogQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Usa
 	var (
 		nodes       = []*UsageLog{}
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			_q.withRequest != nil,
 			_q.withProject != nil,
 			_q.withChannel != nil,
+			_q.withCredential != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -494,6 +531,12 @@ func (_q *UsageLogQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Usa
 	if query := _q.withChannel; query != nil {
 		if err := _q.loadChannel(ctx, query, nodes, nil,
 			func(n *UsageLog, e *Channel) { n.Edges.Channel = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCredential; query != nil {
+		if err := _q.loadCredential(ctx, query, nodes, nil,
+			func(n *UsageLog, e *UpstreamCredential) { n.Edges.Credential = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -592,6 +635,35 @@ func (_q *UsageLogQuery) loadChannel(ctx context.Context, query *ChannelQuery, n
 	}
 	return nil
 }
+func (_q *UsageLogQuery) loadCredential(ctx context.Context, query *UpstreamCredentialQuery, nodes []*UsageLog, init func(*UsageLog), assign func(*UsageLog, *UpstreamCredential)) error {
+	ids := make([]int, 0, len(nodes))
+	nodeids := make(map[int][]*UsageLog)
+	for i := range nodes {
+		fk := nodes[i].CredentialID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(upstreamcredential.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "credential_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
 
 func (_q *UsageLogQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
@@ -629,6 +701,9 @@ func (_q *UsageLogQuery) querySpec() *sqlgraph.QuerySpec {
 		}
 		if _q.withChannel != nil {
 			_spec.Node.AddColumnOnce(usagelog.FieldChannelID)
+		}
+		if _q.withCredential != nil {
+			_spec.Node.AddColumnOnce(usagelog.FieldCredentialID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

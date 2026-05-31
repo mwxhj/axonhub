@@ -16,6 +16,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/predicate"
 	"github.com/looplj/axonhub/internal/ent/request"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 )
 
 // RequestExecutionQuery is the builder for querying RequestExecution entities.
@@ -27,6 +28,7 @@ type RequestExecutionQuery struct {
 	predicates      []predicate.RequestExecution
 	withRequest     *RequestQuery
 	withChannel     *ChannelQuery
+	withCredential  *UpstreamCredentialQuery
 	withDataStorage *DataStorageQuery
 	loadTotal       []func(context.Context, []*RequestExecution) error
 	modifiers       []func(*sql.Selector)
@@ -103,6 +105,28 @@ func (_q *RequestExecutionQuery) QueryChannel() *ChannelQuery {
 			sqlgraph.From(requestexecution.Table, requestexecution.FieldID, selector),
 			sqlgraph.To(channel.Table, channel.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, requestexecution.ChannelTable, requestexecution.ChannelColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCredential chains the current query on the "credential" edge.
+func (_q *RequestExecutionQuery) QueryCredential() *UpstreamCredentialQuery {
+	query := (&UpstreamCredentialClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(requestexecution.Table, requestexecution.FieldID, selector),
+			sqlgraph.To(upstreamcredential.Table, upstreamcredential.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, requestexecution.CredentialTable, requestexecution.CredentialColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -326,6 +350,7 @@ func (_q *RequestExecutionQuery) Clone() *RequestExecutionQuery {
 		predicates:      append([]predicate.RequestExecution{}, _q.predicates...),
 		withRequest:     _q.withRequest.Clone(),
 		withChannel:     _q.withChannel.Clone(),
+		withCredential:  _q.withCredential.Clone(),
 		withDataStorage: _q.withDataStorage.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
@@ -353,6 +378,17 @@ func (_q *RequestExecutionQuery) WithChannel(opts ...func(*ChannelQuery)) *Reque
 		opt(query)
 	}
 	_q.withChannel = query
+	return _q
+}
+
+// WithCredential tells the query-builder to eager-load the nodes that are connected to
+// the "credential" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *RequestExecutionQuery) WithCredential(opts ...func(*UpstreamCredentialQuery)) *RequestExecutionQuery {
+	query := (&UpstreamCredentialClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCredential = query
 	return _q
 }
 
@@ -445,9 +481,10 @@ func (_q *RequestExecutionQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	var (
 		nodes       = []*RequestExecution{}
 		_spec       = _q.querySpec()
-		loadedTypes = [3]bool{
+		loadedTypes = [4]bool{
 			_q.withRequest != nil,
 			_q.withChannel != nil,
+			_q.withCredential != nil,
 			_q.withDataStorage != nil,
 		}
 	)
@@ -481,6 +518,12 @@ func (_q *RequestExecutionQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	if query := _q.withChannel; query != nil {
 		if err := _q.loadChannel(ctx, query, nodes, nil,
 			func(n *RequestExecution, e *Channel) { n.Edges.Channel = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCredential; query != nil {
+		if err := _q.loadCredential(ctx, query, nodes, nil,
+			func(n *RequestExecution, e *UpstreamCredential) { n.Edges.Credential = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -556,6 +599,35 @@ func (_q *RequestExecutionQuery) loadChannel(ctx context.Context, query *Channel
 	}
 	return nil
 }
+func (_q *RequestExecutionQuery) loadCredential(ctx context.Context, query *UpstreamCredentialQuery, nodes []*RequestExecution, init func(*RequestExecution), assign func(*RequestExecution, *UpstreamCredential)) error {
+	ids := make([]int, 0, len(nodes))
+	nodeids := make(map[int][]*RequestExecution)
+	for i := range nodes {
+		fk := nodes[i].CredentialID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(upstreamcredential.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "credential_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
 func (_q *RequestExecutionQuery) loadDataStorage(ctx context.Context, query *DataStorageQuery, nodes []*RequestExecution, init func(*RequestExecution), assign func(*RequestExecution, *DataStorage)) error {
 	ids := make([]int, 0, len(nodes))
 	nodeids := make(map[int][]*RequestExecution)
@@ -619,6 +691,9 @@ func (_q *RequestExecutionQuery) querySpec() *sqlgraph.QuerySpec {
 		}
 		if _q.withChannel != nil {
 			_spec.Node.AddColumnOnce(requestexecution.FieldChannelID)
+		}
+		if _q.withCredential != nil {
+			_spec.Node.AddColumnOnce(requestexecution.FieldCredentialID)
 		}
 		if _q.withDataStorage != nil {
 			_spec.Node.AddColumnOnce(requestexecution.FieldDataStorageID)

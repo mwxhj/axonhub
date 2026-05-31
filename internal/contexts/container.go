@@ -24,6 +24,29 @@ type contextContainer struct {
 
 	// ChannelAPIKey stores the API key used for the channel request (not the user's API key)
 	ChannelAPIKey *string
+
+	// ChannelCredentialFingerprint stores the safe upstream credential identity
+	// used for the channel request. It must never contain the raw secret.
+	ChannelCredentialFingerprint *string
+
+	// ChannelCredentialID stores the first-class upstream credential row ID
+	// selected for the channel request when the channel uses credential refs.
+	ChannelCredentialID *int
+
+	// CredentialSelectionSeed stores the sticky-session identity used by
+	// channel credential providers to keep related requests on the same
+	// upstream credential/cache pool.
+	CredentialSelectionSeed *string
+
+	// PreferredCredentialID stores the credential row selected by routing.
+	// Channel credential providers should prefer it when the current channel
+	// references the credential.
+	PreferredCredentialID *int
+
+	// PreferredCredentialFingerprint stores the credential identity selected by
+	// the outer router. Channel credential providers should prefer it when the
+	// current channel references the credential.
+	PreferredCredentialFingerprint *string
 }
 
 // getContainer retrieves the existing container from context, or creates a new one and stores it in the context if it doesn't exist.

@@ -58,20 +58,22 @@ func TestUsageLogService_CreateUsageLog_PromptWriteCachedTokens(t *testing.T) {
 	}
 
 	created, err := svc.CreateUsageLog(ctx, CreateUsageLogParams{
-		RequestID:     req.ID,
-		ProjectID:     p.ID,
-		ChannelID:     0,
-		ActualModelID: "test-model",
-		Usage:         usage,
-		Source:        usagelog.SourceAPI,
-		Format:        "openai/chat_completions",
-		APIKeyID:      nil,
+		RequestID:             req.ID,
+		ProjectID:             p.ID,
+		ChannelID:             0,
+		ActualModelID:         "test-model",
+		CredentialFingerprint: "cred:v1:test",
+		Usage:                 usage,
+		Source:                usagelog.SourceAPI,
+		Format:                "openai/chat_completions",
+		APIKeyID:              nil,
 	})
 	require.NoError(t, err)
 	require.NotNil(t, created)
 
 	require.Equal(t, int64(2), created.PromptCachedTokens)
 	require.Equal(t, int64(3), created.PromptWriteCachedTokens)
+	require.Equal(t, "cred:v1:test", created.CredentialFingerprint)
 }
 
 func TestUsageLogService_CreateUsageLog_WithPriceReferenceID(t *testing.T) {

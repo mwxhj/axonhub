@@ -82,14 +82,16 @@ func NewUsageLogService(ent *ent.Client, systemService *SystemService, channelSe
 
 // CreateUsageLogParams represents the parameters for creating a usage log.
 type CreateUsageLogParams struct {
-	RequestID     int
-	ProjectID     int
-	ChannelID     int
-	ActualModelID string // The channel actual model ID, not the request model ID.
-	Usage         *llm.Usage
-	Source        usagelog.Source
-	Format        string
-	APIKeyID      *int
+	RequestID             int
+	ProjectID             int
+	ChannelID             int
+	ActualModelID         string // The channel actual model ID, not the request model ID.
+	CredentialID          int
+	CredentialFingerprint string
+	Usage                 *llm.Usage
+	Source                usagelog.Source
+	Format                string
+	APIKeyID              *int
 }
 
 // CreateUsageLog creates a new usage log record from LLM response usage data.
@@ -115,6 +117,17 @@ func (s *UsageLogService) CreateUsageLog(ctx context.Context, params CreateUsage
 		mut = mut.SetAPIKeyID(*params.APIKeyID)
 	} else if ctxAPIKey, ok := contexts.GetAPIKey(ctx); ok && ctxAPIKey != nil {
 		mut = mut.SetAPIKeyID(ctxAPIKey.ID)
+	}
+
+	if params.CredentialFingerprint != "" {
+		mut = mut.SetCredentialFingerprint(params.CredentialFingerprint)
+	} else if fingerprint, ok := contexts.GetChannelCredentialFingerprint(ctx); ok && fingerprint != "" {
+		mut = mut.SetCredentialFingerprint(fingerprint)
+	}
+	if params.CredentialID > 0 {
+		mut = mut.SetCredentialID(params.CredentialID)
+	} else if credentialID, ok := contexts.GetChannelCredentialID(ctx); ok && credentialID > 0 {
+		mut = mut.SetCredentialID(credentialID)
 	}
 
 	// Set prompt tokens details if available
@@ -186,13 +199,15 @@ func (s *UsageLogService) CreateUsageLogFromRequest(
 	}
 
 	return s.CreateUsageLog(ctx, CreateUsageLogParams{
-		RequestID:     request.ID,
-		ProjectID:     request.ProjectID,
-		ChannelID:     requestExec.ChannelID,
-		ActualModelID: requestExec.ModelID,
-		Usage:         usage,
-		Source:        usagelog.Source(request.Source),
-		Format:        request.Format,
-		APIKeyID:      lo.ToPtr(request.APIKeyID),
+		RequestID:             request.ID,
+		ProjectID:             request.ProjectID,
+		ChannelID:             requestExec.ChannelID,
+		ActualModelID:         requestExec.ModelID,
+		CredentialID:          requestExec.CredentialID,
+		CredentialFingerprint: requestExec.CredentialFingerprint,
+		Usage:                 usage,
+		Source:                usagelog.Source(request.Source),
+		Format:                request.Format,
+		APIKeyID:              lo.ToPtr(request.APIKeyID),
 	})
 }

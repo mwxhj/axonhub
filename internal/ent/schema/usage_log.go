@@ -35,6 +35,10 @@ func (UsageLog) Indexes() []ent.Index {
 			StorageKey("usage_logs_by_project_id_created_at"),
 		index.Fields("channel_id", "created_at").
 			StorageKey("usage_logs_by_channel_id_created_at"),
+		index.Fields("credential_id", "created_at").
+			StorageKey("usage_logs_by_credential_id_created_at"),
+		index.Fields("credential_fingerprint", "created_at").
+			StorageKey("usage_logs_by_credential_fingerprint_created_at"),
 		index.Fields("api_key_id", "created_at").
 			StorageKey("usage_logs_by_api_key_id_created_at"),
 	}
@@ -46,7 +50,16 @@ func (UsageLog) Fields() []ent.Field {
 		field.Int("api_key_id").Optional().Immutable(),
 		field.Int("project_id").Immutable().Default(1).Comment("Project ID, default to 1 for backward compatibility"),
 		field.Int("channel_id").Immutable().Optional().Comment("Channel ID used for the request"), // Optional for deleted channel, this field is not null.
+		field.Int("credential_id").
+			Optional().
+			Immutable().
+			Comment("Upstream credential ID used for this request when known"),
 		field.String("model_id").Immutable().Comment("Model identifier used for the request"),
+		field.String("credential_fingerprint").
+			Optional().
+			Immutable().
+			MaxLen(128).
+			Comment("Safe upstream credential identity used for this request; never stores the raw secret"),
 
 		// Core usage metrics from llm.Usage
 		field.Int64("prompt_tokens").Default(0).Comment("Number of tokens in the prompt"),
@@ -102,6 +115,14 @@ func (UsageLog) Edges() []ent.Edge {
 		edge.From("channel", Channel.Type).
 			Ref("usage_logs").
 			Field("channel_id").
+			Immutable().
+			Annotations(
+				entgql.Directives(forceResolver()),
+			).
+			Unique(),
+		edge.From("credential", UpstreamCredential.Type).
+			Ref("usage_logs").
+			Field("credential_id").
 			Immutable().
 			Annotations(
 				entgql.Directives(forceResolver()),

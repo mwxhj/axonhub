@@ -12,7 +12,9 @@ import (
 
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/schema/schematype"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/objects"
 	"github.com/looplj/axonhub/internal/pkg/watcher"
@@ -72,6 +74,11 @@ type Channel struct {
 	// cachedEnabledAPIKeys caches enabled API keys (computed once when channel is loaded)
 	cachedEnabledAPIKeys []string
 
+	// cachedCredentialViews caches executable upstream credentials resolved
+	// from first-class credential refs, or legacy inline channel credentials
+	// when refs are absent.
+	cachedCredentialViews []ChannelCredentialView
+
 	// cachedDisabledKeySet caches disabled key lookup set for O(1) check
 	cachedDisabledKeySet map[string]struct{}
 }
@@ -91,13 +98,14 @@ func NewChannelService(params ChannelServiceParams) *ChannelService {
 		AbstractService: &AbstractService{
 			db: params.Ent,
 		},
-		SystemService:      params.SystemService,
-		WebhookNotifier:    params.WebhookNotifier,
-		httpClient:         params.HttpClient,
-		channelPerfMetrics: make(map[int]*channelMetrics),
-		channelErrorCounts: make(map[int]map[int]int),
-		apiKeyErrorCounts:  make(map[int]map[string]map[int]int),
-		perfCh:             make(chan *PerformanceRecord, 1024),
+		SystemService:         params.SystemService,
+		WebhookNotifier:       params.WebhookNotifier,
+		httpClient:            params.HttpClient,
+		channelPerfMetrics:    make(map[int]*channelMetrics),
+		channelErrorCounts:    make(map[int]map[int]int),
+		apiKeyErrorCounts:     make(map[int]map[string]map[int]int),
+		credentialErrorCounts: make(map[string]map[int]int),
+		perfCh:                make(chan *PerformanceRecord, 1024),
 	}
 	svc.initChannelPerformances(context.Background())
 
@@ -178,6 +186,11 @@ type ChannelService struct {
 	apiKeyErrorCounts     map[int]map[string]map[int]int
 	apiKeyErrorCountsLock sync.Mutex
 
+	// credentialErrorCounts stores credential-scoped error counts by safe fingerprint.
+	// credentialFingerprint -> statusCode -> count
+	credentialErrorCounts     map[string]map[int]int
+	credentialErrorCountsLock sync.Mutex
+
 	modelSyncMu sync.Mutex
 
 	lastModelSyncExecutionTime time.Time
@@ -208,17 +221,35 @@ func (svc *ChannelService) reloadEnabledChannels(ctx context.Context, current []
 		return current, lastUpdate, false, err
 	}
 
-	if latestUpdatedChannel == nil {
+	latestUpdatedCredential, err := svc.entFromContext(ctx).UpstreamCredential.Query().
+		Order(ent.Desc(upstreamcredential.FieldUpdatedAt)).
+		First(schematype.SkipSoftDelete(ctx))
+	if err != nil && !ent.IsNotFound(err) {
+		return current, lastUpdate, false, err
+	}
+
+	latestUpdatedCredentialRef, err := svc.entFromContext(ctx).ChannelCredentialRef.Query().
+		Order(ent.Desc(channelcredentialref.FieldUpdatedAt)).
+		First(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		return current, lastUpdate, false, err
+	}
+
+	latestUpdate := latestChannelCredentialUpdateTime(latestUpdatedChannel, latestUpdatedCredential, latestUpdatedCredentialRef)
+	if latestUpdate.IsZero() {
 		if lastUpdate.IsZero() && len(current) == 0 {
 			return current, time.Time{}, false, nil
 		}
-	} else if !latestUpdatedChannel.UpdatedAt.After(lastUpdate) {
+	} else if !latestUpdate.After(lastUpdate) {
 		log.Debug(ctx, "no new channels updated")
 		return current, lastUpdate, false, nil
 	}
 
 	entities, err := svc.entFromContext(ctx).Channel.Query().
 		Where(channel.StatusEQ(channel.StatusEnabled)).
+		WithCredentialRefs(func(q *ent.ChannelCredentialRefQuery) {
+			q.WithCredential()
+		}).
 		Order(ent.Desc(channel.FieldOrderingWeight)).
 		All(ctx)
 	if err != nil {
@@ -257,12 +288,22 @@ func (svc *ChannelService) reloadEnabledChannels(ctx context.Context, current []
 
 	log.Info(ctx, "loaded channels", log.Int("count", len(channels)))
 
-	updateTime := time.Time{}
-	if latestUpdatedChannel != nil {
-		updateTime = latestUpdatedChannel.UpdatedAt
+	return channels, latestUpdate, true, nil
+}
+
+func latestChannelCredentialUpdateTime(channel *ent.Channel, credential *ent.UpstreamCredential, ref *ent.ChannelCredentialRef) time.Time {
+	var latest time.Time
+	if channel != nil && channel.UpdatedAt.After(latest) {
+		latest = channel.UpdatedAt
+	}
+	if credential != nil && credential.UpdatedAt.After(latest) {
+		latest = credential.UpdatedAt
+	}
+	if ref != nil && ref.UpdatedAt.After(latest) {
+		latest = ref.UpdatedAt
 	}
 
-	return channels, updateTime, true, nil
+	return latest
 }
 
 func (svc *ChannelService) onEnabledChannelsSwap(old, new []*Channel) {
@@ -356,6 +397,16 @@ func (svc *ChannelService) SetEnabledChannelsForTest(channels []*Channel) {
 func (svc *ChannelService) GetChannel(ctx context.Context, channelID int) (*Channel, error) {
 	// Get the channel entity from database (including disabled ones)
 	entity, err := svc.entFromContext(ctx).Channel.Get(ctx, channelID)
+	if err != nil {
+		return nil, fmt.Errorf("channel not found: %w", err)
+	}
+
+	entity, err = svc.entFromContext(ctx).Channel.Query().
+		Where(channel.ID(entity.ID)).
+		WithCredentialRefs(func(q *ent.ChannelCredentialRefQuery) {
+			q.WithCredential()
+		}).
+		Only(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("channel not found: %w", err)
 	}

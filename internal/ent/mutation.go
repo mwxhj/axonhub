@@ -14,6 +14,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/apikey"
 	"github.com/looplj/axonhub/internal/ent/apikeyprofiletemplate"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/channelmodelprice"
 	"github.com/looplj/axonhub/internal/ent/channelmodelpriceversion"
 	"github.com/looplj/axonhub/internal/ent/channeloverridetemplate"
@@ -32,6 +33,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/system"
 	"github.com/looplj/axonhub/internal/ent/thread"
 	"github.com/looplj/axonhub/internal/ent/trace"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
 	"github.com/looplj/axonhub/internal/ent/user"
 	"github.com/looplj/axonhub/internal/ent/userproject"
@@ -51,6 +53,7 @@ const (
 	TypeAPIKey                   = "APIKey"
 	TypeAPIKeyProfileTemplate    = "APIKeyProfileTemplate"
 	TypeChannel                  = "Channel"
+	TypeChannelCredentialRef     = "ChannelCredentialRef"
 	TypeChannelModelPrice        = "ChannelModelPrice"
 	TypeChannelModelPriceVersion = "ChannelModelPriceVersion"
 	TypeChannelOverrideTemplate  = "ChannelOverrideTemplate"
@@ -68,6 +71,7 @@ const (
 	TypeSystem                   = "System"
 	TypeThread                   = "Thread"
 	TypeTrace                    = "Trace"
+	TypeUpstreamCredential       = "UpstreamCredential"
 	TypeUsageLog                 = "UsageLog"
 	TypeUser                     = "User"
 	TypeUserProject              = "UserProject"
@@ -2050,6 +2054,9 @@ type ChannelMutation struct {
 	channel_model_prices         map[int]struct{}
 	removedchannel_model_prices  map[int]struct{}
 	clearedchannel_model_prices  bool
+	credential_refs              map[int]struct{}
+	removedcredential_refs       map[int]struct{}
+	clearedcredential_refs       bool
 	provider_quota_status        *int
 	clearedprovider_quota_status bool
 	done                         bool
@@ -3430,6 +3437,60 @@ func (m *ChannelMutation) ResetChannelModelPrices() {
 	m.removedchannel_model_prices = nil
 }
 
+// AddCredentialRefIDs adds the "credential_refs" edge to the ChannelCredentialRef entity by ids.
+func (m *ChannelMutation) AddCredentialRefIDs(ids ...int) {
+	if m.credential_refs == nil {
+		m.credential_refs = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.credential_refs[ids[i]] = struct{}{}
+	}
+}
+
+// ClearCredentialRefs clears the "credential_refs" edge to the ChannelCredentialRef entity.
+func (m *ChannelMutation) ClearCredentialRefs() {
+	m.clearedcredential_refs = true
+}
+
+// CredentialRefsCleared reports if the "credential_refs" edge to the ChannelCredentialRef entity was cleared.
+func (m *ChannelMutation) CredentialRefsCleared() bool {
+	return m.clearedcredential_refs
+}
+
+// RemoveCredentialRefIDs removes the "credential_refs" edge to the ChannelCredentialRef entity by IDs.
+func (m *ChannelMutation) RemoveCredentialRefIDs(ids ...int) {
+	if m.removedcredential_refs == nil {
+		m.removedcredential_refs = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.credential_refs, ids[i])
+		m.removedcredential_refs[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCredentialRefs returns the removed IDs of the "credential_refs" edge to the ChannelCredentialRef entity.
+func (m *ChannelMutation) RemovedCredentialRefsIDs() (ids []int) {
+	for id := range m.removedcredential_refs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CredentialRefsIDs returns the "credential_refs" edge IDs in the mutation.
+func (m *ChannelMutation) CredentialRefsIDs() (ids []int) {
+	for id := range m.credential_refs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetCredentialRefs resets all changes to the "credential_refs" edge.
+func (m *ChannelMutation) ResetCredentialRefs() {
+	m.credential_refs = nil
+	m.clearedcredential_refs = false
+	m.removedcredential_refs = nil
+}
+
 // SetProviderQuotaStatusID sets the "provider_quota_status" edge to the ProviderQuotaStatus entity by id.
 func (m *ChannelMutation) SetProviderQuotaStatusID(id int) {
 	m.provider_quota_status = &id
@@ -4032,7 +4093,7 @@ func (m *ChannelMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ChannelMutation) AddedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
 	if m.requests != nil {
 		edges = append(edges, channel.EdgeRequests)
 	}
@@ -4047,6 +4108,9 @@ func (m *ChannelMutation) AddedEdges() []string {
 	}
 	if m.channel_model_prices != nil {
 		edges = append(edges, channel.EdgeChannelModelPrices)
+	}
+	if m.credential_refs != nil {
+		edges = append(edges, channel.EdgeCredentialRefs)
 	}
 	if m.provider_quota_status != nil {
 		edges = append(edges, channel.EdgeProviderQuotaStatus)
@@ -4088,6 +4152,12 @@ func (m *ChannelMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case channel.EdgeCredentialRefs:
+		ids := make([]ent.Value, 0, len(m.credential_refs))
+		for id := range m.credential_refs {
+			ids = append(ids, id)
+		}
+		return ids
 	case channel.EdgeProviderQuotaStatus:
 		if id := m.provider_quota_status; id != nil {
 			return []ent.Value{*id}
@@ -4098,7 +4168,7 @@ func (m *ChannelMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ChannelMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
 	if m.removedrequests != nil {
 		edges = append(edges, channel.EdgeRequests)
 	}
@@ -4113,6 +4183,9 @@ func (m *ChannelMutation) RemovedEdges() []string {
 	}
 	if m.removedchannel_model_prices != nil {
 		edges = append(edges, channel.EdgeChannelModelPrices)
+	}
+	if m.removedcredential_refs != nil {
+		edges = append(edges, channel.EdgeCredentialRefs)
 	}
 	return edges
 }
@@ -4151,13 +4224,19 @@ func (m *ChannelMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case channel.EdgeCredentialRefs:
+		ids := make([]ent.Value, 0, len(m.removedcredential_refs))
+		for id := range m.removedcredential_refs {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ChannelMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 6)
+	edges := make([]string, 0, 7)
 	if m.clearedrequests {
 		edges = append(edges, channel.EdgeRequests)
 	}
@@ -4172,6 +4251,9 @@ func (m *ChannelMutation) ClearedEdges() []string {
 	}
 	if m.clearedchannel_model_prices {
 		edges = append(edges, channel.EdgeChannelModelPrices)
+	}
+	if m.clearedcredential_refs {
+		edges = append(edges, channel.EdgeCredentialRefs)
 	}
 	if m.clearedprovider_quota_status {
 		edges = append(edges, channel.EdgeProviderQuotaStatus)
@@ -4193,6 +4275,8 @@ func (m *ChannelMutation) EdgeCleared(name string) bool {
 		return m.clearedchannel_probes
 	case channel.EdgeChannelModelPrices:
 		return m.clearedchannel_model_prices
+	case channel.EdgeCredentialRefs:
+		return m.clearedcredential_refs
 	case channel.EdgeProviderQuotaStatus:
 		return m.clearedprovider_quota_status
 	}
@@ -4229,11 +4313,769 @@ func (m *ChannelMutation) ResetEdge(name string) error {
 	case channel.EdgeChannelModelPrices:
 		m.ResetChannelModelPrices()
 		return nil
+	case channel.EdgeCredentialRefs:
+		m.ResetCredentialRefs()
+		return nil
 	case channel.EdgeProviderQuotaStatus:
 		m.ResetProviderQuotaStatus()
 		return nil
 	}
 	return fmt.Errorf("unknown Channel edge %s", name)
+}
+
+// ChannelCredentialRefMutation represents an operation that mutates the ChannelCredentialRef nodes in the graph.
+type ChannelCredentialRefMutation struct {
+	config
+	op                 Op
+	typ                string
+	id                 *int
+	created_at         *time.Time
+	updated_at         *time.Time
+	enabled            *bool
+	weight_override    *int
+	addweight_override *int
+	clearedFields      map[string]struct{}
+	channel            *int
+	clearedchannel     bool
+	credential         *int
+	clearedcredential  bool
+	done               bool
+	oldValue           func(context.Context) (*ChannelCredentialRef, error)
+	predicates         []predicate.ChannelCredentialRef
+}
+
+var _ ent.Mutation = (*ChannelCredentialRefMutation)(nil)
+
+// channelcredentialrefOption allows management of the mutation configuration using functional options.
+type channelcredentialrefOption func(*ChannelCredentialRefMutation)
+
+// newChannelCredentialRefMutation creates new mutation for the ChannelCredentialRef entity.
+func newChannelCredentialRefMutation(c config, op Op, opts ...channelcredentialrefOption) *ChannelCredentialRefMutation {
+	m := &ChannelCredentialRefMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeChannelCredentialRef,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withChannelCredentialRefID sets the ID field of the mutation.
+func withChannelCredentialRefID(id int) channelcredentialrefOption {
+	return func(m *ChannelCredentialRefMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ChannelCredentialRef
+		)
+		m.oldValue = func(ctx context.Context) (*ChannelCredentialRef, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ChannelCredentialRef.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withChannelCredentialRef sets the old ChannelCredentialRef of the mutation.
+func withChannelCredentialRef(node *ChannelCredentialRef) channelcredentialrefOption {
+	return func(m *ChannelCredentialRefMutation) {
+		m.oldValue = func(context.Context) (*ChannelCredentialRef, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ChannelCredentialRefMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ChannelCredentialRefMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ChannelCredentialRefMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ChannelCredentialRefMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ChannelCredentialRef.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ChannelCredentialRefMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ChannelCredentialRefMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ChannelCredentialRef entity.
+// If the ChannelCredentialRef object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelCredentialRefMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ChannelCredentialRefMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *ChannelCredentialRefMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *ChannelCredentialRefMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the ChannelCredentialRef entity.
+// If the ChannelCredentialRef object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelCredentialRefMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *ChannelCredentialRefMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetChannelID sets the "channel_id" field.
+func (m *ChannelCredentialRefMutation) SetChannelID(i int) {
+	m.channel = &i
+}
+
+// ChannelID returns the value of the "channel_id" field in the mutation.
+func (m *ChannelCredentialRefMutation) ChannelID() (r int, exists bool) {
+	v := m.channel
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldChannelID returns the old "channel_id" field's value of the ChannelCredentialRef entity.
+// If the ChannelCredentialRef object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelCredentialRefMutation) OldChannelID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldChannelID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldChannelID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldChannelID: %w", err)
+	}
+	return oldValue.ChannelID, nil
+}
+
+// ResetChannelID resets all changes to the "channel_id" field.
+func (m *ChannelCredentialRefMutation) ResetChannelID() {
+	m.channel = nil
+}
+
+// SetCredentialID sets the "credential_id" field.
+func (m *ChannelCredentialRefMutation) SetCredentialID(i int) {
+	m.credential = &i
+}
+
+// CredentialID returns the value of the "credential_id" field in the mutation.
+func (m *ChannelCredentialRefMutation) CredentialID() (r int, exists bool) {
+	v := m.credential
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCredentialID returns the old "credential_id" field's value of the ChannelCredentialRef entity.
+// If the ChannelCredentialRef object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelCredentialRefMutation) OldCredentialID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCredentialID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCredentialID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCredentialID: %w", err)
+	}
+	return oldValue.CredentialID, nil
+}
+
+// ResetCredentialID resets all changes to the "credential_id" field.
+func (m *ChannelCredentialRefMutation) ResetCredentialID() {
+	m.credential = nil
+}
+
+// SetEnabled sets the "enabled" field.
+func (m *ChannelCredentialRefMutation) SetEnabled(b bool) {
+	m.enabled = &b
+}
+
+// Enabled returns the value of the "enabled" field in the mutation.
+func (m *ChannelCredentialRefMutation) Enabled() (r bool, exists bool) {
+	v := m.enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEnabled returns the old "enabled" field's value of the ChannelCredentialRef entity.
+// If the ChannelCredentialRef object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelCredentialRefMutation) OldEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEnabled: %w", err)
+	}
+	return oldValue.Enabled, nil
+}
+
+// ResetEnabled resets all changes to the "enabled" field.
+func (m *ChannelCredentialRefMutation) ResetEnabled() {
+	m.enabled = nil
+}
+
+// SetWeightOverride sets the "weight_override" field.
+func (m *ChannelCredentialRefMutation) SetWeightOverride(i int) {
+	m.weight_override = &i
+	m.addweight_override = nil
+}
+
+// WeightOverride returns the value of the "weight_override" field in the mutation.
+func (m *ChannelCredentialRefMutation) WeightOverride() (r int, exists bool) {
+	v := m.weight_override
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWeightOverride returns the old "weight_override" field's value of the ChannelCredentialRef entity.
+// If the ChannelCredentialRef object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ChannelCredentialRefMutation) OldWeightOverride(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWeightOverride is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWeightOverride requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWeightOverride: %w", err)
+	}
+	return oldValue.WeightOverride, nil
+}
+
+// AddWeightOverride adds i to the "weight_override" field.
+func (m *ChannelCredentialRefMutation) AddWeightOverride(i int) {
+	if m.addweight_override != nil {
+		*m.addweight_override += i
+	} else {
+		m.addweight_override = &i
+	}
+}
+
+// AddedWeightOverride returns the value that was added to the "weight_override" field in this mutation.
+func (m *ChannelCredentialRefMutation) AddedWeightOverride() (r int, exists bool) {
+	v := m.addweight_override
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearWeightOverride clears the value of the "weight_override" field.
+func (m *ChannelCredentialRefMutation) ClearWeightOverride() {
+	m.weight_override = nil
+	m.addweight_override = nil
+	m.clearedFields[channelcredentialref.FieldWeightOverride] = struct{}{}
+}
+
+// WeightOverrideCleared returns if the "weight_override" field was cleared in this mutation.
+func (m *ChannelCredentialRefMutation) WeightOverrideCleared() bool {
+	_, ok := m.clearedFields[channelcredentialref.FieldWeightOverride]
+	return ok
+}
+
+// ResetWeightOverride resets all changes to the "weight_override" field.
+func (m *ChannelCredentialRefMutation) ResetWeightOverride() {
+	m.weight_override = nil
+	m.addweight_override = nil
+	delete(m.clearedFields, channelcredentialref.FieldWeightOverride)
+}
+
+// ClearChannel clears the "channel" edge to the Channel entity.
+func (m *ChannelCredentialRefMutation) ClearChannel() {
+	m.clearedchannel = true
+	m.clearedFields[channelcredentialref.FieldChannelID] = struct{}{}
+}
+
+// ChannelCleared reports if the "channel" edge to the Channel entity was cleared.
+func (m *ChannelCredentialRefMutation) ChannelCleared() bool {
+	return m.clearedchannel
+}
+
+// ChannelIDs returns the "channel" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ChannelID instead. It exists only for internal usage by the builders.
+func (m *ChannelCredentialRefMutation) ChannelIDs() (ids []int) {
+	if id := m.channel; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetChannel resets all changes to the "channel" edge.
+func (m *ChannelCredentialRefMutation) ResetChannel() {
+	m.channel = nil
+	m.clearedchannel = false
+}
+
+// ClearCredential clears the "credential" edge to the UpstreamCredential entity.
+func (m *ChannelCredentialRefMutation) ClearCredential() {
+	m.clearedcredential = true
+	m.clearedFields[channelcredentialref.FieldCredentialID] = struct{}{}
+}
+
+// CredentialCleared reports if the "credential" edge to the UpstreamCredential entity was cleared.
+func (m *ChannelCredentialRefMutation) CredentialCleared() bool {
+	return m.clearedcredential
+}
+
+// CredentialIDs returns the "credential" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CredentialID instead. It exists only for internal usage by the builders.
+func (m *ChannelCredentialRefMutation) CredentialIDs() (ids []int) {
+	if id := m.credential; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCredential resets all changes to the "credential" edge.
+func (m *ChannelCredentialRefMutation) ResetCredential() {
+	m.credential = nil
+	m.clearedcredential = false
+}
+
+// Where appends a list predicates to the ChannelCredentialRefMutation builder.
+func (m *ChannelCredentialRefMutation) Where(ps ...predicate.ChannelCredentialRef) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ChannelCredentialRefMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ChannelCredentialRefMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ChannelCredentialRef, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ChannelCredentialRefMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ChannelCredentialRefMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ChannelCredentialRef).
+func (m *ChannelCredentialRefMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ChannelCredentialRefMutation) Fields() []string {
+	fields := make([]string, 0, 6)
+	if m.created_at != nil {
+		fields = append(fields, channelcredentialref.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, channelcredentialref.FieldUpdatedAt)
+	}
+	if m.channel != nil {
+		fields = append(fields, channelcredentialref.FieldChannelID)
+	}
+	if m.credential != nil {
+		fields = append(fields, channelcredentialref.FieldCredentialID)
+	}
+	if m.enabled != nil {
+		fields = append(fields, channelcredentialref.FieldEnabled)
+	}
+	if m.weight_override != nil {
+		fields = append(fields, channelcredentialref.FieldWeightOverride)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ChannelCredentialRefMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case channelcredentialref.FieldCreatedAt:
+		return m.CreatedAt()
+	case channelcredentialref.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case channelcredentialref.FieldChannelID:
+		return m.ChannelID()
+	case channelcredentialref.FieldCredentialID:
+		return m.CredentialID()
+	case channelcredentialref.FieldEnabled:
+		return m.Enabled()
+	case channelcredentialref.FieldWeightOverride:
+		return m.WeightOverride()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ChannelCredentialRefMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case channelcredentialref.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case channelcredentialref.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case channelcredentialref.FieldChannelID:
+		return m.OldChannelID(ctx)
+	case channelcredentialref.FieldCredentialID:
+		return m.OldCredentialID(ctx)
+	case channelcredentialref.FieldEnabled:
+		return m.OldEnabled(ctx)
+	case channelcredentialref.FieldWeightOverride:
+		return m.OldWeightOverride(ctx)
+	}
+	return nil, fmt.Errorf("unknown ChannelCredentialRef field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ChannelCredentialRefMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case channelcredentialref.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case channelcredentialref.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case channelcredentialref.FieldChannelID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetChannelID(v)
+		return nil
+	case channelcredentialref.FieldCredentialID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCredentialID(v)
+		return nil
+	case channelcredentialref.FieldEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEnabled(v)
+		return nil
+	case channelcredentialref.FieldWeightOverride:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWeightOverride(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ChannelCredentialRef field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ChannelCredentialRefMutation) AddedFields() []string {
+	var fields []string
+	if m.addweight_override != nil {
+		fields = append(fields, channelcredentialref.FieldWeightOverride)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ChannelCredentialRefMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case channelcredentialref.FieldWeightOverride:
+		return m.AddedWeightOverride()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ChannelCredentialRefMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case channelcredentialref.FieldWeightOverride:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddWeightOverride(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ChannelCredentialRef numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ChannelCredentialRefMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(channelcredentialref.FieldWeightOverride) {
+		fields = append(fields, channelcredentialref.FieldWeightOverride)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ChannelCredentialRefMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ChannelCredentialRefMutation) ClearField(name string) error {
+	switch name {
+	case channelcredentialref.FieldWeightOverride:
+		m.ClearWeightOverride()
+		return nil
+	}
+	return fmt.Errorf("unknown ChannelCredentialRef nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ChannelCredentialRefMutation) ResetField(name string) error {
+	switch name {
+	case channelcredentialref.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case channelcredentialref.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case channelcredentialref.FieldChannelID:
+		m.ResetChannelID()
+		return nil
+	case channelcredentialref.FieldCredentialID:
+		m.ResetCredentialID()
+		return nil
+	case channelcredentialref.FieldEnabled:
+		m.ResetEnabled()
+		return nil
+	case channelcredentialref.FieldWeightOverride:
+		m.ResetWeightOverride()
+		return nil
+	}
+	return fmt.Errorf("unknown ChannelCredentialRef field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ChannelCredentialRefMutation) AddedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.channel != nil {
+		edges = append(edges, channelcredentialref.EdgeChannel)
+	}
+	if m.credential != nil {
+		edges = append(edges, channelcredentialref.EdgeCredential)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ChannelCredentialRefMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case channelcredentialref.EdgeChannel:
+		if id := m.channel; id != nil {
+			return []ent.Value{*id}
+		}
+	case channelcredentialref.EdgeCredential:
+		if id := m.credential; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ChannelCredentialRefMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 2)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ChannelCredentialRefMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ChannelCredentialRefMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 2)
+	if m.clearedchannel {
+		edges = append(edges, channelcredentialref.EdgeChannel)
+	}
+	if m.clearedcredential {
+		edges = append(edges, channelcredentialref.EdgeCredential)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ChannelCredentialRefMutation) EdgeCleared(name string) bool {
+	switch name {
+	case channelcredentialref.EdgeChannel:
+		return m.clearedchannel
+	case channelcredentialref.EdgeCredential:
+		return m.clearedcredential
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ChannelCredentialRefMutation) ClearEdge(name string) error {
+	switch name {
+	case channelcredentialref.EdgeChannel:
+		m.ClearChannel()
+		return nil
+	case channelcredentialref.EdgeCredential:
+		m.ClearCredential()
+		return nil
+	}
+	return fmt.Errorf("unknown ChannelCredentialRef unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ChannelCredentialRefMutation) ResetEdge(name string) error {
+	switch name {
+	case channelcredentialref.EdgeChannel:
+		m.ResetChannel()
+		return nil
+	case channelcredentialref.EdgeCredential:
+		m.ResetCredential()
+		return nil
+	}
+	return fmt.Errorf("unknown ChannelCredentialRef edge %s", name)
 }
 
 // ChannelModelPriceMutation represents an operation that mutates the ChannelModelPrice nodes in the graph.
@@ -14139,25 +14981,28 @@ func (m *PromptProtectionRuleMutation) ResetEdge(name string) error {
 // ProviderQuotaStatusMutation represents an operation that mutates the ProviderQuotaStatus nodes in the graph.
 type ProviderQuotaStatusMutation struct {
 	config
-	op             Op
-	typ            string
-	id             *int
-	created_at     *time.Time
-	updated_at     *time.Time
-	deleted_at     *int
-	adddeleted_at  *int
-	provider_type  *providerquotastatus.ProviderType
-	status         *providerquotastatus.Status
-	quota_data     *map[string]interface{}
-	next_reset_at  *time.Time
-	ready          *bool
-	next_check_at  *time.Time
-	clearedFields  map[string]struct{}
-	channel        *int
-	clearedchannel bool
-	done           bool
-	oldValue       func(context.Context) (*ProviderQuotaStatus, error)
-	predicates     []predicate.ProviderQuotaStatus
+	op                     Op
+	typ                    string
+	id                     *int
+	created_at             *time.Time
+	updated_at             *time.Time
+	deleted_at             *int
+	adddeleted_at          *int
+	credential_fingerprint *string
+	provider_type          *providerquotastatus.ProviderType
+	status                 *providerquotastatus.Status
+	quota_data             *map[string]interface{}
+	next_reset_at          *time.Time
+	ready                  *bool
+	next_check_at          *time.Time
+	clearedFields          map[string]struct{}
+	channel                *int
+	clearedchannel         bool
+	credential             *int
+	clearedcredential      bool
+	done                   bool
+	oldValue               func(context.Context) (*ProviderQuotaStatus, error)
+	predicates             []predicate.ProviderQuotaStatus
 }
 
 var _ ent.Mutation = (*ProviderQuotaStatusMutation)(nil)
@@ -14422,6 +15267,104 @@ func (m *ProviderQuotaStatusMutation) ResetChannelID() {
 	m.channel = nil
 }
 
+// SetCredentialID sets the "credential_id" field.
+func (m *ProviderQuotaStatusMutation) SetCredentialID(i int) {
+	m.credential = &i
+}
+
+// CredentialID returns the value of the "credential_id" field in the mutation.
+func (m *ProviderQuotaStatusMutation) CredentialID() (r int, exists bool) {
+	v := m.credential
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCredentialID returns the old "credential_id" field's value of the ProviderQuotaStatus entity.
+// If the ProviderQuotaStatus object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderQuotaStatusMutation) OldCredentialID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCredentialID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCredentialID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCredentialID: %w", err)
+	}
+	return oldValue.CredentialID, nil
+}
+
+// ClearCredentialID clears the value of the "credential_id" field.
+func (m *ProviderQuotaStatusMutation) ClearCredentialID() {
+	m.credential = nil
+	m.clearedFields[providerquotastatus.FieldCredentialID] = struct{}{}
+}
+
+// CredentialIDCleared returns if the "credential_id" field was cleared in this mutation.
+func (m *ProviderQuotaStatusMutation) CredentialIDCleared() bool {
+	_, ok := m.clearedFields[providerquotastatus.FieldCredentialID]
+	return ok
+}
+
+// ResetCredentialID resets all changes to the "credential_id" field.
+func (m *ProviderQuotaStatusMutation) ResetCredentialID() {
+	m.credential = nil
+	delete(m.clearedFields, providerquotastatus.FieldCredentialID)
+}
+
+// SetCredentialFingerprint sets the "credential_fingerprint" field.
+func (m *ProviderQuotaStatusMutation) SetCredentialFingerprint(s string) {
+	m.credential_fingerprint = &s
+}
+
+// CredentialFingerprint returns the value of the "credential_fingerprint" field in the mutation.
+func (m *ProviderQuotaStatusMutation) CredentialFingerprint() (r string, exists bool) {
+	v := m.credential_fingerprint
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCredentialFingerprint returns the old "credential_fingerprint" field's value of the ProviderQuotaStatus entity.
+// If the ProviderQuotaStatus object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderQuotaStatusMutation) OldCredentialFingerprint(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCredentialFingerprint is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCredentialFingerprint requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCredentialFingerprint: %w", err)
+	}
+	return oldValue.CredentialFingerprint, nil
+}
+
+// ClearCredentialFingerprint clears the value of the "credential_fingerprint" field.
+func (m *ProviderQuotaStatusMutation) ClearCredentialFingerprint() {
+	m.credential_fingerprint = nil
+	m.clearedFields[providerquotastatus.FieldCredentialFingerprint] = struct{}{}
+}
+
+// CredentialFingerprintCleared returns if the "credential_fingerprint" field was cleared in this mutation.
+func (m *ProviderQuotaStatusMutation) CredentialFingerprintCleared() bool {
+	_, ok := m.clearedFields[providerquotastatus.FieldCredentialFingerprint]
+	return ok
+}
+
+// ResetCredentialFingerprint resets all changes to the "credential_fingerprint" field.
+func (m *ProviderQuotaStatusMutation) ResetCredentialFingerprint() {
+	m.credential_fingerprint = nil
+	delete(m.clearedFields, providerquotastatus.FieldCredentialFingerprint)
+}
+
 // SetProviderType sets the "provider_type" field.
 func (m *ProviderQuotaStatusMutation) SetProviderType(pt providerquotastatus.ProviderType) {
 	m.provider_type = &pt
@@ -14678,6 +15621,33 @@ func (m *ProviderQuotaStatusMutation) ResetChannel() {
 	m.clearedchannel = false
 }
 
+// ClearCredential clears the "credential" edge to the UpstreamCredential entity.
+func (m *ProviderQuotaStatusMutation) ClearCredential() {
+	m.clearedcredential = true
+	m.clearedFields[providerquotastatus.FieldCredentialID] = struct{}{}
+}
+
+// CredentialCleared reports if the "credential" edge to the UpstreamCredential entity was cleared.
+func (m *ProviderQuotaStatusMutation) CredentialCleared() bool {
+	return m.CredentialIDCleared() || m.clearedcredential
+}
+
+// CredentialIDs returns the "credential" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CredentialID instead. It exists only for internal usage by the builders.
+func (m *ProviderQuotaStatusMutation) CredentialIDs() (ids []int) {
+	if id := m.credential; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCredential resets all changes to the "credential" edge.
+func (m *ProviderQuotaStatusMutation) ResetCredential() {
+	m.credential = nil
+	m.clearedcredential = false
+}
+
 // Where appends a list predicates to the ProviderQuotaStatusMutation builder.
 func (m *ProviderQuotaStatusMutation) Where(ps ...predicate.ProviderQuotaStatus) {
 	m.predicates = append(m.predicates, ps...)
@@ -14712,7 +15682,7 @@ func (m *ProviderQuotaStatusMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderQuotaStatusMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 12)
 	if m.created_at != nil {
 		fields = append(fields, providerquotastatus.FieldCreatedAt)
 	}
@@ -14724,6 +15694,12 @@ func (m *ProviderQuotaStatusMutation) Fields() []string {
 	}
 	if m.channel != nil {
 		fields = append(fields, providerquotastatus.FieldChannelID)
+	}
+	if m.credential != nil {
+		fields = append(fields, providerquotastatus.FieldCredentialID)
+	}
+	if m.credential_fingerprint != nil {
+		fields = append(fields, providerquotastatus.FieldCredentialFingerprint)
 	}
 	if m.provider_type != nil {
 		fields = append(fields, providerquotastatus.FieldProviderType)
@@ -14759,6 +15735,10 @@ func (m *ProviderQuotaStatusMutation) Field(name string) (ent.Value, bool) {
 		return m.DeletedAt()
 	case providerquotastatus.FieldChannelID:
 		return m.ChannelID()
+	case providerquotastatus.FieldCredentialID:
+		return m.CredentialID()
+	case providerquotastatus.FieldCredentialFingerprint:
+		return m.CredentialFingerprint()
 	case providerquotastatus.FieldProviderType:
 		return m.ProviderType()
 	case providerquotastatus.FieldStatus:
@@ -14788,6 +15768,10 @@ func (m *ProviderQuotaStatusMutation) OldField(ctx context.Context, name string)
 		return m.OldDeletedAt(ctx)
 	case providerquotastatus.FieldChannelID:
 		return m.OldChannelID(ctx)
+	case providerquotastatus.FieldCredentialID:
+		return m.OldCredentialID(ctx)
+	case providerquotastatus.FieldCredentialFingerprint:
+		return m.OldCredentialFingerprint(ctx)
 	case providerquotastatus.FieldProviderType:
 		return m.OldProviderType(ctx)
 	case providerquotastatus.FieldStatus:
@@ -14836,6 +15820,20 @@ func (m *ProviderQuotaStatusMutation) SetField(name string, value ent.Value) err
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetChannelID(v)
+		return nil
+	case providerquotastatus.FieldCredentialID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCredentialID(v)
+		return nil
+	case providerquotastatus.FieldCredentialFingerprint:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCredentialFingerprint(v)
 		return nil
 	case providerquotastatus.FieldProviderType:
 		v, ok := value.(providerquotastatus.ProviderType)
@@ -14924,6 +15922,12 @@ func (m *ProviderQuotaStatusMutation) AddField(name string, value ent.Value) err
 // mutation.
 func (m *ProviderQuotaStatusMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(providerquotastatus.FieldCredentialID) {
+		fields = append(fields, providerquotastatus.FieldCredentialID)
+	}
+	if m.FieldCleared(providerquotastatus.FieldCredentialFingerprint) {
+		fields = append(fields, providerquotastatus.FieldCredentialFingerprint)
+	}
 	if m.FieldCleared(providerquotastatus.FieldNextResetAt) {
 		fields = append(fields, providerquotastatus.FieldNextResetAt)
 	}
@@ -14941,6 +15945,12 @@ func (m *ProviderQuotaStatusMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ProviderQuotaStatusMutation) ClearField(name string) error {
 	switch name {
+	case providerquotastatus.FieldCredentialID:
+		m.ClearCredentialID()
+		return nil
+	case providerquotastatus.FieldCredentialFingerprint:
+		m.ClearCredentialFingerprint()
+		return nil
 	case providerquotastatus.FieldNextResetAt:
 		m.ClearNextResetAt()
 		return nil
@@ -14963,6 +15973,12 @@ func (m *ProviderQuotaStatusMutation) ResetField(name string) error {
 		return nil
 	case providerquotastatus.FieldChannelID:
 		m.ResetChannelID()
+		return nil
+	case providerquotastatus.FieldCredentialID:
+		m.ResetCredentialID()
+		return nil
+	case providerquotastatus.FieldCredentialFingerprint:
+		m.ResetCredentialFingerprint()
 		return nil
 	case providerquotastatus.FieldProviderType:
 		m.ResetProviderType()
@@ -14988,9 +16004,12 @@ func (m *ProviderQuotaStatusMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProviderQuotaStatusMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.channel != nil {
 		edges = append(edges, providerquotastatus.EdgeChannel)
+	}
+	if m.credential != nil {
+		edges = append(edges, providerquotastatus.EdgeCredential)
 	}
 	return edges
 }
@@ -15003,13 +16022,17 @@ func (m *ProviderQuotaStatusMutation) AddedIDs(name string) []ent.Value {
 		if id := m.channel; id != nil {
 			return []ent.Value{*id}
 		}
+	case providerquotastatus.EdgeCredential:
+		if id := m.credential; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProviderQuotaStatusMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	return edges
 }
 
@@ -15021,9 +16044,12 @@ func (m *ProviderQuotaStatusMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProviderQuotaStatusMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.clearedchannel {
 		edges = append(edges, providerquotastatus.EdgeChannel)
+	}
+	if m.clearedcredential {
+		edges = append(edges, providerquotastatus.EdgeCredential)
 	}
 	return edges
 }
@@ -15034,6 +16060,8 @@ func (m *ProviderQuotaStatusMutation) EdgeCleared(name string) bool {
 	switch name {
 	case providerquotastatus.EdgeChannel:
 		return m.clearedchannel
+	case providerquotastatus.EdgeCredential:
+		return m.clearedcredential
 	}
 	return false
 }
@@ -15045,6 +16073,9 @@ func (m *ProviderQuotaStatusMutation) ClearEdge(name string) error {
 	case providerquotastatus.EdgeChannel:
 		m.ClearChannel()
 		return nil
+	case providerquotastatus.EdgeCredential:
+		m.ClearCredential()
+		return nil
 	}
 	return fmt.Errorf("unknown ProviderQuotaStatus unique edge %s", name)
 }
@@ -15055,6 +16086,9 @@ func (m *ProviderQuotaStatusMutation) ResetEdge(name string) error {
 	switch name {
 	case providerquotastatus.EdgeChannel:
 		m.ResetChannel()
+		return nil
+	case providerquotastatus.EdgeCredential:
+		m.ResetCredential()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderQuotaStatus edge %s", name)
@@ -17648,6 +18682,7 @@ type RequestExecutionMutation struct {
 	addproject_id                     *int
 	external_id                       *string
 	model_id                          *string
+	credential_fingerprint            *string
 	format                            *string
 	request_body                      *objects.JSONRawMessage
 	appendrequest_body                objects.JSONRawMessage
@@ -17673,6 +18708,8 @@ type RequestExecutionMutation struct {
 	clearedrequest                    bool
 	channel                           *int
 	clearedchannel                    bool
+	credential                        *int
+	clearedcredential                 bool
 	data_storage                      *int
 	cleareddata_storage               bool
 	done                              bool
@@ -17991,6 +19028,55 @@ func (m *RequestExecutionMutation) ResetChannelID() {
 	delete(m.clearedFields, requestexecution.FieldChannelID)
 }
 
+// SetCredentialID sets the "credential_id" field.
+func (m *RequestExecutionMutation) SetCredentialID(i int) {
+	m.credential = &i
+}
+
+// CredentialID returns the value of the "credential_id" field in the mutation.
+func (m *RequestExecutionMutation) CredentialID() (r int, exists bool) {
+	v := m.credential
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCredentialID returns the old "credential_id" field's value of the RequestExecution entity.
+// If the RequestExecution object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestExecutionMutation) OldCredentialID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCredentialID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCredentialID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCredentialID: %w", err)
+	}
+	return oldValue.CredentialID, nil
+}
+
+// ClearCredentialID clears the value of the "credential_id" field.
+func (m *RequestExecutionMutation) ClearCredentialID() {
+	m.credential = nil
+	m.clearedFields[requestexecution.FieldCredentialID] = struct{}{}
+}
+
+// CredentialIDCleared returns if the "credential_id" field was cleared in this mutation.
+func (m *RequestExecutionMutation) CredentialIDCleared() bool {
+	_, ok := m.clearedFields[requestexecution.FieldCredentialID]
+	return ok
+}
+
+// ResetCredentialID resets all changes to the "credential_id" field.
+func (m *RequestExecutionMutation) ResetCredentialID() {
+	m.credential = nil
+	delete(m.clearedFields, requestexecution.FieldCredentialID)
+}
+
 // SetDataStorageID sets the "data_storage_id" field.
 func (m *RequestExecutionMutation) SetDataStorageID(i int) {
 	m.data_storage = &i
@@ -18123,6 +19209,55 @@ func (m *RequestExecutionMutation) OldModelID(ctx context.Context) (v string, er
 // ResetModelID resets all changes to the "model_id" field.
 func (m *RequestExecutionMutation) ResetModelID() {
 	m.model_id = nil
+}
+
+// SetCredentialFingerprint sets the "credential_fingerprint" field.
+func (m *RequestExecutionMutation) SetCredentialFingerprint(s string) {
+	m.credential_fingerprint = &s
+}
+
+// CredentialFingerprint returns the value of the "credential_fingerprint" field in the mutation.
+func (m *RequestExecutionMutation) CredentialFingerprint() (r string, exists bool) {
+	v := m.credential_fingerprint
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCredentialFingerprint returns the old "credential_fingerprint" field's value of the RequestExecution entity.
+// If the RequestExecution object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestExecutionMutation) OldCredentialFingerprint(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCredentialFingerprint is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCredentialFingerprint requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCredentialFingerprint: %w", err)
+	}
+	return oldValue.CredentialFingerprint, nil
+}
+
+// ClearCredentialFingerprint clears the value of the "credential_fingerprint" field.
+func (m *RequestExecutionMutation) ClearCredentialFingerprint() {
+	m.credential_fingerprint = nil
+	m.clearedFields[requestexecution.FieldCredentialFingerprint] = struct{}{}
+}
+
+// CredentialFingerprintCleared returns if the "credential_fingerprint" field was cleared in this mutation.
+func (m *RequestExecutionMutation) CredentialFingerprintCleared() bool {
+	_, ok := m.clearedFields[requestexecution.FieldCredentialFingerprint]
+	return ok
+}
+
+// ResetCredentialFingerprint resets all changes to the "credential_fingerprint" field.
+func (m *RequestExecutionMutation) ResetCredentialFingerprint() {
+	m.credential_fingerprint = nil
+	delete(m.clearedFields, requestexecution.FieldCredentialFingerprint)
 }
 
 // SetFormat sets the "format" field.
@@ -18862,6 +19997,33 @@ func (m *RequestExecutionMutation) ResetChannel() {
 	m.clearedchannel = false
 }
 
+// ClearCredential clears the "credential" edge to the UpstreamCredential entity.
+func (m *RequestExecutionMutation) ClearCredential() {
+	m.clearedcredential = true
+	m.clearedFields[requestexecution.FieldCredentialID] = struct{}{}
+}
+
+// CredentialCleared reports if the "credential" edge to the UpstreamCredential entity was cleared.
+func (m *RequestExecutionMutation) CredentialCleared() bool {
+	return m.CredentialIDCleared() || m.clearedcredential
+}
+
+// CredentialIDs returns the "credential" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CredentialID instead. It exists only for internal usage by the builders.
+func (m *RequestExecutionMutation) CredentialIDs() (ids []int) {
+	if id := m.credential; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCredential resets all changes to the "credential" edge.
+func (m *RequestExecutionMutation) ResetCredential() {
+	m.credential = nil
+	m.clearedcredential = false
+}
+
 // ClearDataStorage clears the "data_storage" edge to the DataStorage entity.
 func (m *RequestExecutionMutation) ClearDataStorage() {
 	m.cleareddata_storage = true
@@ -18923,7 +20085,7 @@ func (m *RequestExecutionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RequestExecutionMutation) Fields() []string {
-	fields := make([]string, 0, 20)
+	fields := make([]string, 0, 22)
 	if m.created_at != nil {
 		fields = append(fields, requestexecution.FieldCreatedAt)
 	}
@@ -18939,6 +20101,9 @@ func (m *RequestExecutionMutation) Fields() []string {
 	if m.channel != nil {
 		fields = append(fields, requestexecution.FieldChannelID)
 	}
+	if m.credential != nil {
+		fields = append(fields, requestexecution.FieldCredentialID)
+	}
 	if m.data_storage != nil {
 		fields = append(fields, requestexecution.FieldDataStorageID)
 	}
@@ -18947,6 +20112,9 @@ func (m *RequestExecutionMutation) Fields() []string {
 	}
 	if m.model_id != nil {
 		fields = append(fields, requestexecution.FieldModelID)
+	}
+	if m.credential_fingerprint != nil {
+		fields = append(fields, requestexecution.FieldCredentialFingerprint)
 	}
 	if m.format != nil {
 		fields = append(fields, requestexecution.FieldFormat)
@@ -19002,12 +20170,16 @@ func (m *RequestExecutionMutation) Field(name string) (ent.Value, bool) {
 		return m.RequestID()
 	case requestexecution.FieldChannelID:
 		return m.ChannelID()
+	case requestexecution.FieldCredentialID:
+		return m.CredentialID()
 	case requestexecution.FieldDataStorageID:
 		return m.DataStorageID()
 	case requestexecution.FieldExternalID:
 		return m.ExternalID()
 	case requestexecution.FieldModelID:
 		return m.ModelID()
+	case requestexecution.FieldCredentialFingerprint:
+		return m.CredentialFingerprint()
 	case requestexecution.FieldFormat:
 		return m.Format()
 	case requestexecution.FieldRequestBody:
@@ -19051,12 +20223,16 @@ func (m *RequestExecutionMutation) OldField(ctx context.Context, name string) (e
 		return m.OldRequestID(ctx)
 	case requestexecution.FieldChannelID:
 		return m.OldChannelID(ctx)
+	case requestexecution.FieldCredentialID:
+		return m.OldCredentialID(ctx)
 	case requestexecution.FieldDataStorageID:
 		return m.OldDataStorageID(ctx)
 	case requestexecution.FieldExternalID:
 		return m.OldExternalID(ctx)
 	case requestexecution.FieldModelID:
 		return m.OldModelID(ctx)
+	case requestexecution.FieldCredentialFingerprint:
+		return m.OldCredentialFingerprint(ctx)
 	case requestexecution.FieldFormat:
 		return m.OldFormat(ctx)
 	case requestexecution.FieldRequestBody:
@@ -19125,6 +20301,13 @@ func (m *RequestExecutionMutation) SetField(name string, value ent.Value) error 
 		}
 		m.SetChannelID(v)
 		return nil
+	case requestexecution.FieldCredentialID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCredentialID(v)
+		return nil
 	case requestexecution.FieldDataStorageID:
 		v, ok := value.(int)
 		if !ok {
@@ -19145,6 +20328,13 @@ func (m *RequestExecutionMutation) SetField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetModelID(v)
+		return nil
+	case requestexecution.FieldCredentialFingerprint:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCredentialFingerprint(v)
 		return nil
 	case requestexecution.FieldFormat:
 		v, ok := value.(string)
@@ -19326,11 +20516,17 @@ func (m *RequestExecutionMutation) ClearedFields() []string {
 	if m.FieldCleared(requestexecution.FieldChannelID) {
 		fields = append(fields, requestexecution.FieldChannelID)
 	}
+	if m.FieldCleared(requestexecution.FieldCredentialID) {
+		fields = append(fields, requestexecution.FieldCredentialID)
+	}
 	if m.FieldCleared(requestexecution.FieldDataStorageID) {
 		fields = append(fields, requestexecution.FieldDataStorageID)
 	}
 	if m.FieldCleared(requestexecution.FieldExternalID) {
 		fields = append(fields, requestexecution.FieldExternalID)
+	}
+	if m.FieldCleared(requestexecution.FieldCredentialFingerprint) {
+		fields = append(fields, requestexecution.FieldCredentialFingerprint)
 	}
 	if m.FieldCleared(requestexecution.FieldResponseBody) {
 		fields = append(fields, requestexecution.FieldResponseBody)
@@ -19373,11 +20569,17 @@ func (m *RequestExecutionMutation) ClearField(name string) error {
 	case requestexecution.FieldChannelID:
 		m.ClearChannelID()
 		return nil
+	case requestexecution.FieldCredentialID:
+		m.ClearCredentialID()
+		return nil
 	case requestexecution.FieldDataStorageID:
 		m.ClearDataStorageID()
 		return nil
 	case requestexecution.FieldExternalID:
 		m.ClearExternalID()
+		return nil
+	case requestexecution.FieldCredentialFingerprint:
+		m.ClearCredentialFingerprint()
 		return nil
 	case requestexecution.FieldResponseBody:
 		m.ClearResponseBody()
@@ -19426,6 +20628,9 @@ func (m *RequestExecutionMutation) ResetField(name string) error {
 	case requestexecution.FieldChannelID:
 		m.ResetChannelID()
 		return nil
+	case requestexecution.FieldCredentialID:
+		m.ResetCredentialID()
+		return nil
 	case requestexecution.FieldDataStorageID:
 		m.ResetDataStorageID()
 		return nil
@@ -19434,6 +20639,9 @@ func (m *RequestExecutionMutation) ResetField(name string) error {
 		return nil
 	case requestexecution.FieldModelID:
 		m.ResetModelID()
+		return nil
+	case requestexecution.FieldCredentialFingerprint:
+		m.ResetCredentialFingerprint()
 		return nil
 	case requestexecution.FieldFormat:
 		m.ResetFormat()
@@ -19477,12 +20685,15 @@ func (m *RequestExecutionMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *RequestExecutionMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.request != nil {
 		edges = append(edges, requestexecution.EdgeRequest)
 	}
 	if m.channel != nil {
 		edges = append(edges, requestexecution.EdgeChannel)
+	}
+	if m.credential != nil {
+		edges = append(edges, requestexecution.EdgeCredential)
 	}
 	if m.data_storage != nil {
 		edges = append(edges, requestexecution.EdgeDataStorage)
@@ -19502,6 +20713,10 @@ func (m *RequestExecutionMutation) AddedIDs(name string) []ent.Value {
 		if id := m.channel; id != nil {
 			return []ent.Value{*id}
 		}
+	case requestexecution.EdgeCredential:
+		if id := m.credential; id != nil {
+			return []ent.Value{*id}
+		}
 	case requestexecution.EdgeDataStorage:
 		if id := m.data_storage; id != nil {
 			return []ent.Value{*id}
@@ -19512,7 +20727,7 @@ func (m *RequestExecutionMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *RequestExecutionMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	return edges
 }
 
@@ -19524,12 +20739,15 @@ func (m *RequestExecutionMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *RequestExecutionMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.clearedrequest {
 		edges = append(edges, requestexecution.EdgeRequest)
 	}
 	if m.clearedchannel {
 		edges = append(edges, requestexecution.EdgeChannel)
+	}
+	if m.clearedcredential {
+		edges = append(edges, requestexecution.EdgeCredential)
 	}
 	if m.cleareddata_storage {
 		edges = append(edges, requestexecution.EdgeDataStorage)
@@ -19545,6 +20763,8 @@ func (m *RequestExecutionMutation) EdgeCleared(name string) bool {
 		return m.clearedrequest
 	case requestexecution.EdgeChannel:
 		return m.clearedchannel
+	case requestexecution.EdgeCredential:
+		return m.clearedcredential
 	case requestexecution.EdgeDataStorage:
 		return m.cleareddata_storage
 	}
@@ -19560,6 +20780,9 @@ func (m *RequestExecutionMutation) ClearEdge(name string) error {
 		return nil
 	case requestexecution.EdgeChannel:
 		m.ClearChannel()
+		return nil
+	case requestexecution.EdgeCredential:
+		m.ClearCredential()
 		return nil
 	case requestexecution.EdgeDataStorage:
 		m.ClearDataStorage()
@@ -19577,6 +20800,9 @@ func (m *RequestExecutionMutation) ResetEdge(name string) error {
 		return nil
 	case requestexecution.EdgeChannel:
 		m.ResetChannel()
+		return nil
+	case requestexecution.EdgeCredential:
+		m.ResetCredential()
 		return nil
 	case requestexecution.EdgeDataStorage:
 		m.ResetDataStorage()
@@ -22511,6 +23737,1397 @@ func (m *TraceMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Trace edge %s", name)
 }
 
+// UpstreamCredentialMutation represents an operation that mutates the UpstreamCredential nodes in the graph.
+type UpstreamCredentialMutation struct {
+	config
+	op                             Op
+	typ                            string
+	id                             *int
+	created_at                     *time.Time
+	updated_at                     *time.Time
+	deleted_at                     *int
+	adddeleted_at                  *int
+	name                           *string
+	provider_type                  *string
+	base_url                       *string
+	auth_kind                      *upstreamcredential.AuthKind
+	secret_payload                 *objects.UpstreamCredentialSecret
+	fingerprint                    *string
+	status                         *upstreamcredential.Status
+	weight                         *int
+	addweight                      *int
+	remark                         *string
+	clearedFields                  map[string]struct{}
+	channel_refs                   map[int]struct{}
+	removedchannel_refs            map[int]struct{}
+	clearedchannel_refs            bool
+	executions                     map[int]struct{}
+	removedexecutions              map[int]struct{}
+	clearedexecutions              bool
+	usage_logs                     map[int]struct{}
+	removedusage_logs              map[int]struct{}
+	clearedusage_logs              bool
+	provider_quota_statuses        map[int]struct{}
+	removedprovider_quota_statuses map[int]struct{}
+	clearedprovider_quota_statuses bool
+	done                           bool
+	oldValue                       func(context.Context) (*UpstreamCredential, error)
+	predicates                     []predicate.UpstreamCredential
+}
+
+var _ ent.Mutation = (*UpstreamCredentialMutation)(nil)
+
+// upstreamcredentialOption allows management of the mutation configuration using functional options.
+type upstreamcredentialOption func(*UpstreamCredentialMutation)
+
+// newUpstreamCredentialMutation creates new mutation for the UpstreamCredential entity.
+func newUpstreamCredentialMutation(c config, op Op, opts ...upstreamcredentialOption) *UpstreamCredentialMutation {
+	m := &UpstreamCredentialMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeUpstreamCredential,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withUpstreamCredentialID sets the ID field of the mutation.
+func withUpstreamCredentialID(id int) upstreamcredentialOption {
+	return func(m *UpstreamCredentialMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *UpstreamCredential
+		)
+		m.oldValue = func(ctx context.Context) (*UpstreamCredential, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().UpstreamCredential.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withUpstreamCredential sets the old UpstreamCredential of the mutation.
+func withUpstreamCredential(node *UpstreamCredential) upstreamcredentialOption {
+	return func(m *UpstreamCredentialMutation) {
+		m.oldValue = func(context.Context) (*UpstreamCredential, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m UpstreamCredentialMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m UpstreamCredentialMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *UpstreamCredentialMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *UpstreamCredentialMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().UpstreamCredential.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *UpstreamCredentialMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *UpstreamCredentialMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *UpstreamCredentialMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *UpstreamCredentialMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *UpstreamCredentialMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *UpstreamCredentialMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *UpstreamCredentialMutation) SetDeletedAt(i int) {
+	m.deleted_at = &i
+	m.adddeleted_at = nil
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *UpstreamCredentialMutation) DeletedAt() (r int, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldDeletedAt(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// AddDeletedAt adds i to the "deleted_at" field.
+func (m *UpstreamCredentialMutation) AddDeletedAt(i int) {
+	if m.adddeleted_at != nil {
+		*m.adddeleted_at += i
+	} else {
+		m.adddeleted_at = &i
+	}
+}
+
+// AddedDeletedAt returns the value that was added to the "deleted_at" field in this mutation.
+func (m *UpstreamCredentialMutation) AddedDeletedAt() (r int, exists bool) {
+	v := m.adddeleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *UpstreamCredentialMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	m.adddeleted_at = nil
+}
+
+// SetName sets the "name" field.
+func (m *UpstreamCredentialMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *UpstreamCredentialMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ClearName clears the value of the "name" field.
+func (m *UpstreamCredentialMutation) ClearName() {
+	m.name = nil
+	m.clearedFields[upstreamcredential.FieldName] = struct{}{}
+}
+
+// NameCleared returns if the "name" field was cleared in this mutation.
+func (m *UpstreamCredentialMutation) NameCleared() bool {
+	_, ok := m.clearedFields[upstreamcredential.FieldName]
+	return ok
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *UpstreamCredentialMutation) ResetName() {
+	m.name = nil
+	delete(m.clearedFields, upstreamcredential.FieldName)
+}
+
+// SetProviderType sets the "provider_type" field.
+func (m *UpstreamCredentialMutation) SetProviderType(s string) {
+	m.provider_type = &s
+}
+
+// ProviderType returns the value of the "provider_type" field in the mutation.
+func (m *UpstreamCredentialMutation) ProviderType() (r string, exists bool) {
+	v := m.provider_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProviderType returns the old "provider_type" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldProviderType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProviderType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProviderType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProviderType: %w", err)
+	}
+	return oldValue.ProviderType, nil
+}
+
+// ResetProviderType resets all changes to the "provider_type" field.
+func (m *UpstreamCredentialMutation) ResetProviderType() {
+	m.provider_type = nil
+}
+
+// SetBaseURL sets the "base_url" field.
+func (m *UpstreamCredentialMutation) SetBaseURL(s string) {
+	m.base_url = &s
+}
+
+// BaseURL returns the value of the "base_url" field in the mutation.
+func (m *UpstreamCredentialMutation) BaseURL() (r string, exists bool) {
+	v := m.base_url
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBaseURL returns the old "base_url" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldBaseURL(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBaseURL is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBaseURL requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBaseURL: %w", err)
+	}
+	return oldValue.BaseURL, nil
+}
+
+// ClearBaseURL clears the value of the "base_url" field.
+func (m *UpstreamCredentialMutation) ClearBaseURL() {
+	m.base_url = nil
+	m.clearedFields[upstreamcredential.FieldBaseURL] = struct{}{}
+}
+
+// BaseURLCleared returns if the "base_url" field was cleared in this mutation.
+func (m *UpstreamCredentialMutation) BaseURLCleared() bool {
+	_, ok := m.clearedFields[upstreamcredential.FieldBaseURL]
+	return ok
+}
+
+// ResetBaseURL resets all changes to the "base_url" field.
+func (m *UpstreamCredentialMutation) ResetBaseURL() {
+	m.base_url = nil
+	delete(m.clearedFields, upstreamcredential.FieldBaseURL)
+}
+
+// SetAuthKind sets the "auth_kind" field.
+func (m *UpstreamCredentialMutation) SetAuthKind(uk upstreamcredential.AuthKind) {
+	m.auth_kind = &uk
+}
+
+// AuthKind returns the value of the "auth_kind" field in the mutation.
+func (m *UpstreamCredentialMutation) AuthKind() (r upstreamcredential.AuthKind, exists bool) {
+	v := m.auth_kind
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAuthKind returns the old "auth_kind" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldAuthKind(ctx context.Context) (v upstreamcredential.AuthKind, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAuthKind is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAuthKind requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAuthKind: %w", err)
+	}
+	return oldValue.AuthKind, nil
+}
+
+// ResetAuthKind resets all changes to the "auth_kind" field.
+func (m *UpstreamCredentialMutation) ResetAuthKind() {
+	m.auth_kind = nil
+}
+
+// SetSecretPayload sets the "secret_payload" field.
+func (m *UpstreamCredentialMutation) SetSecretPayload(ocs objects.UpstreamCredentialSecret) {
+	m.secret_payload = &ocs
+}
+
+// SecretPayload returns the value of the "secret_payload" field in the mutation.
+func (m *UpstreamCredentialMutation) SecretPayload() (r objects.UpstreamCredentialSecret, exists bool) {
+	v := m.secret_payload
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSecretPayload returns the old "secret_payload" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldSecretPayload(ctx context.Context) (v objects.UpstreamCredentialSecret, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSecretPayload is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSecretPayload requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSecretPayload: %w", err)
+	}
+	return oldValue.SecretPayload, nil
+}
+
+// ResetSecretPayload resets all changes to the "secret_payload" field.
+func (m *UpstreamCredentialMutation) ResetSecretPayload() {
+	m.secret_payload = nil
+}
+
+// SetFingerprint sets the "fingerprint" field.
+func (m *UpstreamCredentialMutation) SetFingerprint(s string) {
+	m.fingerprint = &s
+}
+
+// Fingerprint returns the value of the "fingerprint" field in the mutation.
+func (m *UpstreamCredentialMutation) Fingerprint() (r string, exists bool) {
+	v := m.fingerprint
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFingerprint returns the old "fingerprint" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldFingerprint(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFingerprint is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFingerprint requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFingerprint: %w", err)
+	}
+	return oldValue.Fingerprint, nil
+}
+
+// ResetFingerprint resets all changes to the "fingerprint" field.
+func (m *UpstreamCredentialMutation) ResetFingerprint() {
+	m.fingerprint = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *UpstreamCredentialMutation) SetStatus(u upstreamcredential.Status) {
+	m.status = &u
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *UpstreamCredentialMutation) Status() (r upstreamcredential.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldStatus(ctx context.Context) (v upstreamcredential.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *UpstreamCredentialMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetWeight sets the "weight" field.
+func (m *UpstreamCredentialMutation) SetWeight(i int) {
+	m.weight = &i
+	m.addweight = nil
+}
+
+// Weight returns the value of the "weight" field in the mutation.
+func (m *UpstreamCredentialMutation) Weight() (r int, exists bool) {
+	v := m.weight
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWeight returns the old "weight" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldWeight(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWeight is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWeight requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWeight: %w", err)
+	}
+	return oldValue.Weight, nil
+}
+
+// AddWeight adds i to the "weight" field.
+func (m *UpstreamCredentialMutation) AddWeight(i int) {
+	if m.addweight != nil {
+		*m.addweight += i
+	} else {
+		m.addweight = &i
+	}
+}
+
+// AddedWeight returns the value that was added to the "weight" field in this mutation.
+func (m *UpstreamCredentialMutation) AddedWeight() (r int, exists bool) {
+	v := m.addweight
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetWeight resets all changes to the "weight" field.
+func (m *UpstreamCredentialMutation) ResetWeight() {
+	m.weight = nil
+	m.addweight = nil
+}
+
+// SetRemark sets the "remark" field.
+func (m *UpstreamCredentialMutation) SetRemark(s string) {
+	m.remark = &s
+}
+
+// Remark returns the value of the "remark" field in the mutation.
+func (m *UpstreamCredentialMutation) Remark() (r string, exists bool) {
+	v := m.remark
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRemark returns the old "remark" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldRemark(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRemark is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRemark requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRemark: %w", err)
+	}
+	return oldValue.Remark, nil
+}
+
+// ClearRemark clears the value of the "remark" field.
+func (m *UpstreamCredentialMutation) ClearRemark() {
+	m.remark = nil
+	m.clearedFields[upstreamcredential.FieldRemark] = struct{}{}
+}
+
+// RemarkCleared returns if the "remark" field was cleared in this mutation.
+func (m *UpstreamCredentialMutation) RemarkCleared() bool {
+	_, ok := m.clearedFields[upstreamcredential.FieldRemark]
+	return ok
+}
+
+// ResetRemark resets all changes to the "remark" field.
+func (m *UpstreamCredentialMutation) ResetRemark() {
+	m.remark = nil
+	delete(m.clearedFields, upstreamcredential.FieldRemark)
+}
+
+// AddChannelRefIDs adds the "channel_refs" edge to the ChannelCredentialRef entity by ids.
+func (m *UpstreamCredentialMutation) AddChannelRefIDs(ids ...int) {
+	if m.channel_refs == nil {
+		m.channel_refs = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.channel_refs[ids[i]] = struct{}{}
+	}
+}
+
+// ClearChannelRefs clears the "channel_refs" edge to the ChannelCredentialRef entity.
+func (m *UpstreamCredentialMutation) ClearChannelRefs() {
+	m.clearedchannel_refs = true
+}
+
+// ChannelRefsCleared reports if the "channel_refs" edge to the ChannelCredentialRef entity was cleared.
+func (m *UpstreamCredentialMutation) ChannelRefsCleared() bool {
+	return m.clearedchannel_refs
+}
+
+// RemoveChannelRefIDs removes the "channel_refs" edge to the ChannelCredentialRef entity by IDs.
+func (m *UpstreamCredentialMutation) RemoveChannelRefIDs(ids ...int) {
+	if m.removedchannel_refs == nil {
+		m.removedchannel_refs = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.channel_refs, ids[i])
+		m.removedchannel_refs[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedChannelRefs returns the removed IDs of the "channel_refs" edge to the ChannelCredentialRef entity.
+func (m *UpstreamCredentialMutation) RemovedChannelRefsIDs() (ids []int) {
+	for id := range m.removedchannel_refs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ChannelRefsIDs returns the "channel_refs" edge IDs in the mutation.
+func (m *UpstreamCredentialMutation) ChannelRefsIDs() (ids []int) {
+	for id := range m.channel_refs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetChannelRefs resets all changes to the "channel_refs" edge.
+func (m *UpstreamCredentialMutation) ResetChannelRefs() {
+	m.channel_refs = nil
+	m.clearedchannel_refs = false
+	m.removedchannel_refs = nil
+}
+
+// AddExecutionIDs adds the "executions" edge to the RequestExecution entity by ids.
+func (m *UpstreamCredentialMutation) AddExecutionIDs(ids ...int) {
+	if m.executions == nil {
+		m.executions = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.executions[ids[i]] = struct{}{}
+	}
+}
+
+// ClearExecutions clears the "executions" edge to the RequestExecution entity.
+func (m *UpstreamCredentialMutation) ClearExecutions() {
+	m.clearedexecutions = true
+}
+
+// ExecutionsCleared reports if the "executions" edge to the RequestExecution entity was cleared.
+func (m *UpstreamCredentialMutation) ExecutionsCleared() bool {
+	return m.clearedexecutions
+}
+
+// RemoveExecutionIDs removes the "executions" edge to the RequestExecution entity by IDs.
+func (m *UpstreamCredentialMutation) RemoveExecutionIDs(ids ...int) {
+	if m.removedexecutions == nil {
+		m.removedexecutions = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.executions, ids[i])
+		m.removedexecutions[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedExecutions returns the removed IDs of the "executions" edge to the RequestExecution entity.
+func (m *UpstreamCredentialMutation) RemovedExecutionsIDs() (ids []int) {
+	for id := range m.removedexecutions {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ExecutionsIDs returns the "executions" edge IDs in the mutation.
+func (m *UpstreamCredentialMutation) ExecutionsIDs() (ids []int) {
+	for id := range m.executions {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetExecutions resets all changes to the "executions" edge.
+func (m *UpstreamCredentialMutation) ResetExecutions() {
+	m.executions = nil
+	m.clearedexecutions = false
+	m.removedexecutions = nil
+}
+
+// AddUsageLogIDs adds the "usage_logs" edge to the UsageLog entity by ids.
+func (m *UpstreamCredentialMutation) AddUsageLogIDs(ids ...int) {
+	if m.usage_logs == nil {
+		m.usage_logs = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.usage_logs[ids[i]] = struct{}{}
+	}
+}
+
+// ClearUsageLogs clears the "usage_logs" edge to the UsageLog entity.
+func (m *UpstreamCredentialMutation) ClearUsageLogs() {
+	m.clearedusage_logs = true
+}
+
+// UsageLogsCleared reports if the "usage_logs" edge to the UsageLog entity was cleared.
+func (m *UpstreamCredentialMutation) UsageLogsCleared() bool {
+	return m.clearedusage_logs
+}
+
+// RemoveUsageLogIDs removes the "usage_logs" edge to the UsageLog entity by IDs.
+func (m *UpstreamCredentialMutation) RemoveUsageLogIDs(ids ...int) {
+	if m.removedusage_logs == nil {
+		m.removedusage_logs = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.usage_logs, ids[i])
+		m.removedusage_logs[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedUsageLogs returns the removed IDs of the "usage_logs" edge to the UsageLog entity.
+func (m *UpstreamCredentialMutation) RemovedUsageLogsIDs() (ids []int) {
+	for id := range m.removedusage_logs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// UsageLogsIDs returns the "usage_logs" edge IDs in the mutation.
+func (m *UpstreamCredentialMutation) UsageLogsIDs() (ids []int) {
+	for id := range m.usage_logs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetUsageLogs resets all changes to the "usage_logs" edge.
+func (m *UpstreamCredentialMutation) ResetUsageLogs() {
+	m.usage_logs = nil
+	m.clearedusage_logs = false
+	m.removedusage_logs = nil
+}
+
+// AddProviderQuotaStatusIDs adds the "provider_quota_statuses" edge to the ProviderQuotaStatus entity by ids.
+func (m *UpstreamCredentialMutation) AddProviderQuotaStatusIDs(ids ...int) {
+	if m.provider_quota_statuses == nil {
+		m.provider_quota_statuses = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.provider_quota_statuses[ids[i]] = struct{}{}
+	}
+}
+
+// ClearProviderQuotaStatuses clears the "provider_quota_statuses" edge to the ProviderQuotaStatus entity.
+func (m *UpstreamCredentialMutation) ClearProviderQuotaStatuses() {
+	m.clearedprovider_quota_statuses = true
+}
+
+// ProviderQuotaStatusesCleared reports if the "provider_quota_statuses" edge to the ProviderQuotaStatus entity was cleared.
+func (m *UpstreamCredentialMutation) ProviderQuotaStatusesCleared() bool {
+	return m.clearedprovider_quota_statuses
+}
+
+// RemoveProviderQuotaStatusIDs removes the "provider_quota_statuses" edge to the ProviderQuotaStatus entity by IDs.
+func (m *UpstreamCredentialMutation) RemoveProviderQuotaStatusIDs(ids ...int) {
+	if m.removedprovider_quota_statuses == nil {
+		m.removedprovider_quota_statuses = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.provider_quota_statuses, ids[i])
+		m.removedprovider_quota_statuses[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedProviderQuotaStatuses returns the removed IDs of the "provider_quota_statuses" edge to the ProviderQuotaStatus entity.
+func (m *UpstreamCredentialMutation) RemovedProviderQuotaStatusesIDs() (ids []int) {
+	for id := range m.removedprovider_quota_statuses {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ProviderQuotaStatusesIDs returns the "provider_quota_statuses" edge IDs in the mutation.
+func (m *UpstreamCredentialMutation) ProviderQuotaStatusesIDs() (ids []int) {
+	for id := range m.provider_quota_statuses {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetProviderQuotaStatuses resets all changes to the "provider_quota_statuses" edge.
+func (m *UpstreamCredentialMutation) ResetProviderQuotaStatuses() {
+	m.provider_quota_statuses = nil
+	m.clearedprovider_quota_statuses = false
+	m.removedprovider_quota_statuses = nil
+}
+
+// Where appends a list predicates to the UpstreamCredentialMutation builder.
+func (m *UpstreamCredentialMutation) Where(ps ...predicate.UpstreamCredential) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the UpstreamCredentialMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *UpstreamCredentialMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.UpstreamCredential, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *UpstreamCredentialMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *UpstreamCredentialMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (UpstreamCredential).
+func (m *UpstreamCredentialMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *UpstreamCredentialMutation) Fields() []string {
+	fields := make([]string, 0, 12)
+	if m.created_at != nil {
+		fields = append(fields, upstreamcredential.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, upstreamcredential.FieldUpdatedAt)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, upstreamcredential.FieldDeletedAt)
+	}
+	if m.name != nil {
+		fields = append(fields, upstreamcredential.FieldName)
+	}
+	if m.provider_type != nil {
+		fields = append(fields, upstreamcredential.FieldProviderType)
+	}
+	if m.base_url != nil {
+		fields = append(fields, upstreamcredential.FieldBaseURL)
+	}
+	if m.auth_kind != nil {
+		fields = append(fields, upstreamcredential.FieldAuthKind)
+	}
+	if m.secret_payload != nil {
+		fields = append(fields, upstreamcredential.FieldSecretPayload)
+	}
+	if m.fingerprint != nil {
+		fields = append(fields, upstreamcredential.FieldFingerprint)
+	}
+	if m.status != nil {
+		fields = append(fields, upstreamcredential.FieldStatus)
+	}
+	if m.weight != nil {
+		fields = append(fields, upstreamcredential.FieldWeight)
+	}
+	if m.remark != nil {
+		fields = append(fields, upstreamcredential.FieldRemark)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *UpstreamCredentialMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case upstreamcredential.FieldCreatedAt:
+		return m.CreatedAt()
+	case upstreamcredential.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case upstreamcredential.FieldDeletedAt:
+		return m.DeletedAt()
+	case upstreamcredential.FieldName:
+		return m.Name()
+	case upstreamcredential.FieldProviderType:
+		return m.ProviderType()
+	case upstreamcredential.FieldBaseURL:
+		return m.BaseURL()
+	case upstreamcredential.FieldAuthKind:
+		return m.AuthKind()
+	case upstreamcredential.FieldSecretPayload:
+		return m.SecretPayload()
+	case upstreamcredential.FieldFingerprint:
+		return m.Fingerprint()
+	case upstreamcredential.FieldStatus:
+		return m.Status()
+	case upstreamcredential.FieldWeight:
+		return m.Weight()
+	case upstreamcredential.FieldRemark:
+		return m.Remark()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *UpstreamCredentialMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case upstreamcredential.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case upstreamcredential.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case upstreamcredential.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
+	case upstreamcredential.FieldName:
+		return m.OldName(ctx)
+	case upstreamcredential.FieldProviderType:
+		return m.OldProviderType(ctx)
+	case upstreamcredential.FieldBaseURL:
+		return m.OldBaseURL(ctx)
+	case upstreamcredential.FieldAuthKind:
+		return m.OldAuthKind(ctx)
+	case upstreamcredential.FieldSecretPayload:
+		return m.OldSecretPayload(ctx)
+	case upstreamcredential.FieldFingerprint:
+		return m.OldFingerprint(ctx)
+	case upstreamcredential.FieldStatus:
+		return m.OldStatus(ctx)
+	case upstreamcredential.FieldWeight:
+		return m.OldWeight(ctx)
+	case upstreamcredential.FieldRemark:
+		return m.OldRemark(ctx)
+	}
+	return nil, fmt.Errorf("unknown UpstreamCredential field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *UpstreamCredentialMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case upstreamcredential.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case upstreamcredential.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case upstreamcredential.FieldDeletedAt:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
+		return nil
+	case upstreamcredential.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case upstreamcredential.FieldProviderType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProviderType(v)
+		return nil
+	case upstreamcredential.FieldBaseURL:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBaseURL(v)
+		return nil
+	case upstreamcredential.FieldAuthKind:
+		v, ok := value.(upstreamcredential.AuthKind)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAuthKind(v)
+		return nil
+	case upstreamcredential.FieldSecretPayload:
+		v, ok := value.(objects.UpstreamCredentialSecret)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSecretPayload(v)
+		return nil
+	case upstreamcredential.FieldFingerprint:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFingerprint(v)
+		return nil
+	case upstreamcredential.FieldStatus:
+		v, ok := value.(upstreamcredential.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case upstreamcredential.FieldWeight:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWeight(v)
+		return nil
+	case upstreamcredential.FieldRemark:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRemark(v)
+		return nil
+	}
+	return fmt.Errorf("unknown UpstreamCredential field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *UpstreamCredentialMutation) AddedFields() []string {
+	var fields []string
+	if m.adddeleted_at != nil {
+		fields = append(fields, upstreamcredential.FieldDeletedAt)
+	}
+	if m.addweight != nil {
+		fields = append(fields, upstreamcredential.FieldWeight)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *UpstreamCredentialMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case upstreamcredential.FieldDeletedAt:
+		return m.AddedDeletedAt()
+	case upstreamcredential.FieldWeight:
+		return m.AddedWeight()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *UpstreamCredentialMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case upstreamcredential.FieldDeletedAt:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddDeletedAt(v)
+		return nil
+	case upstreamcredential.FieldWeight:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddWeight(v)
+		return nil
+	}
+	return fmt.Errorf("unknown UpstreamCredential numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *UpstreamCredentialMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(upstreamcredential.FieldName) {
+		fields = append(fields, upstreamcredential.FieldName)
+	}
+	if m.FieldCleared(upstreamcredential.FieldBaseURL) {
+		fields = append(fields, upstreamcredential.FieldBaseURL)
+	}
+	if m.FieldCleared(upstreamcredential.FieldRemark) {
+		fields = append(fields, upstreamcredential.FieldRemark)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *UpstreamCredentialMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *UpstreamCredentialMutation) ClearField(name string) error {
+	switch name {
+	case upstreamcredential.FieldName:
+		m.ClearName()
+		return nil
+	case upstreamcredential.FieldBaseURL:
+		m.ClearBaseURL()
+		return nil
+	case upstreamcredential.FieldRemark:
+		m.ClearRemark()
+		return nil
+	}
+	return fmt.Errorf("unknown UpstreamCredential nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *UpstreamCredentialMutation) ResetField(name string) error {
+	switch name {
+	case upstreamcredential.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case upstreamcredential.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case upstreamcredential.FieldDeletedAt:
+		m.ResetDeletedAt()
+		return nil
+	case upstreamcredential.FieldName:
+		m.ResetName()
+		return nil
+	case upstreamcredential.FieldProviderType:
+		m.ResetProviderType()
+		return nil
+	case upstreamcredential.FieldBaseURL:
+		m.ResetBaseURL()
+		return nil
+	case upstreamcredential.FieldAuthKind:
+		m.ResetAuthKind()
+		return nil
+	case upstreamcredential.FieldSecretPayload:
+		m.ResetSecretPayload()
+		return nil
+	case upstreamcredential.FieldFingerprint:
+		m.ResetFingerprint()
+		return nil
+	case upstreamcredential.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case upstreamcredential.FieldWeight:
+		m.ResetWeight()
+		return nil
+	case upstreamcredential.FieldRemark:
+		m.ResetRemark()
+		return nil
+	}
+	return fmt.Errorf("unknown UpstreamCredential field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *UpstreamCredentialMutation) AddedEdges() []string {
+	edges := make([]string, 0, 4)
+	if m.channel_refs != nil {
+		edges = append(edges, upstreamcredential.EdgeChannelRefs)
+	}
+	if m.executions != nil {
+		edges = append(edges, upstreamcredential.EdgeExecutions)
+	}
+	if m.usage_logs != nil {
+		edges = append(edges, upstreamcredential.EdgeUsageLogs)
+	}
+	if m.provider_quota_statuses != nil {
+		edges = append(edges, upstreamcredential.EdgeProviderQuotaStatuses)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *UpstreamCredentialMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case upstreamcredential.EdgeChannelRefs:
+		ids := make([]ent.Value, 0, len(m.channel_refs))
+		for id := range m.channel_refs {
+			ids = append(ids, id)
+		}
+		return ids
+	case upstreamcredential.EdgeExecutions:
+		ids := make([]ent.Value, 0, len(m.executions))
+		for id := range m.executions {
+			ids = append(ids, id)
+		}
+		return ids
+	case upstreamcredential.EdgeUsageLogs:
+		ids := make([]ent.Value, 0, len(m.usage_logs))
+		for id := range m.usage_logs {
+			ids = append(ids, id)
+		}
+		return ids
+	case upstreamcredential.EdgeProviderQuotaStatuses:
+		ids := make([]ent.Value, 0, len(m.provider_quota_statuses))
+		for id := range m.provider_quota_statuses {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *UpstreamCredentialMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 4)
+	if m.removedchannel_refs != nil {
+		edges = append(edges, upstreamcredential.EdgeChannelRefs)
+	}
+	if m.removedexecutions != nil {
+		edges = append(edges, upstreamcredential.EdgeExecutions)
+	}
+	if m.removedusage_logs != nil {
+		edges = append(edges, upstreamcredential.EdgeUsageLogs)
+	}
+	if m.removedprovider_quota_statuses != nil {
+		edges = append(edges, upstreamcredential.EdgeProviderQuotaStatuses)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *UpstreamCredentialMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case upstreamcredential.EdgeChannelRefs:
+		ids := make([]ent.Value, 0, len(m.removedchannel_refs))
+		for id := range m.removedchannel_refs {
+			ids = append(ids, id)
+		}
+		return ids
+	case upstreamcredential.EdgeExecutions:
+		ids := make([]ent.Value, 0, len(m.removedexecutions))
+		for id := range m.removedexecutions {
+			ids = append(ids, id)
+		}
+		return ids
+	case upstreamcredential.EdgeUsageLogs:
+		ids := make([]ent.Value, 0, len(m.removedusage_logs))
+		for id := range m.removedusage_logs {
+			ids = append(ids, id)
+		}
+		return ids
+	case upstreamcredential.EdgeProviderQuotaStatuses:
+		ids := make([]ent.Value, 0, len(m.removedprovider_quota_statuses))
+		for id := range m.removedprovider_quota_statuses {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *UpstreamCredentialMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 4)
+	if m.clearedchannel_refs {
+		edges = append(edges, upstreamcredential.EdgeChannelRefs)
+	}
+	if m.clearedexecutions {
+		edges = append(edges, upstreamcredential.EdgeExecutions)
+	}
+	if m.clearedusage_logs {
+		edges = append(edges, upstreamcredential.EdgeUsageLogs)
+	}
+	if m.clearedprovider_quota_statuses {
+		edges = append(edges, upstreamcredential.EdgeProviderQuotaStatuses)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *UpstreamCredentialMutation) EdgeCleared(name string) bool {
+	switch name {
+	case upstreamcredential.EdgeChannelRefs:
+		return m.clearedchannel_refs
+	case upstreamcredential.EdgeExecutions:
+		return m.clearedexecutions
+	case upstreamcredential.EdgeUsageLogs:
+		return m.clearedusage_logs
+	case upstreamcredential.EdgeProviderQuotaStatuses:
+		return m.clearedprovider_quota_statuses
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *UpstreamCredentialMutation) ClearEdge(name string) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown UpstreamCredential unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *UpstreamCredentialMutation) ResetEdge(name string) error {
+	switch name {
+	case upstreamcredential.EdgeChannelRefs:
+		m.ResetChannelRefs()
+		return nil
+	case upstreamcredential.EdgeExecutions:
+		m.ResetExecutions()
+		return nil
+	case upstreamcredential.EdgeUsageLogs:
+		m.ResetUsageLogs()
+		return nil
+	case upstreamcredential.EdgeProviderQuotaStatuses:
+		m.ResetProviderQuotaStatuses()
+		return nil
+	}
+	return fmt.Errorf("unknown UpstreamCredential edge %s", name)
+}
+
 // UsageLogMutation represents an operation that mutates the UsageLog nodes in the graph.
 type UsageLogMutation struct {
 	config
@@ -22522,6 +25139,7 @@ type UsageLogMutation struct {
 	api_key_id                               *int
 	addapi_key_id                            *int
 	model_id                                 *string
+	credential_fingerprint                   *string
 	prompt_tokens                            *int64
 	addprompt_tokens                         *int64
 	completion_tokens                        *int64
@@ -22560,6 +25178,8 @@ type UsageLogMutation struct {
 	clearedproject                           bool
 	channel                                  *int
 	clearedchannel                           bool
+	credential                               *int
+	clearedcredential                        bool
 	done                                     bool
 	oldValue                                 func(context.Context) (*UsageLog, error)
 	predicates                               []predicate.UsageLog
@@ -22926,6 +25546,55 @@ func (m *UsageLogMutation) ResetChannelID() {
 	delete(m.clearedFields, usagelog.FieldChannelID)
 }
 
+// SetCredentialID sets the "credential_id" field.
+func (m *UsageLogMutation) SetCredentialID(i int) {
+	m.credential = &i
+}
+
+// CredentialID returns the value of the "credential_id" field in the mutation.
+func (m *UsageLogMutation) CredentialID() (r int, exists bool) {
+	v := m.credential
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCredentialID returns the old "credential_id" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldCredentialID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCredentialID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCredentialID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCredentialID: %w", err)
+	}
+	return oldValue.CredentialID, nil
+}
+
+// ClearCredentialID clears the value of the "credential_id" field.
+func (m *UsageLogMutation) ClearCredentialID() {
+	m.credential = nil
+	m.clearedFields[usagelog.FieldCredentialID] = struct{}{}
+}
+
+// CredentialIDCleared returns if the "credential_id" field was cleared in this mutation.
+func (m *UsageLogMutation) CredentialIDCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldCredentialID]
+	return ok
+}
+
+// ResetCredentialID resets all changes to the "credential_id" field.
+func (m *UsageLogMutation) ResetCredentialID() {
+	m.credential = nil
+	delete(m.clearedFields, usagelog.FieldCredentialID)
+}
+
 // SetModelID sets the "model_id" field.
 func (m *UsageLogMutation) SetModelID(s string) {
 	m.model_id = &s
@@ -22960,6 +25629,55 @@ func (m *UsageLogMutation) OldModelID(ctx context.Context) (v string, err error)
 // ResetModelID resets all changes to the "model_id" field.
 func (m *UsageLogMutation) ResetModelID() {
 	m.model_id = nil
+}
+
+// SetCredentialFingerprint sets the "credential_fingerprint" field.
+func (m *UsageLogMutation) SetCredentialFingerprint(s string) {
+	m.credential_fingerprint = &s
+}
+
+// CredentialFingerprint returns the value of the "credential_fingerprint" field in the mutation.
+func (m *UsageLogMutation) CredentialFingerprint() (r string, exists bool) {
+	v := m.credential_fingerprint
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCredentialFingerprint returns the old "credential_fingerprint" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldCredentialFingerprint(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCredentialFingerprint is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCredentialFingerprint requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCredentialFingerprint: %w", err)
+	}
+	return oldValue.CredentialFingerprint, nil
+}
+
+// ClearCredentialFingerprint clears the value of the "credential_fingerprint" field.
+func (m *UsageLogMutation) ClearCredentialFingerprint() {
+	m.credential_fingerprint = nil
+	m.clearedFields[usagelog.FieldCredentialFingerprint] = struct{}{}
+}
+
+// CredentialFingerprintCleared returns if the "credential_fingerprint" field was cleared in this mutation.
+func (m *UsageLogMutation) CredentialFingerprintCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldCredentialFingerprint]
+	return ok
+}
+
+// ResetCredentialFingerprint resets all changes to the "credential_fingerprint" field.
+func (m *UsageLogMutation) ResetCredentialFingerprint() {
+	m.credential_fingerprint = nil
+	delete(m.clearedFields, usagelog.FieldCredentialFingerprint)
 }
 
 // SetPromptTokens sets the "prompt_tokens" field.
@@ -24097,6 +26815,33 @@ func (m *UsageLogMutation) ResetChannel() {
 	m.clearedchannel = false
 }
 
+// ClearCredential clears the "credential" edge to the UpstreamCredential entity.
+func (m *UsageLogMutation) ClearCredential() {
+	m.clearedcredential = true
+	m.clearedFields[usagelog.FieldCredentialID] = struct{}{}
+}
+
+// CredentialCleared reports if the "credential" edge to the UpstreamCredential entity was cleared.
+func (m *UsageLogMutation) CredentialCleared() bool {
+	return m.CredentialIDCleared() || m.clearedcredential
+}
+
+// CredentialIDs returns the "credential" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CredentialID instead. It exists only for internal usage by the builders.
+func (m *UsageLogMutation) CredentialIDs() (ids []int) {
+	if id := m.credential; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCredential resets all changes to the "credential" edge.
+func (m *UsageLogMutation) ResetCredential() {
+	m.credential = nil
+	m.clearedcredential = false
+}
+
 // Where appends a list predicates to the UsageLogMutation builder.
 func (m *UsageLogMutation) Where(ps ...predicate.UsageLog) {
 	m.predicates = append(m.predicates, ps...)
@@ -24131,7 +26876,7 @@ func (m *UsageLogMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UsageLogMutation) Fields() []string {
-	fields := make([]string, 0, 24)
+	fields := make([]string, 0, 26)
 	if m.created_at != nil {
 		fields = append(fields, usagelog.FieldCreatedAt)
 	}
@@ -24150,8 +26895,14 @@ func (m *UsageLogMutation) Fields() []string {
 	if m.channel != nil {
 		fields = append(fields, usagelog.FieldChannelID)
 	}
+	if m.credential != nil {
+		fields = append(fields, usagelog.FieldCredentialID)
+	}
 	if m.model_id != nil {
 		fields = append(fields, usagelog.FieldModelID)
+	}
+	if m.credential_fingerprint != nil {
+		fields = append(fields, usagelog.FieldCredentialFingerprint)
 	}
 	if m.prompt_tokens != nil {
 		fields = append(fields, usagelog.FieldPromptTokens)
@@ -24224,8 +26975,12 @@ func (m *UsageLogMutation) Field(name string) (ent.Value, bool) {
 		return m.ProjectID()
 	case usagelog.FieldChannelID:
 		return m.ChannelID()
+	case usagelog.FieldCredentialID:
+		return m.CredentialID()
 	case usagelog.FieldModelID:
 		return m.ModelID()
+	case usagelog.FieldCredentialFingerprint:
+		return m.CredentialFingerprint()
 	case usagelog.FieldPromptTokens:
 		return m.PromptTokens()
 	case usagelog.FieldCompletionTokens:
@@ -24281,8 +27036,12 @@ func (m *UsageLogMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldProjectID(ctx)
 	case usagelog.FieldChannelID:
 		return m.OldChannelID(ctx)
+	case usagelog.FieldCredentialID:
+		return m.OldCredentialID(ctx)
 	case usagelog.FieldModelID:
 		return m.OldModelID(ctx)
+	case usagelog.FieldCredentialFingerprint:
+		return m.OldCredentialFingerprint(ctx)
 	case usagelog.FieldPromptTokens:
 		return m.OldPromptTokens(ctx)
 	case usagelog.FieldCompletionTokens:
@@ -24368,12 +27127,26 @@ func (m *UsageLogMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetChannelID(v)
 		return nil
+	case usagelog.FieldCredentialID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCredentialID(v)
+		return nil
 	case usagelog.FieldModelID:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetModelID(v)
+		return nil
+	case usagelog.FieldCredentialFingerprint:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCredentialFingerprint(v)
 		return nil
 	case usagelog.FieldPromptTokens:
 		v, ok := value.(int64)
@@ -24701,6 +27474,12 @@ func (m *UsageLogMutation) ClearedFields() []string {
 	if m.FieldCleared(usagelog.FieldChannelID) {
 		fields = append(fields, usagelog.FieldChannelID)
 	}
+	if m.FieldCleared(usagelog.FieldCredentialID) {
+		fields = append(fields, usagelog.FieldCredentialID)
+	}
+	if m.FieldCleared(usagelog.FieldCredentialFingerprint) {
+		fields = append(fields, usagelog.FieldCredentialFingerprint)
+	}
 	if m.FieldCleared(usagelog.FieldPromptAudioTokens) {
 		fields = append(fields, usagelog.FieldPromptAudioTokens)
 	}
@@ -24756,6 +27535,12 @@ func (m *UsageLogMutation) ClearField(name string) error {
 		return nil
 	case usagelog.FieldChannelID:
 		m.ClearChannelID()
+		return nil
+	case usagelog.FieldCredentialID:
+		m.ClearCredentialID()
+		return nil
+	case usagelog.FieldCredentialFingerprint:
+		m.ClearCredentialFingerprint()
 		return nil
 	case usagelog.FieldPromptAudioTokens:
 		m.ClearPromptAudioTokens()
@@ -24819,8 +27604,14 @@ func (m *UsageLogMutation) ResetField(name string) error {
 	case usagelog.FieldChannelID:
 		m.ResetChannelID()
 		return nil
+	case usagelog.FieldCredentialID:
+		m.ResetCredentialID()
+		return nil
 	case usagelog.FieldModelID:
 		m.ResetModelID()
+		return nil
+	case usagelog.FieldCredentialFingerprint:
+		m.ResetCredentialFingerprint()
 		return nil
 	case usagelog.FieldPromptTokens:
 		m.ResetPromptTokens()
@@ -24879,7 +27670,7 @@ func (m *UsageLogMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UsageLogMutation) AddedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.request != nil {
 		edges = append(edges, usagelog.EdgeRequest)
 	}
@@ -24888,6 +27679,9 @@ func (m *UsageLogMutation) AddedEdges() []string {
 	}
 	if m.channel != nil {
 		edges = append(edges, usagelog.EdgeChannel)
+	}
+	if m.credential != nil {
+		edges = append(edges, usagelog.EdgeCredential)
 	}
 	return edges
 }
@@ -24908,13 +27702,17 @@ func (m *UsageLogMutation) AddedIDs(name string) []ent.Value {
 		if id := m.channel; id != nil {
 			return []ent.Value{*id}
 		}
+	case usagelog.EdgeCredential:
+		if id := m.credential; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UsageLogMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	return edges
 }
 
@@ -24926,7 +27724,7 @@ func (m *UsageLogMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UsageLogMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 3)
+	edges := make([]string, 0, 4)
 	if m.clearedrequest {
 		edges = append(edges, usagelog.EdgeRequest)
 	}
@@ -24935,6 +27733,9 @@ func (m *UsageLogMutation) ClearedEdges() []string {
 	}
 	if m.clearedchannel {
 		edges = append(edges, usagelog.EdgeChannel)
+	}
+	if m.clearedcredential {
+		edges = append(edges, usagelog.EdgeCredential)
 	}
 	return edges
 }
@@ -24949,6 +27750,8 @@ func (m *UsageLogMutation) EdgeCleared(name string) bool {
 		return m.clearedproject
 	case usagelog.EdgeChannel:
 		return m.clearedchannel
+	case usagelog.EdgeCredential:
+		return m.clearedcredential
 	}
 	return false
 }
@@ -24966,6 +27769,9 @@ func (m *UsageLogMutation) ClearEdge(name string) error {
 	case usagelog.EdgeChannel:
 		m.ClearChannel()
 		return nil
+	case usagelog.EdgeCredential:
+		m.ClearCredential()
+		return nil
 	}
 	return fmt.Errorf("unknown UsageLog unique edge %s", name)
 }
@@ -24982,6 +27788,9 @@ func (m *UsageLogMutation) ResetEdge(name string) error {
 		return nil
 	case usagelog.EdgeChannel:
 		m.ResetChannel()
+		return nil
+	case usagelog.EdgeCredential:
+		m.ResetCredential()
 		return nil
 	}
 	return fmt.Errorf("unknown UsageLog edge %s", name)

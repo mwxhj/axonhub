@@ -31,6 +31,10 @@ func (RequestExecution) Indexes() []ent.Index {
 			StorageKey("request_executions_by_request_id_created_at"),
 		index.Fields("channel_id", "created_at").
 			StorageKey("request_executions_by_channel_id_created_at"),
+		index.Fields("credential_id", "created_at").
+			StorageKey("request_executions_by_credential_id_created_at"),
+		index.Fields("credential_fingerprint", "created_at").
+			StorageKey("request_executions_by_credential_fingerprint_created_at"),
 	}
 }
 
@@ -39,6 +43,10 @@ func (RequestExecution) Fields() []ent.Field {
 		field.Int("project_id").Immutable().Default(1),
 		field.Int("request_id").Immutable(),
 		field.Int("channel_id").Immutable().Optional(), // Optional for deleted channel, this field is not null.
+		field.Int("credential_id").
+			Optional().
+			Immutable().
+			Comment("Upstream credential ID used for this execution when known"),
 		field.Int("data_storage_id").
 			Optional().
 			Immutable().
@@ -48,6 +56,11 @@ func (RequestExecution) Fields() []ent.Field {
 			Optional().
 			MaxLen(512),
 		field.String("model_id").Immutable(),
+		field.String("credential_fingerprint").
+			Optional().
+			Immutable().
+			MaxLen(128).
+			Comment("Safe upstream credential identity used for this execution; never stores the raw secret"),
 		//  The format of the request, e.g: openai/chat_completions, claude/messages, openai/response.
 		field.String("format").Immutable().Default("openai/chat_completions"),
 		// The original request to the provider.
@@ -95,6 +108,14 @@ func (RequestExecution) Edges() []ent.Edge {
 			Unique(),
 		edge.From("channel", Channel.Type).
 			Field("channel_id").
+			Ref("executions").
+			Annotations(
+				entgql.Directives(forceResolver()),
+			).
+			Immutable().
+			Unique(),
+		edge.From("credential", UpstreamCredential.Type).
+			Field("credential_id").
 			Ref("executions").
 			Annotations(
 				entgql.Directives(forceResolver()),

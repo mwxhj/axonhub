@@ -17,6 +17,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/apikey"
 	"github.com/looplj/axonhub/internal/ent/apikeyprofiletemplate"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/channelmodelprice"
 	"github.com/looplj/axonhub/internal/ent/channelmodelpriceversion"
 	"github.com/looplj/axonhub/internal/ent/channeloverridetemplate"
@@ -34,6 +35,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/system"
 	"github.com/looplj/axonhub/internal/ent/thread"
 	"github.com/looplj/axonhub/internal/ent/trace"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
 	"github.com/looplj/axonhub/internal/ent/user"
 	"github.com/looplj/axonhub/internal/ent/userproject"
@@ -61,6 +63,11 @@ var channelImplementors = []string{"Channel", "Node"}
 
 // IsNode implements the Node interface check for GQLGen.
 func (*Channel) IsNode() {}
+
+var channelcredentialrefImplementors = []string{"ChannelCredentialRef", "Node"}
+
+// IsNode implements the Node interface check for GQLGen.
+func (*ChannelCredentialRef) IsNode() {}
 
 var channelmodelpriceImplementors = []string{"ChannelModelPrice", "Node"}
 
@@ -146,6 +153,11 @@ var traceImplementors = []string{"Trace", "Node"}
 
 // IsNode implements the Node interface check for GQLGen.
 func (*Trace) IsNode() {}
+
+var upstreamcredentialImplementors = []string{"UpstreamCredential", "Node"}
+
+// IsNode implements the Node interface check for GQLGen.
+func (*UpstreamCredential) IsNode() {}
 
 var usagelogImplementors = []string{"UsageLog", "Node"}
 
@@ -248,6 +260,15 @@ func (c *Client) noder(ctx context.Context, table string, id int) (Noder, error)
 			Where(channel.ID(id))
 		if fc := graphql.GetFieldContext(ctx); fc != nil {
 			if err := query.collectField(ctx, true, graphql.GetOperationContext(ctx), fc.Field, nil, channelImplementors...); err != nil {
+				return nil, err
+			}
+		}
+		return query.Only(ctx)
+	case channelcredentialref.Table:
+		query := c.ChannelCredentialRef.Query().
+			Where(channelcredentialref.ID(id))
+		if fc := graphql.GetFieldContext(ctx); fc != nil {
+			if err := query.collectField(ctx, true, graphql.GetOperationContext(ctx), fc.Field, nil, channelcredentialrefImplementors...); err != nil {
 				return nil, err
 			}
 		}
@@ -405,6 +426,15 @@ func (c *Client) noder(ctx context.Context, table string, id int) (Noder, error)
 			}
 		}
 		return query.Only(ctx)
+	case upstreamcredential.Table:
+		query := c.UpstreamCredential.Query().
+			Where(upstreamcredential.ID(id))
+		if fc := graphql.GetFieldContext(ctx); fc != nil {
+			if err := query.collectField(ctx, true, graphql.GetOperationContext(ctx), fc.Field, nil, upstreamcredentialImplementors...); err != nil {
+				return nil, err
+			}
+		}
+		return query.Only(ctx)
 	case usagelog.Table:
 		query := c.UsageLog.Query().
 			Where(usagelog.ID(id))
@@ -550,6 +580,22 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 		query := c.Channel.Query().
 			Where(channel.IDIn(ids...))
 		query, err := query.CollectFields(ctx, channelImplementors...)
+		if err != nil {
+			return nil, err
+		}
+		nodes, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, node := range nodes {
+			for _, noder := range idmap[node.ID] {
+				*noder = node
+			}
+		}
+	case channelcredentialref.Table:
+		query := c.ChannelCredentialRef.Query().
+			Where(channelcredentialref.IDIn(ids...))
+		query, err := query.CollectFields(ctx, channelcredentialrefImplementors...)
 		if err != nil {
 			return nil, err
 		}
@@ -822,6 +868,22 @@ func (c *Client) noders(ctx context.Context, table string, ids []int) ([]Noder, 
 		query := c.Trace.Query().
 			Where(trace.IDIn(ids...))
 		query, err := query.CollectFields(ctx, traceImplementors...)
+		if err != nil {
+			return nil, err
+		}
+		nodes, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, node := range nodes {
+			for _, noder := range idmap[node.ID] {
+				*noder = node
+			}
+		}
+	case upstreamcredential.Table:
+		query := c.UpstreamCredential.Query().
+			Where(upstreamcredential.IDIn(ids...))
+		query, err := query.CollectFields(ctx, upstreamcredentialImplementors...)
 		if err != nil {
 			return nil, err
 		}

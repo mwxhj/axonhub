@@ -11,6 +11,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/apikey"
 	"github.com/looplj/axonhub/internal/ent/apikeyprofiletemplate"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/channelmodelprice"
 	"github.com/looplj/axonhub/internal/ent/channelmodelpriceversion"
 	"github.com/looplj/axonhub/internal/ent/channeloverridetemplate"
@@ -29,6 +30,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/system"
 	"github.com/looplj/axonhub/internal/ent/thread"
 	"github.com/looplj/axonhub/internal/ent/trace"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
 	"github.com/looplj/axonhub/internal/ent/user"
 	"github.com/looplj/axonhub/internal/ent/userproject"
@@ -170,6 +172,33 @@ func (f TraverseChannel) Traverse(ctx context.Context, q ent.Query) error {
 		return f(ctx, q)
 	}
 	return fmt.Errorf("unexpected query type %T. expect *ent.ChannelQuery", q)
+}
+
+// The ChannelCredentialRefFunc type is an adapter to allow the use of ordinary function as a Querier.
+type ChannelCredentialRefFunc func(context.Context, *ent.ChannelCredentialRefQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f ChannelCredentialRefFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.ChannelCredentialRefQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.ChannelCredentialRefQuery", q)
+}
+
+// The TraverseChannelCredentialRef type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseChannelCredentialRef func(context.Context, *ent.ChannelCredentialRefQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseChannelCredentialRef) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseChannelCredentialRef) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.ChannelCredentialRefQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.ChannelCredentialRefQuery", q)
 }
 
 // The ChannelModelPriceFunc type is an adapter to allow the use of ordinary function as a Querier.
@@ -631,6 +660,33 @@ func (f TraverseTrace) Traverse(ctx context.Context, q ent.Query) error {
 	return fmt.Errorf("unexpected query type %T. expect *ent.TraceQuery", q)
 }
 
+// The UpstreamCredentialFunc type is an adapter to allow the use of ordinary function as a Querier.
+type UpstreamCredentialFunc func(context.Context, *ent.UpstreamCredentialQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f UpstreamCredentialFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.UpstreamCredentialQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.UpstreamCredentialQuery", q)
+}
+
+// The TraverseUpstreamCredential type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseUpstreamCredential func(context.Context, *ent.UpstreamCredentialQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseUpstreamCredential) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseUpstreamCredential) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.UpstreamCredentialQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.UpstreamCredentialQuery", q)
+}
+
 // The UsageLogFunc type is an adapter to allow the use of ordinary function as a Querier.
 type UsageLogFunc func(context.Context, *ent.UsageLogQuery) (ent.Value, error)
 
@@ -748,6 +804,8 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.APIKeyProfileTemplateQuery, predicate.APIKeyProfileTemplate, apikeyprofiletemplate.OrderOption]{typ: ent.TypeAPIKeyProfileTemplate, tq: q}, nil
 	case *ent.ChannelQuery:
 		return &query[*ent.ChannelQuery, predicate.Channel, channel.OrderOption]{typ: ent.TypeChannel, tq: q}, nil
+	case *ent.ChannelCredentialRefQuery:
+		return &query[*ent.ChannelCredentialRefQuery, predicate.ChannelCredentialRef, channelcredentialref.OrderOption]{typ: ent.TypeChannelCredentialRef, tq: q}, nil
 	case *ent.ChannelModelPriceQuery:
 		return &query[*ent.ChannelModelPriceQuery, predicate.ChannelModelPrice, channelmodelprice.OrderOption]{typ: ent.TypeChannelModelPrice, tq: q}, nil
 	case *ent.ChannelModelPriceVersionQuery:
@@ -782,6 +840,8 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.ThreadQuery, predicate.Thread, thread.OrderOption]{typ: ent.TypeThread, tq: q}, nil
 	case *ent.TraceQuery:
 		return &query[*ent.TraceQuery, predicate.Trace, trace.OrderOption]{typ: ent.TypeTrace, tq: q}, nil
+	case *ent.UpstreamCredentialQuery:
+		return &query[*ent.UpstreamCredentialQuery, predicate.UpstreamCredential, upstreamcredential.OrderOption]{typ: ent.TypeUpstreamCredential, tq: q}, nil
 	case *ent.UsageLogQuery:
 		return &query[*ent.UsageLogQuery, predicate.UsageLog, usagelog.OrderOption]{typ: ent.TypeUsageLog, tq: q}, nil
 	case *ent.UserQuery:

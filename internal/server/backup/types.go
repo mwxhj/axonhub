@@ -11,15 +11,17 @@ import (
 )
 
 type BackupData struct {
-	Version            string                     `json:"version"`
-	Timestamp          time.Time                  `json:"timestamp"`
-	Projects           []*BackupProject           `json:"projects,omitempty"`
-	Channels           []*BackupChannel           `json:"channels"`
-	Models             []*BackupModel             `json:"models"`
-	ChannelModelPrices []*BackupChannelModelPrice `json:"channel_model_prices,omitempty"`
-	APIKeys            []*BackupAPIKey            `json:"api_keys,omitempty"`
-	UsageRequests      []*BackupUsageRequest      `json:"usage_requests,omitempty"`
-	UsageLogs          []*BackupUsageLog          `json:"usage_logs,omitempty"`
+	Version               string                        `json:"version"`
+	Timestamp             time.Time                     `json:"timestamp"`
+	Projects              []*BackupProject              `json:"projects,omitempty"`
+	Channels              []*BackupChannel              `json:"channels"`
+	UpstreamCredentials   []*BackupUpstreamCredential   `json:"upstream_credentials,omitempty"`
+	ChannelCredentialRefs []*BackupChannelCredentialRef `json:"channel_credential_refs,omitempty"`
+	Models                []*BackupModel                `json:"models"`
+	ChannelModelPrices    []*BackupChannelModelPrice    `json:"channel_model_prices,omitempty"`
+	APIKeys               []*BackupAPIKey               `json:"api_keys,omitempty"`
+	UsageRequests         []*BackupUsageRequest         `json:"usage_requests,omitempty"`
+	UsageLogs             []*BackupUsageLog             `json:"usage_logs,omitempty"`
 }
 
 type BackupProject struct {
@@ -30,6 +32,19 @@ type BackupChannel struct {
 	ent.Channel
 
 	Credentials objects.ChannelCredentials `json:"credentials"`
+}
+
+type BackupUpstreamCredential struct {
+	ent.UpstreamCredential
+
+	SecretPayload objects.UpstreamCredentialSecret `json:"secret_payload,omitempty"`
+}
+
+type BackupChannelCredentialRef struct {
+	ent.ChannelCredentialRef
+
+	ChannelName           string `json:"channel_name"`
+	CredentialFingerprint string `json:"credential_fingerprint"`
 }
 
 type BackupModel struct {

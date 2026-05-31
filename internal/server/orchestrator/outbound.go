@@ -8,6 +8,7 @@ import (
 
 	"github.com/samber/lo"
 
+	"github.com/looplj/axonhub/internal/contexts"
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/objects"
@@ -372,6 +373,9 @@ func (p *PersistentOutboundTransformer) TransformRequest(ctx context.Context, ll
 	p.state.StickyResponseID = ""
 	p.state.StickyPreviousResponseID = ""
 	p.state.StickyResponseMessage = nil
+	p.state.CurrentCredentialID = 0
+	p.state.CurrentCredentialFingerprint = ""
+	p.state.CurrentCredentialAPIKey = ""
 
 	p.wrapped = selectOutboundForCandidate(candidate)
 
@@ -404,7 +408,56 @@ func (p *PersistentOutboundTransformer) TransformRequest(ctx context.Context, ll
 		}
 	}
 
-	return p.wrapped.TransformRequest(ctx, llmRequest)
+	// Ensure the mutable request context container exists before API key
+	// providers store the selected credential metadata in it.
+	ctx = contexts.WithCredentialSelectionSeed(ctx, "")
+	if p.state.StickyKeyOK && p.state.StickyKey != "" {
+		ctx = contexts.WithCredentialSelectionSeed(ctx, p.state.StickyKey)
+	}
+	if p.state.PreferredCredentialID > 0 {
+		ctx = contexts.WithPreferredCredential(ctx, p.state.PreferredCredentialID, p.state.PreferredCredentialFingerprint)
+	} else if p.state.PreferredCredentialFingerprint != "" {
+		ctx = contexts.WithPreferredCredentialFingerprint(ctx, p.state.PreferredCredentialFingerprint)
+	}
+
+	rawRequest, err := p.wrapped.TransformRequest(ctx, llmRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	if apiKey, ok := contexts.GetChannelAPIKey(ctx); ok {
+		p.state.CurrentCredentialAPIKey = apiKey
+	}
+	if credentialID, ok := contexts.GetChannelCredentialID(ctx); ok {
+		p.state.CurrentCredentialID = credentialID
+	}
+	if fingerprint, ok := contexts.GetChannelCredentialFingerprint(ctx); ok {
+		p.state.CurrentCredentialFingerprint = fingerprint
+	}
+	if p.state.CurrentCredentialFingerprint == "" || p.state.CurrentCredentialID == 0 {
+		var only *biz.ChannelCredentialView
+		for _, view := range candidate.Channel.CredentialViews() {
+			if !view.Enabled {
+				continue
+			}
+			if only != nil {
+				only = nil
+				break
+			}
+			v := view
+			only = &v
+		}
+		if only != nil {
+			if p.state.CurrentCredentialID == 0 {
+				p.state.CurrentCredentialID = only.CredentialID
+			}
+			if p.state.CurrentCredentialFingerprint == "" {
+				p.state.CurrentCredentialFingerprint = only.Fingerprint
+			}
+		}
+	}
+
+	return rawRequest, nil
 }
 
 func filterResponseCustomToolMessagesForNonResponsesOutbound(

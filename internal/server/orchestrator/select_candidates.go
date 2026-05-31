@@ -172,7 +172,7 @@ func areAllChannelsExhausted(candidates []*ChannelModelsCandidate, quotaProvider
 	limitType := provider_quota.RequestModality(llmRequest.Image != nil)
 
 	for _, c := range candidates {
-		quotaStatus := quotaProvider.GetQuotaStatus(c.Channel.ID)
+		quotaStatus := quotaStatusForChannel(quotaProvider, c.Channel, limitType)
 		if quotaStatus == nil {
 			return false
 		}

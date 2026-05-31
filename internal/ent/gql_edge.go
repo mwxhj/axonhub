@@ -140,12 +140,49 @@ func (_m *Channel) ChannelModelPrices(ctx context.Context) (result []*ChannelMod
 	return result, err
 }
 
+func (_m *Channel) CredentialRefs(
+	ctx context.Context, after *Cursor, first *int, before *Cursor, last *int, orderBy *ChannelCredentialRefOrder, where *ChannelCredentialRefWhereInput,
+) (*ChannelCredentialRefConnection, error) {
+	opts := []ChannelCredentialRefPaginateOption{
+		WithChannelCredentialRefOrder(orderBy),
+		WithChannelCredentialRefFilter(where.Filter),
+	}
+	alias := graphql.GetFieldContext(ctx).Field.Alias
+	totalCount, hasTotalCount := _m.Edges.totalCount[5][alias]
+	if nodes, err := _m.NamedCredentialRefs(alias); err == nil || hasTotalCount {
+		pager, err := newChannelCredentialRefPager(opts, last != nil)
+		if err != nil {
+			return nil, err
+		}
+		conn := &ChannelCredentialRefConnection{Edges: []*ChannelCredentialRefEdge{}, TotalCount: totalCount}
+		conn.build(nodes, pager, after, first, before, last)
+		return conn, nil
+	}
+	return _m.QueryCredentialRefs().Paginate(ctx, after, first, before, last, opts...)
+}
+
 func (_m *Channel) ProviderQuotaStatus(ctx context.Context) (*ProviderQuotaStatus, error) {
 	result, err := _m.Edges.ProviderQuotaStatusOrErr()
 	if IsNotLoaded(err) {
 		result, err = _m.QueryProviderQuotaStatus().Only(ctx)
 	}
 	return result, MaskNotFound(err)
+}
+
+func (_m *ChannelCredentialRef) Channel(ctx context.Context) (*Channel, error) {
+	result, err := _m.Edges.ChannelOrErr()
+	if IsNotLoaded(err) {
+		result, err = _m.QueryChannel().Only(ctx)
+	}
+	return result, err
+}
+
+func (_m *ChannelCredentialRef) Credential(ctx context.Context) (*UpstreamCredential, error) {
+	result, err := _m.Edges.CredentialOrErr()
+	if IsNotLoaded(err) {
+		result, err = _m.QueryCredential().Only(ctx)
+	}
+	return result, err
 }
 
 func (_m *ChannelModelPrice) Channel(ctx context.Context) (*Channel, error) {
@@ -481,6 +518,14 @@ func (_m *ProviderQuotaStatus) Channel(ctx context.Context) (*Channel, error) {
 	return result, err
 }
 
+func (_m *ProviderQuotaStatus) Credential(ctx context.Context) (*UpstreamCredential, error) {
+	result, err := _m.Edges.CredentialOrErr()
+	if IsNotLoaded(err) {
+		result, err = _m.QueryCredential().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
 func (_m *Request) APIKey(ctx context.Context) (*APIKey, error) {
 	result, err := _m.Edges.APIKeyOrErr()
 	if IsNotLoaded(err) {
@@ -575,6 +620,14 @@ func (_m *RequestExecution) Channel(ctx context.Context) (*Channel, error) {
 	result, err := _m.Edges.ChannelOrErr()
 	if IsNotLoaded(err) {
 		result, err = _m.QueryChannel().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (_m *RequestExecution) Credential(ctx context.Context) (*UpstreamCredential, error) {
+	result, err := _m.Edges.CredentialOrErr()
+	if IsNotLoaded(err) {
+		result, err = _m.QueryCredential().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }
@@ -703,6 +756,81 @@ func (_m *Trace) Requests(
 	return _m.QueryRequests().Paginate(ctx, after, first, before, last, opts...)
 }
 
+func (_m *UpstreamCredential) ChannelRefs(
+	ctx context.Context, after *Cursor, first *int, before *Cursor, last *int, orderBy *ChannelCredentialRefOrder, where *ChannelCredentialRefWhereInput,
+) (*ChannelCredentialRefConnection, error) {
+	opts := []ChannelCredentialRefPaginateOption{
+		WithChannelCredentialRefOrder(orderBy),
+		WithChannelCredentialRefFilter(where.Filter),
+	}
+	alias := graphql.GetFieldContext(ctx).Field.Alias
+	totalCount, hasTotalCount := _m.Edges.totalCount[0][alias]
+	if nodes, err := _m.NamedChannelRefs(alias); err == nil || hasTotalCount {
+		pager, err := newChannelCredentialRefPager(opts, last != nil)
+		if err != nil {
+			return nil, err
+		}
+		conn := &ChannelCredentialRefConnection{Edges: []*ChannelCredentialRefEdge{}, TotalCount: totalCount}
+		conn.build(nodes, pager, after, first, before, last)
+		return conn, nil
+	}
+	return _m.QueryChannelRefs().Paginate(ctx, after, first, before, last, opts...)
+}
+
+func (_m *UpstreamCredential) Executions(
+	ctx context.Context, after *Cursor, first *int, before *Cursor, last *int, orderBy *RequestExecutionOrder, where *RequestExecutionWhereInput,
+) (*RequestExecutionConnection, error) {
+	opts := []RequestExecutionPaginateOption{
+		WithRequestExecutionOrder(orderBy),
+		WithRequestExecutionFilter(where.Filter),
+	}
+	alias := graphql.GetFieldContext(ctx).Field.Alias
+	totalCount, hasTotalCount := _m.Edges.totalCount[1][alias]
+	if nodes, err := _m.NamedExecutions(alias); err == nil || hasTotalCount {
+		pager, err := newRequestExecutionPager(opts, last != nil)
+		if err != nil {
+			return nil, err
+		}
+		conn := &RequestExecutionConnection{Edges: []*RequestExecutionEdge{}, TotalCount: totalCount}
+		conn.build(nodes, pager, after, first, before, last)
+		return conn, nil
+	}
+	return _m.QueryExecutions().Paginate(ctx, after, first, before, last, opts...)
+}
+
+func (_m *UpstreamCredential) UsageLogs(
+	ctx context.Context, after *Cursor, first *int, before *Cursor, last *int, orderBy *UsageLogOrder, where *UsageLogWhereInput,
+) (*UsageLogConnection, error) {
+	opts := []UsageLogPaginateOption{
+		WithUsageLogOrder(orderBy),
+		WithUsageLogFilter(where.Filter),
+	}
+	alias := graphql.GetFieldContext(ctx).Field.Alias
+	totalCount, hasTotalCount := _m.Edges.totalCount[2][alias]
+	if nodes, err := _m.NamedUsageLogs(alias); err == nil || hasTotalCount {
+		pager, err := newUsageLogPager(opts, last != nil)
+		if err != nil {
+			return nil, err
+		}
+		conn := &UsageLogConnection{Edges: []*UsageLogEdge{}, TotalCount: totalCount}
+		conn.build(nodes, pager, after, first, before, last)
+		return conn, nil
+	}
+	return _m.QueryUsageLogs().Paginate(ctx, after, first, before, last, opts...)
+}
+
+func (_m *UpstreamCredential) ProviderQuotaStatuses(ctx context.Context) (result []*ProviderQuotaStatus, err error) {
+	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
+		result, err = _m.NamedProviderQuotaStatuses(graphql.GetFieldContext(ctx).Field.Alias)
+	} else {
+		result, err = _m.Edges.ProviderQuotaStatusesOrErr()
+	}
+	if IsNotLoaded(err) {
+		result, err = _m.QueryProviderQuotaStatuses().All(ctx)
+	}
+	return result, err
+}
+
 func (_m *UsageLog) Request(ctx context.Context) (*Request, error) {
 	result, err := _m.Edges.RequestOrErr()
 	if IsNotLoaded(err) {
@@ -723,6 +851,14 @@ func (_m *UsageLog) Channel(ctx context.Context) (*Channel, error) {
 	result, err := _m.Edges.ChannelOrErr()
 	if IsNotLoaded(err) {
 		result, err = _m.QueryChannel().Only(ctx)
+	}
+	return result, MaskNotFound(err)
+}
+
+func (_m *UsageLog) Credential(ctx context.Context) (*UpstreamCredential, error) {
+	result, err := _m.Edges.CredentialOrErr()
+	if IsNotLoaded(err) {
+		result, err = _m.QueryCredential().Only(ctx)
 	}
 	return result, MaskNotFound(err)
 }

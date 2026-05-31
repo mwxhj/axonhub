@@ -18,6 +18,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/apikey"
 	"github.com/looplj/axonhub/internal/ent/apikeyprofiletemplate"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/channelmodelprice"
 	"github.com/looplj/axonhub/internal/ent/channelmodelpriceversion"
 	"github.com/looplj/axonhub/internal/ent/channeloverridetemplate"
@@ -35,6 +36,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/system"
 	"github.com/looplj/axonhub/internal/ent/thread"
 	"github.com/looplj/axonhub/internal/ent/trace"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
 	"github.com/looplj/axonhub/internal/ent/user"
 	"github.com/looplj/axonhub/internal/ent/userproject"
@@ -52,6 +54,8 @@ type Client struct {
 	APIKeyProfileTemplate *APIKeyProfileTemplateClient
 	// Channel is the client for interacting with the Channel builders.
 	Channel *ChannelClient
+	// ChannelCredentialRef is the client for interacting with the ChannelCredentialRef builders.
+	ChannelCredentialRef *ChannelCredentialRefClient
 	// ChannelModelPrice is the client for interacting with the ChannelModelPrice builders.
 	ChannelModelPrice *ChannelModelPriceClient
 	// ChannelModelPriceVersion is the client for interacting with the ChannelModelPriceVersion builders.
@@ -86,6 +90,8 @@ type Client struct {
 	Thread *ThreadClient
 	// Trace is the client for interacting with the Trace builders.
 	Trace *TraceClient
+	// UpstreamCredential is the client for interacting with the UpstreamCredential builders.
+	UpstreamCredential *UpstreamCredentialClient
 	// UsageLog is the client for interacting with the UsageLog builders.
 	UsageLog *UsageLogClient
 	// User is the client for interacting with the User builders.
@@ -110,6 +116,7 @@ func (c *Client) init() {
 	c.APIKey = NewAPIKeyClient(c.config)
 	c.APIKeyProfileTemplate = NewAPIKeyProfileTemplateClient(c.config)
 	c.Channel = NewChannelClient(c.config)
+	c.ChannelCredentialRef = NewChannelCredentialRefClient(c.config)
 	c.ChannelModelPrice = NewChannelModelPriceClient(c.config)
 	c.ChannelModelPriceVersion = NewChannelModelPriceVersionClient(c.config)
 	c.ChannelOverrideTemplate = NewChannelOverrideTemplateClient(c.config)
@@ -127,6 +134,7 @@ func (c *Client) init() {
 	c.System = NewSystemClient(c.config)
 	c.Thread = NewThreadClient(c.config)
 	c.Trace = NewTraceClient(c.config)
+	c.UpstreamCredential = NewUpstreamCredentialClient(c.config)
 	c.UsageLog = NewUsageLogClient(c.config)
 	c.User = NewUserClient(c.config)
 	c.UserProject = NewUserProjectClient(c.config)
@@ -226,6 +234,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		APIKey:                   NewAPIKeyClient(cfg),
 		APIKeyProfileTemplate:    NewAPIKeyProfileTemplateClient(cfg),
 		Channel:                  NewChannelClient(cfg),
+		ChannelCredentialRef:     NewChannelCredentialRefClient(cfg),
 		ChannelModelPrice:        NewChannelModelPriceClient(cfg),
 		ChannelModelPriceVersion: NewChannelModelPriceVersionClient(cfg),
 		ChannelOverrideTemplate:  NewChannelOverrideTemplateClient(cfg),
@@ -243,6 +252,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		System:                   NewSystemClient(cfg),
 		Thread:                   NewThreadClient(cfg),
 		Trace:                    NewTraceClient(cfg),
+		UpstreamCredential:       NewUpstreamCredentialClient(cfg),
 		UsageLog:                 NewUsageLogClient(cfg),
 		User:                     NewUserClient(cfg),
 		UserProject:              NewUserProjectClient(cfg),
@@ -269,6 +279,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		APIKey:                   NewAPIKeyClient(cfg),
 		APIKeyProfileTemplate:    NewAPIKeyProfileTemplateClient(cfg),
 		Channel:                  NewChannelClient(cfg),
+		ChannelCredentialRef:     NewChannelCredentialRefClient(cfg),
 		ChannelModelPrice:        NewChannelModelPriceClient(cfg),
 		ChannelModelPriceVersion: NewChannelModelPriceVersionClient(cfg),
 		ChannelOverrideTemplate:  NewChannelOverrideTemplateClient(cfg),
@@ -286,6 +297,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		System:                   NewSystemClient(cfg),
 		Thread:                   NewThreadClient(cfg),
 		Trace:                    NewTraceClient(cfg),
+		UpstreamCredential:       NewUpstreamCredentialClient(cfg),
 		UsageLog:                 NewUsageLogClient(cfg),
 		User:                     NewUserClient(cfg),
 		UserProject:              NewUserProjectClient(cfg),
@@ -319,12 +331,12 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.APIKey, c.APIKeyProfileTemplate, c.Channel, c.ChannelModelPrice,
-		c.ChannelModelPriceVersion, c.ChannelOverrideTemplate, c.ChannelProbe,
-		c.DataStorage, c.Model, c.OIDCIdentity, c.Project, c.Prompt,
+		c.APIKey, c.APIKeyProfileTemplate, c.Channel, c.ChannelCredentialRef,
+		c.ChannelModelPrice, c.ChannelModelPriceVersion, c.ChannelOverrideTemplate,
+		c.ChannelProbe, c.DataStorage, c.Model, c.OIDCIdentity, c.Project, c.Prompt,
 		c.PromptProtectionRule, c.ProviderQuotaStatus, c.Request, c.RequestExecution,
-		c.Role, c.System, c.Thread, c.Trace, c.UsageLog, c.User, c.UserProject,
-		c.UserRole,
+		c.Role, c.System, c.Thread, c.Trace, c.UpstreamCredential, c.UsageLog, c.User,
+		c.UserProject, c.UserRole,
 	} {
 		n.Use(hooks...)
 	}
@@ -334,12 +346,12 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.APIKey, c.APIKeyProfileTemplate, c.Channel, c.ChannelModelPrice,
-		c.ChannelModelPriceVersion, c.ChannelOverrideTemplate, c.ChannelProbe,
-		c.DataStorage, c.Model, c.OIDCIdentity, c.Project, c.Prompt,
+		c.APIKey, c.APIKeyProfileTemplate, c.Channel, c.ChannelCredentialRef,
+		c.ChannelModelPrice, c.ChannelModelPriceVersion, c.ChannelOverrideTemplate,
+		c.ChannelProbe, c.DataStorage, c.Model, c.OIDCIdentity, c.Project, c.Prompt,
 		c.PromptProtectionRule, c.ProviderQuotaStatus, c.Request, c.RequestExecution,
-		c.Role, c.System, c.Thread, c.Trace, c.UsageLog, c.User, c.UserProject,
-		c.UserRole,
+		c.Role, c.System, c.Thread, c.Trace, c.UpstreamCredential, c.UsageLog, c.User,
+		c.UserProject, c.UserRole,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -354,6 +366,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.APIKeyProfileTemplate.mutate(ctx, m)
 	case *ChannelMutation:
 		return c.Channel.mutate(ctx, m)
+	case *ChannelCredentialRefMutation:
+		return c.ChannelCredentialRef.mutate(ctx, m)
 	case *ChannelModelPriceMutation:
 		return c.ChannelModelPrice.mutate(ctx, m)
 	case *ChannelModelPriceVersionMutation:
@@ -388,6 +402,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Thread.mutate(ctx, m)
 	case *TraceMutation:
 		return c.Trace.mutate(ctx, m)
+	case *UpstreamCredentialMutation:
+		return c.UpstreamCredential.mutate(ctx, m)
 	case *UsageLogMutation:
 		return c.UsageLog.mutate(ctx, m)
 	case *UserMutation:
@@ -923,6 +939,22 @@ func (c *ChannelClient) QueryChannelModelPrices(_m *Channel) *ChannelModelPriceQ
 	return query
 }
 
+// QueryCredentialRefs queries the credential_refs edge of a Channel.
+func (c *ChannelClient) QueryCredentialRefs(_m *Channel) *ChannelCredentialRefQuery {
+	query := (&ChannelCredentialRefClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(channel.Table, channel.FieldID, id),
+			sqlgraph.To(channelcredentialref.Table, channelcredentialref.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, channel.CredentialRefsTable, channel.CredentialRefsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // QueryProviderQuotaStatus queries the provider_quota_status edge of a Channel.
 func (c *ChannelClient) QueryProviderQuotaStatus(_m *Channel) *ProviderQuotaStatusQuery {
 	query := (&ProviderQuotaStatusClient{config: c.config}).Query()
@@ -963,6 +995,172 @@ func (c *ChannelClient) mutate(ctx context.Context, m *ChannelMutation) (Value, 
 		return (&ChannelDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Channel mutation op: %q", m.Op())
+	}
+}
+
+// ChannelCredentialRefClient is a client for the ChannelCredentialRef schema.
+type ChannelCredentialRefClient struct {
+	config
+}
+
+// NewChannelCredentialRefClient returns a client for the ChannelCredentialRef from the given config.
+func NewChannelCredentialRefClient(c config) *ChannelCredentialRefClient {
+	return &ChannelCredentialRefClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `channelcredentialref.Hooks(f(g(h())))`.
+func (c *ChannelCredentialRefClient) Use(hooks ...Hook) {
+	c.hooks.ChannelCredentialRef = append(c.hooks.ChannelCredentialRef, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `channelcredentialref.Intercept(f(g(h())))`.
+func (c *ChannelCredentialRefClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ChannelCredentialRef = append(c.inters.ChannelCredentialRef, interceptors...)
+}
+
+// Create returns a builder for creating a ChannelCredentialRef entity.
+func (c *ChannelCredentialRefClient) Create() *ChannelCredentialRefCreate {
+	mutation := newChannelCredentialRefMutation(c.config, OpCreate)
+	return &ChannelCredentialRefCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ChannelCredentialRef entities.
+func (c *ChannelCredentialRefClient) CreateBulk(builders ...*ChannelCredentialRefCreate) *ChannelCredentialRefCreateBulk {
+	return &ChannelCredentialRefCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ChannelCredentialRefClient) MapCreateBulk(slice any, setFunc func(*ChannelCredentialRefCreate, int)) *ChannelCredentialRefCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ChannelCredentialRefCreateBulk{err: fmt.Errorf("calling to ChannelCredentialRefClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ChannelCredentialRefCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ChannelCredentialRefCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ChannelCredentialRef.
+func (c *ChannelCredentialRefClient) Update() *ChannelCredentialRefUpdate {
+	mutation := newChannelCredentialRefMutation(c.config, OpUpdate)
+	return &ChannelCredentialRefUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ChannelCredentialRefClient) UpdateOne(_m *ChannelCredentialRef) *ChannelCredentialRefUpdateOne {
+	mutation := newChannelCredentialRefMutation(c.config, OpUpdateOne, withChannelCredentialRef(_m))
+	return &ChannelCredentialRefUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ChannelCredentialRefClient) UpdateOneID(id int) *ChannelCredentialRefUpdateOne {
+	mutation := newChannelCredentialRefMutation(c.config, OpUpdateOne, withChannelCredentialRefID(id))
+	return &ChannelCredentialRefUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ChannelCredentialRef.
+func (c *ChannelCredentialRefClient) Delete() *ChannelCredentialRefDelete {
+	mutation := newChannelCredentialRefMutation(c.config, OpDelete)
+	return &ChannelCredentialRefDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ChannelCredentialRefClient) DeleteOne(_m *ChannelCredentialRef) *ChannelCredentialRefDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ChannelCredentialRefClient) DeleteOneID(id int) *ChannelCredentialRefDeleteOne {
+	builder := c.Delete().Where(channelcredentialref.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ChannelCredentialRefDeleteOne{builder}
+}
+
+// Query returns a query builder for ChannelCredentialRef.
+func (c *ChannelCredentialRefClient) Query() *ChannelCredentialRefQuery {
+	return &ChannelCredentialRefQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeChannelCredentialRef},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ChannelCredentialRef entity by its id.
+func (c *ChannelCredentialRefClient) Get(ctx context.Context, id int) (*ChannelCredentialRef, error) {
+	return c.Query().Where(channelcredentialref.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ChannelCredentialRefClient) GetX(ctx context.Context, id int) *ChannelCredentialRef {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryChannel queries the channel edge of a ChannelCredentialRef.
+func (c *ChannelCredentialRefClient) QueryChannel(_m *ChannelCredentialRef) *ChannelQuery {
+	query := (&ChannelClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(channelcredentialref.Table, channelcredentialref.FieldID, id),
+			sqlgraph.To(channel.Table, channel.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, channelcredentialref.ChannelTable, channelcredentialref.ChannelColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCredential queries the credential edge of a ChannelCredentialRef.
+func (c *ChannelCredentialRefClient) QueryCredential(_m *ChannelCredentialRef) *UpstreamCredentialQuery {
+	query := (&UpstreamCredentialClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(channelcredentialref.Table, channelcredentialref.FieldID, id),
+			sqlgraph.To(upstreamcredential.Table, upstreamcredential.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, channelcredentialref.CredentialTable, channelcredentialref.CredentialColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ChannelCredentialRefClient) Hooks() []Hook {
+	hooks := c.hooks.ChannelCredentialRef
+	return append(hooks[:len(hooks):len(hooks)], channelcredentialref.Hooks[:]...)
+}
+
+// Interceptors returns the client interceptors.
+func (c *ChannelCredentialRefClient) Interceptors() []Interceptor {
+	return c.inters.ChannelCredentialRef
+}
+
+func (c *ChannelCredentialRefClient) mutate(ctx context.Context, m *ChannelCredentialRefMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ChannelCredentialRefCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ChannelCredentialRefUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ChannelCredentialRefUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ChannelCredentialRefDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ChannelCredentialRef mutation op: %q", m.Op())
 	}
 }
 
@@ -2741,6 +2939,22 @@ func (c *ProviderQuotaStatusClient) QueryChannel(_m *ProviderQuotaStatus) *Chann
 	return query
 }
 
+// QueryCredential queries the credential edge of a ProviderQuotaStatus.
+func (c *ProviderQuotaStatusClient) QueryCredential(_m *ProviderQuotaStatus) *UpstreamCredentialQuery {
+	query := (&UpstreamCredentialClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerquotastatus.Table, providerquotastatus.FieldID, id),
+			sqlgraph.To(upstreamcredential.Table, upstreamcredential.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, providerquotastatus.CredentialTable, providerquotastatus.CredentialColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *ProviderQuotaStatusClient) Hooks() []Hook {
 	hooks := c.hooks.ProviderQuotaStatus
@@ -3147,6 +3361,22 @@ func (c *RequestExecutionClient) QueryChannel(_m *RequestExecution) *ChannelQuer
 			sqlgraph.From(requestexecution.Table, requestexecution.FieldID, id),
 			sqlgraph.To(channel.Table, channel.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, requestexecution.ChannelTable, requestexecution.ChannelColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCredential queries the credential edge of a RequestExecution.
+func (c *RequestExecutionClient) QueryCredential(_m *RequestExecution) *UpstreamCredentialQuery {
+	query := (&UpstreamCredentialClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(requestexecution.Table, requestexecution.FieldID, id),
+			sqlgraph.To(upstreamcredential.Table, upstreamcredential.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, requestexecution.CredentialTable, requestexecution.CredentialColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -3861,6 +4091,205 @@ func (c *TraceClient) mutate(ctx context.Context, m *TraceMutation) (Value, erro
 	}
 }
 
+// UpstreamCredentialClient is a client for the UpstreamCredential schema.
+type UpstreamCredentialClient struct {
+	config
+}
+
+// NewUpstreamCredentialClient returns a client for the UpstreamCredential from the given config.
+func NewUpstreamCredentialClient(c config) *UpstreamCredentialClient {
+	return &UpstreamCredentialClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `upstreamcredential.Hooks(f(g(h())))`.
+func (c *UpstreamCredentialClient) Use(hooks ...Hook) {
+	c.hooks.UpstreamCredential = append(c.hooks.UpstreamCredential, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `upstreamcredential.Intercept(f(g(h())))`.
+func (c *UpstreamCredentialClient) Intercept(interceptors ...Interceptor) {
+	c.inters.UpstreamCredential = append(c.inters.UpstreamCredential, interceptors...)
+}
+
+// Create returns a builder for creating a UpstreamCredential entity.
+func (c *UpstreamCredentialClient) Create() *UpstreamCredentialCreate {
+	mutation := newUpstreamCredentialMutation(c.config, OpCreate)
+	return &UpstreamCredentialCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of UpstreamCredential entities.
+func (c *UpstreamCredentialClient) CreateBulk(builders ...*UpstreamCredentialCreate) *UpstreamCredentialCreateBulk {
+	return &UpstreamCredentialCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *UpstreamCredentialClient) MapCreateBulk(slice any, setFunc func(*UpstreamCredentialCreate, int)) *UpstreamCredentialCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &UpstreamCredentialCreateBulk{err: fmt.Errorf("calling to UpstreamCredentialClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*UpstreamCredentialCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &UpstreamCredentialCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for UpstreamCredential.
+func (c *UpstreamCredentialClient) Update() *UpstreamCredentialUpdate {
+	mutation := newUpstreamCredentialMutation(c.config, OpUpdate)
+	return &UpstreamCredentialUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *UpstreamCredentialClient) UpdateOne(_m *UpstreamCredential) *UpstreamCredentialUpdateOne {
+	mutation := newUpstreamCredentialMutation(c.config, OpUpdateOne, withUpstreamCredential(_m))
+	return &UpstreamCredentialUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *UpstreamCredentialClient) UpdateOneID(id int) *UpstreamCredentialUpdateOne {
+	mutation := newUpstreamCredentialMutation(c.config, OpUpdateOne, withUpstreamCredentialID(id))
+	return &UpstreamCredentialUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for UpstreamCredential.
+func (c *UpstreamCredentialClient) Delete() *UpstreamCredentialDelete {
+	mutation := newUpstreamCredentialMutation(c.config, OpDelete)
+	return &UpstreamCredentialDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *UpstreamCredentialClient) DeleteOne(_m *UpstreamCredential) *UpstreamCredentialDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *UpstreamCredentialClient) DeleteOneID(id int) *UpstreamCredentialDeleteOne {
+	builder := c.Delete().Where(upstreamcredential.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &UpstreamCredentialDeleteOne{builder}
+}
+
+// Query returns a query builder for UpstreamCredential.
+func (c *UpstreamCredentialClient) Query() *UpstreamCredentialQuery {
+	return &UpstreamCredentialQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeUpstreamCredential},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a UpstreamCredential entity by its id.
+func (c *UpstreamCredentialClient) Get(ctx context.Context, id int) (*UpstreamCredential, error) {
+	return c.Query().Where(upstreamcredential.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *UpstreamCredentialClient) GetX(ctx context.Context, id int) *UpstreamCredential {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryChannelRefs queries the channel_refs edge of a UpstreamCredential.
+func (c *UpstreamCredentialClient) QueryChannelRefs(_m *UpstreamCredential) *ChannelCredentialRefQuery {
+	query := (&ChannelCredentialRefClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(upstreamcredential.Table, upstreamcredential.FieldID, id),
+			sqlgraph.To(channelcredentialref.Table, channelcredentialref.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, upstreamcredential.ChannelRefsTable, upstreamcredential.ChannelRefsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryExecutions queries the executions edge of a UpstreamCredential.
+func (c *UpstreamCredentialClient) QueryExecutions(_m *UpstreamCredential) *RequestExecutionQuery {
+	query := (&RequestExecutionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(upstreamcredential.Table, upstreamcredential.FieldID, id),
+			sqlgraph.To(requestexecution.Table, requestexecution.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, upstreamcredential.ExecutionsTable, upstreamcredential.ExecutionsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryUsageLogs queries the usage_logs edge of a UpstreamCredential.
+func (c *UpstreamCredentialClient) QueryUsageLogs(_m *UpstreamCredential) *UsageLogQuery {
+	query := (&UsageLogClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(upstreamcredential.Table, upstreamcredential.FieldID, id),
+			sqlgraph.To(usagelog.Table, usagelog.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, upstreamcredential.UsageLogsTable, upstreamcredential.UsageLogsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProviderQuotaStatuses queries the provider_quota_statuses edge of a UpstreamCredential.
+func (c *UpstreamCredentialClient) QueryProviderQuotaStatuses(_m *UpstreamCredential) *ProviderQuotaStatusQuery {
+	query := (&ProviderQuotaStatusClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(upstreamcredential.Table, upstreamcredential.FieldID, id),
+			sqlgraph.To(providerquotastatus.Table, providerquotastatus.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, upstreamcredential.ProviderQuotaStatusesTable, upstreamcredential.ProviderQuotaStatusesColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *UpstreamCredentialClient) Hooks() []Hook {
+	hooks := c.hooks.UpstreamCredential
+	return append(hooks[:len(hooks):len(hooks)], upstreamcredential.Hooks[:]...)
+}
+
+// Interceptors returns the client interceptors.
+func (c *UpstreamCredentialClient) Interceptors() []Interceptor {
+	inters := c.inters.UpstreamCredential
+	return append(inters[:len(inters):len(inters)], upstreamcredential.Interceptors[:]...)
+}
+
+func (c *UpstreamCredentialClient) mutate(ctx context.Context, m *UpstreamCredentialMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&UpstreamCredentialCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&UpstreamCredentialUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&UpstreamCredentialUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&UpstreamCredentialDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown UpstreamCredential mutation op: %q", m.Op())
+	}
+}
+
 // UsageLogClient is a client for the UsageLog schema.
 type UsageLogClient struct {
 	config
@@ -4010,6 +4439,22 @@ func (c *UsageLogClient) QueryChannel(_m *UsageLog) *ChannelQuery {
 			sqlgraph.From(usagelog.Table, usagelog.FieldID, id),
 			sqlgraph.To(channel.Table, channel.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, usagelog.ChannelTable, usagelog.ChannelColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryCredential queries the credential edge of a UsageLog.
+func (c *UsageLogClient) QueryCredential(_m *UsageLog) *UpstreamCredentialQuery {
+	query := (&UpstreamCredentialClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(usagelog.Table, usagelog.FieldID, id),
+			sqlgraph.To(upstreamcredential.Table, upstreamcredential.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, usagelog.CredentialTable, usagelog.CredentialColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -4624,17 +5069,17 @@ func (c *UserRoleClient) mutate(ctx context.Context, m *UserRoleMutation) (Value
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		APIKey, APIKeyProfileTemplate, Channel, ChannelModelPrice,
+		APIKey, APIKeyProfileTemplate, Channel, ChannelCredentialRef, ChannelModelPrice,
 		ChannelModelPriceVersion, ChannelOverrideTemplate, ChannelProbe, DataStorage,
 		Model, OIDCIdentity, Project, Prompt, PromptProtectionRule,
 		ProviderQuotaStatus, Request, RequestExecution, Role, System, Thread, Trace,
-		UsageLog, User, UserProject, UserRole []ent.Hook
+		UpstreamCredential, UsageLog, User, UserProject, UserRole []ent.Hook
 	}
 	inters struct {
-		APIKey, APIKeyProfileTemplate, Channel, ChannelModelPrice,
+		APIKey, APIKeyProfileTemplate, Channel, ChannelCredentialRef, ChannelModelPrice,
 		ChannelModelPriceVersion, ChannelOverrideTemplate, ChannelProbe, DataStorage,
 		Model, OIDCIdentity, Project, Prompt, PromptProtectionRule,
 		ProviderQuotaStatus, Request, RequestExecution, Role, System, Thread, Trace,
-		UsageLog, User, UserProject, UserRole []ent.Interceptor
+		UpstreamCredential, UsageLog, User, UserProject, UserRole []ent.Interceptor
 	}
 )

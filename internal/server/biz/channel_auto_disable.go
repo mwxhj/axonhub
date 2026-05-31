@@ -169,3 +169,89 @@ func (svc *ChannelService) checkAndHandleAPIKeyError(ctx context.Context, perf *
 
 	return false
 }
+
+// checkAndHandleCredentialError checks if the upstream credential should be disabled based on the error status code.
+// Returns true if the credential was disabled across channels that reference it.
+func (svc *ChannelService) checkAndHandleCredentialError(ctx context.Context, perf *PerformanceRecord, policy *RetryPolicy) bool {
+	if !isCredentialScopedAutoDisableStatus(perf.ResponseStatusCode) {
+		return false
+	}
+
+	for _, statusConfig := range policy.AutoDisableChannel.Statuses {
+		if statusConfig.Status != perf.ResponseStatusCode {
+			continue
+		}
+
+		svc.credentialErrorCountsLock.Lock()
+
+		if svc.credentialErrorCounts == nil {
+			svc.credentialErrorCounts = make(map[string]map[int]int)
+		}
+		identity := credentialErrorIdentity(perf)
+		if identity == "" {
+			svc.credentialErrorCountsLock.Unlock()
+			return false
+		}
+		if svc.credentialErrorCounts[identity] == nil {
+			svc.credentialErrorCounts[identity] = make(map[int]int)
+		}
+
+		svc.credentialErrorCounts[identity][perf.ResponseStatusCode]++
+		count := svc.credentialErrorCounts[identity][perf.ResponseStatusCode]
+		svc.credentialErrorCountsLock.Unlock()
+
+		if count >= statusConfig.Times {
+			reason := fmt.Sprintf("Auto-disabled credential after %d consecutive errors with status %d", count, perf.ResponseStatusCode)
+			affected, err := svc.disableCredentialFromPerformance(ctx, perf, reason)
+			if err != nil {
+				log.Error(ctx, "Failed to disable credential",
+					log.Int("channel_id", perf.ChannelID),
+					log.Int("error_code", perf.ResponseStatusCode),
+					log.Int("credential_id", perf.CredentialID),
+					log.String("credential_fingerprint", perf.CredentialFingerprint),
+					log.Cause(err),
+				)
+
+				return false
+			}
+
+			svc.credentialErrorCountsLock.Lock()
+			delete(svc.credentialErrorCounts, identity)
+			svc.credentialErrorCountsLock.Unlock()
+
+			return affected > 0
+		}
+	}
+
+	return false
+}
+
+func credentialErrorIdentity(perf *PerformanceRecord) string {
+	if perf == nil {
+		return ""
+	}
+	if perf.CredentialID > 0 {
+		return fmt.Sprintf("id:%d", perf.CredentialID)
+	}
+	if perf.CredentialFingerprint != "" {
+		return "fp:" + perf.CredentialFingerprint
+	}
+	return ""
+}
+
+func (svc *ChannelService) disableCredentialFromPerformance(ctx context.Context, perf *PerformanceRecord, reason string) (int, error) {
+	if perf.CredentialID > 0 {
+		return svc.DisableCredentialID(ctx, perf.CredentialID, perf.ResponseStatusCode, reason)
+	}
+
+	return svc.DisableCredentialFingerprint(ctx, perf.CredentialFingerprint, perf.ResponseStatusCode, reason)
+}
+
+func isCredentialScopedAutoDisableStatus(statusCode int) bool {
+	switch statusCode {
+	case 401, 402, 403:
+		return true
+	default:
+		return false
+	}
+}

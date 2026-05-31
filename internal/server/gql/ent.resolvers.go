@@ -92,6 +92,40 @@ func (r *channelResolver) ProviderQuotaStatus(ctx context.Context, obj *ent.Chan
 }
 
 // ID is the resolver for the id field.
+func (r *channelCredentialRefResolver) ID(ctx context.Context, obj *ent.ChannelCredentialRef) (*objects.GUID, error) {
+	return &objects.GUID{
+		Type: ent.TypeChannelCredentialRef,
+		ID:   obj.ID,
+	}, nil
+}
+
+// ChannelID is the resolver for the channelID field.
+func (r *channelCredentialRefResolver) ChannelID(ctx context.Context, obj *ent.ChannelCredentialRef) (*objects.GUID, error) {
+	return &objects.GUID{
+		Type: ent.TypeChannel,
+		ID:   obj.ChannelID,
+	}, nil
+}
+
+// CredentialID is the resolver for the credentialID field.
+func (r *channelCredentialRefResolver) CredentialID(ctx context.Context, obj *ent.ChannelCredentialRef) (*objects.GUID, error) {
+	return &objects.GUID{
+		Type: ent.TypeUpstreamCredential,
+		ID:   obj.CredentialID,
+	}, nil
+}
+
+// Channel is the resolver for the channel field.
+func (r *channelCredentialRefResolver) Channel(ctx context.Context, obj *ent.ChannelCredentialRef) (*ent.Channel, error) {
+	return obj.QueryChannel().Only(ctx)
+}
+
+// Credential is the resolver for the credential field.
+func (r *channelCredentialRefResolver) Credential(ctx context.Context, obj *ent.ChannelCredentialRef) (*ent.UpstreamCredential, error) {
+	return obj.QueryCredential().Only(ctx)
+}
+
+// ID is the resolver for the id field.
 func (r *channelModelPriceResolver) ID(ctx context.Context, obj *ent.ChannelModelPrice) (*objects.GUID, error) {
 	return &objects.GUID{
 		Type: ent.TypeChannelModelPrice,
@@ -276,6 +310,18 @@ func (r *providerQuotaStatusResolver) ChannelID(ctx context.Context, obj *ent.Pr
 	}, nil
 }
 
+// CredentialID is the resolver for the credentialID field.
+func (r *providerQuotaStatusResolver) CredentialID(ctx context.Context, obj *ent.ProviderQuotaStatus) (*objects.GUID, error) {
+	if obj.CredentialID == 0 {
+		return nil, nil
+	}
+
+	return &objects.GUID{
+		Type: ent.TypeUpstreamCredential,
+		ID:   obj.CredentialID,
+	}, nil
+}
+
 // Node is the resolver for the node field.
 func (r *queryResolver) Node(ctx context.Context, id objects.GUID) (ent.Noder, error) {
 	typ, ok := guidTypeToNodeType[id.Type]
@@ -332,6 +378,22 @@ func (r *queryResolver) Channels(ctx context.Context, after *entgql.Cursor[int],
 	return r.client.Channel.Query().Paginate(ctx, after, first, before, last,
 		ent.WithChannelOrder(orderBy),
 		ent.WithChannelFilter(where.Filter),
+	)
+}
+
+// ChannelCredentialRefs is the resolver for the channelCredentialRefs field.
+func (r *queryResolver) ChannelCredentialRefs(ctx context.Context, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.ChannelCredentialRefOrder, where *ent.ChannelCredentialRefWhereInput) (*ent.ChannelCredentialRefConnection, error) {
+	if err := validatePaginationArgs(first, last); err != nil {
+		return nil, err
+	}
+
+	if orderBy != nil && orderBy.Field.String() == "CREATED_AT" {
+		orderBy.Field = ent.DefaultChannelCredentialRefOrder.Field
+	}
+
+	return r.client.ChannelCredentialRef.Query().Paginate(ctx, after, first, before, last,
+		ent.WithChannelCredentialRefOrder(orderBy),
+		ent.WithChannelCredentialRefFilter(where.Filter),
 	)
 }
 
@@ -514,6 +576,22 @@ func (r *queryResolver) Traces(ctx context.Context, after *entgql.Cursor[int], f
 	)
 }
 
+// UpstreamCredentials is the resolver for the upstreamCredentials field.
+func (r *queryResolver) UpstreamCredentials(ctx context.Context, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.UpstreamCredentialOrder, where *ent.UpstreamCredentialWhereInput) (*ent.UpstreamCredentialConnection, error) {
+	if err := validatePaginationArgs(first, last); err != nil {
+		return nil, err
+	}
+
+	if orderBy != nil && orderBy.Field.String() == "CREATED_AT" {
+		orderBy.Field = ent.DefaultUpstreamCredentialOrder.Field
+	}
+
+	return r.client.UpstreamCredential.Query().Paginate(ctx, after, first, before, last,
+		ent.WithUpstreamCredentialOrder(orderBy),
+		ent.WithUpstreamCredentialFilter(where.Filter),
+	)
+}
+
 // UsageLogs is the resolver for the usageLogs field.
 func (r *queryResolver) UsageLogs(ctx context.Context, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.UsageLogOrder, where *ent.UsageLogWhereInput) (*ent.UsageLogConnection, error) {
 	if err := validatePaginationArgs(first, last); err != nil {
@@ -672,6 +750,18 @@ func (r *requestExecutionResolver) ChannelID(ctx context.Context, obj *ent.Reque
 	}, nil
 }
 
+// CredentialID is the resolver for the credentialID field.
+func (r *requestExecutionResolver) CredentialID(ctx context.Context, obj *ent.RequestExecution) (*objects.GUID, error) {
+	if obj.CredentialID == 0 {
+		return nil, nil
+	}
+
+	return &objects.GUID{
+		Type: ent.TypeUpstreamCredential,
+		ID:   obj.CredentialID,
+	}, nil
+}
+
 // DataStorageID is the resolver for the dataStorageID field.
 func (r *requestExecutionResolver) DataStorageID(ctx context.Context, obj *ent.RequestExecution) (*objects.GUID, error) {
 	if obj.DataStorageID == 0 {
@@ -725,6 +815,11 @@ func (r *requestExecutionResolver) ResponseChunks(ctx context.Context, obj *ent.
 // Channel is the resolver for the channel field.
 func (r *requestExecutionResolver) Channel(ctx context.Context, obj *ent.RequestExecution) (*ent.Channel, error) {
 	return getNilableChannel(ctx, r.client, obj.ChannelID)
+}
+
+// Credential is the resolver for the credential field.
+func (r *requestExecutionResolver) Credential(ctx context.Context, obj *ent.RequestExecution) (*ent.UpstreamCredential, error) {
+	return getNilableUpstreamCredential(ctx, r.client, obj.CredentialID)
 }
 
 // ID is the resolver for the id field.
@@ -802,6 +897,14 @@ func (r *traceResolver) ThreadID(ctx context.Context, obj *ent.Trace) (*objects.
 }
 
 // ID is the resolver for the id field.
+func (r *upstreamCredentialResolver) ID(ctx context.Context, obj *ent.UpstreamCredential) (*objects.GUID, error) {
+	return &objects.GUID{
+		Type: ent.TypeUpstreamCredential,
+		ID:   obj.ID,
+	}, nil
+}
+
+// ID is the resolver for the id field.
 func (r *usageLogResolver) ID(ctx context.Context, obj *ent.UsageLog) (*objects.GUID, error) {
 	return &objects.GUID{
 		Type: ent.TypeUsageLog,
@@ -833,9 +936,26 @@ func (r *usageLogResolver) ChannelID(ctx context.Context, obj *ent.UsageLog) (*o
 	}, nil
 }
 
+// CredentialID is the resolver for the credentialID field.
+func (r *usageLogResolver) CredentialID(ctx context.Context, obj *ent.UsageLog) (*objects.GUID, error) {
+	if obj.CredentialID == 0 {
+		return nil, nil
+	}
+
+	return &objects.GUID{
+		Type: ent.TypeUpstreamCredential,
+		ID:   obj.CredentialID,
+	}, nil
+}
+
 // Channel is the resolver for the channel field.
 func (r *usageLogResolver) Channel(ctx context.Context, obj *ent.UsageLog) (*ent.Channel, error) {
 	return getNilableChannel(ctx, r.client, obj.ChannelID)
+}
+
+// Credential is the resolver for the credential field.
+func (r *usageLogResolver) Credential(ctx context.Context, obj *ent.UsageLog) (*ent.UpstreamCredential, error) {
+	return getNilableUpstreamCredential(ctx, r.client, obj.CredentialID)
 }
 
 // ID is the resolver for the id field.
@@ -915,6 +1035,11 @@ func (r *Resolver) APIKeyProfileTemplate() APIKeyProfileTemplateResolver {
 // Channel returns ChannelResolver implementation.
 func (r *Resolver) Channel() ChannelResolver { return &channelResolver{r} }
 
+// ChannelCredentialRef returns ChannelCredentialRefResolver implementation.
+func (r *Resolver) ChannelCredentialRef() ChannelCredentialRefResolver {
+	return &channelCredentialRefResolver{r}
+}
+
 // ChannelModelPrice returns ChannelModelPriceResolver implementation.
 func (r *Resolver) ChannelModelPrice() ChannelModelPriceResolver {
 	return &channelModelPriceResolver{r}
@@ -979,6 +1104,11 @@ func (r *Resolver) Thread() ThreadResolver { return &threadResolver{r} }
 // Trace returns TraceResolver implementation.
 func (r *Resolver) Trace() TraceResolver { return &traceResolver{r} }
 
+// UpstreamCredential returns UpstreamCredentialResolver implementation.
+func (r *Resolver) UpstreamCredential() UpstreamCredentialResolver {
+	return &upstreamCredentialResolver{r}
+}
+
 // UsageLog returns UsageLogResolver implementation.
 func (r *Resolver) UsageLog() UsageLogResolver { return &usageLogResolver{r} }
 
@@ -994,6 +1124,7 @@ func (r *Resolver) UserRole() UserRoleResolver { return &userRoleResolver{r} }
 type aPIKeyResolver struct{ *Resolver }
 type aPIKeyProfileTemplateResolver struct{ *Resolver }
 type channelResolver struct{ *Resolver }
+type channelCredentialRefResolver struct{ *Resolver }
 type channelModelPriceResolver struct{ *Resolver }
 type channelModelPriceVersionResolver struct{ *Resolver }
 type channelOverrideTemplateResolver struct{ *Resolver }
@@ -1012,6 +1143,7 @@ type roleResolver struct{ *Resolver }
 type systemResolver struct{ *Resolver }
 type threadResolver struct{ *Resolver }
 type traceResolver struct{ *Resolver }
+type upstreamCredentialResolver struct{ *Resolver }
 type usageLogResolver struct{ *Resolver }
 type userResolver struct{ *Resolver }
 type userProjectResolver struct{ *Resolver }

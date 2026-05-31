@@ -46,14 +46,27 @@ const (
 )
 
 type StickySessionBinding struct {
-	ChannelID int
-	ExpiresAt time.Time
+	CredentialID          int
+	ChannelID             int
+	CredentialFingerprint string
+	ExpiresAt             time.Time
+}
+
+type StickySessionTarget struct {
+	CredentialID          int
+	ChannelID             int
+	CredentialFingerprint string
 }
 
 type StickySessionStore interface {
 	Get(key string) (int, bool)
 	Bind(key string, channelID int)
 	Delete(key string)
+}
+
+type StickySessionTargetStore interface {
+	GetTarget(key string) (StickySessionTarget, bool)
+	BindTarget(key string, target StickySessionTarget)
 }
 
 type StickySessionBindingStore struct {
@@ -76,8 +89,17 @@ func NewStickySessionBindingStore(ttl time.Duration) *StickySessionBindingStore 
 }
 
 func (s *StickySessionBindingStore) Get(key string) (int, bool) {
-	if s == nil || key == "" {
+	target, ok := s.GetTarget(key)
+	if !ok {
 		return 0, false
+	}
+
+	return target.ChannelID, true
+}
+
+func (s *StickySessionBindingStore) GetTarget(key string) (StickySessionTarget, bool) {
+	if s == nil || key == "" {
+		return StickySessionTarget{}, false
 	}
 
 	s.mu.Lock()
@@ -85,19 +107,27 @@ func (s *StickySessionBindingStore) Get(key string) (int, bool) {
 
 	binding, ok := s.bindings[key]
 	if !ok {
-		return 0, false
+		return StickySessionTarget{}, false
 	}
 
 	if !binding.ExpiresAt.After(s.now()) {
 		delete(s.bindings, key)
-		return 0, false
+		return StickySessionTarget{}, false
 	}
 
-	return binding.ChannelID, true
+	return StickySessionTarget{
+		CredentialID:          binding.CredentialID,
+		ChannelID:             binding.ChannelID,
+		CredentialFingerprint: binding.CredentialFingerprint,
+	}, true
 }
 
 func (s *StickySessionBindingStore) Bind(key string, channelID int) {
-	if s == nil || key == "" || channelID == 0 {
+	s.BindTarget(key, StickySessionTarget{ChannelID: channelID})
+}
+
+func (s *StickySessionBindingStore) BindTarget(key string, target StickySessionTarget) {
+	if s == nil || key == "" || target.ChannelID == 0 {
 		return
 	}
 
@@ -105,8 +135,10 @@ func (s *StickySessionBindingStore) Bind(key string, channelID int) {
 	defer s.mu.Unlock()
 
 	s.bindings[key] = StickySessionBinding{
-		ChannelID: channelID,
-		ExpiresAt: s.now().Add(s.ttl),
+		CredentialID:          target.CredentialID,
+		ChannelID:             target.ChannelID,
+		CredentialFingerprint: target.CredentialFingerprint,
+		ExpiresAt:             s.now().Add(s.ttl),
 	}
 }
 
@@ -792,6 +824,8 @@ func (r *StickySessionRouter) Order(ctx context.Context, req StickySessionOrderR
 		req.State.StickyResponseID = ""
 		req.State.StickyPreviousResponseID = ""
 		req.State.StickyResponseMessage = nil
+		req.State.PreferredCredentialID = 0
+		req.State.PreferredCredentialFingerprint = ""
 	}
 
 	if len(req.Candidates) == 0 || req.LoadBalancer == nil || req.Request == nil {
@@ -823,7 +857,7 @@ func (r *StickySessionRouter) Order(ctx context.Context, req StickySessionOrderR
 	}
 
 	eligibleCandidates := r.eligibleCandidates(ctx, req)
-	primary, excludedChannelID, boundLookup := r.boundCandidateForLookups(ctx, extraction.Lookups, req.Candidates, eligibleCandidates)
+	primary, excludedChannelID, boundLookup, preferredTarget := r.boundCandidateForLookups(ctx, extraction.Lookups, req.Candidates, eligibleCandidates)
 	source := "binding"
 	if primary == nil {
 		primary = randomBestTierCandidate(eligibleCandidates)
@@ -834,6 +868,10 @@ func (r *StickySessionRouter) Order(ctx context.Context, req StickySessionOrderR
 	}
 
 	ordered := stickyOrderedCandidates(ctx, req, primary, excludedChannelID)
+	if req.State != nil {
+		req.State.PreferredCredentialID = preferredTarget.CredentialID
+		req.State.PreferredCredentialFingerprint = preferredTarget.CredentialFingerprint
+	}
 	req.LoadBalancer.TrackSelection(ordered)
 
 	if log.DebugEnabled(ctx) && len(ordered) > 0 && ordered[0] != nil && ordered[0].Channel != nil {
@@ -858,22 +896,24 @@ func (r *StickySessionRouter) boundCandidateForLookups(
 	lookups []StickyLookup,
 	candidates []*ChannelModelsCandidate,
 	eligibleCandidates []*ChannelModelsCandidate,
-) (*ChannelModelsCandidate, int, StickyLookup) {
+) (*ChannelModelsCandidate, int, StickyLookup, StickySessionTarget) {
 	excludedChannelID := 0
+	var excludedTarget StickySessionTarget
 	for _, lookup := range lookups {
 		if lookup.Key == "" {
 			continue
 		}
-		primary, excluded := r.boundCandidate(ctx, lookup.Key, candidates, eligibleCandidates)
+		primary, excluded, preferredTarget := r.boundCandidate(ctx, lookup.Key, candidates, eligibleCandidates)
 		if primary != nil {
-			return primary, excludedChannelID, lookup
+			return primary, excludedChannelID, lookup, preferredTarget
 		}
 		if excluded != 0 && excludedChannelID == 0 {
 			excludedChannelID = excluded
+			excludedTarget = preferredTarget
 		}
 	}
 
-	return nil, excludedChannelID, StickyLookup{}
+	return nil, excludedChannelID, StickyLookup{}, excludedTarget
 }
 
 func (r *StickySessionRouter) boundCandidate(
@@ -881,29 +921,60 @@ func (r *StickySessionRouter) boundCandidate(
 	key string,
 	candidates []*ChannelModelsCandidate,
 	eligibleCandidates []*ChannelModelsCandidate,
-) (*ChannelModelsCandidate, int) {
-	channelID, ok := r.store.Get(key)
+) (*ChannelModelsCandidate, int, StickySessionTarget) {
+	target, ok := stickyStoreGetTarget(r.store, key)
 	if !ok {
-		return nil, 0
+		return nil, 0, StickySessionTarget{}
 	}
+
+	primaryTier := stickyBestPriorityCandidates(eligibleCandidates)
+	channelID := target.ChannelID
+	boundChannelPresent := false
+	boundChannelInPrimaryTier := false
 
 	for _, candidate := range candidates {
 		if candidate == nil || candidate.Channel == nil || candidate.Channel.ID != channelID {
 			continue
 		}
+		boundChannelPresent = true
 
-		for _, eligible := range eligibleCandidates {
+		for _, eligible := range primaryTier {
+			if eligible != nil && eligible.Channel != nil && eligible.Channel.ID == channelID && stickyCandidateMatchesTarget(eligible, target) {
+				return eligible, 0, target
+			}
 			if eligible != nil && eligible.Channel != nil && eligible.Channel.ID == channelID {
-				return eligible, 0
+				boundChannelInPrimaryTier = true
 			}
 		}
 
-		if log.DebugEnabled(ctx) {
-			log.Debug(ctx, "sticky-session binding skipped because channel is not currently eligible",
-				log.Int("bound_channel_id", channelID))
-		}
+		break
+	}
 
-		return nil, channelID
+	if target.CredentialID > 0 || target.CredentialFingerprint != "" {
+		for _, eligible := range primaryTier {
+			if stickyCandidateMatchesTarget(eligible, target) {
+				if log.DebugEnabled(ctx) {
+					log.Debug(ctx, "sticky-session binding kept credential on same priority channel",
+						log.Int("bound_channel_id", channelID),
+						log.Int("selected_channel_id", eligible.Channel.ID),
+						log.String("credential_fingerprint", target.CredentialFingerprint))
+				}
+
+				return eligible, 0, target
+			}
+		}
+	}
+
+	if boundChannelPresent {
+		if log.DebugEnabled(ctx) {
+			log.Debug(ctx, "sticky-session binding skipped because channel is not currently eligible in the active priority tier",
+				log.Int("bound_channel_id", channelID),
+				log.String("credential_fingerprint", target.CredentialFingerprint))
+		}
+		if boundChannelInPrimaryTier {
+			return nil, channelID, target
+		}
+		return nil, 0, target
 	}
 
 	r.store.Delete(key)
@@ -912,7 +983,62 @@ func (r *StickySessionRouter) boundCandidate(
 			log.Int("bound_channel_id", channelID))
 	}
 
-	return nil, 0
+	return nil, 0, StickySessionTarget{}
+}
+
+func stickyStoreGetTarget(store StickySessionStore, key string) (StickySessionTarget, bool) {
+	if targetStore, ok := store.(StickySessionTargetStore); ok {
+		return targetStore.GetTarget(key)
+	}
+
+	channelID, ok := store.Get(key)
+	if !ok {
+		return StickySessionTarget{}, false
+	}
+
+	return StickySessionTarget{ChannelID: channelID}, true
+}
+
+func stickyCandidateMatchesTarget(candidate *ChannelModelsCandidate, target StickySessionTarget) bool {
+	if candidate == nil || candidate.Channel == nil {
+		return false
+	}
+
+	if target.CredentialID > 0 && candidate.Channel.HasEnabledCredentialID(target.CredentialID) {
+		return true
+	}
+
+	if target.CredentialFingerprint == "" {
+		return true
+	}
+
+	return candidate.Channel.HasEnabledCredentialFingerprint(target.CredentialFingerprint)
+}
+
+func stickyBestPriorityCandidates(candidates []*ChannelModelsCandidate) []*ChannelModelsCandidate {
+	bestPrioritySet := false
+	bestPriority := 0
+	for _, candidate := range candidates {
+		if candidate == nil || candidate.Channel == nil {
+			continue
+		}
+		if !bestPrioritySet || candidate.Priority < bestPriority {
+			bestPrioritySet = true
+			bestPriority = candidate.Priority
+		}
+	}
+	if !bestPrioritySet {
+		return nil
+	}
+
+	result := make([]*ChannelModelsCandidate, 0, len(candidates))
+	for _, candidate := range candidates {
+		if candidate != nil && candidate.Channel != nil && candidate.Priority == bestPriority {
+			result = append(result, candidate)
+		}
+	}
+
+	return result
 }
 
 func (r *StickySessionRouter) eligibleCandidates(ctx context.Context, req StickySessionOrderRequest) []*ChannelModelsCandidate {
@@ -1147,7 +1273,16 @@ func (m *stickySessionBindingMiddleware) bindCurrentChannel(ctx context.Context)
 	}
 
 	for _, binding := range bindings {
-		m.store.Bind(binding.Key, channel.ID)
+		target := StickySessionTarget{
+			CredentialID:          state.CurrentCredentialID,
+			ChannelID:             channel.ID,
+			CredentialFingerprint: state.CurrentCredentialFingerprint,
+		}
+		if targetStore, ok := m.store.(StickySessionTargetStore); ok {
+			targetStore.BindTarget(binding.Key, target)
+		} else {
+			m.store.Bind(binding.Key, channel.ID)
+		}
 	}
 
 	if log.DebugEnabled(ctx) {

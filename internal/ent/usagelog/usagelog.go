@@ -31,8 +31,12 @@ const (
 	FieldProjectID = "project_id"
 	// FieldChannelID holds the string denoting the channel_id field in the database.
 	FieldChannelID = "channel_id"
+	// FieldCredentialID holds the string denoting the credential_id field in the database.
+	FieldCredentialID = "credential_id"
 	// FieldModelID holds the string denoting the model_id field in the database.
 	FieldModelID = "model_id"
+	// FieldCredentialFingerprint holds the string denoting the credential_fingerprint field in the database.
+	FieldCredentialFingerprint = "credential_fingerprint"
 	// FieldPromptTokens holds the string denoting the prompt_tokens field in the database.
 	FieldPromptTokens = "prompt_tokens"
 	// FieldCompletionTokens holds the string denoting the completion_tokens field in the database.
@@ -73,6 +77,8 @@ const (
 	EdgeProject = "project"
 	// EdgeChannel holds the string denoting the channel edge name in mutations.
 	EdgeChannel = "channel"
+	// EdgeCredential holds the string denoting the credential edge name in mutations.
+	EdgeCredential = "credential"
 	// Table holds the table name of the usagelog in the database.
 	Table = "usage_logs"
 	// RequestTable is the table that holds the request relation/edge.
@@ -96,6 +102,13 @@ const (
 	ChannelInverseTable = "channels"
 	// ChannelColumn is the table column denoting the channel relation/edge.
 	ChannelColumn = "channel_id"
+	// CredentialTable is the table that holds the credential relation/edge.
+	CredentialTable = "usage_logs"
+	// CredentialInverseTable is the table name for the UpstreamCredential entity.
+	// It exists in this package in order to avoid circular dependency with the "upstreamcredential" package.
+	CredentialInverseTable = "upstream_credentials"
+	// CredentialColumn is the table column denoting the credential relation/edge.
+	CredentialColumn = "credential_id"
 )
 
 // Columns holds all SQL columns for usagelog fields.
@@ -107,7 +120,9 @@ var Columns = []string{
 	FieldAPIKeyID,
 	FieldProjectID,
 	FieldChannelID,
+	FieldCredentialID,
 	FieldModelID,
+	FieldCredentialFingerprint,
 	FieldPromptTokens,
 	FieldCompletionTokens,
 	FieldTotalTokens,
@@ -153,6 +168,8 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 	// DefaultProjectID holds the default value on creation for the "project_id" field.
 	DefaultProjectID int
+	// CredentialFingerprintValidator is a validator for the "credential_fingerprint" field. It is called by the builders before save.
+	CredentialFingerprintValidator func(string) error
 	// DefaultPromptTokens holds the default value on creation for the "prompt_tokens" field.
 	DefaultPromptTokens int64
 	// DefaultCompletionTokens holds the default value on creation for the "completion_tokens" field.
@@ -248,9 +265,19 @@ func ByChannelID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldChannelID, opts...).ToFunc()
 }
 
+// ByCredentialID orders the results by the credential_id field.
+func ByCredentialID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCredentialID, opts...).ToFunc()
+}
+
 // ByModelID orders the results by the model_id field.
 func ByModelID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldModelID, opts...).ToFunc()
+}
+
+// ByCredentialFingerprint orders the results by the credential_fingerprint field.
+func ByCredentialFingerprint(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCredentialFingerprint, opts...).ToFunc()
 }
 
 // ByPromptTokens orders the results by the prompt_tokens field.
@@ -353,6 +380,13 @@ func ByChannelField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newChannelStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByCredentialField orders the results by credential field.
+func ByCredentialField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCredentialStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newRequestStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -372,6 +406,13 @@ func newChannelStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ChannelInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, ChannelTable, ChannelColumn),
+	)
+}
+func newCredentialStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CredentialInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, CredentialTable, CredentialColumn),
 	)
 }
 

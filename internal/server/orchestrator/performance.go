@@ -71,6 +71,18 @@ func (m *performanceRecording) OnOutboundRawRequest(ctx context.Context, request
 	// Get the API key used for this request from context (set by TraceStickyKeyProvider)
 	if apiKey, ok := contexts.GetChannelAPIKey(ctx); ok {
 		perf.APIKey = apiKey
+	} else if m.outbound.state.CurrentCredentialAPIKey != "" {
+		perf.APIKey = m.outbound.state.CurrentCredentialAPIKey
+	}
+	if fingerprint, ok := contexts.GetChannelCredentialFingerprint(ctx); ok {
+		perf.CredentialFingerprint = fingerprint
+	} else if m.outbound.state.CurrentCredentialFingerprint != "" {
+		perf.CredentialFingerprint = m.outbound.state.CurrentCredentialFingerprint
+	}
+	if credentialID, ok := contexts.GetChannelCredentialID(ctx); ok {
+		perf.CredentialID = credentialID
+	} else if m.outbound.state.CurrentCredentialID > 0 {
+		perf.CredentialID = m.outbound.state.CurrentCredentialID
 	}
 
 	m.outbound.state.Perf = &perf

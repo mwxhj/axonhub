@@ -23,6 +23,8 @@ func (ProviderQuotaStatus) Mixin() []ent.Mixin {
 func (ProviderQuotaStatus) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("channel_id").Unique(),
+		index.Fields("credential_id"),
+		index.Fields("credential_fingerprint"),
 		index.Fields("next_check_at"),
 	}
 }
@@ -30,6 +32,13 @@ func (ProviderQuotaStatus) Indexes() []ent.Index {
 func (ProviderQuotaStatus) Fields() []ent.Field {
 	return []ent.Field{
 		field.Int("channel_id").Immutable(),
+		field.Int("credential_id").
+			Optional().
+			Comment("Upstream credential represented by this quota status when known"),
+		field.String("credential_fingerprint").
+			Optional().
+			MaxLen(128).
+			Comment("Safe upstream credential identity represented by this quota status when known"),
 		field.Enum("provider_type").
 			Values("claudecode", "codex", "github_copilot", "nanogpt", "wafer", "synthetic", "neuralwatt").
 			Immutable(),
@@ -57,6 +66,10 @@ func (ProviderQuotaStatus) Edges() []ent.Edge {
 			Field("channel_id").
 			Required().
 			Immutable().
+			Unique(),
+		edge.From("credential", UpstreamCredential.Type).
+			Ref("provider_quota_statuses").
+			Field("credential_id").
 			Unique(),
 	}
 }

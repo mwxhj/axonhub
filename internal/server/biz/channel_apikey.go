@@ -9,6 +9,7 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/objects"
 	"github.com/looplj/axonhub/internal/pkg/xcontext"
@@ -99,6 +100,154 @@ func (svc *ChannelService) DisableAPIKey(ctx context.Context, channelID int, key
 	svc.asyncReloadChannels()
 
 	return nil
+}
+
+// DisableCredentialFingerprint disables every API key matching the derived credential fingerprint.
+// This keeps duplicated upstream keys across channels in the same failure domain without exposing the raw key.
+func (svc *ChannelService) DisableCredentialFingerprint(ctx context.Context, fingerprint string, errorCode int, reason string) (int, error) {
+	if fingerprint == "" {
+		return 0, fmt.Errorf("credential fingerprint cannot be empty")
+	}
+
+	channels, err := svc.entFromContext(ctx).Channel.Query().All(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to query channels: %w", err)
+	}
+
+	affectedKeys := 0
+	disabledChannels := 0
+
+	for _, ch := range channels {
+		matchingKeys := make(map[string]struct{})
+		for _, key := range ch.Credentials.GetAllAPIKeys() {
+			if ChannelCredentialFingerprintForAPIKey(ch.Type.String(), ch.BaseURL, key) == fingerprint {
+				matchingKeys[key] = struct{}{}
+			}
+		}
+		if len(matchingKeys) == 0 {
+			continue
+		}
+
+		disabledSet := make(map[string]struct{}, len(ch.DisabledAPIKeys)+len(matchingKeys))
+		for _, dk := range ch.DisabledAPIKeys {
+			disabledSet[dk.Key] = struct{}{}
+		}
+
+		newDisabledKeys := slices.Clone(ch.DisabledAPIKeys)
+		channelChanged := false
+		now := time.Now()
+
+		for key := range matchingKeys {
+			if _, disabled := disabledSet[key]; disabled {
+				continue
+			}
+
+			newDisabledKeys = append(newDisabledKeys, objects.DisabledAPIKey{
+				Key:        key,
+				DisabledAt: now,
+				ErrorCode:  errorCode,
+				Reason:     reason,
+			})
+			disabledSet[key] = struct{}{}
+			channelChanged = true
+			affectedKeys++
+		}
+
+		if !channelChanged {
+			continue
+		}
+
+		enabledKeys := ch.Credentials.GetEnabledAPIKeys(newDisabledKeys)
+		update := svc.entFromContext(ctx).Channel.UpdateOneID(ch.ID).
+			SetDisabledAPIKeys(newDisabledKeys)
+
+		if len(enabledKeys) == 0 {
+			update.SetStatus(channel.StatusDisabled)
+			update.SetErrorMessage(fmt.Sprintf("All API keys disabled (last credential error: %d)", errorCode))
+			disabledChannels++
+		}
+
+		if _, err := update.Save(ctx); err != nil {
+			return affectedKeys, fmt.Errorf("failed to disable credential on channel %d: %w", ch.ID, err)
+		}
+	}
+
+	if affectedKeys == 0 {
+		return 0, nil
+	}
+
+	log.Info(ctx, "Credential disabled across channels",
+		log.String("credential_fingerprint", fingerprint),
+		log.Int("affected_keys", affectedKeys),
+		log.Int("disabled_channels", disabledChannels),
+		log.Int("error_code", errorCode),
+	)
+
+	reloadCtx, cancel := xcontext.DetachWithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	if err := svc.enabledChannelsCache.Load(reloadCtx, true); err != nil {
+		log.Warn(ctx, "Failed to synchronously reload channels after credential disable",
+			log.String("credential_fingerprint", fingerprint),
+			log.Cause(err),
+		)
+	}
+
+	svc.asyncReloadChannels()
+
+	return affectedKeys, nil
+}
+
+// DisableCredentialID disables a first-class upstream credential globally.
+// The channel cache then resolves every attached ChannelCredentialRef as
+// unavailable while leaving unrelated credentials on the same channels usable.
+func (svc *ChannelService) DisableCredentialID(ctx context.Context, credentialID int, errorCode int, reason string) (int, error) {
+	if credentialID <= 0 {
+		return 0, fmt.Errorf("credential id cannot be empty")
+	}
+
+	affected, err := svc.entFromContext(ctx).UpstreamCredential.Update().
+		Where(
+			upstreamcredential.ID(credentialID),
+			upstreamcredential.StatusEQ(upstreamcredential.StatusEnabled),
+		).
+		SetStatus(upstreamcredential.StatusDisabled).
+		Save(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to disable upstream credential: %w", err)
+	}
+	if affected == 0 {
+		exists, err := svc.entFromContext(ctx).UpstreamCredential.Query().
+			Where(upstreamcredential.ID(credentialID)).
+			Exist(ctx)
+		if err != nil {
+			return 0, fmt.Errorf("failed to check upstream credential: %w", err)
+		}
+		if exists {
+			return 1, nil
+		}
+
+		return 0, nil
+	}
+
+	log.Info(ctx, "Upstream credential disabled",
+		log.Int("credential_id", credentialID),
+		log.Int("error_code", errorCode),
+	)
+
+	reloadCtx, cancel := xcontext.DetachWithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	if err := svc.enabledChannelsCache.Load(reloadCtx, true); err != nil {
+		log.Warn(ctx, "Failed to synchronously reload channels after upstream credential disable",
+			log.Int("credential_id", credentialID),
+			log.Cause(err),
+		)
+	}
+
+	svc.asyncReloadChannels()
+
+	return affected, nil
 }
 
 // EnableAPIKey 重新启用指定 key（从 disabled_api_keys 中移除）.

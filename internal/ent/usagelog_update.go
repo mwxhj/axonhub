@@ -490,6 +490,9 @@ func (_u *UsageLogUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.APIKeyIDCleared() {
 		_spec.ClearField(usagelog.FieldAPIKeyID, field.TypeInt)
 	}
+	if _u.mutation.CredentialFingerprintCleared() {
+		_spec.ClearField(usagelog.FieldCredentialFingerprint, field.TypeString)
+	}
 	if value, ok := _u.mutation.PromptTokens(); ok {
 		_spec.SetField(usagelog.FieldPromptTokens, field.TypeInt64, value)
 	}
@@ -1125,6 +1128,9 @@ func (_u *UsageLogUpdateOne) sqlSave(ctx context.Context) (_node *UsageLog, err 
 	}
 	if _u.mutation.APIKeyIDCleared() {
 		_spec.ClearField(usagelog.FieldAPIKeyID, field.TypeInt)
+	}
+	if _u.mutation.CredentialFingerprintCleared() {
+		_spec.ClearField(usagelog.FieldCredentialFingerprint, field.TypeString)
 	}
 	if value, ok := _u.mutation.PromptTokens(); ok {
 		_spec.SetField(usagelog.FieldPromptTokens, field.TypeInt64, value)

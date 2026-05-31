@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/looplj/axonhub/internal/ent/predicate"
 	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 )
 
 // ProviderQuotaStatusUpdate is the builder for updating ProviderQuotaStatus entities.
@@ -53,6 +54,46 @@ func (_u *ProviderQuotaStatusUpdate) SetNillableDeletedAt(v *int) *ProviderQuota
 // AddDeletedAt adds value to the "deleted_at" field.
 func (_u *ProviderQuotaStatusUpdate) AddDeletedAt(v int) *ProviderQuotaStatusUpdate {
 	_u.mutation.AddDeletedAt(v)
+	return _u
+}
+
+// SetCredentialID sets the "credential_id" field.
+func (_u *ProviderQuotaStatusUpdate) SetCredentialID(v int) *ProviderQuotaStatusUpdate {
+	_u.mutation.SetCredentialID(v)
+	return _u
+}
+
+// SetNillableCredentialID sets the "credential_id" field if the given value is not nil.
+func (_u *ProviderQuotaStatusUpdate) SetNillableCredentialID(v *int) *ProviderQuotaStatusUpdate {
+	if v != nil {
+		_u.SetCredentialID(*v)
+	}
+	return _u
+}
+
+// ClearCredentialID clears the value of the "credential_id" field.
+func (_u *ProviderQuotaStatusUpdate) ClearCredentialID() *ProviderQuotaStatusUpdate {
+	_u.mutation.ClearCredentialID()
+	return _u
+}
+
+// SetCredentialFingerprint sets the "credential_fingerprint" field.
+func (_u *ProviderQuotaStatusUpdate) SetCredentialFingerprint(v string) *ProviderQuotaStatusUpdate {
+	_u.mutation.SetCredentialFingerprint(v)
+	return _u
+}
+
+// SetNillableCredentialFingerprint sets the "credential_fingerprint" field if the given value is not nil.
+func (_u *ProviderQuotaStatusUpdate) SetNillableCredentialFingerprint(v *string) *ProviderQuotaStatusUpdate {
+	if v != nil {
+		_u.SetCredentialFingerprint(*v)
+	}
+	return _u
+}
+
+// ClearCredentialFingerprint clears the value of the "credential_fingerprint" field.
+func (_u *ProviderQuotaStatusUpdate) ClearCredentialFingerprint() *ProviderQuotaStatusUpdate {
+	_u.mutation.ClearCredentialFingerprint()
 	return _u
 }
 
@@ -124,9 +165,20 @@ func (_u *ProviderQuotaStatusUpdate) SetNillableNextCheckAt(v *time.Time) *Provi
 	return _u
 }
 
+// SetCredential sets the "credential" edge to the UpstreamCredential entity.
+func (_u *ProviderQuotaStatusUpdate) SetCredential(v *UpstreamCredential) *ProviderQuotaStatusUpdate {
+	return _u.SetCredentialID(v.ID)
+}
+
 // Mutation returns the ProviderQuotaStatusMutation object of the builder.
 func (_u *ProviderQuotaStatusUpdate) Mutation() *ProviderQuotaStatusMutation {
 	return _u.mutation
+}
+
+// ClearCredential clears the "credential" edge to the UpstreamCredential entity.
+func (_u *ProviderQuotaStatusUpdate) ClearCredential() *ProviderQuotaStatusUpdate {
+	_u.mutation.ClearCredential()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -173,6 +225,11 @@ func (_u *ProviderQuotaStatusUpdate) defaults() error {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ProviderQuotaStatusUpdate) check() error {
+	if v, ok := _u.mutation.CredentialFingerprint(); ok {
+		if err := providerquotastatus.CredentialFingerprintValidator(v); err != nil {
+			return &ValidationError{Name: "credential_fingerprint", err: fmt.Errorf(`ent: validator failed for field "ProviderQuotaStatus.credential_fingerprint": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := providerquotastatus.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "ProviderQuotaStatus.status": %w`, err)}
@@ -211,6 +268,12 @@ func (_u *ProviderQuotaStatusUpdate) sqlSave(ctx context.Context) (_node int, er
 	if value, ok := _u.mutation.AddedDeletedAt(); ok {
 		_spec.AddField(providerquotastatus.FieldDeletedAt, field.TypeInt, value)
 	}
+	if value, ok := _u.mutation.CredentialFingerprint(); ok {
+		_spec.SetField(providerquotastatus.FieldCredentialFingerprint, field.TypeString, value)
+	}
+	if _u.mutation.CredentialFingerprintCleared() {
+		_spec.ClearField(providerquotastatus.FieldCredentialFingerprint, field.TypeString)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(providerquotastatus.FieldStatus, field.TypeEnum, value)
 	}
@@ -228,6 +291,35 @@ func (_u *ProviderQuotaStatusUpdate) sqlSave(ctx context.Context) (_node int, er
 	}
 	if value, ok := _u.mutation.NextCheckAt(); ok {
 		_spec.SetField(providerquotastatus.FieldNextCheckAt, field.TypeTime, value)
+	}
+	if _u.mutation.CredentialCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   providerquotastatus.CredentialTable,
+			Columns: []string{providerquotastatus.CredentialColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(upstreamcredential.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CredentialIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   providerquotastatus.CredentialTable,
+			Columns: []string{providerquotastatus.CredentialColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(upstreamcredential.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
@@ -275,6 +367,46 @@ func (_u *ProviderQuotaStatusUpdateOne) SetNillableDeletedAt(v *int) *ProviderQu
 // AddDeletedAt adds value to the "deleted_at" field.
 func (_u *ProviderQuotaStatusUpdateOne) AddDeletedAt(v int) *ProviderQuotaStatusUpdateOne {
 	_u.mutation.AddDeletedAt(v)
+	return _u
+}
+
+// SetCredentialID sets the "credential_id" field.
+func (_u *ProviderQuotaStatusUpdateOne) SetCredentialID(v int) *ProviderQuotaStatusUpdateOne {
+	_u.mutation.SetCredentialID(v)
+	return _u
+}
+
+// SetNillableCredentialID sets the "credential_id" field if the given value is not nil.
+func (_u *ProviderQuotaStatusUpdateOne) SetNillableCredentialID(v *int) *ProviderQuotaStatusUpdateOne {
+	if v != nil {
+		_u.SetCredentialID(*v)
+	}
+	return _u
+}
+
+// ClearCredentialID clears the value of the "credential_id" field.
+func (_u *ProviderQuotaStatusUpdateOne) ClearCredentialID() *ProviderQuotaStatusUpdateOne {
+	_u.mutation.ClearCredentialID()
+	return _u
+}
+
+// SetCredentialFingerprint sets the "credential_fingerprint" field.
+func (_u *ProviderQuotaStatusUpdateOne) SetCredentialFingerprint(v string) *ProviderQuotaStatusUpdateOne {
+	_u.mutation.SetCredentialFingerprint(v)
+	return _u
+}
+
+// SetNillableCredentialFingerprint sets the "credential_fingerprint" field if the given value is not nil.
+func (_u *ProviderQuotaStatusUpdateOne) SetNillableCredentialFingerprint(v *string) *ProviderQuotaStatusUpdateOne {
+	if v != nil {
+		_u.SetCredentialFingerprint(*v)
+	}
+	return _u
+}
+
+// ClearCredentialFingerprint clears the value of the "credential_fingerprint" field.
+func (_u *ProviderQuotaStatusUpdateOne) ClearCredentialFingerprint() *ProviderQuotaStatusUpdateOne {
+	_u.mutation.ClearCredentialFingerprint()
 	return _u
 }
 
@@ -346,9 +478,20 @@ func (_u *ProviderQuotaStatusUpdateOne) SetNillableNextCheckAt(v *time.Time) *Pr
 	return _u
 }
 
+// SetCredential sets the "credential" edge to the UpstreamCredential entity.
+func (_u *ProviderQuotaStatusUpdateOne) SetCredential(v *UpstreamCredential) *ProviderQuotaStatusUpdateOne {
+	return _u.SetCredentialID(v.ID)
+}
+
 // Mutation returns the ProviderQuotaStatusMutation object of the builder.
 func (_u *ProviderQuotaStatusUpdateOne) Mutation() *ProviderQuotaStatusMutation {
 	return _u.mutation
+}
+
+// ClearCredential clears the "credential" edge to the UpstreamCredential entity.
+func (_u *ProviderQuotaStatusUpdateOne) ClearCredential() *ProviderQuotaStatusUpdateOne {
+	_u.mutation.ClearCredential()
+	return _u
 }
 
 // Where appends a list predicates to the ProviderQuotaStatusUpdate builder.
@@ -408,6 +551,11 @@ func (_u *ProviderQuotaStatusUpdateOne) defaults() error {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ProviderQuotaStatusUpdateOne) check() error {
+	if v, ok := _u.mutation.CredentialFingerprint(); ok {
+		if err := providerquotastatus.CredentialFingerprintValidator(v); err != nil {
+			return &ValidationError{Name: "credential_fingerprint", err: fmt.Errorf(`ent: validator failed for field "ProviderQuotaStatus.credential_fingerprint": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Status(); ok {
 		if err := providerquotastatus.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "ProviderQuotaStatus.status": %w`, err)}
@@ -463,6 +611,12 @@ func (_u *ProviderQuotaStatusUpdateOne) sqlSave(ctx context.Context) (_node *Pro
 	if value, ok := _u.mutation.AddedDeletedAt(); ok {
 		_spec.AddField(providerquotastatus.FieldDeletedAt, field.TypeInt, value)
 	}
+	if value, ok := _u.mutation.CredentialFingerprint(); ok {
+		_spec.SetField(providerquotastatus.FieldCredentialFingerprint, field.TypeString, value)
+	}
+	if _u.mutation.CredentialFingerprintCleared() {
+		_spec.ClearField(providerquotastatus.FieldCredentialFingerprint, field.TypeString)
+	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(providerquotastatus.FieldStatus, field.TypeEnum, value)
 	}
@@ -480,6 +634,35 @@ func (_u *ProviderQuotaStatusUpdateOne) sqlSave(ctx context.Context) (_node *Pro
 	}
 	if value, ok := _u.mutation.NextCheckAt(); ok {
 		_spec.SetField(providerquotastatus.FieldNextCheckAt, field.TypeTime, value)
+	}
+	if _u.mutation.CredentialCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   providerquotastatus.CredentialTable,
+			Columns: []string{providerquotastatus.CredentialColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(upstreamcredential.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CredentialIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   providerquotastatus.CredentialTable,
+			Columns: []string{providerquotastatus.CredentialColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(upstreamcredential.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &ProviderQuotaStatus{config: _u.config}

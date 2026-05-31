@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/channelmodelprice"
 	"github.com/looplj/axonhub/internal/ent/channelprobe"
 	"github.com/looplj/axonhub/internal/ent/predicate"
@@ -440,6 +441,21 @@ func (_u *ChannelUpdate) AddChannelModelPrices(v ...*ChannelModelPrice) *Channel
 	return _u.AddChannelModelPriceIDs(ids...)
 }
 
+// AddCredentialRefIDs adds the "credential_refs" edge to the ChannelCredentialRef entity by IDs.
+func (_u *ChannelUpdate) AddCredentialRefIDs(ids ...int) *ChannelUpdate {
+	_u.mutation.AddCredentialRefIDs(ids...)
+	return _u
+}
+
+// AddCredentialRefs adds the "credential_refs" edges to the ChannelCredentialRef entity.
+func (_u *ChannelUpdate) AddCredentialRefs(v ...*ChannelCredentialRef) *ChannelUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCredentialRefIDs(ids...)
+}
+
 // SetProviderQuotaStatusID sets the "provider_quota_status" edge to the ProviderQuotaStatus entity by ID.
 func (_u *ChannelUpdate) SetProviderQuotaStatusID(id int) *ChannelUpdate {
 	_u.mutation.SetProviderQuotaStatusID(id)
@@ -567,6 +583,27 @@ func (_u *ChannelUpdate) RemoveChannelModelPrices(v ...*ChannelModelPrice) *Chan
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveChannelModelPriceIDs(ids...)
+}
+
+// ClearCredentialRefs clears all "credential_refs" edges to the ChannelCredentialRef entity.
+func (_u *ChannelUpdate) ClearCredentialRefs() *ChannelUpdate {
+	_u.mutation.ClearCredentialRefs()
+	return _u
+}
+
+// RemoveCredentialRefIDs removes the "credential_refs" edge to ChannelCredentialRef entities by IDs.
+func (_u *ChannelUpdate) RemoveCredentialRefIDs(ids ...int) *ChannelUpdate {
+	_u.mutation.RemoveCredentialRefIDs(ids...)
+	return _u
+}
+
+// RemoveCredentialRefs removes "credential_refs" edges to ChannelCredentialRef entities.
+func (_u *ChannelUpdate) RemoveCredentialRefs(v ...*ChannelCredentialRef) *ChannelUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCredentialRefIDs(ids...)
 }
 
 // ClearProviderQuotaStatus clears the "provider_quota_status" edge to the ProviderQuotaStatus entity.
@@ -989,6 +1026,51 @@ func (_u *ChannelUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(channelmodelprice.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CredentialRefsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   channel.CredentialRefsTable,
+			Columns: []string{channel.CredentialRefsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(channelcredentialref.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCredentialRefsIDs(); len(nodes) > 0 && !_u.mutation.CredentialRefsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   channel.CredentialRefsTable,
+			Columns: []string{channel.CredentialRefsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(channelcredentialref.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CredentialRefsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   channel.CredentialRefsTable,
+			Columns: []string{channel.CredentialRefsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(channelcredentialref.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -1450,6 +1532,21 @@ func (_u *ChannelUpdateOne) AddChannelModelPrices(v ...*ChannelModelPrice) *Chan
 	return _u.AddChannelModelPriceIDs(ids...)
 }
 
+// AddCredentialRefIDs adds the "credential_refs" edge to the ChannelCredentialRef entity by IDs.
+func (_u *ChannelUpdateOne) AddCredentialRefIDs(ids ...int) *ChannelUpdateOne {
+	_u.mutation.AddCredentialRefIDs(ids...)
+	return _u
+}
+
+// AddCredentialRefs adds the "credential_refs" edges to the ChannelCredentialRef entity.
+func (_u *ChannelUpdateOne) AddCredentialRefs(v ...*ChannelCredentialRef) *ChannelUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddCredentialRefIDs(ids...)
+}
+
 // SetProviderQuotaStatusID sets the "provider_quota_status" edge to the ProviderQuotaStatus entity by ID.
 func (_u *ChannelUpdateOne) SetProviderQuotaStatusID(id int) *ChannelUpdateOne {
 	_u.mutation.SetProviderQuotaStatusID(id)
@@ -1577,6 +1674,27 @@ func (_u *ChannelUpdateOne) RemoveChannelModelPrices(v ...*ChannelModelPrice) *C
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveChannelModelPriceIDs(ids...)
+}
+
+// ClearCredentialRefs clears all "credential_refs" edges to the ChannelCredentialRef entity.
+func (_u *ChannelUpdateOne) ClearCredentialRefs() *ChannelUpdateOne {
+	_u.mutation.ClearCredentialRefs()
+	return _u
+}
+
+// RemoveCredentialRefIDs removes the "credential_refs" edge to ChannelCredentialRef entities by IDs.
+func (_u *ChannelUpdateOne) RemoveCredentialRefIDs(ids ...int) *ChannelUpdateOne {
+	_u.mutation.RemoveCredentialRefIDs(ids...)
+	return _u
+}
+
+// RemoveCredentialRefs removes "credential_refs" edges to ChannelCredentialRef entities.
+func (_u *ChannelUpdateOne) RemoveCredentialRefs(v ...*ChannelCredentialRef) *ChannelUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveCredentialRefIDs(ids...)
 }
 
 // ClearProviderQuotaStatus clears the "provider_quota_status" edge to the ProviderQuotaStatus entity.
@@ -2029,6 +2147,51 @@ func (_u *ChannelUpdateOne) sqlSave(ctx context.Context) (_node *Channel, err er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(channelmodelprice.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.CredentialRefsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   channel.CredentialRefsTable,
+			Columns: []string{channel.CredentialRefsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(channelcredentialref.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedCredentialRefsIDs(); len(nodes) > 0 && !_u.mutation.CredentialRefsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   channel.CredentialRefsTable,
+			Columns: []string{channel.CredentialRefsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(channelcredentialref.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.CredentialRefsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   channel.CredentialRefsTable,
+			Columns: []string{channel.CredentialRefsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(channelcredentialref.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

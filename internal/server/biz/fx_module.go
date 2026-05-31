@@ -14,6 +14,7 @@ var Module = fx.Module("biz",
 	fx.Provide(NewWebhookNotifier),
 	fx.Provide(NewAuthService),
 	fx.Provide(NewChannelService),
+	fx.Provide(NewUpstreamCredentialService),
 	fx.Provide(NewRequestService),
 	fx.Provide(NewUsageLogService),
 	fx.Provide(NewVideoService),
@@ -65,6 +66,14 @@ var Module = fx.Module("biz",
 			},
 			OnStop: func(ctx context.Context) error {
 				svc.Stop()
+				return nil
+			},
+		})
+	}),
+	fx.Invoke(func(lc fx.Lifecycle, svc *UpstreamCredentialService) {
+		lc.Append(fx.Hook{
+			OnStart: func(ctx context.Context) error {
+				go svc.RunStartupMigration(context.Background())
 				return nil
 			},
 		})

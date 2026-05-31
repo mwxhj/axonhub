@@ -1365,6 +1365,7 @@ func (c *TraceUpdateOne) SetInput(i UpdateTraceInput) *TraceUpdateOne {
 type CreateUsageLogInput struct {
 	APIKeyID                           *int
 	ModelID                            string
+	CredentialFingerprint              *string
 	PromptTokens                       *int64
 	CompletionTokens                   *int64
 	TotalTokens                        *int64
@@ -1385,6 +1386,7 @@ type CreateUsageLogInput struct {
 	RequestID                          int
 	ProjectID                          int
 	ChannelID                          *int
+	CredentialID                       *int
 }
 
 // Mutate applies the CreateUsageLogInput on the UsageLogMutation builder.
@@ -1393,6 +1395,9 @@ func (i *CreateUsageLogInput) Mutate(m *UsageLogMutation) {
 		m.SetAPIKeyID(*v)
 	}
 	m.SetModelID(i.ModelID)
+	if v := i.CredentialFingerprint; v != nil {
+		m.SetCredentialFingerprint(*v)
+	}
 	if v := i.PromptTokens; v != nil {
 		m.SetPromptTokens(*v)
 	}
@@ -1448,6 +1453,9 @@ func (i *CreateUsageLogInput) Mutate(m *UsageLogMutation) {
 	m.SetProjectID(i.ProjectID)
 	if v := i.ChannelID; v != nil {
 		m.SetChannelID(*v)
+	}
+	if v := i.CredentialID; v != nil {
+		m.SetCredentialID(*v)
 	}
 }
 

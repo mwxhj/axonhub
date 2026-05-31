@@ -316,6 +316,13 @@ func (s *RequestService) CreateRequestExecution(
 		SetStream(request.Stream).
 		SetRequestHeaders(requestHeadersBytes)
 
+	if fingerprint, ok := contexts.GetChannelCredentialFingerprint(ctx); ok && fingerprint != "" {
+		mut = mut.SetCredentialFingerprint(fingerprint)
+	}
+	if credentialID, ok := contexts.GetChannelCredentialID(ctx); ok && credentialID > 0 {
+		mut = mut.SetCredentialID(credentialID)
+	}
+
 	// Use the same data storage as the request
 	if request.DataStorageID != 0 {
 		mut = mut.SetDataStorageID(request.DataStorageID)

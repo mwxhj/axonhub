@@ -16,6 +16,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/channel"
 	"github.com/looplj/axonhub/internal/ent/project"
 	"github.com/looplj/axonhub/internal/ent/request"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/user"
 	"github.com/looplj/axonhub/internal/objects"
 	"github.com/looplj/axonhub/internal/scopes"
@@ -366,6 +367,48 @@ func (r *mutationResolver) DeleteDisabledChannelAPIKeys(ctx context.Context, cha
 	}
 
 	return result, nil
+}
+
+// CreateUpstreamCredential is the resolver for the createUpstreamCredential field.
+func (r *mutationResolver) CreateUpstreamCredential(ctx context.Context, input biz.CreateUpstreamCredentialInput) (*ent.UpstreamCredential, error) {
+	return r.upstreamCredentialService.CreateUpstreamCredential(ctx, input)
+}
+
+// UpdateUpstreamCredential is the resolver for the updateUpstreamCredential field.
+func (r *mutationResolver) UpdateUpstreamCredential(ctx context.Context, id objects.GUID, input biz.UpdateUpstreamCredentialInput) (*ent.UpstreamCredential, error) {
+	return r.upstreamCredentialService.UpdateUpstreamCredential(ctx, id.ID, input)
+}
+
+// RotateUpstreamCredentialSecret is the resolver for the rotateUpstreamCredentialSecret field.
+func (r *mutationResolver) RotateUpstreamCredentialSecret(ctx context.Context, id objects.GUID, input biz.RotateUpstreamCredentialSecretInput) (*ent.UpstreamCredential, error) {
+	return r.upstreamCredentialService.RotateUpstreamCredentialSecret(ctx, id.ID, input)
+}
+
+// UpdateUpstreamCredentialStatus is the resolver for the updateUpstreamCredentialStatus field.
+func (r *mutationResolver) UpdateUpstreamCredentialStatus(ctx context.Context, id objects.GUID, status upstreamcredential.Status) (*ent.UpstreamCredential, error) {
+	return r.upstreamCredentialService.UpdateUpstreamCredential(ctx, id.ID, biz.UpdateUpstreamCredentialInput{
+		Status: &status,
+	})
+}
+
+// AttachCredentialToChannel is the resolver for the attachCredentialToChannel field.
+func (r *mutationResolver) AttachCredentialToChannel(ctx context.Context, input biz.AttachCredentialToChannelInput) (*ent.ChannelCredentialRef, error) {
+	return r.upstreamCredentialService.AttachCredentialToChannel(ctx, input)
+}
+
+// UpdateChannelCredentialRef is the resolver for the updateChannelCredentialRef field.
+func (r *mutationResolver) UpdateChannelCredentialRef(ctx context.Context, id objects.GUID, input biz.UpdateChannelCredentialRefInput) (*ent.ChannelCredentialRef, error) {
+	return r.upstreamCredentialService.UpdateChannelCredentialRef(ctx, id.ID, input)
+}
+
+// DetachCredentialFromChannel is the resolver for the detachCredentialFromChannel field.
+func (r *mutationResolver) DetachCredentialFromChannel(ctx context.Context, channelID objects.GUID, credentialID objects.GUID) (bool, error) {
+	return r.upstreamCredentialService.DetachCredentialFromChannel(ctx, channelID.ID, credentialID.ID)
+}
+
+// MigrateLegacyChannelCredentials is the resolver for the migrateLegacyChannelCredentials field.
+func (r *mutationResolver) MigrateLegacyChannelCredentials(ctx context.Context) (*biz.MigrateLegacyCredentialsPayload, error) {
+	return r.upstreamCredentialService.MigrateLegacyChannelCredentials(ctx)
 }
 
 // CreateAPIKey is the resolver for the createAPIKey field.

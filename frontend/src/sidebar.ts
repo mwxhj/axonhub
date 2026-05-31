@@ -79,6 +79,11 @@ export function useSidebarData(): SidebarData {
           icon: IconAi,
         } as NavLink,
         {
+          title: t('sidebar.items.credentials'),
+          url: '/credentials',
+          icon: IconKey,
+        } as NavLink,
+        {
           title: t('sidebar.items.models'),
           url: '/models',
           icon: IconRobot,

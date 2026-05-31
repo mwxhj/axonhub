@@ -13,11 +13,14 @@ import (
 	"github.com/looplj/axonhub/internal/contexts"
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/enttest"
 	"github.com/looplj/axonhub/internal/ent/model"
 	"github.com/looplj/axonhub/internal/ent/request"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
 	"github.com/looplj/axonhub/internal/objects"
+	"github.com/looplj/axonhub/internal/server/biz"
 )
 
 func setupBackupTest(t *testing.T) (*ent.Client, *BackupService, context.Context) {
@@ -360,4 +363,141 @@ func TestBackupService_Backup_WithUsageStats(t *testing.T) {
 	err = json.Unmarshal(data, &backupData)
 	require.NoError(t, err)
 	require.Equal(t, "sk-test-key-1", backupData.UsageRequests[0].APIKeyKey)
+}
+
+func TestBackupService_Backup_IncludesUpstreamCredentialsAndRefs(t *testing.T) {
+	client, service, ctx := setupBackupTest(t)
+	defer client.Close()
+
+	ch := createBackupTestChannel(t, client, ctx, "Credential Channel", channel.TypeOpenai)
+	fingerprint := biz.ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), ch.BaseURL, "credential-key")
+	credential, err := client.UpstreamCredential.Create().
+		SetName("credential one").
+		SetProviderType(channel.TypeOpenai.String()).
+		SetBaseURL(ch.BaseURL).
+		SetAuthKind(upstreamcredential.AuthKindAPIKey).
+		SetSecretPayload(objects.UpstreamCredentialSecretFromAPIKey("credential-key")).
+		SetFingerprint(fingerprint).
+		Save(ctx)
+	require.NoError(t, err)
+	_, err = client.ChannelCredentialRef.Create().
+		SetChannelID(ch.ID).
+		SetCredentialID(credential.ID).
+		SetEnabled(true).
+		Save(ctx)
+	require.NoError(t, err)
+
+	data, err := service.Backup(ctx, BackupOptions{IncludeChannels: true})
+	require.NoError(t, err)
+
+	var backupData BackupData
+	require.NoError(t, json.Unmarshal(data, &backupData))
+	require.Len(t, backupData.UpstreamCredentials, 1)
+	require.Len(t, backupData.ChannelCredentialRefs, 1)
+	require.Equal(t, fingerprint, backupData.UpstreamCredentials[0].Fingerprint)
+	require.Equal(t, "credential-key", backupData.UpstreamCredentials[0].SecretPayload.APIKey)
+	require.Equal(t, ch.Name, backupData.ChannelCredentialRefs[0].ChannelName)
+	require.Equal(t, fingerprint, backupData.ChannelCredentialRefs[0].CredentialFingerprint)
+}
+
+func TestBackupService_Restore_LegacyChannelCredentialsMigratesToCredentialRefs(t *testing.T) {
+	client, service, ctx := setupBackupTest(t)
+	defer client.Close()
+
+	backupData := BackupData{
+		Version: BackupVersion,
+		Channels: []*BackupChannel{
+			{
+				Channel: ent.Channel{
+					ID:               10,
+					Name:             "Legacy Credential Channel",
+					Type:             channel.TypeOpenai,
+					BaseURL:          "https://api.openai.com/v1",
+					Status:           channel.StatusEnabled,
+					SupportedModels:  []string{"gpt-4"},
+					DefaultTestModel: "gpt-4",
+				},
+				Credentials: objects.ChannelCredentials{APIKey: "legacy-key"},
+			},
+		},
+	}
+	data, err := json.Marshal(backupData)
+	require.NoError(t, err)
+
+	err = service.Restore(ctx, data, RestoreOptions{
+		IncludeChannels:         true,
+		ChannelConflictStrategy: ConflictStrategyOverwrite,
+	})
+	require.NoError(t, err)
+
+	credentialCount, err := client.UpstreamCredential.Query().Count(ctx)
+	require.NoError(t, err)
+	refCount, err := client.ChannelCredentialRef.Query().Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, credentialCount)
+	require.Equal(t, 1, refCount)
+}
+
+func TestBackupService_Restore_FirstClassCredentialRefs(t *testing.T) {
+	client, service, ctx := setupBackupTest(t)
+	defer client.Close()
+
+	fingerprint := biz.ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://api.openai.com/v1", "restored-key")
+	backupData := BackupData{
+		Version: BackupVersion,
+		Channels: []*BackupChannel{
+			{
+				Channel: ent.Channel{
+					ID:               10,
+					Name:             "Credential Ref Channel",
+					Type:             channel.TypeOpenai,
+					BaseURL:          "https://api.openai.com/v1",
+					Status:           channel.StatusEnabled,
+					SupportedModels:  []string{"gpt-4"},
+					DefaultTestModel: "gpt-4",
+				},
+				Credentials: objects.ChannelCredentials{},
+			},
+		},
+		UpstreamCredentials: []*BackupUpstreamCredential{
+			{
+				UpstreamCredential: ent.UpstreamCredential{
+					ID:           7,
+					Name:         "restored credential",
+					ProviderType: channel.TypeOpenai.String(),
+					BaseURL:      "https://api.openai.com/v1",
+					AuthKind:     upstreamcredential.AuthKindAPIKey,
+					Fingerprint:  fingerprint,
+					Status:       upstreamcredential.StatusEnabled,
+					Weight:       100,
+				},
+				SecretPayload: objects.UpstreamCredentialSecretFromAPIKey("restored-key"),
+			},
+		},
+		ChannelCredentialRefs: []*BackupChannelCredentialRef{
+			{
+				ChannelCredentialRef: ent.ChannelCredentialRef{
+					ChannelID:    10,
+					CredentialID: 7,
+					Enabled:      true,
+				},
+				ChannelName:           "Credential Ref Channel",
+				CredentialFingerprint: fingerprint,
+			},
+		},
+	}
+	data, err := json.Marshal(backupData)
+	require.NoError(t, err)
+
+	err = service.Restore(ctx, data, RestoreOptions{
+		IncludeChannels:         true,
+		ChannelConflictStrategy: ConflictStrategyOverwrite,
+	})
+	require.NoError(t, err)
+
+	refExists, err := client.ChannelCredentialRef.Query().
+		Where(channelcredentialref.HasCredentialWith(upstreamcredential.Fingerprint(fingerprint))).
+		Exist(ctx)
+	require.NoError(t, err)
+	require.True(t, refExists)
 }

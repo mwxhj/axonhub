@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/looplj/axonhub/internal/ent"
+	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/objects"
 	"github.com/looplj/axonhub/internal/server/biz"
 	"github.com/looplj/axonhub/llm"
 	"github.com/looplj/axonhub/llm/httpclient"
@@ -68,6 +70,15 @@ func stickyTestCandidate(id int, priority int, weight int) *ChannelModelsCandida
 			Source:       "test",
 		}},
 	}
+}
+
+func stickyTestCredentialCandidate(id int, priority int, weight int, keys ...string) *ChannelModelsCandidate {
+	candidate := stickyTestCandidate(id, priority, weight)
+	candidate.Channel.Type = channel.TypeOpenai
+	candidate.Channel.BaseURL = "https://api.openai.com"
+	candidate.Channel.Credentials = objects.ChannelCredentials{APIKeys: keys}
+	candidate.Channel.DisabledAPIKeys = nil
+	return candidate
 }
 
 func stickyTestLoadBalancer(retryEnabled bool) *LoadBalancer {
@@ -190,6 +201,20 @@ func TestStickySessionBindingStore_TTLAndLatestWriteWins(t *testing.T) {
 	require.Empty(t, store.bindings)
 }
 
+func TestStickySessionBindingStore_TargetPreservesCredentialFingerprint(t *testing.T) {
+	store := NewStickySessionBindingStore(5 * time.Minute)
+	store.BindTarget("key", StickySessionTarget{ChannelID: 7, CredentialFingerprint: "cred:v1:test"})
+
+	target, ok := store.GetTarget("key")
+	require.True(t, ok)
+	require.Equal(t, 7, target.ChannelID)
+	require.Equal(t, "cred:v1:test", target.CredentialFingerprint)
+
+	channelID, ok := store.Get("key")
+	require.True(t, ok)
+	require.Equal(t, 7, channelID)
+}
+
 func TestStickySessionRouter_UnboundPrimaryStaysInsideBestTier(t *testing.T) {
 	router := NewStickySessionRouter(
 		NewStickySessionBindingStore(5*time.Minute),
@@ -217,7 +242,7 @@ func TestStickySessionRouter_UnboundPrimaryStaysInsideBestTier(t *testing.T) {
 	}
 }
 
-func TestStickySessionRouter_PrefersBoundFallbackUntilTTLExpires(t *testing.T) {
+func TestStickySessionRouter_DoesNotCrossPriorityForBoundFallback(t *testing.T) {
 	now := time.Date(2026, 5, 30, 12, 0, 0, 0, time.UTC)
 	store := NewStickySessionBindingStore(5 * time.Minute)
 	store.now = func() time.Time { return now }
@@ -236,7 +261,7 @@ func TestStickySessionRouter_PrefersBoundFallbackUntilTTLExpires(t *testing.T) {
 		Candidates:   candidates,
 		LoadBalancer: stickyTestLoadBalancer(true),
 	})
-	require.Equal(t, 3, ordered[0].Channel.ID)
+	require.Contains(t, []int{1, 2}, ordered[0].Channel.ID)
 
 	now = now.Add(6 * time.Minute)
 	ordered = router.Order(context.Background(), StickySessionOrderRequest{
@@ -246,6 +271,50 @@ func TestStickySessionRouter_PrefersBoundFallbackUntilTTLExpires(t *testing.T) {
 		LoadBalancer: stickyTestLoadBalancer(true),
 	})
 	require.Contains(t, []int{1, 2}, ordered[0].Channel.ID)
+}
+
+func TestStickySessionRouter_KeepsCredentialOnSamePriorityChannel(t *testing.T) {
+	store := NewStickySessionBindingStore(5 * time.Minute)
+	fp := biz.ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://api.openai.com", "shared-key")
+	store.BindTarget("key", StickySessionTarget{ChannelID: 1, CredentialFingerprint: fp})
+
+	router := NewStickySessionRouter(store, fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}})
+	state := &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 2}}}
+	ordered := router.Order(context.Background(), StickySessionOrderRequest{
+		Request: &llm.Request{Model: "gpt-4"},
+		State:   state,
+		Candidates: []*ChannelModelsCandidate{
+			stickyTestCredentialCandidate(2, 0, 100, "shared-key"),
+			stickyTestCredentialCandidate(3, 1, 100, "shared-key"),
+		},
+		LoadBalancer: stickyTestLoadBalancer(true),
+	})
+
+	require.NotEmpty(t, ordered)
+	require.Equal(t, 2, ordered[0].Channel.ID)
+	require.Equal(t, fp, state.PreferredCredentialFingerprint)
+}
+
+func TestStickySessionRouter_DoesNotUseLowerPriorityCredentialBinding(t *testing.T) {
+	store := NewStickySessionBindingStore(5 * time.Minute)
+	fp := biz.ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://api.openai.com", "shared-key")
+	store.BindTarget("key", StickySessionTarget{ChannelID: 1, CredentialFingerprint: fp})
+
+	router := NewStickySessionRouter(store, fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}})
+	state := &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 2}}}
+	ordered := router.Order(context.Background(), StickySessionOrderRequest{
+		Request: &llm.Request{Model: "gpt-4"},
+		State:   state,
+		Candidates: []*ChannelModelsCandidate{
+			stickyTestCredentialCandidate(2, 0, 100, "other-key"),
+			stickyTestCredentialCandidate(3, 1, 100, "shared-key"),
+		},
+		LoadBalancer: stickyTestLoadBalancer(true),
+	})
+
+	require.NotEmpty(t, ordered)
+	require.Equal(t, 2, ordered[0].Channel.ID)
+	require.Empty(t, state.PreferredCredentialFingerprint)
 }
 
 func TestStickySessionRouter_UsesResponsesPreviousResponseIDBeforePrefix(t *testing.T) {
@@ -435,6 +504,32 @@ func TestStickySessionBindingMiddleware_BindsSuccessfulFallbackChannel(t *testin
 	channelID, ok := store.Get("key")
 	require.True(t, ok)
 	require.Equal(t, 3, channelID)
+}
+
+func TestStickySessionBindingMiddleware_BindsCredentialTarget(t *testing.T) {
+	store := NewStickySessionBindingStore(5 * time.Minute)
+
+	state := &PersistenceState{
+		StickyKey:                    "key",
+		StickyKeyOK:                  true,
+		StickyKeyReason:              "test",
+		CurrentCandidate:             stickyTestCandidate(3, 1, 50),
+		CurrentModelIndex:            0,
+		CurrentCandidateIndex:        0,
+		CurrentCredentialFingerprint: "cred:v1:selected",
+	}
+	middleware := &stickySessionBindingMiddleware{
+		outbound: &PersistentOutboundTransformer{state: state},
+		store:    store,
+		strategy: biz.LoadBalancerStrategyStickySession,
+	}
+
+	middleware.bindCurrentChannel(context.Background())
+
+	target, ok := store.GetTarget("key")
+	require.True(t, ok)
+	require.Equal(t, 3, target.ChannelID)
+	require.Equal(t, "cred:v1:selected", target.CredentialFingerprint)
 }
 
 func TestStickySessionBindingMiddleware_BindsResponsesIDAndMigratesActiveAliases(t *testing.T) {

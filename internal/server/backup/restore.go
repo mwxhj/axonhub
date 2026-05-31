@@ -13,14 +13,17 @@ import (
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/apikey"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/channelmodelprice"
 	"github.com/looplj/axonhub/internal/ent/channelmodelpriceversion"
 	"github.com/looplj/axonhub/internal/ent/model"
 	"github.com/looplj/axonhub/internal/ent/project"
 	"github.com/looplj/axonhub/internal/ent/request"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/objects"
+	"github.com/looplj/axonhub/internal/server/biz"
 )
 
 func (svc *BackupService) Restore(ctx context.Context, data []byte, opts RestoreOptions) error {
@@ -84,6 +87,20 @@ func (svc *BackupService) restore(ctx context.Context, db *ent.Client, backupDat
 	channelIDMap, err := svc.buildChannelIDMap(ctx, db, backupData.Channels)
 	if err != nil {
 		return err
+	}
+
+	if opts.IncludeChannels {
+		credentialIDMap, err := svc.restoreUpstreamCredentials(ctx, db, backupData.UpstreamCredentials, opts)
+		if err != nil {
+			return err
+		}
+
+		if err := svc.restoreChannelCredentialRefs(ctx, db, backupData.ChannelCredentialRefs, channelIDMap, credentialIDMap, opts); err != nil {
+			return err
+		}
+		if err := svc.migrateRestoredLegacyChannelCredentials(ctx, db); err != nil {
+			return err
+		}
 	}
 
 	if opts.IncludeModelPrices {
@@ -577,12 +594,6 @@ func (svc *BackupService) restoreChannels(ctx context.Context, db *ent.Client, c
 			return err
 		}
 
-		credentials := chData.Credentials
-		// Check if credentials are empty (no API key and no OAuth)
-		if credentials.APIKey == "" && len(credentials.APIKeys) == 0 && credentials.OAuth == nil {
-			continue
-		}
-
 		var baseURL *string
 		if chData.BaseURL != "" {
 			baseURL = &chData.BaseURL
@@ -602,7 +613,8 @@ func (svc *BackupService) restoreChannels(ctx context.Context, db *ent.Client, c
 				update := db.Channel.UpdateOneID(existing.ID).
 					SetNillableBaseURL(baseURL).
 					SetStatus(chData.Status).
-					SetCredentials(credentials).
+					SetCredentials(chData.Credentials).
+					SetDisabledAPIKeys(chData.DisabledAPIKeys).
 					SetSupportedModels(chData.SupportedModels).
 					SetNillableAutoSyncSupportedModels(lo.ToPtr(chData.AutoSyncSupportedModels)).
 					SetAutoSyncModelPattern(chData.AutoSyncModelPattern).
@@ -632,7 +644,8 @@ func (svc *BackupService) restoreChannels(ctx context.Context, db *ent.Client, c
 				SetType(chData.Type).
 				SetNillableBaseURL(baseURL).
 				SetStatus(chData.Status).
-				SetCredentials(credentials).
+				SetCredentials(chData.Credentials).
+				SetDisabledAPIKeys(chData.DisabledAPIKeys).
 				SetSupportedModels(chData.SupportedModels).
 				SetNillableAutoSyncSupportedModels(lo.ToPtr(chData.AutoSyncSupportedModels)).
 				SetAutoSyncModelPattern(chData.AutoSyncModelPattern).
@@ -654,6 +667,209 @@ func (svc *BackupService) restoreChannels(ctx context.Context, db *ent.Client, c
 				return fmt.Errorf("failed to create channel %s: %w", chData.Name, err)
 			}
 		}
+	}
+
+	return nil
+}
+
+func (svc *BackupService) restoreUpstreamCredentials(ctx context.Context, db *ent.Client, credentials []*BackupUpstreamCredential, opts RestoreOptions) (map[int]int, error) {
+	idMap := map[int]int{}
+	for _, credData := range credentials {
+		if credData == nil || credData.Fingerprint == "" {
+			continue
+		}
+
+		existing, err := db.UpstreamCredential.Query().
+			Where(upstreamcredential.Fingerprint(credData.Fingerprint)).
+			First(ctx)
+		if err != nil && !ent.IsNotFound(err) {
+			return idMap, err
+		}
+
+		if existing != nil {
+			idMap[credData.ID] = existing.ID
+
+			switch opts.ChannelConflictStrategy {
+			case ConflictStrategySkip:
+				continue
+			case ConflictStrategyError:
+				return idMap, fmt.Errorf("upstream credential %s already exists", credData.Fingerprint)
+			case ConflictStrategyOverwrite:
+				update := db.UpstreamCredential.UpdateOneID(existing.ID).
+					SetName(credData.Name).
+					SetBaseURL(credData.BaseURL).
+					SetSecretPayload(credData.SecretPayload).
+					SetFingerprint(credData.Fingerprint).
+					SetStatus(credData.Status).
+					SetWeight(credData.Weight).
+					SetRemark(credData.Remark)
+				updated, err := update.Save(ctx)
+				if err != nil {
+					return idMap, fmt.Errorf("failed to restore upstream credential %s: %w", credData.Fingerprint, err)
+				}
+				idMap[credData.ID] = updated.ID
+			}
+
+			continue
+		}
+
+		create := db.UpstreamCredential.Create().
+			SetName(credData.Name).
+			SetProviderType(credData.ProviderType).
+			SetBaseURL(credData.BaseURL).
+			SetAuthKind(credData.AuthKind).
+			SetSecretPayload(credData.SecretPayload).
+			SetFingerprint(credData.Fingerprint).
+			SetStatus(credData.Status).
+			SetWeight(credData.Weight).
+			SetRemark(credData.Remark)
+
+		created, err := create.Save(ctx)
+		if err != nil {
+			return idMap, fmt.Errorf("failed to create upstream credential %s: %w", credData.Fingerprint, err)
+		}
+		idMap[credData.ID] = created.ID
+	}
+
+	return idMap, nil
+}
+
+func (svc *BackupService) restoreChannelCredentialRefs(
+	ctx context.Context,
+	db *ent.Client,
+	refs []*BackupChannelCredentialRef,
+	channelIDMap map[int]int,
+	credentialIDMap map[int]int,
+	opts RestoreOptions,
+) error {
+	for _, refData := range refs {
+		if refData == nil {
+			continue
+		}
+
+		channelID, err := restoreRefChannelID(ctx, db, refData, channelIDMap)
+		if err != nil {
+			return err
+		}
+		if channelID == 0 {
+			log.Warn(ctx, "channel not found for credential ref, skipping",
+				log.String("channel", refData.ChannelName),
+			)
+			continue
+		}
+
+		credentialID, err := restoreRefCredentialID(ctx, db, refData, credentialIDMap)
+		if err != nil {
+			return err
+		}
+		if credentialID == 0 {
+			log.Warn(ctx, "upstream credential not found for channel ref, skipping",
+				log.String("credential_fingerprint", refData.CredentialFingerprint),
+			)
+			continue
+		}
+
+		existing, err := db.ChannelCredentialRef.Query().
+			Where(
+				channelcredentialref.ChannelID(channelID),
+				channelcredentialref.CredentialID(credentialID),
+			).
+			First(ctx)
+		if err != nil && !ent.IsNotFound(err) {
+			return err
+		}
+
+		if existing != nil {
+			switch opts.ChannelConflictStrategy {
+			case ConflictStrategySkip:
+				continue
+			case ConflictStrategyError:
+				return fmt.Errorf("channel credential ref already exists: channel=%s credential=%s", refData.ChannelName, refData.CredentialFingerprint)
+			case ConflictStrategyOverwrite:
+				update := db.ChannelCredentialRef.UpdateOneID(existing.ID).
+					SetEnabled(refData.Enabled)
+				if refData.WeightOverride != nil {
+					update.SetWeightOverride(*refData.WeightOverride)
+				} else {
+					update.ClearWeightOverride()
+				}
+				if _, err := update.Save(ctx); err != nil {
+					return fmt.Errorf("failed to restore channel credential ref: %w", err)
+				}
+			}
+
+			continue
+		}
+
+		create := db.ChannelCredentialRef.Create().
+			SetChannelID(channelID).
+			SetCredentialID(credentialID).
+			SetEnabled(refData.Enabled)
+		if refData.WeightOverride != nil {
+			create.SetWeightOverride(*refData.WeightOverride)
+		}
+
+		if _, err := create.Save(ctx); err != nil {
+			return fmt.Errorf("failed to create channel credential ref: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func restoreRefChannelID(ctx context.Context, db *ent.Client, refData *BackupChannelCredentialRef, channelIDMap map[int]int) (int, error) {
+	if refData.ChannelID > 0 {
+		if id, ok := channelIDMap[refData.ChannelID]; ok {
+			return id, nil
+		}
+	}
+	if refData.ChannelName == "" {
+		return 0, nil
+	}
+
+	ch, err := db.Channel.Query().
+		Where(channel.Name(refData.ChannelName)).
+		First(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return 0, nil
+		}
+		return 0, err
+	}
+
+	return ch.ID, nil
+}
+
+func restoreRefCredentialID(ctx context.Context, db *ent.Client, refData *BackupChannelCredentialRef, credentialIDMap map[int]int) (int, error) {
+	if refData.CredentialID > 0 {
+		if id, ok := credentialIDMap[refData.CredentialID]; ok {
+			return id, nil
+		}
+	}
+	if refData.CredentialFingerprint == "" {
+		return 0, nil
+	}
+
+	credential, err := db.UpstreamCredential.Query().
+		Where(upstreamcredential.Fingerprint(refData.CredentialFingerprint)).
+		First(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return 0, nil
+		}
+		return 0, err
+	}
+
+	return credential.ID, nil
+}
+
+func (svc *BackupService) migrateRestoredLegacyChannelCredentials(ctx context.Context, db *ent.Client) error {
+	migrationCtx := ent.NewContext(ctx, db)
+	credentialService := biz.NewUpstreamCredentialService(biz.UpstreamCredentialServiceParams{
+		Ent: db,
+	})
+	if _, err := credentialService.MigrateLegacyChannelCredentials(migrationCtx); err != nil {
+		return fmt.Errorf("failed to migrate restored legacy channel credentials: %w", err)
 	}
 
 	return nil

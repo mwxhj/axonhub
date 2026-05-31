@@ -17,6 +17,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/apikey"
 	"github.com/looplj/axonhub/internal/ent/apikeyprofiletemplate"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/channelmodelprice"
 	"github.com/looplj/axonhub/internal/ent/channelmodelpriceversion"
 	"github.com/looplj/axonhub/internal/ent/channeloverridetemplate"
@@ -34,6 +35,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/system"
 	"github.com/looplj/axonhub/internal/ent/thread"
 	"github.com/looplj/axonhub/internal/ent/trace"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
 	"github.com/looplj/axonhub/internal/ent/user"
 	"github.com/looplj/axonhub/internal/ent/userproject"
@@ -1130,6 +1132,320 @@ func (_m *Channel) ToEdge(order *ChannelOrder) *ChannelEdge {
 		order = DefaultChannelOrder
 	}
 	return &ChannelEdge{
+		Node:   _m,
+		Cursor: order.Field.toCursor(_m),
+	}
+}
+
+// ChannelCredentialRefEdge is the edge representation of ChannelCredentialRef.
+type ChannelCredentialRefEdge struct {
+	Node   *ChannelCredentialRef `json:"node"`
+	Cursor Cursor                `json:"cursor"`
+}
+
+// ChannelCredentialRefConnection is the connection containing edges to ChannelCredentialRef.
+type ChannelCredentialRefConnection struct {
+	Edges      []*ChannelCredentialRefEdge `json:"edges"`
+	PageInfo   PageInfo                    `json:"pageInfo"`
+	TotalCount int                         `json:"totalCount"`
+}
+
+func (c *ChannelCredentialRefConnection) build(nodes []*ChannelCredentialRef, pager *channelcredentialrefPager, after *Cursor, first *int, before *Cursor, last *int) {
+	c.PageInfo.HasNextPage = before != nil
+	c.PageInfo.HasPreviousPage = after != nil
+	if first != nil && *first+1 == len(nodes) {
+		c.PageInfo.HasNextPage = true
+		nodes = nodes[:len(nodes)-1]
+	} else if last != nil && *last+1 == len(nodes) {
+		c.PageInfo.HasPreviousPage = true
+		nodes = nodes[:len(nodes)-1]
+	}
+	var nodeAt func(int) *ChannelCredentialRef
+	if last != nil {
+		n := len(nodes) - 1
+		nodeAt = func(i int) *ChannelCredentialRef {
+			return nodes[n-i]
+		}
+	} else {
+		nodeAt = func(i int) *ChannelCredentialRef {
+			return nodes[i]
+		}
+	}
+	c.Edges = make([]*ChannelCredentialRefEdge, len(nodes))
+	for i := range nodes {
+		node := nodeAt(i)
+		c.Edges[i] = &ChannelCredentialRefEdge{
+			Node:   node,
+			Cursor: pager.toCursor(node),
+		}
+	}
+	if l := len(c.Edges); l > 0 {
+		c.PageInfo.StartCursor = &c.Edges[0].Cursor
+		c.PageInfo.EndCursor = &c.Edges[l-1].Cursor
+	}
+	if c.TotalCount == 0 {
+		c.TotalCount = len(nodes)
+	}
+}
+
+// ChannelCredentialRefPaginateOption enables pagination customization.
+type ChannelCredentialRefPaginateOption func(*channelcredentialrefPager) error
+
+// WithChannelCredentialRefOrder configures pagination ordering.
+func WithChannelCredentialRefOrder(order *ChannelCredentialRefOrder) ChannelCredentialRefPaginateOption {
+	if order == nil {
+		order = DefaultChannelCredentialRefOrder
+	}
+	o := *order
+	return func(pager *channelcredentialrefPager) error {
+		if err := o.Direction.Validate(); err != nil {
+			return err
+		}
+		if o.Field == nil {
+			o.Field = DefaultChannelCredentialRefOrder.Field
+		}
+		pager.order = &o
+		return nil
+	}
+}
+
+// WithChannelCredentialRefFilter configures pagination filter.
+func WithChannelCredentialRefFilter(filter func(*ChannelCredentialRefQuery) (*ChannelCredentialRefQuery, error)) ChannelCredentialRefPaginateOption {
+	return func(pager *channelcredentialrefPager) error {
+		if filter == nil {
+			return errors.New("ChannelCredentialRefQuery filter cannot be nil")
+		}
+		pager.filter = filter
+		return nil
+	}
+}
+
+type channelcredentialrefPager struct {
+	reverse bool
+	order   *ChannelCredentialRefOrder
+	filter  func(*ChannelCredentialRefQuery) (*ChannelCredentialRefQuery, error)
+}
+
+func newChannelCredentialRefPager(opts []ChannelCredentialRefPaginateOption, reverse bool) (*channelcredentialrefPager, error) {
+	pager := &channelcredentialrefPager{reverse: reverse}
+	for _, opt := range opts {
+		if err := opt(pager); err != nil {
+			return nil, err
+		}
+	}
+	if pager.order == nil {
+		pager.order = DefaultChannelCredentialRefOrder
+	}
+	return pager, nil
+}
+
+func (p *channelcredentialrefPager) applyFilter(query *ChannelCredentialRefQuery) (*ChannelCredentialRefQuery, error) {
+	if p.filter != nil {
+		return p.filter(query)
+	}
+	return query, nil
+}
+
+func (p *channelcredentialrefPager) toCursor(_m *ChannelCredentialRef) Cursor {
+	return p.order.Field.toCursor(_m)
+}
+
+func (p *channelcredentialrefPager) applyCursors(query *ChannelCredentialRefQuery, after, before *Cursor) (*ChannelCredentialRefQuery, error) {
+	direction := p.order.Direction
+	if p.reverse {
+		direction = direction.Reverse()
+	}
+	for _, predicate := range entgql.CursorsPredicate(after, before, DefaultChannelCredentialRefOrder.Field.column, p.order.Field.column, direction) {
+		query = query.Where(predicate)
+	}
+	return query, nil
+}
+
+func (p *channelcredentialrefPager) applyOrder(query *ChannelCredentialRefQuery) *ChannelCredentialRefQuery {
+	direction := p.order.Direction
+	if p.reverse {
+		direction = direction.Reverse()
+	}
+	query = query.Order(p.order.Field.toTerm(direction.OrderTermOption()))
+	if p.order.Field != DefaultChannelCredentialRefOrder.Field {
+		query = query.Order(DefaultChannelCredentialRefOrder.Field.toTerm(direction.OrderTermOption()))
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(p.order.Field.column)
+	}
+	return query
+}
+
+func (p *channelcredentialrefPager) orderExpr(query *ChannelCredentialRefQuery) sql.Querier {
+	direction := p.order.Direction
+	if p.reverse {
+		direction = direction.Reverse()
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(p.order.Field.column)
+	}
+	return sql.ExprFunc(func(b *sql.Builder) {
+		b.Ident(p.order.Field.column).Pad().WriteString(string(direction))
+		if p.order.Field != DefaultChannelCredentialRefOrder.Field {
+			b.Comma().Ident(DefaultChannelCredentialRefOrder.Field.column).Pad().WriteString(string(direction))
+		}
+	})
+}
+
+// Paginate executes the query and returns a relay based cursor connection to ChannelCredentialRef.
+func (_m *ChannelCredentialRefQuery) Paginate(
+	ctx context.Context, after *Cursor, first *int,
+	before *Cursor, last *int, opts ...ChannelCredentialRefPaginateOption,
+) (*ChannelCredentialRefConnection, error) {
+	if err := validateFirstLast(first, last); err != nil {
+		return nil, err
+	}
+	pager, err := newChannelCredentialRefPager(opts, last != nil)
+	if err != nil {
+		return nil, err
+	}
+	if _m, err = pager.applyFilter(_m); err != nil {
+		return nil, err
+	}
+	conn := &ChannelCredentialRefConnection{Edges: []*ChannelCredentialRefEdge{}}
+	ignoredEdges := !hasCollectedField(ctx, edgesField)
+	if hasCollectedField(ctx, totalCountField) || hasCollectedField(ctx, pageInfoField) {
+		hasPagination := after != nil || first != nil || before != nil || last != nil
+		if hasPagination || ignoredEdges {
+			c := _m.Clone()
+			c.ctx.Fields = nil
+			if conn.TotalCount, err = c.Count(ctx); err != nil {
+				return nil, err
+			}
+			conn.PageInfo.HasNextPage = first != nil && conn.TotalCount > 0
+			conn.PageInfo.HasPreviousPage = last != nil && conn.TotalCount > 0
+		}
+	}
+	if ignoredEdges || (first != nil && *first == 0) || (last != nil && *last == 0) {
+		return conn, nil
+	}
+	if _m, err = pager.applyCursors(_m, after, before); err != nil {
+		return nil, err
+	}
+	limit := paginateLimit(first, last)
+	if limit != 0 {
+		_m.Limit(limit)
+	}
+	if field := collectedField(ctx, edgesField, nodeField); field != nil {
+		if err := _m.collectField(ctx, limit == 1, graphql.GetOperationContext(ctx), *field, []string{edgesField, nodeField}); err != nil {
+			return nil, err
+		}
+	}
+	_m = pager.applyOrder(_m)
+	nodes, err := _m.All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	conn.build(nodes, pager, after, first, before, last)
+	return conn, nil
+}
+
+var (
+	// ChannelCredentialRefOrderFieldCreatedAt orders ChannelCredentialRef by created_at.
+	ChannelCredentialRefOrderFieldCreatedAt = &ChannelCredentialRefOrderField{
+		Value: func(_m *ChannelCredentialRef) (ent.Value, error) {
+			return _m.CreatedAt, nil
+		},
+		column: channelcredentialref.FieldCreatedAt,
+		toTerm: channelcredentialref.ByCreatedAt,
+		toCursor: func(_m *ChannelCredentialRef) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.CreatedAt,
+			}
+		},
+	}
+	// ChannelCredentialRefOrderFieldUpdatedAt orders ChannelCredentialRef by updated_at.
+	ChannelCredentialRefOrderFieldUpdatedAt = &ChannelCredentialRefOrderField{
+		Value: func(_m *ChannelCredentialRef) (ent.Value, error) {
+			return _m.UpdatedAt, nil
+		},
+		column: channelcredentialref.FieldUpdatedAt,
+		toTerm: channelcredentialref.ByUpdatedAt,
+		toCursor: func(_m *ChannelCredentialRef) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.UpdatedAt,
+			}
+		},
+	}
+)
+
+// String implement fmt.Stringer interface.
+func (f ChannelCredentialRefOrderField) String() string {
+	var str string
+	switch f.column {
+	case ChannelCredentialRefOrderFieldCreatedAt.column:
+		str = "CREATED_AT"
+	case ChannelCredentialRefOrderFieldUpdatedAt.column:
+		str = "UPDATED_AT"
+	}
+	return str
+}
+
+// MarshalGQL implements graphql.Marshaler interface.
+func (f ChannelCredentialRefOrderField) MarshalGQL(w io.Writer) {
+	io.WriteString(w, strconv.Quote(f.String()))
+}
+
+// UnmarshalGQL implements graphql.Unmarshaler interface.
+func (f *ChannelCredentialRefOrderField) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("ChannelCredentialRefOrderField %T must be a string", v)
+	}
+	switch str {
+	case "CREATED_AT":
+		*f = *ChannelCredentialRefOrderFieldCreatedAt
+	case "UPDATED_AT":
+		*f = *ChannelCredentialRefOrderFieldUpdatedAt
+	default:
+		return fmt.Errorf("%s is not a valid ChannelCredentialRefOrderField", str)
+	}
+	return nil
+}
+
+// ChannelCredentialRefOrderField defines the ordering field of ChannelCredentialRef.
+type ChannelCredentialRefOrderField struct {
+	// Value extracts the ordering value from the given ChannelCredentialRef.
+	Value    func(*ChannelCredentialRef) (ent.Value, error)
+	column   string // field or computed.
+	toTerm   func(...sql.OrderTermOption) channelcredentialref.OrderOption
+	toCursor func(*ChannelCredentialRef) Cursor
+}
+
+// ChannelCredentialRefOrder defines the ordering of ChannelCredentialRef.
+type ChannelCredentialRefOrder struct {
+	Direction OrderDirection                  `json:"direction"`
+	Field     *ChannelCredentialRefOrderField `json:"field"`
+}
+
+// DefaultChannelCredentialRefOrder is the default ordering of ChannelCredentialRef.
+var DefaultChannelCredentialRefOrder = &ChannelCredentialRefOrder{
+	Direction: entgql.OrderDirectionAsc,
+	Field: &ChannelCredentialRefOrderField{
+		Value: func(_m *ChannelCredentialRef) (ent.Value, error) {
+			return _m.ID, nil
+		},
+		column: channelcredentialref.FieldID,
+		toTerm: channelcredentialref.ByID,
+		toCursor: func(_m *ChannelCredentialRef) Cursor {
+			return Cursor{ID: _m.ID}
+		},
+	},
+}
+
+// ToEdge converts ChannelCredentialRef into ChannelCredentialRefEdge.
+func (_m *ChannelCredentialRef) ToEdge(order *ChannelCredentialRefOrder) *ChannelCredentialRefEdge {
+	if order == nil {
+		order = DefaultChannelCredentialRefOrder
+	}
+	return &ChannelCredentialRefEdge{
 		Node:   _m,
 		Cursor: order.Field.toCursor(_m),
 	}
@@ -6457,6 +6773,446 @@ func (_m *Trace) ToEdge(order *TraceOrder) *TraceEdge {
 		order = DefaultTraceOrder
 	}
 	return &TraceEdge{
+		Node:   _m,
+		Cursor: order.Field.toCursor(_m),
+	}
+}
+
+// UpstreamCredentialEdge is the edge representation of UpstreamCredential.
+type UpstreamCredentialEdge struct {
+	Node   *UpstreamCredential `json:"node"`
+	Cursor Cursor              `json:"cursor"`
+}
+
+// UpstreamCredentialConnection is the connection containing edges to UpstreamCredential.
+type UpstreamCredentialConnection struct {
+	Edges      []*UpstreamCredentialEdge `json:"edges"`
+	PageInfo   PageInfo                  `json:"pageInfo"`
+	TotalCount int                       `json:"totalCount"`
+}
+
+func (c *UpstreamCredentialConnection) build(nodes []*UpstreamCredential, pager *upstreamcredentialPager, after *Cursor, first *int, before *Cursor, last *int) {
+	c.PageInfo.HasNextPage = before != nil
+	c.PageInfo.HasPreviousPage = after != nil
+	if first != nil && *first+1 == len(nodes) {
+		c.PageInfo.HasNextPage = true
+		nodes = nodes[:len(nodes)-1]
+	} else if last != nil && *last+1 == len(nodes) {
+		c.PageInfo.HasPreviousPage = true
+		nodes = nodes[:len(nodes)-1]
+	}
+	var nodeAt func(int) *UpstreamCredential
+	if last != nil {
+		n := len(nodes) - 1
+		nodeAt = func(i int) *UpstreamCredential {
+			return nodes[n-i]
+		}
+	} else {
+		nodeAt = func(i int) *UpstreamCredential {
+			return nodes[i]
+		}
+	}
+	c.Edges = make([]*UpstreamCredentialEdge, len(nodes))
+	for i := range nodes {
+		node := nodeAt(i)
+		c.Edges[i] = &UpstreamCredentialEdge{
+			Node:   node,
+			Cursor: pager.toCursor(node),
+		}
+	}
+	if l := len(c.Edges); l > 0 {
+		c.PageInfo.StartCursor = &c.Edges[0].Cursor
+		c.PageInfo.EndCursor = &c.Edges[l-1].Cursor
+	}
+	if c.TotalCount == 0 {
+		c.TotalCount = len(nodes)
+	}
+}
+
+// UpstreamCredentialPaginateOption enables pagination customization.
+type UpstreamCredentialPaginateOption func(*upstreamcredentialPager) error
+
+// WithUpstreamCredentialOrder configures pagination ordering.
+func WithUpstreamCredentialOrder(order *UpstreamCredentialOrder) UpstreamCredentialPaginateOption {
+	if order == nil {
+		order = DefaultUpstreamCredentialOrder
+	}
+	o := *order
+	return func(pager *upstreamcredentialPager) error {
+		if err := o.Direction.Validate(); err != nil {
+			return err
+		}
+		if o.Field == nil {
+			o.Field = DefaultUpstreamCredentialOrder.Field
+		}
+		pager.order = &o
+		return nil
+	}
+}
+
+// WithUpstreamCredentialFilter configures pagination filter.
+func WithUpstreamCredentialFilter(filter func(*UpstreamCredentialQuery) (*UpstreamCredentialQuery, error)) UpstreamCredentialPaginateOption {
+	return func(pager *upstreamcredentialPager) error {
+		if filter == nil {
+			return errors.New("UpstreamCredentialQuery filter cannot be nil")
+		}
+		pager.filter = filter
+		return nil
+	}
+}
+
+type upstreamcredentialPager struct {
+	reverse bool
+	order   *UpstreamCredentialOrder
+	filter  func(*UpstreamCredentialQuery) (*UpstreamCredentialQuery, error)
+}
+
+func newUpstreamCredentialPager(opts []UpstreamCredentialPaginateOption, reverse bool) (*upstreamcredentialPager, error) {
+	pager := &upstreamcredentialPager{reverse: reverse}
+	for _, opt := range opts {
+		if err := opt(pager); err != nil {
+			return nil, err
+		}
+	}
+	if pager.order == nil {
+		pager.order = DefaultUpstreamCredentialOrder
+	}
+	return pager, nil
+}
+
+func (p *upstreamcredentialPager) applyFilter(query *UpstreamCredentialQuery) (*UpstreamCredentialQuery, error) {
+	if p.filter != nil {
+		return p.filter(query)
+	}
+	return query, nil
+}
+
+func (p *upstreamcredentialPager) toCursor(_m *UpstreamCredential) Cursor {
+	return p.order.Field.toCursor(_m)
+}
+
+func (p *upstreamcredentialPager) applyCursors(query *UpstreamCredentialQuery, after, before *Cursor) (*UpstreamCredentialQuery, error) {
+	direction := p.order.Direction
+	if p.reverse {
+		direction = direction.Reverse()
+	}
+	for _, predicate := range entgql.CursorsPredicate(after, before, DefaultUpstreamCredentialOrder.Field.column, p.order.Field.column, direction) {
+		query = query.Where(predicate)
+	}
+	return query, nil
+}
+
+func (p *upstreamcredentialPager) applyOrder(query *UpstreamCredentialQuery) *UpstreamCredentialQuery {
+	direction := p.order.Direction
+	if p.reverse {
+		direction = direction.Reverse()
+	}
+	query = query.Order(p.order.Field.toTerm(direction.OrderTermOption()))
+	if p.order.Field != DefaultUpstreamCredentialOrder.Field {
+		query = query.Order(DefaultUpstreamCredentialOrder.Field.toTerm(direction.OrderTermOption()))
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(p.order.Field.column)
+	}
+	return query
+}
+
+func (p *upstreamcredentialPager) orderExpr(query *UpstreamCredentialQuery) sql.Querier {
+	direction := p.order.Direction
+	if p.reverse {
+		direction = direction.Reverse()
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(p.order.Field.column)
+	}
+	return sql.ExprFunc(func(b *sql.Builder) {
+		b.Ident(p.order.Field.column).Pad().WriteString(string(direction))
+		if p.order.Field != DefaultUpstreamCredentialOrder.Field {
+			b.Comma().Ident(DefaultUpstreamCredentialOrder.Field.column).Pad().WriteString(string(direction))
+		}
+	})
+}
+
+// Paginate executes the query and returns a relay based cursor connection to UpstreamCredential.
+func (_m *UpstreamCredentialQuery) Paginate(
+	ctx context.Context, after *Cursor, first *int,
+	before *Cursor, last *int, opts ...UpstreamCredentialPaginateOption,
+) (*UpstreamCredentialConnection, error) {
+	if err := validateFirstLast(first, last); err != nil {
+		return nil, err
+	}
+	pager, err := newUpstreamCredentialPager(opts, last != nil)
+	if err != nil {
+		return nil, err
+	}
+	if _m, err = pager.applyFilter(_m); err != nil {
+		return nil, err
+	}
+	conn := &UpstreamCredentialConnection{Edges: []*UpstreamCredentialEdge{}}
+	ignoredEdges := !hasCollectedField(ctx, edgesField)
+	if hasCollectedField(ctx, totalCountField) || hasCollectedField(ctx, pageInfoField) {
+		hasPagination := after != nil || first != nil || before != nil || last != nil
+		if hasPagination || ignoredEdges {
+			c := _m.Clone()
+			c.ctx.Fields = nil
+			if conn.TotalCount, err = c.Count(ctx); err != nil {
+				return nil, err
+			}
+			conn.PageInfo.HasNextPage = first != nil && conn.TotalCount > 0
+			conn.PageInfo.HasPreviousPage = last != nil && conn.TotalCount > 0
+		}
+	}
+	if ignoredEdges || (first != nil && *first == 0) || (last != nil && *last == 0) {
+		return conn, nil
+	}
+	if _m, err = pager.applyCursors(_m, after, before); err != nil {
+		return nil, err
+	}
+	limit := paginateLimit(first, last)
+	if limit != 0 {
+		_m.Limit(limit)
+	}
+	if field := collectedField(ctx, edgesField, nodeField); field != nil {
+		if err := _m.collectField(ctx, limit == 1, graphql.GetOperationContext(ctx), *field, []string{edgesField, nodeField}); err != nil {
+			return nil, err
+		}
+	}
+	_m = pager.applyOrder(_m)
+	nodes, err := _m.All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	conn.build(nodes, pager, after, first, before, last)
+	return conn, nil
+}
+
+var (
+	// UpstreamCredentialOrderFieldCreatedAt orders UpstreamCredential by created_at.
+	UpstreamCredentialOrderFieldCreatedAt = &UpstreamCredentialOrderField{
+		Value: func(_m *UpstreamCredential) (ent.Value, error) {
+			return _m.CreatedAt, nil
+		},
+		column: upstreamcredential.FieldCreatedAt,
+		toTerm: upstreamcredential.ByCreatedAt,
+		toCursor: func(_m *UpstreamCredential) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.CreatedAt,
+			}
+		},
+	}
+	// UpstreamCredentialOrderFieldUpdatedAt orders UpstreamCredential by updated_at.
+	UpstreamCredentialOrderFieldUpdatedAt = &UpstreamCredentialOrderField{
+		Value: func(_m *UpstreamCredential) (ent.Value, error) {
+			return _m.UpdatedAt, nil
+		},
+		column: upstreamcredential.FieldUpdatedAt,
+		toTerm: upstreamcredential.ByUpdatedAt,
+		toCursor: func(_m *UpstreamCredential) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.UpdatedAt,
+			}
+		},
+	}
+	// UpstreamCredentialOrderFieldName orders UpstreamCredential by name.
+	UpstreamCredentialOrderFieldName = &UpstreamCredentialOrderField{
+		Value: func(_m *UpstreamCredential) (ent.Value, error) {
+			return _m.Name, nil
+		},
+		column: upstreamcredential.FieldName,
+		toTerm: upstreamcredential.ByName,
+		toCursor: func(_m *UpstreamCredential) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.Name,
+			}
+		},
+	}
+	// UpstreamCredentialOrderFieldProviderType orders UpstreamCredential by provider_type.
+	UpstreamCredentialOrderFieldProviderType = &UpstreamCredentialOrderField{
+		Value: func(_m *UpstreamCredential) (ent.Value, error) {
+			return _m.ProviderType, nil
+		},
+		column: upstreamcredential.FieldProviderType,
+		toTerm: upstreamcredential.ByProviderType,
+		toCursor: func(_m *UpstreamCredential) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.ProviderType,
+			}
+		},
+	}
+	// UpstreamCredentialOrderFieldBaseURL orders UpstreamCredential by base_url.
+	UpstreamCredentialOrderFieldBaseURL = &UpstreamCredentialOrderField{
+		Value: func(_m *UpstreamCredential) (ent.Value, error) {
+			return _m.BaseURL, nil
+		},
+		column: upstreamcredential.FieldBaseURL,
+		toTerm: upstreamcredential.ByBaseURL,
+		toCursor: func(_m *UpstreamCredential) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.BaseURL,
+			}
+		},
+	}
+	// UpstreamCredentialOrderFieldAuthKind orders UpstreamCredential by auth_kind.
+	UpstreamCredentialOrderFieldAuthKind = &UpstreamCredentialOrderField{
+		Value: func(_m *UpstreamCredential) (ent.Value, error) {
+			return _m.AuthKind, nil
+		},
+		column: upstreamcredential.FieldAuthKind,
+		toTerm: upstreamcredential.ByAuthKind,
+		toCursor: func(_m *UpstreamCredential) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.AuthKind,
+			}
+		},
+	}
+	// UpstreamCredentialOrderFieldFingerprint orders UpstreamCredential by fingerprint.
+	UpstreamCredentialOrderFieldFingerprint = &UpstreamCredentialOrderField{
+		Value: func(_m *UpstreamCredential) (ent.Value, error) {
+			return _m.Fingerprint, nil
+		},
+		column: upstreamcredential.FieldFingerprint,
+		toTerm: upstreamcredential.ByFingerprint,
+		toCursor: func(_m *UpstreamCredential) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.Fingerprint,
+			}
+		},
+	}
+	// UpstreamCredentialOrderFieldStatus orders UpstreamCredential by status.
+	UpstreamCredentialOrderFieldStatus = &UpstreamCredentialOrderField{
+		Value: func(_m *UpstreamCredential) (ent.Value, error) {
+			return _m.Status, nil
+		},
+		column: upstreamcredential.FieldStatus,
+		toTerm: upstreamcredential.ByStatus,
+		toCursor: func(_m *UpstreamCredential) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.Status,
+			}
+		},
+	}
+	// UpstreamCredentialOrderFieldWeight orders UpstreamCredential by weight.
+	UpstreamCredentialOrderFieldWeight = &UpstreamCredentialOrderField{
+		Value: func(_m *UpstreamCredential) (ent.Value, error) {
+			return _m.Weight, nil
+		},
+		column: upstreamcredential.FieldWeight,
+		toTerm: upstreamcredential.ByWeight,
+		toCursor: func(_m *UpstreamCredential) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.Weight,
+			}
+		},
+	}
+)
+
+// String implement fmt.Stringer interface.
+func (f UpstreamCredentialOrderField) String() string {
+	var str string
+	switch f.column {
+	case UpstreamCredentialOrderFieldCreatedAt.column:
+		str = "CREATED_AT"
+	case UpstreamCredentialOrderFieldUpdatedAt.column:
+		str = "UPDATED_AT"
+	case UpstreamCredentialOrderFieldName.column:
+		str = "NAME"
+	case UpstreamCredentialOrderFieldProviderType.column:
+		str = "PROVIDER_TYPE"
+	case UpstreamCredentialOrderFieldBaseURL.column:
+		str = "BASE_URL"
+	case UpstreamCredentialOrderFieldAuthKind.column:
+		str = "AUTH_KIND"
+	case UpstreamCredentialOrderFieldFingerprint.column:
+		str = "FINGERPRINT"
+	case UpstreamCredentialOrderFieldStatus.column:
+		str = "STATUS"
+	case UpstreamCredentialOrderFieldWeight.column:
+		str = "WEIGHT"
+	}
+	return str
+}
+
+// MarshalGQL implements graphql.Marshaler interface.
+func (f UpstreamCredentialOrderField) MarshalGQL(w io.Writer) {
+	io.WriteString(w, strconv.Quote(f.String()))
+}
+
+// UnmarshalGQL implements graphql.Unmarshaler interface.
+func (f *UpstreamCredentialOrderField) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("UpstreamCredentialOrderField %T must be a string", v)
+	}
+	switch str {
+	case "CREATED_AT":
+		*f = *UpstreamCredentialOrderFieldCreatedAt
+	case "UPDATED_AT":
+		*f = *UpstreamCredentialOrderFieldUpdatedAt
+	case "NAME":
+		*f = *UpstreamCredentialOrderFieldName
+	case "PROVIDER_TYPE":
+		*f = *UpstreamCredentialOrderFieldProviderType
+	case "BASE_URL":
+		*f = *UpstreamCredentialOrderFieldBaseURL
+	case "AUTH_KIND":
+		*f = *UpstreamCredentialOrderFieldAuthKind
+	case "FINGERPRINT":
+		*f = *UpstreamCredentialOrderFieldFingerprint
+	case "STATUS":
+		*f = *UpstreamCredentialOrderFieldStatus
+	case "WEIGHT":
+		*f = *UpstreamCredentialOrderFieldWeight
+	default:
+		return fmt.Errorf("%s is not a valid UpstreamCredentialOrderField", str)
+	}
+	return nil
+}
+
+// UpstreamCredentialOrderField defines the ordering field of UpstreamCredential.
+type UpstreamCredentialOrderField struct {
+	// Value extracts the ordering value from the given UpstreamCredential.
+	Value    func(*UpstreamCredential) (ent.Value, error)
+	column   string // field or computed.
+	toTerm   func(...sql.OrderTermOption) upstreamcredential.OrderOption
+	toCursor func(*UpstreamCredential) Cursor
+}
+
+// UpstreamCredentialOrder defines the ordering of UpstreamCredential.
+type UpstreamCredentialOrder struct {
+	Direction OrderDirection                `json:"direction"`
+	Field     *UpstreamCredentialOrderField `json:"field"`
+}
+
+// DefaultUpstreamCredentialOrder is the default ordering of UpstreamCredential.
+var DefaultUpstreamCredentialOrder = &UpstreamCredentialOrder{
+	Direction: entgql.OrderDirectionAsc,
+	Field: &UpstreamCredentialOrderField{
+		Value: func(_m *UpstreamCredential) (ent.Value, error) {
+			return _m.ID, nil
+		},
+		column: upstreamcredential.FieldID,
+		toTerm: upstreamcredential.ByID,
+		toCursor: func(_m *UpstreamCredential) Cursor {
+			return Cursor{ID: _m.ID}
+		},
+	},
+}
+
+// ToEdge converts UpstreamCredential into UpstreamCredentialEdge.
+func (_m *UpstreamCredential) ToEdge(order *UpstreamCredentialOrder) *UpstreamCredentialEdge {
+	if order == nil {
+		order = DefaultUpstreamCredentialOrder
+	}
+	return &UpstreamCredentialEdge{
 		Node:   _m,
 		Cursor: order.Field.toCursor(_m),
 	}

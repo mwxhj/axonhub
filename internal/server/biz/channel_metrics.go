@@ -321,11 +321,21 @@ func (svc *ChannelService) RecordPerformance(ctx context.Context, perf *Performa
 
 			svc.apiKeyErrorCountsLock.Unlock()
 		}
+		if perf.CredentialFingerprint != "" {
+			svc.credentialErrorCountsLock.Lock()
+			delete(svc.credentialErrorCounts, perf.CredentialFingerprint)
+			svc.credentialErrorCountsLock.Unlock()
+		}
 	} else if !perf.Canceled {
 		policy := svc.SystemService.RetryPolicyOrDefault(ctx)
 
 		if policy.AutoDisableChannel.Enabled {
-			// Check API key error first if available.
+			// Check credential error first if available.
+			if (perf.CredentialID > 0 || perf.CredentialFingerprint != "") && isCredentialScopedAutoDisableStatus(perf.ResponseStatusCode) {
+				if svc.checkAndHandleCredentialError(ctx, perf, policy) {
+					return
+				}
+			}
 			if perf.APIKey != "" {
 				if svc.checkAndHandleAPIKeyError(ctx, perf, policy) {
 					return
@@ -491,17 +501,19 @@ func deriveErrorMessage(errorCode int) string {
 
 // PerformanceRecord contains performance metrics collected during request processing.
 type PerformanceRecord struct {
-	ChannelID        int
-	APIKey           string // API key used for the request (sensitive, do not log full value)
-	StartTime           time.Time
-	FirstTokenTime      *time.Time
-	ReasoningStartTime  *time.Time
-	ReasoningEndTime    *time.Time
-	EndTime             time.Time
-	Stream              bool
-	Success          bool
-	Canceled         bool
-	RequestCompleted bool
+	ChannelID             int
+	CredentialID          int
+	APIKey                string // API key used for the request (sensitive, do not log full value)
+	CredentialFingerprint string
+	StartTime             time.Time
+	FirstTokenTime        *time.Time
+	ReasoningStartTime    *time.Time
+	ReasoningEndTime      *time.Time
+	EndTime               time.Time
+	Stream                bool
+	Success               bool
+	Canceled              bool
+	RequestCompleted      bool
 
 	// If response status code is 0, it means the request is successful.
 	ResponseStatusCode int

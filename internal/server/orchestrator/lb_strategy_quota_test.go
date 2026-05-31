@@ -13,7 +13,9 @@ import (
 )
 
 type mockQuotaStatusProvider struct {
-	statuses map[int]*biz.QuotaChannelStatus
+	statuses           map[int]*biz.QuotaChannelStatus
+	credentialIDStatus map[int]*biz.QuotaChannelStatus
+	credentialStatuses map[string]*biz.QuotaChannelStatus
 }
 
 func (m *mockQuotaStatusProvider) GetQuotaStatus(channelID int) *biz.QuotaChannelStatus {
@@ -21,6 +23,20 @@ func (m *mockQuotaStatusProvider) GetQuotaStatus(channelID int) *biz.QuotaChanne
 		return nil
 	}
 	return m.statuses[channelID]
+}
+
+func (m *mockQuotaStatusProvider) GetCredentialQuotaStatusByID(credentialID int) *biz.QuotaChannelStatus {
+	if m.credentialIDStatus == nil {
+		return nil
+	}
+	return m.credentialIDStatus[credentialID]
+}
+
+func (m *mockQuotaStatusProvider) GetCredentialQuotaStatus(fingerprint string) *biz.QuotaChannelStatus {
+	if m.credentialStatuses == nil {
+		return nil
+	}
+	return m.credentialStatuses[fingerprint]
 }
 
 type mockQuotaEnforcementSettingsProvider struct {

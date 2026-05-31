@@ -13,6 +13,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/apikey"
 	"github.com/looplj/axonhub/internal/ent/apikeyprofiletemplate"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/channelmodelprice"
 	"github.com/looplj/axonhub/internal/ent/channelmodelpriceversion"
 	"github.com/looplj/axonhub/internal/ent/channeloverridetemplate"
@@ -30,6 +31,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/system"
 	"github.com/looplj/axonhub/internal/ent/thread"
 	"github.com/looplj/axonhub/internal/ent/trace"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
 	"github.com/looplj/axonhub/internal/ent/user"
 	"github.com/looplj/axonhub/internal/ent/userproject"
@@ -733,6 +735,95 @@ func (_q *ChannelQuery) collectField(ctx context.Context, oneNode bool, opCtx *g
 				*wq = *query
 			})
 
+		case "credentialRefs":
+			var (
+				alias = field.Alias
+				path  = append(path, alias)
+				query = (&ChannelCredentialRefClient{config: _q.config}).Query()
+			)
+			args := newChannelCredentialRefPaginateArgs(fieldArgs(ctx, new(ChannelCredentialRefWhereInput), path...))
+			if err := validateFirstLast(args.first, args.last); err != nil {
+				return fmt.Errorf("validate first and last in path %q: %w", path, err)
+			}
+			pager, err := newChannelCredentialRefPager(args.opts, args.last != nil)
+			if err != nil {
+				return fmt.Errorf("create new pager in path %q: %w", path, err)
+			}
+			if query, err = pager.applyFilter(query); err != nil {
+				return err
+			}
+			ignoredEdges := !hasCollectedField(ctx, append(path, edgesField)...)
+			if hasCollectedField(ctx, append(path, totalCountField)...) || hasCollectedField(ctx, append(path, pageInfoField)...) {
+				hasPagination := args.after != nil || args.first != nil || args.before != nil || args.last != nil
+				if hasPagination || ignoredEdges {
+					query := query.Clone()
+					_q.loadTotal = append(_q.loadTotal, func(ctx context.Context, nodes []*Channel) error {
+						ids := make([]driver.Value, len(nodes))
+						for i := range nodes {
+							ids[i] = nodes[i].ID
+						}
+						var v []struct {
+							NodeID int `sql:"channel_id"`
+							Count  int `sql:"count"`
+						}
+						query.Where(func(s *sql.Selector) {
+							s.Where(sql.InValues(s.C(channel.CredentialRefsColumn), ids...))
+						})
+						if err := query.GroupBy(channel.CredentialRefsColumn).Aggregate(Count()).Scan(ctx, &v); err != nil {
+							return err
+						}
+						m := make(map[int]int, len(v))
+						for i := range v {
+							m[v[i].NodeID] = v[i].Count
+						}
+						for i := range nodes {
+							n := m[nodes[i].ID]
+							if nodes[i].Edges.totalCount[5] == nil {
+								nodes[i].Edges.totalCount[5] = make(map[string]int)
+							}
+							nodes[i].Edges.totalCount[5][alias] = n
+						}
+						return nil
+					})
+				} else {
+					_q.loadTotal = append(_q.loadTotal, func(_ context.Context, nodes []*Channel) error {
+						for i := range nodes {
+							n := len(nodes[i].Edges.CredentialRefs)
+							if nodes[i].Edges.totalCount[5] == nil {
+								nodes[i].Edges.totalCount[5] = make(map[string]int)
+							}
+							nodes[i].Edges.totalCount[5][alias] = n
+						}
+						return nil
+					})
+				}
+			}
+			if ignoredEdges || (args.first != nil && *args.first == 0) || (args.last != nil && *args.last == 0) {
+				continue
+			}
+			if query, err = pager.applyCursors(query, args.after, args.before); err != nil {
+				return err
+			}
+			path = append(path, edgesField, nodeField)
+			if field := collectedField(ctx, path...); field != nil {
+				if err := query.collectField(ctx, false, opCtx, *field, path, mayAddCondition(satisfies, channelcredentialrefImplementors)...); err != nil {
+					return err
+				}
+			}
+			if limit := paginateLimit(args.first, args.last); limit > 0 {
+				if oneNode {
+					pager.applyOrder(query.Limit(limit))
+				} else {
+					modify := entgql.LimitPerRow(channel.CredentialRefsColumn, limit, pager.orderExpr(query))
+					query.modifiers = append(query.modifiers, modify)
+				}
+			} else {
+				query = pager.applyOrder(query)
+			}
+			_q.WithNamedCredentialRefs(alias, func(wq *ChannelCredentialRefQuery) {
+				*wq = *query
+			})
+
 		case "providerQuotaStatus":
 			var (
 				alias = field.Alias
@@ -892,6 +983,150 @@ func newChannelPaginateArgs(rv map[string]any) *channelPaginateArgs {
 	}
 	if v, ok := rv[whereField].(*ChannelWhereInput); ok {
 		args.opts = append(args.opts, WithChannelFilter(v.Filter))
+	}
+	return args
+}
+
+// CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
+func (_q *ChannelCredentialRefQuery) CollectFields(ctx context.Context, satisfies ...string) (*ChannelCredentialRefQuery, error) {
+	fc := graphql.GetFieldContext(ctx)
+	if fc == nil {
+		return _q, nil
+	}
+	if err := _q.collectField(ctx, false, graphql.GetOperationContext(ctx), fc.Field, nil, satisfies...); err != nil {
+		return nil, err
+	}
+	return _q, nil
+}
+
+func (_q *ChannelCredentialRefQuery) collectField(ctx context.Context, oneNode bool, opCtx *graphql.OperationContext, collected graphql.CollectedField, path []string, satisfies ...string) error {
+	path = append([]string(nil), path...)
+	var (
+		unknownSeen    bool
+		fieldSeen      = make(map[string]struct{}, len(channelcredentialref.Columns))
+		selectedFields = []string{channelcredentialref.FieldID}
+	)
+	for _, field := range graphql.CollectFields(opCtx, collected.Selections, satisfies) {
+		switch field.Name {
+
+		case "channel":
+			var (
+				alias = field.Alias
+				path  = append(path, alias)
+				query = (&ChannelClient{config: _q.config}).Query()
+			)
+			if err := query.collectField(ctx, oneNode, opCtx, field, path, mayAddCondition(satisfies, channelImplementors)...); err != nil {
+				return err
+			}
+			_q.withChannel = query
+			if _, ok := fieldSeen[channelcredentialref.FieldChannelID]; !ok {
+				selectedFields = append(selectedFields, channelcredentialref.FieldChannelID)
+				fieldSeen[channelcredentialref.FieldChannelID] = struct{}{}
+			}
+
+		case "credential":
+			var (
+				alias = field.Alias
+				path  = append(path, alias)
+				query = (&UpstreamCredentialClient{config: _q.config}).Query()
+			)
+			if err := query.collectField(ctx, oneNode, opCtx, field, path, mayAddCondition(satisfies, upstreamcredentialImplementors)...); err != nil {
+				return err
+			}
+			_q.withCredential = query
+			if _, ok := fieldSeen[channelcredentialref.FieldCredentialID]; !ok {
+				selectedFields = append(selectedFields, channelcredentialref.FieldCredentialID)
+				fieldSeen[channelcredentialref.FieldCredentialID] = struct{}{}
+			}
+		case "createdAt":
+			if _, ok := fieldSeen[channelcredentialref.FieldCreatedAt]; !ok {
+				selectedFields = append(selectedFields, channelcredentialref.FieldCreatedAt)
+				fieldSeen[channelcredentialref.FieldCreatedAt] = struct{}{}
+			}
+		case "updatedAt":
+			if _, ok := fieldSeen[channelcredentialref.FieldUpdatedAt]; !ok {
+				selectedFields = append(selectedFields, channelcredentialref.FieldUpdatedAt)
+				fieldSeen[channelcredentialref.FieldUpdatedAt] = struct{}{}
+			}
+		case "channelID":
+			if _, ok := fieldSeen[channelcredentialref.FieldChannelID]; !ok {
+				selectedFields = append(selectedFields, channelcredentialref.FieldChannelID)
+				fieldSeen[channelcredentialref.FieldChannelID] = struct{}{}
+			}
+		case "credentialID":
+			if _, ok := fieldSeen[channelcredentialref.FieldCredentialID]; !ok {
+				selectedFields = append(selectedFields, channelcredentialref.FieldCredentialID)
+				fieldSeen[channelcredentialref.FieldCredentialID] = struct{}{}
+			}
+		case "enabled":
+			if _, ok := fieldSeen[channelcredentialref.FieldEnabled]; !ok {
+				selectedFields = append(selectedFields, channelcredentialref.FieldEnabled)
+				fieldSeen[channelcredentialref.FieldEnabled] = struct{}{}
+			}
+		case "weightOverride":
+			if _, ok := fieldSeen[channelcredentialref.FieldWeightOverride]; !ok {
+				selectedFields = append(selectedFields, channelcredentialref.FieldWeightOverride)
+				fieldSeen[channelcredentialref.FieldWeightOverride] = struct{}{}
+			}
+		case "id":
+		case "__typename":
+		default:
+			unknownSeen = true
+		}
+	}
+	if !unknownSeen {
+		_q.Select(selectedFields...)
+	}
+	return nil
+}
+
+type channelcredentialrefPaginateArgs struct {
+	first, last   *int
+	after, before *Cursor
+	opts          []ChannelCredentialRefPaginateOption
+}
+
+func newChannelCredentialRefPaginateArgs(rv map[string]any) *channelcredentialrefPaginateArgs {
+	args := &channelcredentialrefPaginateArgs{}
+	if rv == nil {
+		return args
+	}
+	if v := rv[firstField]; v != nil {
+		args.first = v.(*int)
+	}
+	if v := rv[lastField]; v != nil {
+		args.last = v.(*int)
+	}
+	if v := rv[afterField]; v != nil {
+		args.after = v.(*Cursor)
+	}
+	if v := rv[beforeField]; v != nil {
+		args.before = v.(*Cursor)
+	}
+	if v, ok := rv[orderByField]; ok {
+		switch v := v.(type) {
+		case map[string]any:
+			var (
+				err1, err2 error
+				order      = &ChannelCredentialRefOrder{Field: &ChannelCredentialRefOrderField{}, Direction: entgql.OrderDirectionAsc}
+			)
+			if d, ok := v[directionField]; ok {
+				err1 = order.Direction.UnmarshalGQL(d)
+			}
+			if f, ok := v[fieldField]; ok {
+				err2 = order.Field.UnmarshalGQL(f)
+			}
+			if err1 == nil && err2 == nil {
+				args.opts = append(args.opts, WithChannelCredentialRefOrder(order))
+			}
+		case *ChannelCredentialRefOrder:
+			if v != nil {
+				args.opts = append(args.opts, WithChannelCredentialRefOrder(v))
+			}
+		}
+	}
+	if v, ok := rv[whereField].(*ChannelCredentialRefWhereInput); ok {
+		args.opts = append(args.opts, WithChannelCredentialRefFilter(v.Filter))
 	}
 	return args
 }
@@ -3417,6 +3652,21 @@ func (_q *ProviderQuotaStatusQuery) collectField(ctx context.Context, oneNode bo
 				selectedFields = append(selectedFields, providerquotastatus.FieldChannelID)
 				fieldSeen[providerquotastatus.FieldChannelID] = struct{}{}
 			}
+
+		case "credential":
+			var (
+				alias = field.Alias
+				path  = append(path, alias)
+				query = (&UpstreamCredentialClient{config: _q.config}).Query()
+			)
+			if err := query.collectField(ctx, oneNode, opCtx, field, path, mayAddCondition(satisfies, upstreamcredentialImplementors)...); err != nil {
+				return err
+			}
+			_q.withCredential = query
+			if _, ok := fieldSeen[providerquotastatus.FieldCredentialID]; !ok {
+				selectedFields = append(selectedFields, providerquotastatus.FieldCredentialID)
+				fieldSeen[providerquotastatus.FieldCredentialID] = struct{}{}
+			}
 		case "createdAt":
 			if _, ok := fieldSeen[providerquotastatus.FieldCreatedAt]; !ok {
 				selectedFields = append(selectedFields, providerquotastatus.FieldCreatedAt)
@@ -3431,6 +3681,16 @@ func (_q *ProviderQuotaStatusQuery) collectField(ctx context.Context, oneNode bo
 			if _, ok := fieldSeen[providerquotastatus.FieldChannelID]; !ok {
 				selectedFields = append(selectedFields, providerquotastatus.FieldChannelID)
 				fieldSeen[providerquotastatus.FieldChannelID] = struct{}{}
+			}
+		case "credentialID":
+			if _, ok := fieldSeen[providerquotastatus.FieldCredentialID]; !ok {
+				selectedFields = append(selectedFields, providerquotastatus.FieldCredentialID)
+				fieldSeen[providerquotastatus.FieldCredentialID] = struct{}{}
+			}
+		case "credentialFingerprint":
+			if _, ok := fieldSeen[providerquotastatus.FieldCredentialFingerprint]; !ok {
+				selectedFields = append(selectedFields, providerquotastatus.FieldCredentialFingerprint)
+				fieldSeen[providerquotastatus.FieldCredentialFingerprint] = struct{}{}
 			}
 		case "providerType":
 			if _, ok := fieldSeen[providerquotastatus.FieldProviderType]; !ok {
@@ -4044,6 +4304,21 @@ func (_q *RequestExecutionQuery) collectField(ctx context.Context, oneNode bool,
 				fieldSeen[requestexecution.FieldChannelID] = struct{}{}
 			}
 
+		case "credential":
+			var (
+				alias = field.Alias
+				path  = append(path, alias)
+				query = (&UpstreamCredentialClient{config: _q.config}).Query()
+			)
+			if err := query.collectField(ctx, oneNode, opCtx, field, path, mayAddCondition(satisfies, upstreamcredentialImplementors)...); err != nil {
+				return err
+			}
+			_q.withCredential = query
+			if _, ok := fieldSeen[requestexecution.FieldCredentialID]; !ok {
+				selectedFields = append(selectedFields, requestexecution.FieldCredentialID)
+				fieldSeen[requestexecution.FieldCredentialID] = struct{}{}
+			}
+
 		case "dataStorage":
 			var (
 				alias = field.Alias
@@ -4083,6 +4358,11 @@ func (_q *RequestExecutionQuery) collectField(ctx context.Context, oneNode bool,
 				selectedFields = append(selectedFields, requestexecution.FieldChannelID)
 				fieldSeen[requestexecution.FieldChannelID] = struct{}{}
 			}
+		case "credentialID":
+			if _, ok := fieldSeen[requestexecution.FieldCredentialID]; !ok {
+				selectedFields = append(selectedFields, requestexecution.FieldCredentialID)
+				fieldSeen[requestexecution.FieldCredentialID] = struct{}{}
+			}
 		case "dataStorageID":
 			if _, ok := fieldSeen[requestexecution.FieldDataStorageID]; !ok {
 				selectedFields = append(selectedFields, requestexecution.FieldDataStorageID)
@@ -4097,6 +4377,11 @@ func (_q *RequestExecutionQuery) collectField(ctx context.Context, oneNode bool,
 			if _, ok := fieldSeen[requestexecution.FieldModelID]; !ok {
 				selectedFields = append(selectedFields, requestexecution.FieldModelID)
 				fieldSeen[requestexecution.FieldModelID] = struct{}{}
+			}
+		case "credentialFingerprint":
+			if _, ok := fieldSeen[requestexecution.FieldCredentialFingerprint]; !ok {
+				selectedFields = append(selectedFields, requestexecution.FieldCredentialFingerprint)
+				fieldSeen[requestexecution.FieldCredentialFingerprint] = struct{}{}
 			}
 		case "format":
 			if _, ok := fieldSeen[requestexecution.FieldFormat]; !ok {
@@ -5073,6 +5358,420 @@ func newTracePaginateArgs(rv map[string]any) *tracePaginateArgs {
 }
 
 // CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
+func (_q *UpstreamCredentialQuery) CollectFields(ctx context.Context, satisfies ...string) (*UpstreamCredentialQuery, error) {
+	fc := graphql.GetFieldContext(ctx)
+	if fc == nil {
+		return _q, nil
+	}
+	if err := _q.collectField(ctx, false, graphql.GetOperationContext(ctx), fc.Field, nil, satisfies...); err != nil {
+		return nil, err
+	}
+	return _q, nil
+}
+
+func (_q *UpstreamCredentialQuery) collectField(ctx context.Context, oneNode bool, opCtx *graphql.OperationContext, collected graphql.CollectedField, path []string, satisfies ...string) error {
+	path = append([]string(nil), path...)
+	var (
+		unknownSeen    bool
+		fieldSeen      = make(map[string]struct{}, len(upstreamcredential.Columns))
+		selectedFields = []string{upstreamcredential.FieldID}
+	)
+	for _, field := range graphql.CollectFields(opCtx, collected.Selections, satisfies) {
+		switch field.Name {
+
+		case "channelRefs":
+			var (
+				alias = field.Alias
+				path  = append(path, alias)
+				query = (&ChannelCredentialRefClient{config: _q.config}).Query()
+			)
+			args := newChannelCredentialRefPaginateArgs(fieldArgs(ctx, new(ChannelCredentialRefWhereInput), path...))
+			if err := validateFirstLast(args.first, args.last); err != nil {
+				return fmt.Errorf("validate first and last in path %q: %w", path, err)
+			}
+			pager, err := newChannelCredentialRefPager(args.opts, args.last != nil)
+			if err != nil {
+				return fmt.Errorf("create new pager in path %q: %w", path, err)
+			}
+			if query, err = pager.applyFilter(query); err != nil {
+				return err
+			}
+			ignoredEdges := !hasCollectedField(ctx, append(path, edgesField)...)
+			if hasCollectedField(ctx, append(path, totalCountField)...) || hasCollectedField(ctx, append(path, pageInfoField)...) {
+				hasPagination := args.after != nil || args.first != nil || args.before != nil || args.last != nil
+				if hasPagination || ignoredEdges {
+					query := query.Clone()
+					_q.loadTotal = append(_q.loadTotal, func(ctx context.Context, nodes []*UpstreamCredential) error {
+						ids := make([]driver.Value, len(nodes))
+						for i := range nodes {
+							ids[i] = nodes[i].ID
+						}
+						var v []struct {
+							NodeID int `sql:"credential_id"`
+							Count  int `sql:"count"`
+						}
+						query.Where(func(s *sql.Selector) {
+							s.Where(sql.InValues(s.C(upstreamcredential.ChannelRefsColumn), ids...))
+						})
+						if err := query.GroupBy(upstreamcredential.ChannelRefsColumn).Aggregate(Count()).Scan(ctx, &v); err != nil {
+							return err
+						}
+						m := make(map[int]int, len(v))
+						for i := range v {
+							m[v[i].NodeID] = v[i].Count
+						}
+						for i := range nodes {
+							n := m[nodes[i].ID]
+							if nodes[i].Edges.totalCount[0] == nil {
+								nodes[i].Edges.totalCount[0] = make(map[string]int)
+							}
+							nodes[i].Edges.totalCount[0][alias] = n
+						}
+						return nil
+					})
+				} else {
+					_q.loadTotal = append(_q.loadTotal, func(_ context.Context, nodes []*UpstreamCredential) error {
+						for i := range nodes {
+							n := len(nodes[i].Edges.ChannelRefs)
+							if nodes[i].Edges.totalCount[0] == nil {
+								nodes[i].Edges.totalCount[0] = make(map[string]int)
+							}
+							nodes[i].Edges.totalCount[0][alias] = n
+						}
+						return nil
+					})
+				}
+			}
+			if ignoredEdges || (args.first != nil && *args.first == 0) || (args.last != nil && *args.last == 0) {
+				continue
+			}
+			if query, err = pager.applyCursors(query, args.after, args.before); err != nil {
+				return err
+			}
+			path = append(path, edgesField, nodeField)
+			if field := collectedField(ctx, path...); field != nil {
+				if err := query.collectField(ctx, false, opCtx, *field, path, mayAddCondition(satisfies, channelcredentialrefImplementors)...); err != nil {
+					return err
+				}
+			}
+			if limit := paginateLimit(args.first, args.last); limit > 0 {
+				if oneNode {
+					pager.applyOrder(query.Limit(limit))
+				} else {
+					modify := entgql.LimitPerRow(upstreamcredential.ChannelRefsColumn, limit, pager.orderExpr(query))
+					query.modifiers = append(query.modifiers, modify)
+				}
+			} else {
+				query = pager.applyOrder(query)
+			}
+			_q.WithNamedChannelRefs(alias, func(wq *ChannelCredentialRefQuery) {
+				*wq = *query
+			})
+
+		case "executions":
+			var (
+				alias = field.Alias
+				path  = append(path, alias)
+				query = (&RequestExecutionClient{config: _q.config}).Query()
+			)
+			args := newRequestExecutionPaginateArgs(fieldArgs(ctx, new(RequestExecutionWhereInput), path...))
+			if err := validateFirstLast(args.first, args.last); err != nil {
+				return fmt.Errorf("validate first and last in path %q: %w", path, err)
+			}
+			pager, err := newRequestExecutionPager(args.opts, args.last != nil)
+			if err != nil {
+				return fmt.Errorf("create new pager in path %q: %w", path, err)
+			}
+			if query, err = pager.applyFilter(query); err != nil {
+				return err
+			}
+			ignoredEdges := !hasCollectedField(ctx, append(path, edgesField)...)
+			if hasCollectedField(ctx, append(path, totalCountField)...) || hasCollectedField(ctx, append(path, pageInfoField)...) {
+				hasPagination := args.after != nil || args.first != nil || args.before != nil || args.last != nil
+				if hasPagination || ignoredEdges {
+					query := query.Clone()
+					_q.loadTotal = append(_q.loadTotal, func(ctx context.Context, nodes []*UpstreamCredential) error {
+						ids := make([]driver.Value, len(nodes))
+						for i := range nodes {
+							ids[i] = nodes[i].ID
+						}
+						var v []struct {
+							NodeID int `sql:"credential_id"`
+							Count  int `sql:"count"`
+						}
+						query.Where(func(s *sql.Selector) {
+							s.Where(sql.InValues(s.C(upstreamcredential.ExecutionsColumn), ids...))
+						})
+						if err := query.GroupBy(upstreamcredential.ExecutionsColumn).Aggregate(Count()).Scan(ctx, &v); err != nil {
+							return err
+						}
+						m := make(map[int]int, len(v))
+						for i := range v {
+							m[v[i].NodeID] = v[i].Count
+						}
+						for i := range nodes {
+							n := m[nodes[i].ID]
+							if nodes[i].Edges.totalCount[1] == nil {
+								nodes[i].Edges.totalCount[1] = make(map[string]int)
+							}
+							nodes[i].Edges.totalCount[1][alias] = n
+						}
+						return nil
+					})
+				} else {
+					_q.loadTotal = append(_q.loadTotal, func(_ context.Context, nodes []*UpstreamCredential) error {
+						for i := range nodes {
+							n := len(nodes[i].Edges.Executions)
+							if nodes[i].Edges.totalCount[1] == nil {
+								nodes[i].Edges.totalCount[1] = make(map[string]int)
+							}
+							nodes[i].Edges.totalCount[1][alias] = n
+						}
+						return nil
+					})
+				}
+			}
+			if ignoredEdges || (args.first != nil && *args.first == 0) || (args.last != nil && *args.last == 0) {
+				continue
+			}
+			if query, err = pager.applyCursors(query, args.after, args.before); err != nil {
+				return err
+			}
+			path = append(path, edgesField, nodeField)
+			if field := collectedField(ctx, path...); field != nil {
+				if err := query.collectField(ctx, false, opCtx, *field, path, mayAddCondition(satisfies, requestexecutionImplementors)...); err != nil {
+					return err
+				}
+			}
+			if limit := paginateLimit(args.first, args.last); limit > 0 {
+				if oneNode {
+					pager.applyOrder(query.Limit(limit))
+				} else {
+					modify := entgql.LimitPerRow(upstreamcredential.ExecutionsColumn, limit, pager.orderExpr(query))
+					query.modifiers = append(query.modifiers, modify)
+				}
+			} else {
+				query = pager.applyOrder(query)
+			}
+			_q.WithNamedExecutions(alias, func(wq *RequestExecutionQuery) {
+				*wq = *query
+			})
+
+		case "usageLogs":
+			var (
+				alias = field.Alias
+				path  = append(path, alias)
+				query = (&UsageLogClient{config: _q.config}).Query()
+			)
+			args := newUsageLogPaginateArgs(fieldArgs(ctx, new(UsageLogWhereInput), path...))
+			if err := validateFirstLast(args.first, args.last); err != nil {
+				return fmt.Errorf("validate first and last in path %q: %w", path, err)
+			}
+			pager, err := newUsageLogPager(args.opts, args.last != nil)
+			if err != nil {
+				return fmt.Errorf("create new pager in path %q: %w", path, err)
+			}
+			if query, err = pager.applyFilter(query); err != nil {
+				return err
+			}
+			ignoredEdges := !hasCollectedField(ctx, append(path, edgesField)...)
+			if hasCollectedField(ctx, append(path, totalCountField)...) || hasCollectedField(ctx, append(path, pageInfoField)...) {
+				hasPagination := args.after != nil || args.first != nil || args.before != nil || args.last != nil
+				if hasPagination || ignoredEdges {
+					query := query.Clone()
+					_q.loadTotal = append(_q.loadTotal, func(ctx context.Context, nodes []*UpstreamCredential) error {
+						ids := make([]driver.Value, len(nodes))
+						for i := range nodes {
+							ids[i] = nodes[i].ID
+						}
+						var v []struct {
+							NodeID int `sql:"credential_id"`
+							Count  int `sql:"count"`
+						}
+						query.Where(func(s *sql.Selector) {
+							s.Where(sql.InValues(s.C(upstreamcredential.UsageLogsColumn), ids...))
+						})
+						if err := query.GroupBy(upstreamcredential.UsageLogsColumn).Aggregate(Count()).Scan(ctx, &v); err != nil {
+							return err
+						}
+						m := make(map[int]int, len(v))
+						for i := range v {
+							m[v[i].NodeID] = v[i].Count
+						}
+						for i := range nodes {
+							n := m[nodes[i].ID]
+							if nodes[i].Edges.totalCount[2] == nil {
+								nodes[i].Edges.totalCount[2] = make(map[string]int)
+							}
+							nodes[i].Edges.totalCount[2][alias] = n
+						}
+						return nil
+					})
+				} else {
+					_q.loadTotal = append(_q.loadTotal, func(_ context.Context, nodes []*UpstreamCredential) error {
+						for i := range nodes {
+							n := len(nodes[i].Edges.UsageLogs)
+							if nodes[i].Edges.totalCount[2] == nil {
+								nodes[i].Edges.totalCount[2] = make(map[string]int)
+							}
+							nodes[i].Edges.totalCount[2][alias] = n
+						}
+						return nil
+					})
+				}
+			}
+			if ignoredEdges || (args.first != nil && *args.first == 0) || (args.last != nil && *args.last == 0) {
+				continue
+			}
+			if query, err = pager.applyCursors(query, args.after, args.before); err != nil {
+				return err
+			}
+			path = append(path, edgesField, nodeField)
+			if field := collectedField(ctx, path...); field != nil {
+				if err := query.collectField(ctx, false, opCtx, *field, path, mayAddCondition(satisfies, usagelogImplementors)...); err != nil {
+					return err
+				}
+			}
+			if limit := paginateLimit(args.first, args.last); limit > 0 {
+				if oneNode {
+					pager.applyOrder(query.Limit(limit))
+				} else {
+					modify := entgql.LimitPerRow(upstreamcredential.UsageLogsColumn, limit, pager.orderExpr(query))
+					query.modifiers = append(query.modifiers, modify)
+				}
+			} else {
+				query = pager.applyOrder(query)
+			}
+			_q.WithNamedUsageLogs(alias, func(wq *UsageLogQuery) {
+				*wq = *query
+			})
+
+		case "providerQuotaStatuses":
+			var (
+				alias = field.Alias
+				path  = append(path, alias)
+				query = (&ProviderQuotaStatusClient{config: _q.config}).Query()
+			)
+			if err := query.collectField(ctx, false, opCtx, field, path, mayAddCondition(satisfies, providerquotastatusImplementors)...); err != nil {
+				return err
+			}
+			_q.WithNamedProviderQuotaStatuses(alias, func(wq *ProviderQuotaStatusQuery) {
+				*wq = *query
+			})
+		case "createdAt":
+			if _, ok := fieldSeen[upstreamcredential.FieldCreatedAt]; !ok {
+				selectedFields = append(selectedFields, upstreamcredential.FieldCreatedAt)
+				fieldSeen[upstreamcredential.FieldCreatedAt] = struct{}{}
+			}
+		case "updatedAt":
+			if _, ok := fieldSeen[upstreamcredential.FieldUpdatedAt]; !ok {
+				selectedFields = append(selectedFields, upstreamcredential.FieldUpdatedAt)
+				fieldSeen[upstreamcredential.FieldUpdatedAt] = struct{}{}
+			}
+		case "name":
+			if _, ok := fieldSeen[upstreamcredential.FieldName]; !ok {
+				selectedFields = append(selectedFields, upstreamcredential.FieldName)
+				fieldSeen[upstreamcredential.FieldName] = struct{}{}
+			}
+		case "providerType":
+			if _, ok := fieldSeen[upstreamcredential.FieldProviderType]; !ok {
+				selectedFields = append(selectedFields, upstreamcredential.FieldProviderType)
+				fieldSeen[upstreamcredential.FieldProviderType] = struct{}{}
+			}
+		case "baseURL":
+			if _, ok := fieldSeen[upstreamcredential.FieldBaseURL]; !ok {
+				selectedFields = append(selectedFields, upstreamcredential.FieldBaseURL)
+				fieldSeen[upstreamcredential.FieldBaseURL] = struct{}{}
+			}
+		case "authKind":
+			if _, ok := fieldSeen[upstreamcredential.FieldAuthKind]; !ok {
+				selectedFields = append(selectedFields, upstreamcredential.FieldAuthKind)
+				fieldSeen[upstreamcredential.FieldAuthKind] = struct{}{}
+			}
+		case "fingerprint":
+			if _, ok := fieldSeen[upstreamcredential.FieldFingerprint]; !ok {
+				selectedFields = append(selectedFields, upstreamcredential.FieldFingerprint)
+				fieldSeen[upstreamcredential.FieldFingerprint] = struct{}{}
+			}
+		case "status":
+			if _, ok := fieldSeen[upstreamcredential.FieldStatus]; !ok {
+				selectedFields = append(selectedFields, upstreamcredential.FieldStatus)
+				fieldSeen[upstreamcredential.FieldStatus] = struct{}{}
+			}
+		case "weight":
+			if _, ok := fieldSeen[upstreamcredential.FieldWeight]; !ok {
+				selectedFields = append(selectedFields, upstreamcredential.FieldWeight)
+				fieldSeen[upstreamcredential.FieldWeight] = struct{}{}
+			}
+		case "remark":
+			if _, ok := fieldSeen[upstreamcredential.FieldRemark]; !ok {
+				selectedFields = append(selectedFields, upstreamcredential.FieldRemark)
+				fieldSeen[upstreamcredential.FieldRemark] = struct{}{}
+			}
+		case "id":
+		case "__typename":
+		default:
+			unknownSeen = true
+		}
+	}
+	if !unknownSeen {
+		_q.Select(selectedFields...)
+	}
+	return nil
+}
+
+type upstreamcredentialPaginateArgs struct {
+	first, last   *int
+	after, before *Cursor
+	opts          []UpstreamCredentialPaginateOption
+}
+
+func newUpstreamCredentialPaginateArgs(rv map[string]any) *upstreamcredentialPaginateArgs {
+	args := &upstreamcredentialPaginateArgs{}
+	if rv == nil {
+		return args
+	}
+	if v := rv[firstField]; v != nil {
+		args.first = v.(*int)
+	}
+	if v := rv[lastField]; v != nil {
+		args.last = v.(*int)
+	}
+	if v := rv[afterField]; v != nil {
+		args.after = v.(*Cursor)
+	}
+	if v := rv[beforeField]; v != nil {
+		args.before = v.(*Cursor)
+	}
+	if v, ok := rv[orderByField]; ok {
+		switch v := v.(type) {
+		case map[string]any:
+			var (
+				err1, err2 error
+				order      = &UpstreamCredentialOrder{Field: &UpstreamCredentialOrderField{}, Direction: entgql.OrderDirectionAsc}
+			)
+			if d, ok := v[directionField]; ok {
+				err1 = order.Direction.UnmarshalGQL(d)
+			}
+			if f, ok := v[fieldField]; ok {
+				err2 = order.Field.UnmarshalGQL(f)
+			}
+			if err1 == nil && err2 == nil {
+				args.opts = append(args.opts, WithUpstreamCredentialOrder(order))
+			}
+		case *UpstreamCredentialOrder:
+			if v != nil {
+				args.opts = append(args.opts, WithUpstreamCredentialOrder(v))
+			}
+		}
+	}
+	if v, ok := rv[whereField].(*UpstreamCredentialWhereInput); ok {
+		args.opts = append(args.opts, WithUpstreamCredentialFilter(v.Filter))
+	}
+	return args
+}
+
+// CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
 func (_q *UsageLogQuery) CollectFields(ctx context.Context, satisfies ...string) (*UsageLogQuery, error) {
 	fc := graphql.GetFieldContext(ctx)
 	if fc == nil {
@@ -5138,6 +5837,21 @@ func (_q *UsageLogQuery) collectField(ctx context.Context, oneNode bool, opCtx *
 				selectedFields = append(selectedFields, usagelog.FieldChannelID)
 				fieldSeen[usagelog.FieldChannelID] = struct{}{}
 			}
+
+		case "credential":
+			var (
+				alias = field.Alias
+				path  = append(path, alias)
+				query = (&UpstreamCredentialClient{config: _q.config}).Query()
+			)
+			if err := query.collectField(ctx, oneNode, opCtx, field, path, mayAddCondition(satisfies, upstreamcredentialImplementors)...); err != nil {
+				return err
+			}
+			_q.withCredential = query
+			if _, ok := fieldSeen[usagelog.FieldCredentialID]; !ok {
+				selectedFields = append(selectedFields, usagelog.FieldCredentialID)
+				fieldSeen[usagelog.FieldCredentialID] = struct{}{}
+			}
 		case "createdAt":
 			if _, ok := fieldSeen[usagelog.FieldCreatedAt]; !ok {
 				selectedFields = append(selectedFields, usagelog.FieldCreatedAt)
@@ -5168,10 +5882,20 @@ func (_q *UsageLogQuery) collectField(ctx context.Context, oneNode bool, opCtx *
 				selectedFields = append(selectedFields, usagelog.FieldChannelID)
 				fieldSeen[usagelog.FieldChannelID] = struct{}{}
 			}
+		case "credentialID":
+			if _, ok := fieldSeen[usagelog.FieldCredentialID]; !ok {
+				selectedFields = append(selectedFields, usagelog.FieldCredentialID)
+				fieldSeen[usagelog.FieldCredentialID] = struct{}{}
+			}
 		case "modelID":
 			if _, ok := fieldSeen[usagelog.FieldModelID]; !ok {
 				selectedFields = append(selectedFields, usagelog.FieldModelID)
 				fieldSeen[usagelog.FieldModelID] = struct{}{}
+			}
+		case "credentialFingerprint":
+			if _, ok := fieldSeen[usagelog.FieldCredentialFingerprint]; !ok {
+				selectedFields = append(selectedFields, usagelog.FieldCredentialFingerprint)
+				fieldSeen[usagelog.FieldCredentialFingerprint] = struct{}{}
 			}
 		case "promptTokens":
 			if _, ok := fieldSeen[usagelog.FieldPromptTokens]; !ok {

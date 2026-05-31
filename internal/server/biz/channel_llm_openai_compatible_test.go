@@ -8,8 +8,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/looplj/axonhub/internal/authz"
+	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/channel"
 	"github.com/looplj/axonhub/internal/ent/enttest"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/objects"
 	"github.com/looplj/axonhub/llm"
 	"github.com/looplj/axonhub/llm/httpclient"
@@ -174,6 +176,69 @@ func TestCodexOAuthWebSocketEndpointBuildsWithoutAPIKey(t *testing.T) {
 	custom, ok := outbound.(pipeline.ChannelCustomizedExecutor)
 	require.True(t, ok)
 	require.NotNil(t, custom.CustomizeExecutor(nil))
+}
+
+func TestCodexOAuthCredentialRefWebSocketEndpointBuildsWithoutInlineCredential(t *testing.T) {
+	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
+	defer client.Close()
+
+	ctx := authz.WithTestBypass(context.Background())
+
+	secret := objects.UpstreamCredentialSecret{
+		OAuth: &objects.OAuthCredentials{
+			AccessToken:  "access-token",
+			RefreshToken: "refresh-token",
+			ExpiresAt:    time.Now().Add(time.Hour),
+		},
+	}
+	credential := client.UpstreamCredential.Create().
+		SetName("codex oauth").
+		SetProviderType(channel.TypeCodex.String()).
+		SetBaseURL("wss://chatgpt.com/backend-api/codex#").
+		SetAuthKind(upstreamcredential.AuthKindOauth).
+		SetSecretPayload(secret).
+		SetFingerprint(ChannelCredentialFingerprintForSecret(channel.TypeCodex.String(), "wss://chatgpt.com/backend-api/codex#", upstreamcredential.AuthKindOauth.String(), secret)).
+		SaveX(ctx)
+
+	entChannel := client.Channel.Create().
+		SetName("Codex OAuth WebSocket Channel").
+		SetType(channel.TypeCodex).
+		SetBaseURL("wss://chatgpt.com/backend-api/codex#").
+		SetCredentials(objects.ChannelCredentials{}).
+		SetSupportedModels([]string{"gpt-5.5"}).
+		SetDefaultTestModel("gpt-5.5").
+		SetEndpoints([]objects.ChannelEndpoint{{
+			APIFormat: llm.APIFormatOpenAIResponse.String(),
+			Transport: objects.ChannelEndpointTransportWebSocket,
+		}}).
+		SaveX(ctx)
+
+	client.ChannelCredentialRef.Create().
+		SetChannelID(entChannel.ID).
+		SetCredentialID(credential.ID).
+		SaveX(ctx)
+
+	entChannel = client.Channel.Query().
+		Where(channel.ID(entChannel.ID)).
+		WithCredentialRefs(func(q *ent.ChannelCredentialRefQuery) {
+			q.WithCredential()
+		}).
+		OnlyX(ctx)
+
+	channelSvc := NewChannelServiceForTest(client)
+
+	built, err := channelSvc.buildChannelWithOutbounds(entChannel)
+	require.NoError(t, err)
+
+	primary, ok := built.Outbound.(*codex.OutboundTransformer)
+	require.True(t, ok)
+	require.NotNil(t, primary.TokenProvider())
+
+	outbound, err := BuildOutboundByAPIFormat(built, llm.APIFormatOpenAIResponse.String())
+	require.NoError(t, err)
+	override, ok := outbound.(*codex.OutboundTransformer)
+	require.True(t, ok)
+	require.True(t, primary.TokenProvider() == override.TokenProvider())
 }
 
 type testStoppableOutbound struct {

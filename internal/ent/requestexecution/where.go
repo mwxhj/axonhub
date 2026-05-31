@@ -80,6 +80,11 @@ func ChannelID(v int) predicate.RequestExecution {
 	return predicate.RequestExecution(sql.FieldEQ(FieldChannelID, v))
 }
 
+// CredentialID applies equality check predicate on the "credential_id" field. It's identical to CredentialIDEQ.
+func CredentialID(v int) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldCredentialID, v))
+}
+
 // DataStorageID applies equality check predicate on the "data_storage_id" field. It's identical to DataStorageIDEQ.
 func DataStorageID(v int) predicate.RequestExecution {
 	return predicate.RequestExecution(sql.FieldEQ(FieldDataStorageID, v))
@@ -93,6 +98,11 @@ func ExternalID(v string) predicate.RequestExecution {
 // ModelID applies equality check predicate on the "model_id" field. It's identical to ModelIDEQ.
 func ModelID(v string) predicate.RequestExecution {
 	return predicate.RequestExecution(sql.FieldEQ(FieldModelID, v))
+}
+
+// CredentialFingerprint applies equality check predicate on the "credential_fingerprint" field. It's identical to CredentialFingerprintEQ.
+func CredentialFingerprint(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldCredentialFingerprint, v))
 }
 
 // Format applies equality check predicate on the "format" field. It's identical to FormatEQ.
@@ -300,6 +310,36 @@ func ChannelIDNotNil() predicate.RequestExecution {
 	return predicate.RequestExecution(sql.FieldNotNull(FieldChannelID))
 }
 
+// CredentialIDEQ applies the EQ predicate on the "credential_id" field.
+func CredentialIDEQ(v int) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldCredentialID, v))
+}
+
+// CredentialIDNEQ applies the NEQ predicate on the "credential_id" field.
+func CredentialIDNEQ(v int) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNEQ(FieldCredentialID, v))
+}
+
+// CredentialIDIn applies the In predicate on the "credential_id" field.
+func CredentialIDIn(vs ...int) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIn(FieldCredentialID, vs...))
+}
+
+// CredentialIDNotIn applies the NotIn predicate on the "credential_id" field.
+func CredentialIDNotIn(vs ...int) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotIn(FieldCredentialID, vs...))
+}
+
+// CredentialIDIsNil applies the IsNil predicate on the "credential_id" field.
+func CredentialIDIsNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIsNull(FieldCredentialID))
+}
+
+// CredentialIDNotNil applies the NotNil predicate on the "credential_id" field.
+func CredentialIDNotNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotNull(FieldCredentialID))
+}
+
 // DataStorageIDEQ applies the EQ predicate on the "data_storage_id" field.
 func DataStorageIDEQ(v int) predicate.RequestExecution {
 	return predicate.RequestExecution(sql.FieldEQ(FieldDataStorageID, v))
@@ -468,6 +508,81 @@ func ModelIDEqualFold(v string) predicate.RequestExecution {
 // ModelIDContainsFold applies the ContainsFold predicate on the "model_id" field.
 func ModelIDContainsFold(v string) predicate.RequestExecution {
 	return predicate.RequestExecution(sql.FieldContainsFold(FieldModelID, v))
+}
+
+// CredentialFingerprintEQ applies the EQ predicate on the "credential_fingerprint" field.
+func CredentialFingerprintEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintNEQ applies the NEQ predicate on the "credential_fingerprint" field.
+func CredentialFingerprintNEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNEQ(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintIn applies the In predicate on the "credential_fingerprint" field.
+func CredentialFingerprintIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIn(FieldCredentialFingerprint, vs...))
+}
+
+// CredentialFingerprintNotIn applies the NotIn predicate on the "credential_fingerprint" field.
+func CredentialFingerprintNotIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotIn(FieldCredentialFingerprint, vs...))
+}
+
+// CredentialFingerprintGT applies the GT predicate on the "credential_fingerprint" field.
+func CredentialFingerprintGT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGT(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintGTE applies the GTE predicate on the "credential_fingerprint" field.
+func CredentialFingerprintGTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGTE(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintLT applies the LT predicate on the "credential_fingerprint" field.
+func CredentialFingerprintLT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLT(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintLTE applies the LTE predicate on the "credential_fingerprint" field.
+func CredentialFingerprintLTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLTE(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintContains applies the Contains predicate on the "credential_fingerprint" field.
+func CredentialFingerprintContains(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContains(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintHasPrefix applies the HasPrefix predicate on the "credential_fingerprint" field.
+func CredentialFingerprintHasPrefix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasPrefix(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintHasSuffix applies the HasSuffix predicate on the "credential_fingerprint" field.
+func CredentialFingerprintHasSuffix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasSuffix(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintIsNil applies the IsNil predicate on the "credential_fingerprint" field.
+func CredentialFingerprintIsNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIsNull(FieldCredentialFingerprint))
+}
+
+// CredentialFingerprintNotNil applies the NotNil predicate on the "credential_fingerprint" field.
+func CredentialFingerprintNotNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotNull(FieldCredentialFingerprint))
+}
+
+// CredentialFingerprintEqualFold applies the EqualFold predicate on the "credential_fingerprint" field.
+func CredentialFingerprintEqualFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEqualFold(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintContainsFold applies the ContainsFold predicate on the "credential_fingerprint" field.
+func CredentialFingerprintContainsFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContainsFold(FieldCredentialFingerprint, v))
 }
 
 // FormatEQ applies the EQ predicate on the "format" field.
@@ -908,6 +1023,29 @@ func HasChannel() predicate.RequestExecution {
 func HasChannelWith(preds ...predicate.Channel) predicate.RequestExecution {
 	return predicate.RequestExecution(func(s *sql.Selector) {
 		step := newChannelStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCredential applies the HasEdge predicate on the "credential" edge.
+func HasCredential() predicate.RequestExecution {
+	return predicate.RequestExecution(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, CredentialTable, CredentialColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCredentialWith applies the HasEdge predicate on the "credential" edge with a given conditions (other predicates).
+func HasCredentialWith(preds ...predicate.UpstreamCredential) predicate.RequestExecution {
+	return predicate.RequestExecution(func(s *sql.Selector) {
+		step := newCredentialStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

@@ -27,12 +27,16 @@ const (
 	FieldRequestID = "request_id"
 	// FieldChannelID holds the string denoting the channel_id field in the database.
 	FieldChannelID = "channel_id"
+	// FieldCredentialID holds the string denoting the credential_id field in the database.
+	FieldCredentialID = "credential_id"
 	// FieldDataStorageID holds the string denoting the data_storage_id field in the database.
 	FieldDataStorageID = "data_storage_id"
 	// FieldExternalID holds the string denoting the external_id field in the database.
 	FieldExternalID = "external_id"
 	// FieldModelID holds the string denoting the model_id field in the database.
 	FieldModelID = "model_id"
+	// FieldCredentialFingerprint holds the string denoting the credential_fingerprint field in the database.
+	FieldCredentialFingerprint = "credential_fingerprint"
 	// FieldFormat holds the string denoting the format field in the database.
 	FieldFormat = "format"
 	// FieldRequestBody holds the string denoting the request_body field in the database.
@@ -61,6 +65,8 @@ const (
 	EdgeRequest = "request"
 	// EdgeChannel holds the string denoting the channel edge name in mutations.
 	EdgeChannel = "channel"
+	// EdgeCredential holds the string denoting the credential edge name in mutations.
+	EdgeCredential = "credential"
 	// EdgeDataStorage holds the string denoting the data_storage edge name in mutations.
 	EdgeDataStorage = "data_storage"
 	// Table holds the table name of the requestexecution in the database.
@@ -79,6 +85,13 @@ const (
 	ChannelInverseTable = "channels"
 	// ChannelColumn is the table column denoting the channel relation/edge.
 	ChannelColumn = "channel_id"
+	// CredentialTable is the table that holds the credential relation/edge.
+	CredentialTable = "request_executions"
+	// CredentialInverseTable is the table name for the UpstreamCredential entity.
+	// It exists in this package in order to avoid circular dependency with the "upstreamcredential" package.
+	CredentialInverseTable = "upstream_credentials"
+	// CredentialColumn is the table column denoting the credential relation/edge.
+	CredentialColumn = "credential_id"
 	// DataStorageTable is the table that holds the data_storage relation/edge.
 	DataStorageTable = "request_executions"
 	// DataStorageInverseTable is the table name for the DataStorage entity.
@@ -96,9 +109,11 @@ var Columns = []string{
 	FieldProjectID,
 	FieldRequestID,
 	FieldChannelID,
+	FieldCredentialID,
 	FieldDataStorageID,
 	FieldExternalID,
 	FieldModelID,
+	FieldCredentialFingerprint,
 	FieldFormat,
 	FieldRequestBody,
 	FieldResponseBody,
@@ -134,6 +149,8 @@ var (
 	DefaultProjectID int
 	// ExternalIDValidator is a validator for the "external_id" field. It is called by the builders before save.
 	ExternalIDValidator func(string) error
+	// CredentialFingerprintValidator is a validator for the "credential_fingerprint" field. It is called by the builders before save.
+	CredentialFingerprintValidator func(string) error
 	// DefaultFormat holds the default value on creation for the "format" field.
 	DefaultFormat string
 	// DefaultStream holds the default value on creation for the "stream" field.
@@ -199,6 +216,11 @@ func ByChannelID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldChannelID, opts...).ToFunc()
 }
 
+// ByCredentialID orders the results by the credential_id field.
+func ByCredentialID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCredentialID, opts...).ToFunc()
+}
+
 // ByDataStorageID orders the results by the data_storage_id field.
 func ByDataStorageID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDataStorageID, opts...).ToFunc()
@@ -212,6 +234,11 @@ func ByExternalID(opts ...sql.OrderTermOption) OrderOption {
 // ByModelID orders the results by the model_id field.
 func ByModelID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldModelID, opts...).ToFunc()
+}
+
+// ByCredentialFingerprint orders the results by the credential_fingerprint field.
+func ByCredentialFingerprint(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCredentialFingerprint, opts...).ToFunc()
 }
 
 // ByFormat orders the results by the format field.
@@ -268,6 +295,13 @@ func ByChannelField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
+// ByCredentialField orders the results by credential field.
+func ByCredentialField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCredentialStep(), sql.OrderByField(field, opts...))
+	}
+}
+
 // ByDataStorageField orders the results by data_storage field.
 func ByDataStorageField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -286,6 +320,13 @@ func newChannelStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ChannelInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, ChannelTable, ChannelColumn),
+	)
+}
+func newCredentialStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CredentialInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, CredentialTable, CredentialColumn),
 	)
 }
 func newDataStorageStep() *sqlgraph.Step {

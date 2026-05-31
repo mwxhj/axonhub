@@ -9,6 +9,7 @@ import (
 
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
+	"github.com/looplj/axonhub/internal/objects"
 	"github.com/looplj/axonhub/internal/server/biz"
 	"github.com/looplj/axonhub/internal/server/biz/provider_quota"
 	"github.com/looplj/axonhub/llm"
@@ -346,4 +347,40 @@ func TestProviderQuotaSelector_ChannelExhaustedOverridesPerLimitAvailable(t *tes
 	result, err := selector.Select(context.Background(), tokenReq)
 	require.NoError(t, err)
 	require.Empty(t, result, "channel with Exhausted channel-level status must be filtered even if per-limit token status is available")
+}
+
+func TestAreAllChannelsExhausted_UsesCredentialDerivedQuotaStatus(t *testing.T) {
+	sharedFingerprint := biz.ChannelCredentialFingerprintForAPIKey("openai", "https://api.openai.com/v1", "shared-key")
+	otherFingerprint := biz.ChannelCredentialFingerprintForAPIKey("openai", "https://api.openai.com/v1", "other-key")
+	provider := &mockQuotaStatusProvider{
+		statuses: map[int]*biz.QuotaChannelStatus{
+			1: {Status: providerquotastatus.StatusExhausted, Ready: false},
+			2: {Status: providerquotastatus.StatusExhausted, Ready: false},
+		},
+		credentialStatuses: map[string]*biz.QuotaChannelStatus{
+			sharedFingerprint: {Status: providerquotastatus.StatusExhausted, Ready: false},
+			otherFingerprint:  {Status: providerquotastatus.StatusAvailable, Ready: true},
+		},
+	}
+
+	candidates := []*ChannelModelsCandidate{
+		{
+			Channel: &biz.Channel{Channel: &ent.Channel{
+				ID:          1,
+				Type:        "openai",
+				BaseURL:     "https://api.openai.com/v1",
+				Credentials: objects.ChannelCredentials{APIKeys: []string{"shared-key"}},
+			}},
+		},
+		{
+			Channel: &biz.Channel{Channel: &ent.Channel{
+				ID:          2,
+				Type:        "openai",
+				BaseURL:     "https://api.openai.com/v1",
+				Credentials: objects.ChannelCredentials{APIKeys: []string{"other-key"}},
+			}},
+		},
+	}
+
+	require.False(t, areAllChannelsExhausted(candidates, provider, &llm.Request{Model: "gpt-4"}))
 }

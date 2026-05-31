@@ -14,6 +14,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/datastorage"
 	"github.com/looplj/axonhub/internal/ent/request"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/objects"
 )
 
@@ -32,12 +33,16 @@ type RequestExecution struct {
 	RequestID int `json:"request_id,omitempty"`
 	// ChannelID holds the value of the "channel_id" field.
 	ChannelID int `json:"channel_id,omitempty"`
+	// Upstream credential ID used for this execution when known
+	CredentialID int `json:"credential_id,omitempty"`
 	// Data Storage ID that this request belongs to
 	DataStorageID int `json:"data_storage_id,omitempty"`
 	// ExternalID holds the value of the "external_id" field.
 	ExternalID string `json:"external_id,omitempty"`
 	// ModelID holds the value of the "model_id" field.
 	ModelID string `json:"model_id,omitempty"`
+	// Safe upstream credential identity used for this execution; never stores the raw secret
+	CredentialFingerprint string `json:"credential_fingerprint,omitempty"`
 	// Format holds the value of the "format" field.
 	Format string `json:"format,omitempty"`
 	// RequestBody holds the value of the "request_body" field.
@@ -74,13 +79,15 @@ type RequestExecutionEdges struct {
 	Request *Request `json:"request,omitempty"`
 	// Channel holds the value of the channel edge.
 	Channel *Channel `json:"channel,omitempty"`
+	// Credential holds the value of the credential edge.
+	Credential *UpstreamCredential `json:"credential,omitempty"`
 	// DataStorage holds the value of the data_storage edge.
 	DataStorage *DataStorage `json:"data_storage,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [3]bool
+	loadedTypes [4]bool
 	// totalCount holds the count of the edges above.
-	totalCount [3]map[string]int
+	totalCount [4]map[string]int
 }
 
 // RequestOrErr returns the Request value or an error if the edge
@@ -105,12 +112,23 @@ func (e RequestExecutionEdges) ChannelOrErr() (*Channel, error) {
 	return nil, &NotLoadedError{edge: "channel"}
 }
 
+// CredentialOrErr returns the Credential value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e RequestExecutionEdges) CredentialOrErr() (*UpstreamCredential, error) {
+	if e.Credential != nil {
+		return e.Credential, nil
+	} else if e.loadedTypes[2] {
+		return nil, &NotFoundError{label: upstreamcredential.Label}
+	}
+	return nil, &NotLoadedError{edge: "credential"}
+}
+
 // DataStorageOrErr returns the DataStorage value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e RequestExecutionEdges) DataStorageOrErr() (*DataStorage, error) {
 	if e.DataStorage != nil {
 		return e.DataStorage, nil
-	} else if e.loadedTypes[2] {
+	} else if e.loadedTypes[3] {
 		return nil, &NotFoundError{label: datastorage.Label}
 	}
 	return nil, &NotLoadedError{edge: "data_storage"}
@@ -125,9 +143,9 @@ func (*RequestExecution) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case requestexecution.FieldStream:
 			values[i] = new(sql.NullBool)
-		case requestexecution.FieldID, requestexecution.FieldProjectID, requestexecution.FieldRequestID, requestexecution.FieldChannelID, requestexecution.FieldDataStorageID, requestexecution.FieldResponseStatusCode, requestexecution.FieldMetricsLatencyMs, requestexecution.FieldMetricsFirstTokenLatencyMs, requestexecution.FieldMetricsReasoningDurationMs:
+		case requestexecution.FieldID, requestexecution.FieldProjectID, requestexecution.FieldRequestID, requestexecution.FieldChannelID, requestexecution.FieldCredentialID, requestexecution.FieldDataStorageID, requestexecution.FieldResponseStatusCode, requestexecution.FieldMetricsLatencyMs, requestexecution.FieldMetricsFirstTokenLatencyMs, requestexecution.FieldMetricsReasoningDurationMs:
 			values[i] = new(sql.NullInt64)
-		case requestexecution.FieldExternalID, requestexecution.FieldModelID, requestexecution.FieldFormat, requestexecution.FieldErrorMessage, requestexecution.FieldStatus:
+		case requestexecution.FieldExternalID, requestexecution.FieldModelID, requestexecution.FieldCredentialFingerprint, requestexecution.FieldFormat, requestexecution.FieldErrorMessage, requestexecution.FieldStatus:
 			values[i] = new(sql.NullString)
 		case requestexecution.FieldCreatedAt, requestexecution.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -182,6 +200,12 @@ func (_m *RequestExecution) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.ChannelID = int(value.Int64)
 			}
+		case requestexecution.FieldCredentialID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field credential_id", values[i])
+			} else if value.Valid {
+				_m.CredentialID = int(value.Int64)
+			}
 		case requestexecution.FieldDataStorageID:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field data_storage_id", values[i])
@@ -199,6 +223,12 @@ func (_m *RequestExecution) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field model_id", values[i])
 			} else if value.Valid {
 				_m.ModelID = value.String
+			}
+		case requestexecution.FieldCredentialFingerprint:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field credential_fingerprint", values[i])
+			} else if value.Valid {
+				_m.CredentialFingerprint = value.String
 			}
 		case requestexecution.FieldFormat:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -307,6 +337,11 @@ func (_m *RequestExecution) QueryChannel() *ChannelQuery {
 	return NewRequestExecutionClient(_m.config).QueryChannel(_m)
 }
 
+// QueryCredential queries the "credential" edge of the RequestExecution entity.
+func (_m *RequestExecution) QueryCredential() *UpstreamCredentialQuery {
+	return NewRequestExecutionClient(_m.config).QueryCredential(_m)
+}
+
 // QueryDataStorage queries the "data_storage" edge of the RequestExecution entity.
 func (_m *RequestExecution) QueryDataStorage() *DataStorageQuery {
 	return NewRequestExecutionClient(_m.config).QueryDataStorage(_m)
@@ -350,6 +385,9 @@ func (_m *RequestExecution) String() string {
 	builder.WriteString("channel_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.ChannelID))
 	builder.WriteString(", ")
+	builder.WriteString("credential_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.CredentialID))
+	builder.WriteString(", ")
 	builder.WriteString("data_storage_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.DataStorageID))
 	builder.WriteString(", ")
@@ -358,6 +396,9 @@ func (_m *RequestExecution) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("model_id=")
 	builder.WriteString(_m.ModelID)
+	builder.WriteString(", ")
+	builder.WriteString("credential_fingerprint=")
+	builder.WriteString(_m.CredentialFingerprint)
 	builder.WriteString(", ")
 	builder.WriteString("format=")
 	builder.WriteString(_m.Format)

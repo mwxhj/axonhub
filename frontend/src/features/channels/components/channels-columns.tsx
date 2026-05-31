@@ -22,6 +22,7 @@ import {
   IconKeyOff,
   IconGauge,
   IconHistory,
+  IconKey,
   IconPlugConnected,
 } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
@@ -205,6 +206,15 @@ const ActionCell = memo(({ row }: { row: Row<Channel> }) => {
           >
             <IconGauge size={16} className='mr-2' />
             {t('channels.dialogs.rateLimit.action')}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              setCurrentRow(channel);
+              setOpen('credentials');
+            }}
+          >
+            <IconKey size={16} className='mr-2' />
+            {t('credentials.title')}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => {

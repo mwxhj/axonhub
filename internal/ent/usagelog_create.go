@@ -14,6 +14,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/channel"
 	"github.com/looplj/axonhub/internal/ent/project"
 	"github.com/looplj/axonhub/internal/ent/request"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
 	"github.com/looplj/axonhub/internal/objects"
 )
@@ -102,9 +103,37 @@ func (_c *UsageLogCreate) SetNillableChannelID(v *int) *UsageLogCreate {
 	return _c
 }
 
+// SetCredentialID sets the "credential_id" field.
+func (_c *UsageLogCreate) SetCredentialID(v int) *UsageLogCreate {
+	_c.mutation.SetCredentialID(v)
+	return _c
+}
+
+// SetNillableCredentialID sets the "credential_id" field if the given value is not nil.
+func (_c *UsageLogCreate) SetNillableCredentialID(v *int) *UsageLogCreate {
+	if v != nil {
+		_c.SetCredentialID(*v)
+	}
+	return _c
+}
+
 // SetModelID sets the "model_id" field.
 func (_c *UsageLogCreate) SetModelID(v string) *UsageLogCreate {
 	_c.mutation.SetModelID(v)
+	return _c
+}
+
+// SetCredentialFingerprint sets the "credential_fingerprint" field.
+func (_c *UsageLogCreate) SetCredentialFingerprint(v string) *UsageLogCreate {
+	_c.mutation.SetCredentialFingerprint(v)
+	return _c
+}
+
+// SetNillableCredentialFingerprint sets the "credential_fingerprint" field if the given value is not nil.
+func (_c *UsageLogCreate) SetNillableCredentialFingerprint(v *string) *UsageLogCreate {
+	if v != nil {
+		_c.SetCredentialFingerprint(*v)
+	}
 	return _c
 }
 
@@ -353,6 +382,11 @@ func (_c *UsageLogCreate) SetChannel(v *Channel) *UsageLogCreate {
 	return _c.SetChannelID(v.ID)
 }
 
+// SetCredential sets the "credential" edge to the UpstreamCredential entity.
+func (_c *UsageLogCreate) SetCredential(v *UpstreamCredential) *UsageLogCreate {
+	return _c.SetCredentialID(v.ID)
+}
+
 // Mutation returns the UsageLogMutation object of the builder.
 func (_c *UsageLogCreate) Mutation() *UsageLogMutation {
 	return _c.mutation
@@ -482,6 +516,11 @@ func (_c *UsageLogCreate) check() error {
 	if _, ok := _c.mutation.ModelID(); !ok {
 		return &ValidationError{Name: "model_id", err: errors.New(`ent: missing required field "UsageLog.model_id"`)}
 	}
+	if v, ok := _c.mutation.CredentialFingerprint(); ok {
+		if err := usagelog.CredentialFingerprintValidator(v); err != nil {
+			return &ValidationError{Name: "credential_fingerprint", err: fmt.Errorf(`ent: validator failed for field "UsageLog.credential_fingerprint": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.PromptTokens(); !ok {
 		return &ValidationError{Name: "prompt_tokens", err: errors.New(`ent: missing required field "UsageLog.prompt_tokens"`)}
 	}
@@ -550,6 +589,10 @@ func (_c *UsageLogCreate) createSpec() (*UsageLog, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ModelID(); ok {
 		_spec.SetField(usagelog.FieldModelID, field.TypeString, value)
 		_node.ModelID = value
+	}
+	if value, ok := _c.mutation.CredentialFingerprint(); ok {
+		_spec.SetField(usagelog.FieldCredentialFingerprint, field.TypeString, value)
+		_node.CredentialFingerprint = value
 	}
 	if value, ok := _c.mutation.PromptTokens(); ok {
 		_spec.SetField(usagelog.FieldPromptTokens, field.TypeInt64, value)
@@ -668,6 +711,23 @@ func (_c *UsageLogCreate) createSpec() (*UsageLog, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.ChannelID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CredentialIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   usagelog.CredentialTable,
+			Columns: []string{usagelog.CredentialColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(upstreamcredential.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.CredentialID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
@@ -1090,8 +1150,14 @@ func (u *UsageLogUpsertOne) UpdateNewValues() *UsageLogUpsertOne {
 		if _, exists := u.create.mutation.ChannelID(); exists {
 			s.SetIgnore(usagelog.FieldChannelID)
 		}
+		if _, exists := u.create.mutation.CredentialID(); exists {
+			s.SetIgnore(usagelog.FieldCredentialID)
+		}
 		if _, exists := u.create.mutation.ModelID(); exists {
 			s.SetIgnore(usagelog.FieldModelID)
+		}
+		if _, exists := u.create.mutation.CredentialFingerprint(); exists {
+			s.SetIgnore(usagelog.FieldCredentialFingerprint)
 		}
 		if _, exists := u.create.mutation.Source(); exists {
 			s.SetIgnore(usagelog.FieldSource)
@@ -1720,8 +1786,14 @@ func (u *UsageLogUpsertBulk) UpdateNewValues() *UsageLogUpsertBulk {
 			if _, exists := b.mutation.ChannelID(); exists {
 				s.SetIgnore(usagelog.FieldChannelID)
 			}
+			if _, exists := b.mutation.CredentialID(); exists {
+				s.SetIgnore(usagelog.FieldCredentialID)
+			}
 			if _, exists := b.mutation.ModelID(); exists {
 				s.SetIgnore(usagelog.FieldModelID)
+			}
+			if _, exists := b.mutation.CredentialFingerprint(); exists {
+				s.SetIgnore(usagelog.FieldCredentialFingerprint)
 			}
 			if _, exists := b.mutation.Source(); exists {
 				s.SetIgnore(usagelog.FieldSource)

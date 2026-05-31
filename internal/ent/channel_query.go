@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/channelmodelprice"
 	"github.com/looplj/axonhub/internal/ent/channelprobe"
 	"github.com/looplj/axonhub/internal/ent/predicate"
@@ -35,6 +36,7 @@ type ChannelQuery struct {
 	withUsageLogs               *UsageLogQuery
 	withChannelProbes           *ChannelProbeQuery
 	withChannelModelPrices      *ChannelModelPriceQuery
+	withCredentialRefs          *ChannelCredentialRefQuery
 	withProviderQuotaStatus     *ProviderQuotaStatusQuery
 	loadTotal                   []func(context.Context, []*Channel) error
 	modifiers                   []func(*sql.Selector)
@@ -43,6 +45,7 @@ type ChannelQuery struct {
 	withNamedUsageLogs          map[string]*UsageLogQuery
 	withNamedChannelProbes      map[string]*ChannelProbeQuery
 	withNamedChannelModelPrices map[string]*ChannelModelPriceQuery
+	withNamedCredentialRefs     map[string]*ChannelCredentialRefQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -182,6 +185,28 @@ func (_q *ChannelQuery) QueryChannelModelPrices() *ChannelModelPriceQuery {
 			sqlgraph.From(channel.Table, channel.FieldID, selector),
 			sqlgraph.To(channelmodelprice.Table, channelmodelprice.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, channel.ChannelModelPricesTable, channel.ChannelModelPricesColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCredentialRefs chains the current query on the "credential_refs" edge.
+func (_q *ChannelQuery) QueryCredentialRefs() *ChannelCredentialRefQuery {
+	query := (&ChannelCredentialRefClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(channel.Table, channel.FieldID, selector),
+			sqlgraph.To(channelcredentialref.Table, channelcredentialref.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, channel.CredentialRefsTable, channel.CredentialRefsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -408,6 +433,7 @@ func (_q *ChannelQuery) Clone() *ChannelQuery {
 		withUsageLogs:           _q.withUsageLogs.Clone(),
 		withChannelProbes:       _q.withChannelProbes.Clone(),
 		withChannelModelPrices:  _q.withChannelModelPrices.Clone(),
+		withCredentialRefs:      _q.withCredentialRefs.Clone(),
 		withProviderQuotaStatus: _q.withProviderQuotaStatus.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
@@ -468,6 +494,17 @@ func (_q *ChannelQuery) WithChannelModelPrices(opts ...func(*ChannelModelPriceQu
 		opt(query)
 	}
 	_q.withChannelModelPrices = query
+	return _q
+}
+
+// WithCredentialRefs tells the query-builder to eager-load the nodes that are connected to
+// the "credential_refs" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ChannelQuery) WithCredentialRefs(opts ...func(*ChannelCredentialRefQuery)) *ChannelQuery {
+	query := (&ChannelCredentialRefClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCredentialRefs = query
 	return _q
 }
 
@@ -566,12 +603,13 @@ func (_q *ChannelQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Chan
 	var (
 		nodes       = []*Channel{}
 		_spec       = _q.querySpec()
-		loadedTypes = [6]bool{
+		loadedTypes = [7]bool{
 			_q.withRequests != nil,
 			_q.withExecutions != nil,
 			_q.withUsageLogs != nil,
 			_q.withChannelProbes != nil,
 			_q.withChannelModelPrices != nil,
+			_q.withCredentialRefs != nil,
 			_q.withProviderQuotaStatus != nil,
 		}
 	)
@@ -633,6 +671,13 @@ func (_q *ChannelQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Chan
 			return nil, err
 		}
 	}
+	if query := _q.withCredentialRefs; query != nil {
+		if err := _q.loadCredentialRefs(ctx, query, nodes,
+			func(n *Channel) { n.Edges.CredentialRefs = []*ChannelCredentialRef{} },
+			func(n *Channel, e *ChannelCredentialRef) { n.Edges.CredentialRefs = append(n.Edges.CredentialRefs, e) }); err != nil {
+			return nil, err
+		}
+	}
 	if query := _q.withProviderQuotaStatus; query != nil {
 		if err := _q.loadProviderQuotaStatus(ctx, query, nodes, nil,
 			func(n *Channel, e *ProviderQuotaStatus) { n.Edges.ProviderQuotaStatus = e }); err != nil {
@@ -671,6 +716,13 @@ func (_q *ChannelQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Chan
 		if err := _q.loadChannelModelPrices(ctx, query, nodes,
 			func(n *Channel) { n.appendNamedChannelModelPrices(name) },
 			func(n *Channel, e *ChannelModelPrice) { n.appendNamedChannelModelPrices(name, e) }); err != nil {
+			return nil, err
+		}
+	}
+	for name, query := range _q.withNamedCredentialRefs {
+		if err := _q.loadCredentialRefs(ctx, query, nodes,
+			func(n *Channel) { n.appendNamedCredentialRefs(name) },
+			func(n *Channel, e *ChannelCredentialRef) { n.appendNamedCredentialRefs(name, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -817,6 +869,36 @@ func (_q *ChannelQuery) loadChannelModelPrices(ctx context.Context, query *Chann
 	}
 	query.Where(predicate.ChannelModelPrice(func(s *sql.Selector) {
 		s.Where(sql.InValues(s.C(channel.ChannelModelPricesColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ChannelID
+		node, ok := nodeids[fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "channel_id" returned %v for node %v`, fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *ChannelQuery) loadCredentialRefs(ctx context.Context, query *ChannelCredentialRefQuery, nodes []*Channel, init func(*Channel), assign func(*Channel, *ChannelCredentialRef)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[int]*Channel)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(channelcredentialref.FieldChannelID)
+	}
+	query.Where(predicate.ChannelCredentialRef(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(channel.CredentialRefsColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -1020,6 +1102,20 @@ func (_q *ChannelQuery) WithNamedChannelModelPrices(name string, opts ...func(*C
 		_q.withNamedChannelModelPrices = make(map[string]*ChannelModelPriceQuery)
 	}
 	_q.withNamedChannelModelPrices[name] = query
+	return _q
+}
+
+// WithNamedCredentialRefs tells the query-builder to eager-load the nodes that are connected to the "credential_refs"
+// edge with the given name. The optional arguments are used to configure the query builder of the edge.
+func (_q *ChannelQuery) WithNamedCredentialRefs(name string, opts ...func(*ChannelCredentialRefQuery)) *ChannelQuery {
+	query := (&ChannelCredentialRefClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	if _q.withNamedCredentialRefs == nil {
+		_q.withNamedCredentialRefs = make(map[string]*ChannelCredentialRefQuery)
+	}
+	_q.withNamedCredentialRefs[name] = query
 	return _q
 }
 

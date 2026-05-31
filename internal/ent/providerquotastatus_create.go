@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/looplj/axonhub/internal/ent/channel"
 	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 )
 
 // ProviderQuotaStatusCreate is the builder for creating a ProviderQuotaStatus entity.
@@ -71,6 +72,34 @@ func (_c *ProviderQuotaStatusCreate) SetChannelID(v int) *ProviderQuotaStatusCre
 	return _c
 }
 
+// SetCredentialID sets the "credential_id" field.
+func (_c *ProviderQuotaStatusCreate) SetCredentialID(v int) *ProviderQuotaStatusCreate {
+	_c.mutation.SetCredentialID(v)
+	return _c
+}
+
+// SetNillableCredentialID sets the "credential_id" field if the given value is not nil.
+func (_c *ProviderQuotaStatusCreate) SetNillableCredentialID(v *int) *ProviderQuotaStatusCreate {
+	if v != nil {
+		_c.SetCredentialID(*v)
+	}
+	return _c
+}
+
+// SetCredentialFingerprint sets the "credential_fingerprint" field.
+func (_c *ProviderQuotaStatusCreate) SetCredentialFingerprint(v string) *ProviderQuotaStatusCreate {
+	_c.mutation.SetCredentialFingerprint(v)
+	return _c
+}
+
+// SetNillableCredentialFingerprint sets the "credential_fingerprint" field if the given value is not nil.
+func (_c *ProviderQuotaStatusCreate) SetNillableCredentialFingerprint(v *string) *ProviderQuotaStatusCreate {
+	if v != nil {
+		_c.SetCredentialFingerprint(*v)
+	}
+	return _c
+}
+
 // SetProviderType sets the "provider_type" field.
 func (_c *ProviderQuotaStatusCreate) SetProviderType(v providerquotastatus.ProviderType) *ProviderQuotaStatusCreate {
 	_c.mutation.SetProviderType(v)
@@ -126,6 +155,11 @@ func (_c *ProviderQuotaStatusCreate) SetNextCheckAt(v time.Time) *ProviderQuotaS
 // SetChannel sets the "channel" edge to the Channel entity.
 func (_c *ProviderQuotaStatusCreate) SetChannel(v *Channel) *ProviderQuotaStatusCreate {
 	return _c.SetChannelID(v.ID)
+}
+
+// SetCredential sets the "credential" edge to the UpstreamCredential entity.
+func (_c *ProviderQuotaStatusCreate) SetCredential(v *UpstreamCredential) *ProviderQuotaStatusCreate {
+	return _c.SetCredentialID(v.ID)
 }
 
 // Mutation returns the ProviderQuotaStatusMutation object of the builder.
@@ -198,6 +232,11 @@ func (_c *ProviderQuotaStatusCreate) check() error {
 	if _, ok := _c.mutation.ChannelID(); !ok {
 		return &ValidationError{Name: "channel_id", err: errors.New(`ent: missing required field "ProviderQuotaStatus.channel_id"`)}
 	}
+	if v, ok := _c.mutation.CredentialFingerprint(); ok {
+		if err := providerquotastatus.CredentialFingerprintValidator(v); err != nil {
+			return &ValidationError{Name: "credential_fingerprint", err: fmt.Errorf(`ent: validator failed for field "ProviderQuotaStatus.credential_fingerprint": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.ProviderType(); !ok {
 		return &ValidationError{Name: "provider_type", err: errors.New(`ent: missing required field "ProviderQuotaStatus.provider_type"`)}
 	}
@@ -265,6 +304,10 @@ func (_c *ProviderQuotaStatusCreate) createSpec() (*ProviderQuotaStatus, *sqlgra
 		_spec.SetField(providerquotastatus.FieldDeletedAt, field.TypeInt, value)
 		_node.DeletedAt = value
 	}
+	if value, ok := _c.mutation.CredentialFingerprint(); ok {
+		_spec.SetField(providerquotastatus.FieldCredentialFingerprint, field.TypeString, value)
+		_node.CredentialFingerprint = value
+	}
 	if value, ok := _c.mutation.ProviderType(); ok {
 		_spec.SetField(providerquotastatus.FieldProviderType, field.TypeEnum, value)
 		_node.ProviderType = value
@@ -304,6 +347,23 @@ func (_c *ProviderQuotaStatusCreate) createSpec() (*ProviderQuotaStatus, *sqlgra
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.ChannelID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CredentialIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   providerquotastatus.CredentialTable,
+			Columns: []string{providerquotastatus.CredentialColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(upstreamcredential.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.CredentialID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
@@ -385,6 +445,42 @@ func (u *ProviderQuotaStatusUpsert) UpdateDeletedAt() *ProviderQuotaStatusUpsert
 // AddDeletedAt adds v to the "deleted_at" field.
 func (u *ProviderQuotaStatusUpsert) AddDeletedAt(v int) *ProviderQuotaStatusUpsert {
 	u.Add(providerquotastatus.FieldDeletedAt, v)
+	return u
+}
+
+// SetCredentialID sets the "credential_id" field.
+func (u *ProviderQuotaStatusUpsert) SetCredentialID(v int) *ProviderQuotaStatusUpsert {
+	u.Set(providerquotastatus.FieldCredentialID, v)
+	return u
+}
+
+// UpdateCredentialID sets the "credential_id" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsert) UpdateCredentialID() *ProviderQuotaStatusUpsert {
+	u.SetExcluded(providerquotastatus.FieldCredentialID)
+	return u
+}
+
+// ClearCredentialID clears the value of the "credential_id" field.
+func (u *ProviderQuotaStatusUpsert) ClearCredentialID() *ProviderQuotaStatusUpsert {
+	u.SetNull(providerquotastatus.FieldCredentialID)
+	return u
+}
+
+// SetCredentialFingerprint sets the "credential_fingerprint" field.
+func (u *ProviderQuotaStatusUpsert) SetCredentialFingerprint(v string) *ProviderQuotaStatusUpsert {
+	u.Set(providerquotastatus.FieldCredentialFingerprint, v)
+	return u
+}
+
+// UpdateCredentialFingerprint sets the "credential_fingerprint" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsert) UpdateCredentialFingerprint() *ProviderQuotaStatusUpsert {
+	u.SetExcluded(providerquotastatus.FieldCredentialFingerprint)
+	return u
+}
+
+// ClearCredentialFingerprint clears the value of the "credential_fingerprint" field.
+func (u *ProviderQuotaStatusUpsert) ClearCredentialFingerprint() *ProviderQuotaStatusUpsert {
+	u.SetNull(providerquotastatus.FieldCredentialFingerprint)
 	return u
 }
 
@@ -537,6 +633,48 @@ func (u *ProviderQuotaStatusUpsertOne) AddDeletedAt(v int) *ProviderQuotaStatusU
 func (u *ProviderQuotaStatusUpsertOne) UpdateDeletedAt() *ProviderQuotaStatusUpsertOne {
 	return u.Update(func(s *ProviderQuotaStatusUpsert) {
 		s.UpdateDeletedAt()
+	})
+}
+
+// SetCredentialID sets the "credential_id" field.
+func (u *ProviderQuotaStatusUpsertOne) SetCredentialID(v int) *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.SetCredentialID(v)
+	})
+}
+
+// UpdateCredentialID sets the "credential_id" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsertOne) UpdateCredentialID() *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.UpdateCredentialID()
+	})
+}
+
+// ClearCredentialID clears the value of the "credential_id" field.
+func (u *ProviderQuotaStatusUpsertOne) ClearCredentialID() *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.ClearCredentialID()
+	})
+}
+
+// SetCredentialFingerprint sets the "credential_fingerprint" field.
+func (u *ProviderQuotaStatusUpsertOne) SetCredentialFingerprint(v string) *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.SetCredentialFingerprint(v)
+	})
+}
+
+// UpdateCredentialFingerprint sets the "credential_fingerprint" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsertOne) UpdateCredentialFingerprint() *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.UpdateCredentialFingerprint()
+	})
+}
+
+// ClearCredentialFingerprint clears the value of the "credential_fingerprint" field.
+func (u *ProviderQuotaStatusUpsertOne) ClearCredentialFingerprint() *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.ClearCredentialFingerprint()
 	})
 }
 
@@ -866,6 +1004,48 @@ func (u *ProviderQuotaStatusUpsertBulk) AddDeletedAt(v int) *ProviderQuotaStatus
 func (u *ProviderQuotaStatusUpsertBulk) UpdateDeletedAt() *ProviderQuotaStatusUpsertBulk {
 	return u.Update(func(s *ProviderQuotaStatusUpsert) {
 		s.UpdateDeletedAt()
+	})
+}
+
+// SetCredentialID sets the "credential_id" field.
+func (u *ProviderQuotaStatusUpsertBulk) SetCredentialID(v int) *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.SetCredentialID(v)
+	})
+}
+
+// UpdateCredentialID sets the "credential_id" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsertBulk) UpdateCredentialID() *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.UpdateCredentialID()
+	})
+}
+
+// ClearCredentialID clears the value of the "credential_id" field.
+func (u *ProviderQuotaStatusUpsertBulk) ClearCredentialID() *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.ClearCredentialID()
+	})
+}
+
+// SetCredentialFingerprint sets the "credential_fingerprint" field.
+func (u *ProviderQuotaStatusUpsertBulk) SetCredentialFingerprint(v string) *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.SetCredentialFingerprint(v)
+	})
+}
+
+// UpdateCredentialFingerprint sets the "credential_fingerprint" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsertBulk) UpdateCredentialFingerprint() *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.UpdateCredentialFingerprint()
+	})
+}
+
+// ClearCredentialFingerprint clears the value of the "credential_fingerprint" field.
+func (u *ProviderQuotaStatusUpsertBulk) ClearCredentialFingerprint() *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.ClearCredentialFingerprint()
 	})
 }
 

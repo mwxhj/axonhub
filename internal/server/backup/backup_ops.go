@@ -38,9 +38,11 @@ func (svc *BackupService) BackupWithoutAuth(ctx context.Context, opts BackupOpti
 
 func (svc *BackupService) doBackup(ctx context.Context, opts BackupOptions) ([]byte, error) {
 	var (
-		projectDataList           []*BackupProject
-		channelDataList           []*BackupChannel
-		channelModelPriceDataList []*BackupChannelModelPrice
+		projectDataList              []*BackupProject
+		channelDataList              []*BackupChannel
+		upstreamCredentialDataList   []*BackupUpstreamCredential
+		channelCredentialRefDataList []*BackupChannelCredentialRef
+		channelModelPriceDataList    []*BackupChannelModelPrice
 	)
 
 	if opts.IncludeProjects {
@@ -65,6 +67,40 @@ func (svc *BackupService) doBackup(ctx context.Context, opts BackupOptions) ([]b
 				Channel:     *ch,
 				Credentials: ch.Credentials,
 			}
+		})
+
+		upstreamCredentials, err := svc.db.UpstreamCredential.Query().All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		upstreamCredentialDataList = lo.Map(upstreamCredentials, func(cred *ent.UpstreamCredential, _ int) *BackupUpstreamCredential {
+			copy := *cred
+			copy.Edges = ent.UpstreamCredentialEdges{}
+			return &BackupUpstreamCredential{
+				UpstreamCredential: copy,
+				SecretPayload:      cred.SecretPayload,
+			}
+		})
+
+		refs, err := svc.db.ChannelCredentialRef.Query().
+			WithChannel().
+			WithCredential().
+			All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		channelCredentialRefDataList = lo.FilterMap(refs, func(ref *ent.ChannelCredentialRef, _ int) (*BackupChannelCredentialRef, bool) {
+			if ref.Edges.Channel == nil || ref.Edges.Credential == nil {
+				return nil, false
+			}
+
+			copy := *ref
+			copy.Edges = ent.ChannelCredentialRefEdges{}
+			return &BackupChannelCredentialRef{
+				ChannelCredentialRef:  copy,
+				ChannelName:           ref.Edges.Channel.Name,
+				CredentialFingerprint: ref.Edges.Credential.Fingerprint,
+			}, true
 		})
 	}
 
@@ -145,15 +181,17 @@ func (svc *BackupService) doBackup(ctx context.Context, opts BackupOptions) ([]b
 	}
 
 	backupData := &BackupData{
-		Version:            BackupVersion,
-		Timestamp:          time.Now(),
-		Projects:           projectDataList,
-		Channels:           channelDataList,
-		Models:             modelDataList,
-		ChannelModelPrices: channelModelPriceDataList,
-		APIKeys:            apiKeyDataList,
-		UsageRequests:      usageRequestDataList,
-		UsageLogs:          usageLogDataList,
+		Version:               BackupVersion,
+		Timestamp:             time.Now(),
+		Projects:              projectDataList,
+		Channels:              channelDataList,
+		UpstreamCredentials:   upstreamCredentialDataList,
+		ChannelCredentialRefs: channelCredentialRefDataList,
+		Models:                modelDataList,
+		ChannelModelPrices:    channelModelPriceDataList,
+		APIKeys:               apiKeyDataList,
+		UsageRequests:         usageRequestDataList,
+		UsageLogs:             usageLogDataList,
 	}
 
 	if opts.IncludeUsageStats {

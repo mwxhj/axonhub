@@ -75,6 +75,16 @@ func ChannelID(v int) predicate.ProviderQuotaStatus {
 	return predicate.ProviderQuotaStatus(sql.FieldEQ(FieldChannelID, v))
 }
 
+// CredentialID applies equality check predicate on the "credential_id" field. It's identical to CredentialIDEQ.
+func CredentialID(v int) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldEQ(FieldCredentialID, v))
+}
+
+// CredentialFingerprint applies equality check predicate on the "credential_fingerprint" field. It's identical to CredentialFingerprintEQ.
+func CredentialFingerprint(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldEQ(FieldCredentialFingerprint, v))
+}
+
 // NextResetAt applies equality check predicate on the "next_reset_at" field. It's identical to NextResetAtEQ.
 func NextResetAt(v time.Time) predicate.ProviderQuotaStatus {
 	return predicate.ProviderQuotaStatus(sql.FieldEQ(FieldNextResetAt, v))
@@ -228,6 +238,111 @@ func ChannelIDIn(vs ...int) predicate.ProviderQuotaStatus {
 // ChannelIDNotIn applies the NotIn predicate on the "channel_id" field.
 func ChannelIDNotIn(vs ...int) predicate.ProviderQuotaStatus {
 	return predicate.ProviderQuotaStatus(sql.FieldNotIn(FieldChannelID, vs...))
+}
+
+// CredentialIDEQ applies the EQ predicate on the "credential_id" field.
+func CredentialIDEQ(v int) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldEQ(FieldCredentialID, v))
+}
+
+// CredentialIDNEQ applies the NEQ predicate on the "credential_id" field.
+func CredentialIDNEQ(v int) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldNEQ(FieldCredentialID, v))
+}
+
+// CredentialIDIn applies the In predicate on the "credential_id" field.
+func CredentialIDIn(vs ...int) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldIn(FieldCredentialID, vs...))
+}
+
+// CredentialIDNotIn applies the NotIn predicate on the "credential_id" field.
+func CredentialIDNotIn(vs ...int) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldNotIn(FieldCredentialID, vs...))
+}
+
+// CredentialIDIsNil applies the IsNil predicate on the "credential_id" field.
+func CredentialIDIsNil() predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldIsNull(FieldCredentialID))
+}
+
+// CredentialIDNotNil applies the NotNil predicate on the "credential_id" field.
+func CredentialIDNotNil() predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldNotNull(FieldCredentialID))
+}
+
+// CredentialFingerprintEQ applies the EQ predicate on the "credential_fingerprint" field.
+func CredentialFingerprintEQ(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldEQ(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintNEQ applies the NEQ predicate on the "credential_fingerprint" field.
+func CredentialFingerprintNEQ(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldNEQ(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintIn applies the In predicate on the "credential_fingerprint" field.
+func CredentialFingerprintIn(vs ...string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldIn(FieldCredentialFingerprint, vs...))
+}
+
+// CredentialFingerprintNotIn applies the NotIn predicate on the "credential_fingerprint" field.
+func CredentialFingerprintNotIn(vs ...string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldNotIn(FieldCredentialFingerprint, vs...))
+}
+
+// CredentialFingerprintGT applies the GT predicate on the "credential_fingerprint" field.
+func CredentialFingerprintGT(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldGT(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintGTE applies the GTE predicate on the "credential_fingerprint" field.
+func CredentialFingerprintGTE(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldGTE(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintLT applies the LT predicate on the "credential_fingerprint" field.
+func CredentialFingerprintLT(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldLT(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintLTE applies the LTE predicate on the "credential_fingerprint" field.
+func CredentialFingerprintLTE(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldLTE(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintContains applies the Contains predicate on the "credential_fingerprint" field.
+func CredentialFingerprintContains(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldContains(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintHasPrefix applies the HasPrefix predicate on the "credential_fingerprint" field.
+func CredentialFingerprintHasPrefix(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldHasPrefix(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintHasSuffix applies the HasSuffix predicate on the "credential_fingerprint" field.
+func CredentialFingerprintHasSuffix(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldHasSuffix(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintIsNil applies the IsNil predicate on the "credential_fingerprint" field.
+func CredentialFingerprintIsNil() predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldIsNull(FieldCredentialFingerprint))
+}
+
+// CredentialFingerprintNotNil applies the NotNil predicate on the "credential_fingerprint" field.
+func CredentialFingerprintNotNil() predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldNotNull(FieldCredentialFingerprint))
+}
+
+// CredentialFingerprintEqualFold applies the EqualFold predicate on the "credential_fingerprint" field.
+func CredentialFingerprintEqualFold(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldEqualFold(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintContainsFold applies the ContainsFold predicate on the "credential_fingerprint" field.
+func CredentialFingerprintContainsFold(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldContainsFold(FieldCredentialFingerprint, v))
 }
 
 // ProviderTypeEQ applies the EQ predicate on the "provider_type" field.
@@ -385,6 +500,29 @@ func HasChannel() predicate.ProviderQuotaStatus {
 func HasChannelWith(preds ...predicate.Channel) predicate.ProviderQuotaStatus {
 	return predicate.ProviderQuotaStatus(func(s *sql.Selector) {
 		step := newChannelStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCredential applies the HasEdge predicate on the "credential" edge.
+func HasCredential() predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, CredentialTable, CredentialColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCredentialWith applies the HasEdge predicate on the "credential" edge with a given conditions (other predicates).
+func HasCredentialWith(preds ...predicate.UpstreamCredential) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(func(s *sql.Selector) {
+		step := newCredentialStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

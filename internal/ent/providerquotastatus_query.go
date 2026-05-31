@@ -14,18 +14,20 @@ import (
 	"github.com/looplj/axonhub/internal/ent/channel"
 	"github.com/looplj/axonhub/internal/ent/predicate"
 	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 )
 
 // ProviderQuotaStatusQuery is the builder for querying ProviderQuotaStatus entities.
 type ProviderQuotaStatusQuery struct {
 	config
-	ctx         *QueryContext
-	order       []providerquotastatus.OrderOption
-	inters      []Interceptor
-	predicates  []predicate.ProviderQuotaStatus
-	withChannel *ChannelQuery
-	loadTotal   []func(context.Context, []*ProviderQuotaStatus) error
-	modifiers   []func(*sql.Selector)
+	ctx            *QueryContext
+	order          []providerquotastatus.OrderOption
+	inters         []Interceptor
+	predicates     []predicate.ProviderQuotaStatus
+	withChannel    *ChannelQuery
+	withCredential *UpstreamCredentialQuery
+	loadTotal      []func(context.Context, []*ProviderQuotaStatus) error
+	modifiers      []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -77,6 +79,28 @@ func (_q *ProviderQuotaStatusQuery) QueryChannel() *ChannelQuery {
 			sqlgraph.From(providerquotastatus.Table, providerquotastatus.FieldID, selector),
 			sqlgraph.To(channel.Table, channel.FieldID),
 			sqlgraph.Edge(sqlgraph.O2O, true, providerquotastatus.ChannelTable, providerquotastatus.ChannelColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCredential chains the current query on the "credential" edge.
+func (_q *ProviderQuotaStatusQuery) QueryCredential() *UpstreamCredentialQuery {
+	query := (&UpstreamCredentialClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerquotastatus.Table, providerquotastatus.FieldID, selector),
+			sqlgraph.To(upstreamcredential.Table, upstreamcredential.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, providerquotastatus.CredentialTable, providerquotastatus.CredentialColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -271,12 +295,13 @@ func (_q *ProviderQuotaStatusQuery) Clone() *ProviderQuotaStatusQuery {
 		return nil
 	}
 	return &ProviderQuotaStatusQuery{
-		config:      _q.config,
-		ctx:         _q.ctx.Clone(),
-		order:       append([]providerquotastatus.OrderOption{}, _q.order...),
-		inters:      append([]Interceptor{}, _q.inters...),
-		predicates:  append([]predicate.ProviderQuotaStatus{}, _q.predicates...),
-		withChannel: _q.withChannel.Clone(),
+		config:         _q.config,
+		ctx:            _q.ctx.Clone(),
+		order:          append([]providerquotastatus.OrderOption{}, _q.order...),
+		inters:         append([]Interceptor{}, _q.inters...),
+		predicates:     append([]predicate.ProviderQuotaStatus{}, _q.predicates...),
+		withChannel:    _q.withChannel.Clone(),
+		withCredential: _q.withCredential.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -292,6 +317,17 @@ func (_q *ProviderQuotaStatusQuery) WithChannel(opts ...func(*ChannelQuery)) *Pr
 		opt(query)
 	}
 	_q.withChannel = query
+	return _q
+}
+
+// WithCredential tells the query-builder to eager-load the nodes that are connected to
+// the "credential" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ProviderQuotaStatusQuery) WithCredential(opts ...func(*UpstreamCredentialQuery)) *ProviderQuotaStatusQuery {
+	query := (&UpstreamCredentialClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withCredential = query
 	return _q
 }
 
@@ -373,8 +409,9 @@ func (_q *ProviderQuotaStatusQuery) sqlAll(ctx context.Context, hooks ...queryHo
 	var (
 		nodes       = []*ProviderQuotaStatus{}
 		_spec       = _q.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			_q.withChannel != nil,
+			_q.withCredential != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -401,6 +438,12 @@ func (_q *ProviderQuotaStatusQuery) sqlAll(ctx context.Context, hooks ...queryHo
 	if query := _q.withChannel; query != nil {
 		if err := _q.loadChannel(ctx, query, nodes, nil,
 			func(n *ProviderQuotaStatus, e *Channel) { n.Edges.Channel = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withCredential; query != nil {
+		if err := _q.loadCredential(ctx, query, nodes, nil,
+			func(n *ProviderQuotaStatus, e *UpstreamCredential) { n.Edges.Credential = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -441,6 +484,35 @@ func (_q *ProviderQuotaStatusQuery) loadChannel(ctx context.Context, query *Chan
 	}
 	return nil
 }
+func (_q *ProviderQuotaStatusQuery) loadCredential(ctx context.Context, query *UpstreamCredentialQuery, nodes []*ProviderQuotaStatus, init func(*ProviderQuotaStatus), assign func(*ProviderQuotaStatus, *UpstreamCredential)) error {
+	ids := make([]int, 0, len(nodes))
+	nodeids := make(map[int][]*ProviderQuotaStatus)
+	for i := range nodes {
+		fk := nodes[i].CredentialID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(upstreamcredential.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "credential_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
 
 func (_q *ProviderQuotaStatusQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
@@ -472,6 +544,9 @@ func (_q *ProviderQuotaStatusQuery) querySpec() *sqlgraph.QuerySpec {
 		}
 		if _q.withChannel != nil {
 			_spec.Node.AddColumnOnce(providerquotastatus.FieldChannelID)
+		}
+		if _q.withCredential != nil {
+			_spec.Node.AddColumnOnce(providerquotastatus.FieldCredentialID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

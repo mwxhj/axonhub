@@ -85,9 +85,19 @@ func ChannelID(v int) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldEQ(FieldChannelID, v))
 }
 
+// CredentialID applies equality check predicate on the "credential_id" field. It's identical to CredentialIDEQ.
+func CredentialID(v int) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldCredentialID, v))
+}
+
 // ModelID applies equality check predicate on the "model_id" field. It's identical to ModelIDEQ.
 func ModelID(v string) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldEQ(FieldModelID, v))
+}
+
+// CredentialFingerprint applies equality check predicate on the "credential_fingerprint" field. It's identical to CredentialFingerprintEQ.
+func CredentialFingerprint(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldCredentialFingerprint, v))
 }
 
 // PromptTokens applies equality check predicate on the "prompt_tokens" field. It's identical to PromptTokensEQ.
@@ -365,6 +375,36 @@ func ChannelIDNotNil() predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldNotNull(FieldChannelID))
 }
 
+// CredentialIDEQ applies the EQ predicate on the "credential_id" field.
+func CredentialIDEQ(v int) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldCredentialID, v))
+}
+
+// CredentialIDNEQ applies the NEQ predicate on the "credential_id" field.
+func CredentialIDNEQ(v int) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNEQ(FieldCredentialID, v))
+}
+
+// CredentialIDIn applies the In predicate on the "credential_id" field.
+func CredentialIDIn(vs ...int) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIn(FieldCredentialID, vs...))
+}
+
+// CredentialIDNotIn applies the NotIn predicate on the "credential_id" field.
+func CredentialIDNotIn(vs ...int) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotIn(FieldCredentialID, vs...))
+}
+
+// CredentialIDIsNil applies the IsNil predicate on the "credential_id" field.
+func CredentialIDIsNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIsNull(FieldCredentialID))
+}
+
+// CredentialIDNotNil applies the NotNil predicate on the "credential_id" field.
+func CredentialIDNotNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotNull(FieldCredentialID))
+}
+
 // ModelIDEQ applies the EQ predicate on the "model_id" field.
 func ModelIDEQ(v string) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldEQ(FieldModelID, v))
@@ -428,6 +468,81 @@ func ModelIDEqualFold(v string) predicate.UsageLog {
 // ModelIDContainsFold applies the ContainsFold predicate on the "model_id" field.
 func ModelIDContainsFold(v string) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldContainsFold(FieldModelID, v))
+}
+
+// CredentialFingerprintEQ applies the EQ predicate on the "credential_fingerprint" field.
+func CredentialFingerprintEQ(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintNEQ applies the NEQ predicate on the "credential_fingerprint" field.
+func CredentialFingerprintNEQ(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNEQ(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintIn applies the In predicate on the "credential_fingerprint" field.
+func CredentialFingerprintIn(vs ...string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIn(FieldCredentialFingerprint, vs...))
+}
+
+// CredentialFingerprintNotIn applies the NotIn predicate on the "credential_fingerprint" field.
+func CredentialFingerprintNotIn(vs ...string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotIn(FieldCredentialFingerprint, vs...))
+}
+
+// CredentialFingerprintGT applies the GT predicate on the "credential_fingerprint" field.
+func CredentialFingerprintGT(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldGT(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintGTE applies the GTE predicate on the "credential_fingerprint" field.
+func CredentialFingerprintGTE(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldGTE(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintLT applies the LT predicate on the "credential_fingerprint" field.
+func CredentialFingerprintLT(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldLT(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintLTE applies the LTE predicate on the "credential_fingerprint" field.
+func CredentialFingerprintLTE(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldLTE(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintContains applies the Contains predicate on the "credential_fingerprint" field.
+func CredentialFingerprintContains(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldContains(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintHasPrefix applies the HasPrefix predicate on the "credential_fingerprint" field.
+func CredentialFingerprintHasPrefix(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldHasPrefix(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintHasSuffix applies the HasSuffix predicate on the "credential_fingerprint" field.
+func CredentialFingerprintHasSuffix(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldHasSuffix(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintIsNil applies the IsNil predicate on the "credential_fingerprint" field.
+func CredentialFingerprintIsNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIsNull(FieldCredentialFingerprint))
+}
+
+// CredentialFingerprintNotNil applies the NotNil predicate on the "credential_fingerprint" field.
+func CredentialFingerprintNotNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotNull(FieldCredentialFingerprint))
+}
+
+// CredentialFingerprintEqualFold applies the EqualFold predicate on the "credential_fingerprint" field.
+func CredentialFingerprintEqualFold(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEqualFold(FieldCredentialFingerprint, v))
+}
+
+// CredentialFingerprintContainsFold applies the ContainsFold predicate on the "credential_fingerprint" field.
+func CredentialFingerprintContainsFold(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldContainsFold(FieldCredentialFingerprint, v))
 }
 
 // PromptTokensEQ applies the EQ predicate on the "prompt_tokens" field.
@@ -1281,6 +1396,29 @@ func HasChannel() predicate.UsageLog {
 func HasChannelWith(preds ...predicate.Channel) predicate.UsageLog {
 	return predicate.UsageLog(func(s *sql.Selector) {
 		step := newChannelStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCredential applies the HasEdge predicate on the "credential" edge.
+func HasCredential() predicate.UsageLog {
+	return predicate.UsageLog(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, CredentialTable, CredentialColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCredentialWith applies the HasEdge predicate on the "credential" edge with a given conditions (other predicates).
+func HasCredentialWith(preds ...predicate.UpstreamCredential) predicate.UsageLog {
+	return predicate.UsageLog(func(s *sql.Selector) {
+		step := newCredentialStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

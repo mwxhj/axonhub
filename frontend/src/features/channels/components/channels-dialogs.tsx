@@ -25,6 +25,7 @@ import { ChannelsRateLimitDialog } from './channels-rate-limit-dialog';
 import { ChannelsTransformOptionsDialog } from './channels-transform-options-dialog';
 import { ChannelsEndpointsDialog } from './channels-endpoints-dialog';
 import { ChannelsSystemSettingsDialog } from './channels-system-settings-dialog';
+import { ChannelsCredentialsDialog } from './channels-credentials-dialog';
 
 export function ChannelsDialogs() {
   const { open, setOpen, currentRow, setCurrentRow, selectedChannels } = useChannels();
@@ -287,6 +288,20 @@ export function ChannelsDialogs() {
           <ChannelsEndpointsDialog
             key={`channel-endpoints-${currentRow.id}`}
             open={open === 'endpoints'}
+            onOpenChange={(isOpen) => {
+              if (!isOpen) {
+                setOpen(null);
+                setTimeout(() => {
+                  setCurrentRow(null);
+                }, 500);
+              }
+            }}
+            channel={currentRow}
+          />
+
+          <ChannelsCredentialsDialog
+            key={`channel-credentials-${currentRow.id}`}
+            open={open === 'credentials'}
             onOpenChange={(isOpen) => {
               if (!isOpen) {
                 setOpen(null);

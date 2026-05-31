@@ -925,6 +925,29 @@ func HasChannelModelPricesWith(preds ...predicate.ChannelModelPrice) predicate.C
 	})
 }
 
+// HasCredentialRefs applies the HasEdge predicate on the "credential_refs" edge.
+func HasCredentialRefs() predicate.Channel {
+	return predicate.Channel(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CredentialRefsTable, CredentialRefsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCredentialRefsWith applies the HasEdge predicate on the "credential_refs" edge with a given conditions (other predicates).
+func HasCredentialRefsWith(preds ...predicate.ChannelCredentialRef) predicate.Channel {
+	return predicate.Channel(func(s *sql.Selector) {
+		step := newCredentialRefsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // HasProviderQuotaStatus applies the HasEdge predicate on the "provider_quota_status" edge.
 func HasProviderQuotaStatus() predicate.Channel {
 	return predicate.Channel(func(s *sql.Selector) {

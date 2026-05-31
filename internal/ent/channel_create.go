@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/channelmodelprice"
 	"github.com/looplj/axonhub/internal/ent/channelprobe"
 	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
@@ -316,6 +317,21 @@ func (_c *ChannelCreate) AddChannelModelPrices(v ...*ChannelModelPrice) *Channel
 		ids[i] = v[i].ID
 	}
 	return _c.AddChannelModelPriceIDs(ids...)
+}
+
+// AddCredentialRefIDs adds the "credential_refs" edge to the ChannelCredentialRef entity by IDs.
+func (_c *ChannelCreate) AddCredentialRefIDs(ids ...int) *ChannelCreate {
+	_c.mutation.AddCredentialRefIDs(ids...)
+	return _c
+}
+
+// AddCredentialRefs adds the "credential_refs" edges to the ChannelCredentialRef entity.
+func (_c *ChannelCreate) AddCredentialRefs(v ...*ChannelCredentialRef) *ChannelCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddCredentialRefIDs(ids...)
 }
 
 // SetProviderQuotaStatusID sets the "provider_quota_status" edge to the ProviderQuotaStatus entity by ID.
@@ -658,6 +674,22 @@ func (_c *ChannelCreate) createSpec() (*Channel, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(channelmodelprice.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CredentialRefsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   channel.CredentialRefsTable,
+			Columns: []string{channel.CredentialRefsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(channelcredentialref.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

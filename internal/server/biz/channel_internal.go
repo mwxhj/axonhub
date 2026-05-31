@@ -63,10 +63,10 @@ func (svc *ChannelService) onCacheRefreshed(ctx context.Context, current []*Chan
 	return svc.reloadEnabledChannels(ctx, current, lastUpdate)
 }
 
-func (svc *ChannelService) onTokenRefreshed(ch *ent.Channel) func(ctx context.Context, refreshed *oauth.OAuthCredentials) error {
+func (svc *ChannelService) onTokenRefreshed(ch *ent.Channel, credentialView ChannelCredentialView) func(ctx context.Context, refreshed *oauth.OAuthCredentials) error {
 	return func(ctx context.Context, refreshed *oauth.OAuthCredentials) error {
 		ctx = authz.WithSystemBypass(ctx, "channel-refresh-cache")
-		return svc.refreshOAuthToken(ctx, ch, refreshed)
+		return svc.refreshOAuthToken(ctx, ch, credentialView, refreshed)
 	}
 }
 

@@ -130,6 +130,53 @@ var (
 			},
 		},
 	}
+	// ChannelCredentialRefsColumns holds the columns for the "channel_credential_refs" table.
+	ChannelCredentialRefsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, Default: schema.Expr("CURRENT_TIMESTAMP")},
+		{Name: "updated_at", Type: field.TypeTime, Default: schema.Expr("CURRENT_TIMESTAMP")},
+		{Name: "enabled", Type: field.TypeBool, Default: true},
+		{Name: "weight_override", Type: field.TypeInt, Nullable: true},
+		{Name: "channel_id", Type: field.TypeInt},
+		{Name: "credential_id", Type: field.TypeInt},
+	}
+	// ChannelCredentialRefsTable holds the schema information for the "channel_credential_refs" table.
+	ChannelCredentialRefsTable = &schema.Table{
+		Name:       "channel_credential_refs",
+		Columns:    ChannelCredentialRefsColumns,
+		PrimaryKey: []*schema.Column{ChannelCredentialRefsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "channel_credential_refs_channels_credential_refs",
+				Columns:    []*schema.Column{ChannelCredentialRefsColumns[5]},
+				RefColumns: []*schema.Column{ChannelsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "channel_credential_refs_upstream_credentials_channel_refs",
+				Columns:    []*schema.Column{ChannelCredentialRefsColumns[6]},
+				RefColumns: []*schema.Column{UpstreamCredentialsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "channel_credential_refs_by_channel_id_credential_id",
+				Unique:  true,
+				Columns: []*schema.Column{ChannelCredentialRefsColumns[5], ChannelCredentialRefsColumns[6]},
+			},
+			{
+				Name:    "channel_credential_refs_by_channel_id_enabled",
+				Unique:  false,
+				Columns: []*schema.Column{ChannelCredentialRefsColumns[5], ChannelCredentialRefsColumns[3]},
+			},
+			{
+				Name:    "channel_credential_refs_by_credential_id",
+				Unique:  false,
+				Columns: []*schema.Column{ChannelCredentialRefsColumns[6]},
+			},
+		},
+	}
 	// ChannelModelPricesColumns holds the columns for the "channel_model_prices" table.
 	ChannelModelPricesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -444,6 +491,7 @@ var (
 		{Name: "created_at", Type: field.TypeTime, Default: schema.Expr("CURRENT_TIMESTAMP")},
 		{Name: "updated_at", Type: field.TypeTime, Default: schema.Expr("CURRENT_TIMESTAMP")},
 		{Name: "deleted_at", Type: field.TypeInt, Default: 0},
+		{Name: "credential_fingerprint", Type: field.TypeString, Nullable: true, Size: 128},
 		{Name: "provider_type", Type: field.TypeEnum, Enums: []string{"claudecode", "codex", "github_copilot", "nanogpt", "wafer", "synthetic", "neuralwatt"}},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"available", "warning", "exhausted", "unknown"}},
 		{Name: "quota_data", Type: field.TypeJSON},
@@ -451,6 +499,7 @@ var (
 		{Name: "ready", Type: field.TypeBool, Default: true},
 		{Name: "next_check_at", Type: field.TypeTime},
 		{Name: "channel_id", Type: field.TypeInt, Unique: true},
+		{Name: "credential_id", Type: field.TypeInt, Nullable: true},
 	}
 	// ProviderQuotaStatusTable holds the schema information for the "provider_quota_status" table.
 	ProviderQuotaStatusTable = &schema.Table{
@@ -460,21 +509,37 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "provider_quota_status_channels_provider_quota_status",
-				Columns:    []*schema.Column{ProviderQuotaStatusColumns[10]},
+				Columns:    []*schema.Column{ProviderQuotaStatusColumns[11]},
 				RefColumns: []*schema.Column{ChannelsColumns[0]},
 				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "provider_quota_status_upstream_credentials_provider_quota_statuses",
+				Columns:    []*schema.Column{ProviderQuotaStatusColumns[12]},
+				RefColumns: []*schema.Column{UpstreamCredentialsColumns[0]},
+				OnDelete:   schema.SetNull,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "providerquotastatus_channel_id",
 				Unique:  true,
-				Columns: []*schema.Column{ProviderQuotaStatusColumns[10]},
+				Columns: []*schema.Column{ProviderQuotaStatusColumns[11]},
+			},
+			{
+				Name:    "providerquotastatus_credential_id",
+				Unique:  false,
+				Columns: []*schema.Column{ProviderQuotaStatusColumns[12]},
+			},
+			{
+				Name:    "providerquotastatus_credential_fingerprint",
+				Unique:  false,
+				Columns: []*schema.Column{ProviderQuotaStatusColumns[4]},
 			},
 			{
 				Name:    "providerquotastatus_next_check_at",
 				Unique:  false,
-				Columns: []*schema.Column{ProviderQuotaStatusColumns[9]},
+				Columns: []*schema.Column{ProviderQuotaStatusColumns[10]},
 			},
 		},
 	}
@@ -581,6 +646,7 @@ var (
 		{Name: "project_id", Type: field.TypeInt, Default: 1},
 		{Name: "external_id", Type: field.TypeString, Nullable: true, Size: 512},
 		{Name: "model_id", Type: field.TypeString},
+		{Name: "credential_fingerprint", Type: field.TypeString, Nullable: true, Size: 128},
 		{Name: "format", Type: field.TypeString, Default: "openai/chat_completions"},
 		{Name: "request_body", Type: field.TypeJSON},
 		{Name: "response_body", Type: field.TypeJSON, Nullable: true},
@@ -596,6 +662,7 @@ var (
 		{Name: "channel_id", Type: field.TypeInt, Nullable: true},
 		{Name: "data_storage_id", Type: field.TypeInt, Nullable: true},
 		{Name: "request_id", Type: field.TypeInt},
+		{Name: "credential_id", Type: field.TypeInt, Nullable: true},
 	}
 	// RequestExecutionsTable holds the schema information for the "request_executions" table.
 	RequestExecutionsTable = &schema.Table{
@@ -605,38 +672,54 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "request_executions_channels_executions",
-				Columns:    []*schema.Column{RequestExecutionsColumns[18]},
+				Columns:    []*schema.Column{RequestExecutionsColumns[19]},
 				RefColumns: []*schema.Column{ChannelsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "request_executions_data_storages_executions",
-				Columns:    []*schema.Column{RequestExecutionsColumns[19]},
+				Columns:    []*schema.Column{RequestExecutionsColumns[20]},
 				RefColumns: []*schema.Column{DataStoragesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "request_executions_requests_executions",
-				Columns:    []*schema.Column{RequestExecutionsColumns[20]},
+				Columns:    []*schema.Column{RequestExecutionsColumns[21]},
 				RefColumns: []*schema.Column{RequestsColumns[0]},
 				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "request_executions_upstream_credentials_executions",
+				Columns:    []*schema.Column{RequestExecutionsColumns[22]},
+				RefColumns: []*schema.Column{UpstreamCredentialsColumns[0]},
+				OnDelete:   schema.SetNull,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "request_executions_by_request_id_status_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{RequestExecutionsColumns[20], RequestExecutionsColumns[12], RequestExecutionsColumns[1]},
+				Columns: []*schema.Column{RequestExecutionsColumns[21], RequestExecutionsColumns[13], RequestExecutionsColumns[1]},
 			},
 			{
 				Name:    "request_executions_by_request_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{RequestExecutionsColumns[20], RequestExecutionsColumns[1]},
+				Columns: []*schema.Column{RequestExecutionsColumns[21], RequestExecutionsColumns[1]},
 			},
 			{
 				Name:    "request_executions_by_channel_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{RequestExecutionsColumns[18], RequestExecutionsColumns[1]},
+				Columns: []*schema.Column{RequestExecutionsColumns[19], RequestExecutionsColumns[1]},
+			},
+			{
+				Name:    "request_executions_by_credential_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{RequestExecutionsColumns[22], RequestExecutionsColumns[1]},
+			},
+			{
+				Name:    "request_executions_by_credential_fingerprint_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{RequestExecutionsColumns[6], RequestExecutionsColumns[1]},
 			},
 		},
 	}
@@ -772,6 +855,45 @@ var (
 			},
 		},
 	}
+	// UpstreamCredentialsColumns holds the columns for the "upstream_credentials" table.
+	UpstreamCredentialsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, Default: schema.Expr("CURRENT_TIMESTAMP")},
+		{Name: "updated_at", Type: field.TypeTime, Default: schema.Expr("CURRENT_TIMESTAMP")},
+		{Name: "deleted_at", Type: field.TypeInt, Default: 0},
+		{Name: "name", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "provider_type", Type: field.TypeString},
+		{Name: "base_url", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "auth_kind", Type: field.TypeEnum, Enums: []string{"api_key", "oauth", "azure", "gcp", "other"}},
+		{Name: "secret_payload", Type: field.TypeJSON},
+		{Name: "fingerprint", Type: field.TypeString, Size: 128},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"enabled", "disabled", "archived"}, Default: "enabled"},
+		{Name: "weight", Type: field.TypeInt, Default: 100},
+		{Name: "remark", Type: field.TypeString, Nullable: true, Default: ""},
+	}
+	// UpstreamCredentialsTable holds the schema information for the "upstream_credentials" table.
+	UpstreamCredentialsTable = &schema.Table{
+		Name:       "upstream_credentials",
+		Columns:    UpstreamCredentialsColumns,
+		PrimaryKey: []*schema.Column{UpstreamCredentialsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "upstream_credentials_by_fingerprint",
+				Unique:  true,
+				Columns: []*schema.Column{UpstreamCredentialsColumns[9], UpstreamCredentialsColumns[3]},
+			},
+			{
+				Name:    "upstream_credentials_by_provider_type_status",
+				Unique:  false,
+				Columns: []*schema.Column{UpstreamCredentialsColumns[5], UpstreamCredentialsColumns[10]},
+			},
+			{
+				Name:    "upstream_credentials_by_base_url",
+				Unique:  false,
+				Columns: []*schema.Column{UpstreamCredentialsColumns[6]},
+			},
+		},
+	}
 	// UsageLogsColumns holds the columns for the "usage_logs" table.
 	UsageLogsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -779,6 +901,7 @@ var (
 		{Name: "updated_at", Type: field.TypeTime, Default: schema.Expr("CURRENT_TIMESTAMP")},
 		{Name: "api_key_id", Type: field.TypeInt, Nullable: true},
 		{Name: "model_id", Type: field.TypeString},
+		{Name: "credential_fingerprint", Type: field.TypeString, Nullable: true, Size: 128},
 		{Name: "prompt_tokens", Type: field.TypeInt64, Default: 0},
 		{Name: "completion_tokens", Type: field.TypeInt64, Default: 0},
 		{Name: "total_tokens", Type: field.TypeInt64, Default: 0},
@@ -799,6 +922,7 @@ var (
 		{Name: "channel_id", Type: field.TypeInt, Nullable: true},
 		{Name: "project_id", Type: field.TypeInt, Default: 1},
 		{Name: "request_id", Type: field.TypeInt},
+		{Name: "credential_id", Type: field.TypeInt, Nullable: true},
 	}
 	// UsageLogsTable holds the schema information for the "usage_logs" table.
 	UsageLogsTable = &schema.Table{
@@ -808,28 +932,34 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "usage_logs_channels_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[22]},
+				Columns:    []*schema.Column{UsageLogsColumns[23]},
 				RefColumns: []*schema.Column{ChannelsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "usage_logs_projects_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[23]},
+				Columns:    []*schema.Column{UsageLogsColumns[24]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "usage_logs_requests_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[24]},
+				Columns:    []*schema.Column{UsageLogsColumns[25]},
 				RefColumns: []*schema.Column{RequestsColumns[0]},
 				OnDelete:   schema.NoAction,
+			},
+			{
+				Symbol:     "usage_logs_upstream_credentials_usage_logs",
+				Columns:    []*schema.Column{UsageLogsColumns[26]},
+				RefColumns: []*schema.Column{UpstreamCredentialsColumns[0]},
+				OnDelete:   schema.SetNull,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "usage_logs_by_request_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[24]},
+				Columns: []*schema.Column{UsageLogsColumns[25]},
 			},
 			{
 				Name:    "usage_logs_by_created_at",
@@ -844,12 +974,22 @@ var (
 			{
 				Name:    "usage_logs_by_project_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[23], UsageLogsColumns[1]},
+				Columns: []*schema.Column{UsageLogsColumns[24], UsageLogsColumns[1]},
 			},
 			{
 				Name:    "usage_logs_by_channel_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[22], UsageLogsColumns[1]},
+				Columns: []*schema.Column{UsageLogsColumns[23], UsageLogsColumns[1]},
+			},
+			{
+				Name:    "usage_logs_by_credential_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{UsageLogsColumns[26], UsageLogsColumns[1]},
+			},
+			{
+				Name:    "usage_logs_by_credential_fingerprint_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{UsageLogsColumns[5], UsageLogsColumns[1]},
 			},
 			{
 				Name:    "usage_logs_by_api_key_id_created_at",
@@ -999,6 +1139,7 @@ var (
 		APIKeysTable,
 		APIKeyProfileTemplatesTable,
 		ChannelsTable,
+		ChannelCredentialRefsTable,
 		ChannelModelPricesTable,
 		ChannelModelPriceVersionsTable,
 		ChannelOverrideTemplatesTable,
@@ -1016,6 +1157,7 @@ var (
 		SystemsTable,
 		ThreadsTable,
 		TracesTable,
+		UpstreamCredentialsTable,
 		UsageLogsTable,
 		UsersTable,
 		UserProjectsTable,
@@ -1028,12 +1170,15 @@ func init() {
 	APIKeysTable.ForeignKeys[0].RefTable = ProjectsTable
 	APIKeysTable.ForeignKeys[1].RefTable = UsersTable
 	APIKeyProfileTemplatesTable.ForeignKeys[0].RefTable = ProjectsTable
+	ChannelCredentialRefsTable.ForeignKeys[0].RefTable = ChannelsTable
+	ChannelCredentialRefsTable.ForeignKeys[1].RefTable = UpstreamCredentialsTable
 	ChannelModelPricesTable.ForeignKeys[0].RefTable = ChannelsTable
 	ChannelModelPriceVersionsTable.ForeignKeys[0].RefTable = ChannelModelPricesTable
 	ChannelOverrideTemplatesTable.ForeignKeys[0].RefTable = UsersTable
 	ChannelProbesTable.ForeignKeys[0].RefTable = ChannelsTable
 	OidcIdentitiesTable.ForeignKeys[0].RefTable = UsersTable
 	ProviderQuotaStatusTable.ForeignKeys[0].RefTable = ChannelsTable
+	ProviderQuotaStatusTable.ForeignKeys[1].RefTable = UpstreamCredentialsTable
 	RequestsTable.ForeignKeys[0].RefTable = APIKeysTable
 	RequestsTable.ForeignKeys[1].RefTable = ChannelsTable
 	RequestsTable.ForeignKeys[2].RefTable = DataStoragesTable
@@ -1042,6 +1187,7 @@ func init() {
 	RequestExecutionsTable.ForeignKeys[0].RefTable = ChannelsTable
 	RequestExecutionsTable.ForeignKeys[1].RefTable = DataStoragesTable
 	RequestExecutionsTable.ForeignKeys[2].RefTable = RequestsTable
+	RequestExecutionsTable.ForeignKeys[3].RefTable = UpstreamCredentialsTable
 	RolesTable.ForeignKeys[0].RefTable = ProjectsTable
 	ThreadsTable.ForeignKeys[0].RefTable = ProjectsTable
 	TracesTable.ForeignKeys[0].RefTable = ProjectsTable
@@ -1049,6 +1195,7 @@ func init() {
 	UsageLogsTable.ForeignKeys[0].RefTable = ChannelsTable
 	UsageLogsTable.ForeignKeys[1].RefTable = ProjectsTable
 	UsageLogsTable.ForeignKeys[2].RefTable = RequestsTable
+	UsageLogsTable.ForeignKeys[3].RefTable = UpstreamCredentialsTable
 	UserProjectsTable.ForeignKeys[0].RefTable = UsersTable
 	UserProjectsTable.ForeignKeys[1].RefTable = ProjectsTable
 	UserRolesTable.ForeignKeys[0].RefTable = UsersTable

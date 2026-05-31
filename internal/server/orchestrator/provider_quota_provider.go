@@ -7,4 +7,6 @@ import (
 // ProviderQuotaStatusProvider provides quota status information for channels.
 type ProviderQuotaStatusProvider interface {
 	GetQuotaStatus(channelID int) *biz.QuotaChannelStatus
+	GetCredentialQuotaStatusByID(credentialID int) *biz.QuotaChannelStatus
+	GetCredentialQuotaStatus(fingerprint string) *biz.QuotaChannelStatus
 }

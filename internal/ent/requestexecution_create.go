@@ -15,6 +15,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/datastorage"
 	"github.com/looplj/axonhub/internal/ent/request"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/objects"
 )
 
@@ -88,6 +89,20 @@ func (_c *RequestExecutionCreate) SetNillableChannelID(v *int) *RequestExecution
 	return _c
 }
 
+// SetCredentialID sets the "credential_id" field.
+func (_c *RequestExecutionCreate) SetCredentialID(v int) *RequestExecutionCreate {
+	_c.mutation.SetCredentialID(v)
+	return _c
+}
+
+// SetNillableCredentialID sets the "credential_id" field if the given value is not nil.
+func (_c *RequestExecutionCreate) SetNillableCredentialID(v *int) *RequestExecutionCreate {
+	if v != nil {
+		_c.SetCredentialID(*v)
+	}
+	return _c
+}
+
 // SetDataStorageID sets the "data_storage_id" field.
 func (_c *RequestExecutionCreate) SetDataStorageID(v int) *RequestExecutionCreate {
 	_c.mutation.SetDataStorageID(v)
@@ -119,6 +134,20 @@ func (_c *RequestExecutionCreate) SetNillableExternalID(v *string) *RequestExecu
 // SetModelID sets the "model_id" field.
 func (_c *RequestExecutionCreate) SetModelID(v string) *RequestExecutionCreate {
 	_c.mutation.SetModelID(v)
+	return _c
+}
+
+// SetCredentialFingerprint sets the "credential_fingerprint" field.
+func (_c *RequestExecutionCreate) SetCredentialFingerprint(v string) *RequestExecutionCreate {
+	_c.mutation.SetCredentialFingerprint(v)
+	return _c
+}
+
+// SetNillableCredentialFingerprint sets the "credential_fingerprint" field if the given value is not nil.
+func (_c *RequestExecutionCreate) SetNillableCredentialFingerprint(v *string) *RequestExecutionCreate {
+	if v != nil {
+		_c.SetCredentialFingerprint(*v)
+	}
 	return _c
 }
 
@@ -260,6 +289,11 @@ func (_c *RequestExecutionCreate) SetChannel(v *Channel) *RequestExecutionCreate
 	return _c.SetChannelID(v.ID)
 }
 
+// SetCredential sets the "credential" edge to the UpstreamCredential entity.
+func (_c *RequestExecutionCreate) SetCredential(v *UpstreamCredential) *RequestExecutionCreate {
+	return _c.SetCredentialID(v.ID)
+}
+
 // SetDataStorage sets the "data_storage" edge to the DataStorage entity.
 func (_c *RequestExecutionCreate) SetDataStorage(v *DataStorage) *RequestExecutionCreate {
 	return _c.SetDataStorageID(v.ID)
@@ -338,6 +372,11 @@ func (_c *RequestExecutionCreate) check() error {
 	if _, ok := _c.mutation.ModelID(); !ok {
 		return &ValidationError{Name: "model_id", err: errors.New(`ent: missing required field "RequestExecution.model_id"`)}
 	}
+	if v, ok := _c.mutation.CredentialFingerprint(); ok {
+		if err := requestexecution.CredentialFingerprintValidator(v); err != nil {
+			return &ValidationError{Name: "credential_fingerprint", err: fmt.Errorf(`ent: validator failed for field "RequestExecution.credential_fingerprint": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Format(); !ok {
 		return &ValidationError{Name: "format", err: errors.New(`ent: missing required field "RequestExecution.format"`)}
 	}
@@ -404,6 +443,10 @@ func (_c *RequestExecutionCreate) createSpec() (*RequestExecution, *sqlgraph.Cre
 	if value, ok := _c.mutation.ModelID(); ok {
 		_spec.SetField(requestexecution.FieldModelID, field.TypeString, value)
 		_node.ModelID = value
+	}
+	if value, ok := _c.mutation.CredentialFingerprint(); ok {
+		_spec.SetField(requestexecution.FieldCredentialFingerprint, field.TypeString, value)
+		_node.CredentialFingerprint = value
 	}
 	if value, ok := _c.mutation.Format(); ok {
 		_spec.SetField(requestexecution.FieldFormat, field.TypeString, value)
@@ -485,6 +528,23 @@ func (_c *RequestExecutionCreate) createSpec() (*RequestExecution, *sqlgraph.Cre
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.ChannelID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.CredentialIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   requestexecution.CredentialTable,
+			Columns: []string{requestexecution.CredentialColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(upstreamcredential.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.CredentialID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.DataStorageIDs(); len(nodes) > 0 {
@@ -789,11 +849,17 @@ func (u *RequestExecutionUpsertOne) UpdateNewValues() *RequestExecutionUpsertOne
 		if _, exists := u.create.mutation.ChannelID(); exists {
 			s.SetIgnore(requestexecution.FieldChannelID)
 		}
+		if _, exists := u.create.mutation.CredentialID(); exists {
+			s.SetIgnore(requestexecution.FieldCredentialID)
+		}
 		if _, exists := u.create.mutation.DataStorageID(); exists {
 			s.SetIgnore(requestexecution.FieldDataStorageID)
 		}
 		if _, exists := u.create.mutation.ModelID(); exists {
 			s.SetIgnore(requestexecution.FieldModelID)
+		}
+		if _, exists := u.create.mutation.CredentialFingerprint(); exists {
+			s.SetIgnore(requestexecution.FieldCredentialFingerprint)
 		}
 		if _, exists := u.create.mutation.Format(); exists {
 			s.SetIgnore(requestexecution.FieldFormat)
@@ -1268,11 +1334,17 @@ func (u *RequestExecutionUpsertBulk) UpdateNewValues() *RequestExecutionUpsertBu
 			if _, exists := b.mutation.ChannelID(); exists {
 				s.SetIgnore(requestexecution.FieldChannelID)
 			}
+			if _, exists := b.mutation.CredentialID(); exists {
+				s.SetIgnore(requestexecution.FieldCredentialID)
+			}
 			if _, exists := b.mutation.DataStorageID(); exists {
 				s.SetIgnore(requestexecution.FieldDataStorageID)
 			}
 			if _, exists := b.mutation.ModelID(); exists {
 				s.SetIgnore(requestexecution.FieldModelID)
+			}
+			if _, exists := b.mutation.CredentialFingerprint(); exists {
+				s.SetIgnore(requestexecution.FieldCredentialFingerprint)
 			}
 			if _, exists := b.mutation.Format(); exists {
 				s.SetIgnore(requestexecution.FieldFormat)

@@ -166,6 +166,7 @@ type ChannelRateLimit {
 type ChannelCredentials {
   apiKey: String
   apiKeys: [String!]
+  azure: AzureCredential
   gcp: GCPCredential
   oauth: OAuthCredentials
 }
@@ -192,9 +193,14 @@ type GCPCredential {
   jsonData: String!
 }
 
+type AzureCredential {
+  apiVersion: String!
+}
+
 input ChannelCredentialsInput {
   apiKey: String
   apiKeys: [String!]
+  azure: AzureCredentialInput
   gcp: GCPCredentialInput
   oauth: OAuthCredentialsInput
 }
@@ -212,6 +218,59 @@ input GCPCredentialInput {
   region: String!
   projectID: String!
   jsonData: String!
+}
+
+input AzureCredentialInput {
+  apiVersion: String!
+}
+
+input UpstreamCredentialSecretInput {
+  apiKey: String
+  oauth: OAuthCredentialsInput
+  azure: AzureCredentialInput
+  gcp: GCPCredentialInput
+}
+
+input CreateUpstreamCredentialInput {
+  name: String
+  providerType: String!
+  baseURL: String
+  authKind: UpstreamCredentialAuthKind!
+  secret: UpstreamCredentialSecretInput!
+  status: UpstreamCredentialStatus
+  weight: Int
+  remark: String
+}
+
+input UpdateUpstreamCredentialInput {
+  name: String
+  status: UpstreamCredentialStatus
+  weight: Int
+  remark: String
+}
+
+input RotateUpstreamCredentialSecretInput {
+  secret: UpstreamCredentialSecretInput!
+}
+
+input AttachCredentialToChannelInput {
+  channelID: ID!
+  credentialID: ID!
+  enabled: Boolean
+  weightOverride: Int
+}
+
+input UpdateChannelCredentialRefInput {
+  enabled: Boolean
+  weightOverride: Int
+  clearWeightOverride: Boolean
+}
+
+type MigrateLegacyCredentialsPayload {
+  migratedChannels: Int!
+  createdCredentials: Int!
+  createdRefs: Int!
+  skippedChannels: Int!
 }
 
 input SignInInput {
@@ -782,6 +841,27 @@ type Mutation {
     channelID: ID!
     keys: [String!]!
   ): DeleteDisabledAPIKeysPayload!
+
+  # Upstream Credential Management
+  createUpstreamCredential(input: CreateUpstreamCredentialInput!): UpstreamCredential!
+  updateUpstreamCredential(id: ID!, input: UpdateUpstreamCredentialInput!): UpstreamCredential!
+  rotateUpstreamCredentialSecret(
+    id: ID!
+    input: RotateUpstreamCredentialSecretInput!
+  ): UpstreamCredential!
+  updateUpstreamCredentialStatus(
+    id: ID!
+    status: UpstreamCredentialStatus!
+  ): UpstreamCredential!
+  attachCredentialToChannel(
+    input: AttachCredentialToChannelInput!
+  ): ChannelCredentialRef!
+  updateChannelCredentialRef(
+    id: ID!
+    input: UpdateChannelCredentialRefInput!
+  ): ChannelCredentialRef!
+  detachCredentialFromChannel(channelID: ID!, credentialID: ID!): Boolean!
+  migrateLegacyChannelCredentials: MigrateLegacyCredentialsPayload!
 
   createAPIKey(input: CreateAPIKeyInput!): APIKey!
   updateAPIKey(id: ID!, input: UpdateAPIKeyInput!): APIKey!

@@ -288,6 +288,33 @@ models:
   GCPCredentialInput:
     model:
       - github.com/looplj/axonhub/internal/objects.GCPCredential
+  AzureCredential:
+    model:
+      - github.com/looplj/axonhub/internal/objects.AzureCredential
+  AzureCredentialInput:
+    model:
+      - github.com/looplj/axonhub/internal/objects.AzureCredential
+  UpstreamCredentialSecretInput:
+    model:
+      - github.com/looplj/axonhub/internal/objects.UpstreamCredentialSecret
+  CreateUpstreamCredentialInput:
+    model:
+      - github.com/looplj/axonhub/internal/server/biz.CreateUpstreamCredentialInput
+  UpdateUpstreamCredentialInput:
+    model:
+      - github.com/looplj/axonhub/internal/server/biz.UpdateUpstreamCredentialInput
+  RotateUpstreamCredentialSecretInput:
+    model:
+      - github.com/looplj/axonhub/internal/server/biz.RotateUpstreamCredentialSecretInput
+  AttachCredentialToChannelInput:
+    model:
+      - github.com/looplj/axonhub/internal/server/biz.AttachCredentialToChannelInput
+  UpdateChannelCredentialRefInput:
+    model:
+      - github.com/looplj/axonhub/internal/server/biz.UpdateChannelCredentialRefInput
+  MigrateLegacyCredentialsPayload:
+    model:
+      - github.com/looplj/axonhub/internal/server/biz.MigrateLegacyCredentialsPayload
   ModelIdentify:
     model:
       - github.com/looplj/axonhub/internal/server/biz.ModelIdentify

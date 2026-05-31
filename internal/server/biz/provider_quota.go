@@ -24,9 +24,11 @@ import (
 const maxConcurrentQuotaChecks = 8
 
 type QuotaChannelStatus struct {
-	Status providerquotastatus.Status
-	Ready  bool
-	Limits []provider_quota.QuotaLimitStatus
+	Status                providerquotastatus.Status
+	Ready                 bool
+	CredentialID          int
+	CredentialFingerprint string
+	Limits                []provider_quota.QuotaLimitStatus
 }
 
 // EffectiveStatus returns the effective quota status for the given limit type.
@@ -263,8 +265,10 @@ type ProviderQuotaService struct {
 	// Registry
 	checkers map[string]provider_quota.QuotaChecker
 
-	mu         sync.Mutex
-	quotaCache sync.Map
+	mu                   sync.Mutex
+	quotaCache           sync.Map
+	credentialIDCache    sync.Map
+	credentialQuotaCache sync.Map
 }
 
 func NewProviderQuotaService(params ProviderQuotaServiceParams) *ProviderQuotaService {
@@ -396,11 +400,26 @@ func (svc *ProviderQuotaService) loadQuotaCache(ctx context.Context) {
 	}
 
 	for _, r := range records {
-		svc.quotaCache.Store(r.ChannelID, &QuotaChannelStatus{
-			Status: r.Status,
-			Ready:  r.Ready,
-			Limits: extractLimitsFromQuotaData(r.QuotaData),
-		})
+		status := &QuotaChannelStatus{
+			Status:                r.Status,
+			Ready:                 r.Ready,
+			CredentialID:          r.CredentialID,
+			CredentialFingerprint: r.CredentialFingerprint,
+			Limits:                extractLimitsFromQuotaData(r.QuotaData),
+		}
+		svc.quotaCache.Store(r.ChannelID, status)
+		if r.CredentialID > 0 {
+			svc.credentialIDCache.Store(r.CredentialID, status)
+		}
+		if r.CredentialFingerprint != "" {
+			svc.credentialQuotaCache.Store(r.CredentialFingerprint, status)
+		}
+		for _, credentialStatus := range extractCredentialQuotaStatusesFromQuotaData(r.QuotaData) {
+			if credentialStatus.CredentialID > 0 {
+				svc.credentialIDCache.Store(credentialStatus.CredentialID, credentialStatus)
+			}
+			svc.credentialQuotaCache.Store(credentialStatus.CredentialFingerprint, credentialStatus)
+		}
 	}
 
 	log.Debug(ctx, "Loaded quota cache from DB", log.Int("records", len(records)))
@@ -420,12 +439,82 @@ func (svc *ProviderQuotaService) GetQuotaStatus(channelID int) *QuotaChannelStat
 	return status
 }
 
+func (svc *ProviderQuotaService) GetCredentialQuotaStatusByID(credentialID int) *QuotaChannelStatus {
+	if credentialID <= 0 {
+		return nil
+	}
+
+	val, ok := svc.credentialIDCache.Load(credentialID)
+	if !ok {
+		return nil
+	}
+
+	status, ok := val.(*QuotaChannelStatus)
+	if !ok {
+		return nil
+	}
+
+	return status
+}
+
+func (svc *ProviderQuotaService) GetCredentialQuotaStatus(fingerprint string) *QuotaChannelStatus {
+	if fingerprint == "" {
+		return nil
+	}
+
+	val, ok := svc.credentialQuotaCache.Load(fingerprint)
+	if !ok {
+		return nil
+	}
+
+	status, ok := val.(*QuotaChannelStatus)
+	if !ok {
+		return nil
+	}
+
+	return status
+}
+
 func (svc *ProviderQuotaService) updateQuotaCache(channelID int, status providerquotastatus.Status, ready bool, limits []provider_quota.QuotaLimitStatus) {
+	svc.updateQuotaCacheForCredentialIdentity(channelID, 0, "", status, ready, limits)
+}
+
+func (svc *ProviderQuotaService) updateQuotaCacheForCredential(channelID int, fingerprint string, status providerquotastatus.Status, ready bool, limits []provider_quota.QuotaLimitStatus) {
+	svc.updateQuotaCacheForCredentialIdentity(channelID, 0, fingerprint, status, ready, limits)
+}
+
+func (svc *ProviderQuotaService) updateQuotaCacheForCredentialIdentity(channelID int, credentialID int, fingerprint string, status providerquotastatus.Status, ready bool, limits []provider_quota.QuotaLimitStatus) {
 	svc.quotaCache.Store(channelID, &QuotaChannelStatus{
-		Status: status,
-		Ready:  ready,
-		Limits: limits,
+		Status:                status,
+		Ready:                 ready,
+		CredentialID:          credentialID,
+		CredentialFingerprint: fingerprint,
+		Limits:                limits,
 	})
+	svc.storeCredentialQuotaStatusForIdentity(credentialID, fingerprint, status, ready, limits)
+}
+
+func (svc *ProviderQuotaService) storeCredentialQuotaStatus(fingerprint string, status providerquotastatus.Status, ready bool, limits []provider_quota.QuotaLimitStatus) {
+	svc.storeCredentialQuotaStatusForIdentity(0, fingerprint, status, ready, limits)
+}
+
+func (svc *ProviderQuotaService) storeCredentialQuotaStatusForIdentity(credentialID int, fingerprint string, status providerquotastatus.Status, ready bool, limits []provider_quota.QuotaLimitStatus) {
+	if credentialID <= 0 && fingerprint == "" {
+		return
+	}
+	quotaStatus := &QuotaChannelStatus{
+		Status:                status,
+		Ready:                 ready,
+		CredentialID:          credentialID,
+		CredentialFingerprint: fingerprint,
+		Limits:                limits,
+	}
+	if credentialID > 0 {
+		svc.credentialIDCache.Store(credentialID, quotaStatus)
+	}
+	if fingerprint != "" {
+		svc.credentialQuotaCache.Store(fingerprint, quotaStatus)
+	}
 }
 
 // ManualCheck forces an immediate quota check for all relevant channels.
@@ -469,6 +558,9 @@ func (svc *ProviderQuotaService) runQuotaCheck(ctx context.Context, force bool) 
 
 	channelsToCheck, err := q.
 		WithProviderQuotaStatus().
+		WithCredentialRefs(func(q *ent.ChannelCredentialRefQuery) {
+			q.WithCredential()
+		}).
 		All(ctx)
 	if err != nil {
 		log.Error(ctx, "Failed to query channels for quota check", log.Cause(err))
@@ -519,8 +611,50 @@ func (svc *ProviderQuotaService) checkChannelQuota(ctx context.Context, ch *ent.
 		return
 	}
 
+	apiKeyCredentialViews := quotaCheckAPIKeyCredentialViews(ch, providerType)
+	if len(apiKeyCredentialViews) > 1 {
+		quotaData, err := svc.checkAPIKeyCredentialQuotas(ctx, checker, ch, apiKeyCredentialViews)
+		if err != nil {
+			log.Error(ctx, "Credential quota check failed",
+				log.Int("channel_id", ch.ID),
+				log.String("channel_name", ch.Name),
+				log.String("provider", providerType),
+				log.Cause(err))
+
+			svc.saveQuotaError(ctx, ch, providerType, err, now)
+			return
+		}
+
+		svc.saveQuotaStatus(ctx, ch.ID, 0, "", providerType, quotaData, now)
+
+		log.Debug(ctx, "Updated credential-derived quota status",
+			log.Int("channel_id", ch.ID),
+			log.String("provider", providerType),
+			log.String("status", quotaData.Status),
+			log.Bool("ready", quotaData.Ready))
+
+		return
+	}
+
 	// Make quota check request
-	quotaData, err := checker.CheckQuota(ctx, ch)
+	quotaChannel := ch
+	credentialID := 0
+	credentialFingerprint := ""
+	if len(apiKeyCredentialViews) == 1 {
+		quotaChannel = quotaChannelForCredentialView(ch, apiKeyCredentialViews[0])
+		credentialID = apiKeyCredentialViews[0].CredentialID
+		credentialFingerprint = apiKeyCredentialViews[0].Fingerprint
+	} else {
+		credentialID, credentialFingerprint = quotaCredentialIdentity(ch)
+		if credentialID > 0 || credentialFingerprint != "" {
+			if view, ok := onlyEnabledCredentialView(ch); ok {
+				quotaChannel = quotaChannelForCredentialView(ch, view)
+			}
+		}
+	}
+
+	// Make quota check request
+	quotaData, err := checker.CheckQuota(ctx, quotaChannel)
 	if err != nil {
 		log.Error(ctx, "Quota check failed",
 			log.Int("channel_id", ch.ID),
@@ -533,18 +667,202 @@ func (svc *ProviderQuotaService) checkChannelQuota(ctx context.Context, ch *ent.
 	}
 
 	// Save quota status
-	svc.saveQuotaStatus(ctx, ch.ID, providerType, quotaData, now)
+	svc.saveQuotaStatus(ctx, ch.ID, credentialID, credentialFingerprint, providerType, quotaData, now)
 
 	log.Debug(ctx, "Updated quota status",
 		log.Int("channel_id", ch.ID),
+		log.String("credential_fingerprint", credentialFingerprint),
 		log.String("provider", providerType),
 		log.String("status", quotaData.Status),
 		log.Bool("ready", quotaData.Ready))
 }
 
+type credentialQuotaResult struct {
+	credentialID int
+	fingerprint  string
+	data         provider_quota.QuotaData
+	err          error
+}
+
+func (svc *ProviderQuotaService) checkAPIKeyCredentialQuotas(ctx context.Context, checker provider_quota.QuotaChecker, ch *ent.Channel, views []ChannelCredentialView) (provider_quota.QuotaData, error) {
+	results := make([]credentialQuotaResult, 0, len(views))
+	successes := 0
+
+	for _, view := range views {
+		credentialChannel := quotaChannelForCredentialView(ch, view)
+
+		quotaData, err := checker.CheckQuota(ctx, credentialChannel)
+		result := credentialQuotaResult{
+			credentialID: view.CredentialID,
+			fingerprint:  view.Fingerprint,
+			data:         quotaData,
+			err:          err,
+		}
+		results = append(results, result)
+
+		if err != nil {
+			svc.storeCredentialQuotaStatusForIdentity(view.CredentialID, view.Fingerprint, providerquotastatus.StatusUnknown, false, nil)
+			log.Warn(ctx, "Credential quota check failed",
+				log.Int("channel_id", ch.ID),
+				log.Int("credential_id", view.CredentialID),
+				log.String("credential_fingerprint", view.Fingerprint),
+				log.Cause(err))
+			continue
+		}
+
+		successes++
+		svc.storeCredentialQuotaStatusForIdentity(view.CredentialID, view.Fingerprint, providerquotastatus.Status(quotaData.Status), quotaData.Ready, quotaData.Limits)
+	}
+
+	if successes == 0 {
+		return provider_quota.QuotaData{}, fmt.Errorf("all credential quota checks failed")
+	}
+
+	return aggregateCredentialQuotaData(results), nil
+}
+
+func quotaChannelForCredentialView(ch *ent.Channel, view ChannelCredentialView) *ent.Channel {
+	clone := *ch
+	clone.Credentials = view.Secret.ToChannelCredentials()
+	clone.DisabledAPIKeys = nil
+	return &clone
+}
+
+func quotaCheckAPIKeyCredentialViews(ch *ent.Channel, providerType string) []ChannelCredentialView {
+	if ch == nil || ch.Credentials.IsOAuth() {
+		return nil
+	}
+
+	switch providerType {
+	case "nanogpt", "wafer", "synthetic", "neuralwatt":
+	default:
+		return nil
+	}
+
+	views := enabledAPIKeyCredentialViews(channelCredentialViews(ch))
+	if len(views) <= 1 {
+		return views
+	}
+
+	seen := make(map[string]struct{}, len(views))
+	deduped := make([]ChannelCredentialView, 0, len(views))
+	for _, view := range views {
+		key := view.Fingerprint
+		if view.CredentialID > 0 {
+			key = fmt.Sprintf("id:%d", view.CredentialID)
+		}
+		if key == "" {
+			continue
+		}
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		deduped = append(deduped, view)
+	}
+
+	return deduped
+}
+
+func aggregateCredentialQuotaData(results []credentialQuotaResult) provider_quota.QuotaData {
+	counts := map[string]int{}
+	var limitBuckets = map[provider_quota.QuotaLimitType][]provider_quota.QuotaLimitStatus{}
+	var nextResetAt *time.Time
+	credentialStatuses := make([]map[string]any, 0, len(results))
+
+	for _, result := range results {
+		status := "unknown"
+		ready := false
+		if result.err == nil {
+			status = result.data.Status
+			ready = result.data.Ready
+		}
+
+		counts[status]++
+
+		credentialStatus := map[string]any{
+			"fingerprint": result.fingerprint,
+			"status":      status,
+			"ready":       ready,
+		}
+		if result.credentialID > 0 {
+			credentialStatus["credential_id"] = result.credentialID
+		}
+		if result.err != nil {
+			credentialStatus["error"] = result.err.Error()
+		} else if len(result.data.Limits) > 0 {
+			credentialStatus["limits"] = quotaLimitStatusMaps(result.data.Limits)
+		}
+		credentialStatuses = append(credentialStatuses, credentialStatus)
+
+		if result.err == nil {
+			for _, limit := range result.data.Limits {
+				limitBuckets[limit.Type] = append(limitBuckets[limit.Type], limit)
+			}
+			if result.data.NextResetAt != nil && (nextResetAt == nil || result.data.NextResetAt.Before(*nextResetAt)) {
+				nextResetAt = result.data.NextResetAt
+			}
+		}
+	}
+
+	status := aggregateQuotaStatus(counts)
+	limits := make([]provider_quota.QuotaLimitStatus, 0, len(limitBuckets))
+	for limitType, bucket := range limitBuckets {
+		limits = append(limits, aggregateQuotaLimitStatus(limitType, bucket))
+	}
+
+	return provider_quota.QuotaData{
+		Status:      status,
+		Ready:       provider_quota.IsReadyStatus(status),
+		NextResetAt: nextResetAt,
+		Limits:      limits,
+		RawData: map[string]any{
+			"credential_count":         len(results),
+			"credential_status_counts": counts,
+			"credential_statuses":      credentialStatuses,
+		},
+	}
+}
+
+func aggregateQuotaStatus(counts map[string]int) string {
+	for _, status := range []string{"warning", "available", "unknown", "exhausted"} {
+		if counts[status] > 0 {
+			return status
+		}
+	}
+	return "unknown"
+}
+
+func aggregateQuotaLimitStatus(limitType provider_quota.QuotaLimitType, bucket []provider_quota.QuotaLimitStatus) provider_quota.QuotaLimitStatus {
+	counts := map[string]int{}
+	var usageRatio float64
+	var nextResetAt *time.Time
+
+	for _, limit := range bucket {
+		counts[limit.Status]++
+		if limit.UsageRatio > usageRatio {
+			usageRatio = limit.UsageRatio
+		}
+		if limit.NextResetAt != nil && (nextResetAt == nil || limit.NextResetAt.Before(*nextResetAt)) {
+			nextResetAt = limit.NextResetAt
+		}
+	}
+
+	status := aggregateQuotaStatus(counts)
+	return provider_quota.QuotaLimitStatus{
+		Type:        limitType,
+		Status:      status,
+		UsageRatio:  usageRatio,
+		Ready:       provider_quota.IsReadyStatus(status),
+		NextResetAt: nextResetAt,
+	}
+}
+
 func (svc *ProviderQuotaService) saveQuotaStatus(
 	ctx context.Context,
 	channelID int,
+	credentialID int,
+	credentialFingerprint string,
 	providerType string,
 	quotaData provider_quota.QuotaData,
 	now time.Time,
@@ -558,6 +876,12 @@ func (svc *ProviderQuotaService) saveQuotaStatus(
 		SetStatus(providerquotastatus.Status(quotaData.Status)).
 		SetQuotaData(svc.mergeLimitsIntoQuotaData(quotaData)).
 		SetNextCheckAt(nextCheck)
+	if credentialID > 0 {
+		create.SetCredentialID(credentialID)
+	}
+	if credentialFingerprint != "" {
+		create.SetCredentialFingerprint(credentialFingerprint)
+	}
 
 	// Only set next_reset_at if it exists (it's optional in schema)
 	if quotaData.NextResetAt != nil {
@@ -580,7 +904,11 @@ func (svc *ProviderQuotaService) saveQuotaStatus(
 		return
 	}
 
-	svc.updateQuotaCache(channelID, providerquotastatus.Status(quotaData.Status), quotaData.Ready, quotaData.Limits)
+	limits := quotaData.Limits
+	if len(limits) == 0 {
+		limits = extractLimitsFromQuotaData(svc.mergeLimitsIntoQuotaData(quotaData))
+	}
+	svc.updateQuotaCacheForCredentialIdentity(channelID, credentialID, credentialFingerprint, providerquotastatus.Status(quotaData.Status), quotaData.Ready, limits)
 }
 
 func (svc *ProviderQuotaService) saveQuotaError(
@@ -595,6 +923,7 @@ func (svc *ProviderQuotaService) saveQuotaError(
 
 	if ch.Edges.ProviderQuotaStatus != nil {
 		existing := ch.Edges.ProviderQuotaStatus
+		credentialID, credentialFingerprint := quotaCredentialIdentity(ch)
 
 		existingData := existing.QuotaData
 		if existingData == nil {
@@ -605,10 +934,21 @@ func (svc *ProviderQuotaService) saveQuotaError(
 			"error": quotaErr.Error(),
 		})
 
-		err := svc.db.ProviderQuotaStatus.UpdateOne(existing).
+		update := svc.db.ProviderQuotaStatus.UpdateOne(existing).
 			SetQuotaData(merged).
-			SetNextCheckAt(nextCheck).
-			Exec(ctx)
+			SetNextCheckAt(nextCheck)
+		if credentialID > 0 {
+			update.SetCredentialID(credentialID)
+		} else {
+			update.ClearCredentialID()
+		}
+		if credentialFingerprint != "" {
+			update.SetCredentialFingerprint(credentialFingerprint)
+		} else {
+			update.ClearCredentialFingerprint()
+		}
+
+		err := update.Exec(ctx)
 		if err != nil {
 			log.Error(ctx, "Failed to save quota error",
 				log.Int("channel_id", ch.ID),
@@ -617,12 +957,13 @@ func (svc *ProviderQuotaService) saveQuotaError(
 		}
 
 		existingLimits := extractLimitsFromQuotaData(existing.QuotaData)
-		svc.updateQuotaCache(ch.ID, existing.Status, existing.Ready, existingLimits)
+		svc.updateQuotaCacheForCredentialIdentity(ch.ID, credentialID, credentialFingerprint, existing.Status, existing.Ready, existingLimits)
 
 		return
 	}
 
-	err := svc.db.ProviderQuotaStatus.Create().
+	credentialID, credentialFingerprint := quotaCredentialIdentity(ch)
+	create := svc.db.ProviderQuotaStatus.Create().
 		SetChannelID(ch.ID).
 		SetProviderType(pt).
 		SetStatus(providerquotastatus.StatusUnknown).
@@ -630,8 +971,15 @@ func (svc *ProviderQuotaService) saveQuotaError(
 		SetQuotaData(map[string]any{
 			"error": quotaErr.Error(),
 		}).
-		SetNextCheckAt(nextCheck).
-		Exec(ctx)
+		SetNextCheckAt(nextCheck)
+	if credentialID > 0 {
+		create.SetCredentialID(credentialID)
+	}
+	if credentialFingerprint != "" {
+		create.SetCredentialFingerprint(credentialFingerprint)
+	}
+
+	err := create.Exec(ctx)
 	if err != nil {
 		log.Error(ctx, "Failed to save quota error",
 			log.Int("channel_id", ch.ID),
@@ -639,7 +987,34 @@ func (svc *ProviderQuotaService) saveQuotaError(
 		return
 	}
 
-	svc.updateQuotaCache(ch.ID, providerquotastatus.StatusUnknown, false, nil)
+	svc.updateQuotaCacheForCredentialIdentity(ch.ID, credentialID, credentialFingerprint, providerquotastatus.StatusUnknown, false, nil)
+}
+
+func quotaCredentialIdentity(ch *ent.Channel) (int, string) {
+	if ch == nil {
+		return 0, ""
+	}
+
+	if view, ok := onlyEnabledCredentialView(ch); ok {
+		return view.CredentialID, view.Fingerprint
+	}
+
+	return 0, ""
+}
+
+func onlyEnabledCredentialView(ch *ent.Channel) (ChannelCredentialView, bool) {
+	views := channelCredentialViews(ch)
+	enabled := make([]ChannelCredentialView, 0, len(views))
+	for _, view := range views {
+		if view.Enabled {
+			enabled = append(enabled, view)
+		}
+	}
+	if len(enabled) != 1 {
+		return ChannelCredentialView{}, false
+	}
+
+	return enabled[0], true
 }
 
 func (svc *ProviderQuotaService) getProviderType(ch *ent.Channel) string {
@@ -660,42 +1035,95 @@ func (svc *ProviderQuotaService) getProviderType(ch *ent.Channel) string {
 }
 
 func hasCredentialsForProvider(ch *ent.Channel) bool {
+	views := channelCredentialViews(ch)
+	if len(views) == 0 {
+		return false
+	}
+
 	if ch.Type == channel.TypeOpenai || ch.Type == channel.TypeOpenaiResponses {
 		providerType := provider_quota.DetectProviderFromURL(ch.BaseURL)
 		if _, ok := provider_quota.URLDetectedProviders()[providerType]; ok {
-			return strings.TrimSpace(ch.Credentials.APIKey) != "" || len(ch.Credentials.APIKeys) > 0
+			return credentialViewsContainAPIKey(views)
 		}
 	}
 
 	if ch.Type == channel.TypeCodex || ch.Type == channel.TypeClaudecode {
-		return ch.Credentials.OAuth != nil || isOAuthJSON(ch.Credentials.APIKey)
+		return credentialViewsContainOAuth(views)
 	}
 
-	return ch.Credentials.OAuth != nil || isOAuthJSON(ch.Credentials.APIKey) ||
-		strings.TrimSpace(ch.Credentials.APIKey) != "" || len(ch.Credentials.APIKeys) > 0
+	return credentialViewsContainAnySecret(views)
+}
+
+func credentialViewsContainAPIKey(views []ChannelCredentialView) bool {
+	for _, view := range views {
+		if !view.Enabled {
+			continue
+		}
+		if normalizeCredentialFingerprintPart(view.AuthKind) != channelCredentialAuthKindAPIKey {
+			continue
+		}
+		if strings.TrimSpace(view.Secret.APIKey) != "" {
+			return true
+		}
+	}
+
+	return false
+}
+
+func credentialViewsContainOAuth(views []ChannelCredentialView) bool {
+	for _, view := range views {
+		if !view.Enabled {
+			continue
+		}
+		if normalizeCredentialFingerprintPart(view.AuthKind) != channelCredentialAuthKindOAuth {
+			continue
+		}
+		if view.Secret.OAuth != nil || isOAuthJSON(view.Secret.APIKey) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func credentialViewsContainAnySecret(views []ChannelCredentialView) bool {
+	for _, view := range views {
+		if !view.Enabled {
+			continue
+		}
+		if strings.TrimSpace(view.Secret.APIKey) != "" || view.Secret.OAuth != nil || view.Secret.GCP != nil || view.Secret.Azure != nil {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (svc *ProviderQuotaService) mergeLimitsIntoQuotaData(quotaData provider_quota.QuotaData) map[string]any {
 	data := lo.Assign(map[string]any{}, quotaData.RawData)
 
 	if len(quotaData.Limits) > 0 {
-		limitMaps := make([]map[string]any, 0, len(quotaData.Limits))
-		for _, l := range quotaData.Limits {
-			m := map[string]any{
-				"type":       string(l.Type),
-				"status":     l.Status,
-				"usageRatio": l.UsageRatio,
-				"ready":      l.Ready,
-			}
-			if l.NextResetAt != nil {
-				m["nextResetAt"] = l.NextResetAt.Format(time.RFC3339)
-			}
-			limitMaps = append(limitMaps, m)
-		}
-		data["_limits"] = limitMaps
+		data["_limits"] = quotaLimitStatusMaps(quotaData.Limits)
 	}
 
 	return data
+}
+
+func quotaLimitStatusMaps(limits []provider_quota.QuotaLimitStatus) []map[string]any {
+	limitMaps := make([]map[string]any, 0, len(limits))
+	for _, l := range limits {
+		m := map[string]any{
+			"type":       string(l.Type),
+			"status":     l.Status,
+			"usageRatio": l.UsageRatio,
+			"ready":      l.Ready,
+		}
+		if l.NextResetAt != nil {
+			m["nextResetAt"] = l.NextResetAt.Format(time.RFC3339)
+		}
+		limitMaps = append(limitMaps, m)
+	}
+	return limitMaps
 }
 
 func extractLimitsFromQuotaData(data map[string]any) []provider_quota.QuotaLimitStatus {
@@ -704,6 +1132,10 @@ func extractLimitsFromQuotaData(data map[string]any) []provider_quota.QuotaLimit
 		return nil
 	}
 
+	return extractLimitsFromRaw(rawLimits)
+}
+
+func extractLimitsFromRaw(rawLimits any) []provider_quota.QuotaLimitStatus {
 	// Handle both []map[string]any (from mergeLimitsIntoQuotaData) and []any (from JSON unmarshaling)
 	var limitMaps []map[string]any
 	if directMaps, ok := rawLimits.([]map[string]any); ok {
@@ -750,4 +1182,59 @@ func extractLimitsFromQuotaData(data map[string]any) []provider_quota.QuotaLimit
 	}
 
 	return limits
+}
+
+func extractCredentialQuotaStatusesFromQuotaData(data map[string]any) []*QuotaChannelStatus {
+	rawStatuses, ok := data["credential_statuses"]
+	if !ok {
+		return nil
+	}
+
+	var statusMaps []map[string]any
+	if directMaps, ok := rawStatuses.([]map[string]any); ok {
+		statusMaps = directMaps
+	} else if anySlice, ok := rawStatuses.([]any); ok {
+		statusMaps = make([]map[string]any, 0, len(anySlice))
+		for _, raw := range anySlice {
+			if m, ok := raw.(map[string]any); ok {
+				statusMaps = append(statusMaps, m)
+			}
+		}
+	} else {
+		return nil
+	}
+
+	result := make([]*QuotaChannelStatus, 0, len(statusMaps))
+	for _, statusMap := range statusMaps {
+		fingerprint, _ := statusMap["fingerprint"].(string)
+		statusText, _ := statusMap["status"].(string)
+		ready, _ := statusMap["ready"].(bool)
+		credentialID := intFromAny(statusMap["credential_id"])
+		if (credentialID <= 0 && fingerprint == "") || statusText == "" {
+			continue
+		}
+
+		result = append(result, &QuotaChannelStatus{
+			Status:                providerquotastatus.Status(statusText),
+			Ready:                 ready,
+			CredentialID:          credentialID,
+			CredentialFingerprint: fingerprint,
+			Limits:                extractLimitsFromRaw(statusMap["limits"]),
+		})
+	}
+
+	return result
+}
+
+func intFromAny(value any) int {
+	switch v := value.(type) {
+	case int:
+		return v
+	case int64:
+		return int(v)
+	case float64:
+		return int(v)
+	default:
+		return 0
+	}
 }

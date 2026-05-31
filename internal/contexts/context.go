@@ -125,6 +125,131 @@ func GetChannelAPIKey(ctx context.Context) (string, bool) {
 	return "", false
 }
 
+// WithChannelCredential stores the selected channel credential metadata in the context.
+func WithChannelCredential(ctx context.Context, credentialID int, apiKey string, fingerprint string) context.Context {
+	container := getContainer(ctx)
+	container.ChannelAPIKey = &apiKey
+	container.ChannelCredentialFingerprint = &fingerprint
+	if credentialID > 0 {
+		container.ChannelCredentialID = &credentialID
+	} else {
+		container.ChannelCredentialID = nil
+	}
+
+	return withContainer(ctx, container)
+}
+
+// WithChannelCredentialID stores the selected channel credential row ID in the context.
+func WithChannelCredentialID(ctx context.Context, credentialID int) context.Context {
+	container := getContainer(ctx)
+	if credentialID > 0 {
+		container.ChannelCredentialID = &credentialID
+	} else {
+		container.ChannelCredentialID = nil
+	}
+
+	return withContainer(ctx, container)
+}
+
+// GetChannelCredentialID retrieves the selected channel credential row ID from the context.
+func GetChannelCredentialID(ctx context.Context) (int, bool) {
+	container := getContainer(ctx)
+	if container.ChannelCredentialID != nil {
+		return *container.ChannelCredentialID, true
+	}
+
+	return 0, false
+}
+
+// WithChannelCredentialFingerprint stores the selected channel credential fingerprint in the context.
+func WithChannelCredentialFingerprint(ctx context.Context, fingerprint string) context.Context {
+	container := getContainer(ctx)
+	container.ChannelCredentialFingerprint = &fingerprint
+
+	return withContainer(ctx, container)
+}
+
+// GetChannelCredentialFingerprint retrieves the selected channel credential fingerprint from the context.
+func GetChannelCredentialFingerprint(ctx context.Context) (string, bool) {
+	container := getContainer(ctx)
+	if container.ChannelCredentialFingerprint != nil {
+		return *container.ChannelCredentialFingerprint, true
+	}
+
+	return "", false
+}
+
+// WithCredentialSelectionSeed stores the stable sticky-session seed for upstream credential selection.
+func WithCredentialSelectionSeed(ctx context.Context, seed string) context.Context {
+	container := getContainer(ctx)
+	container.CredentialSelectionSeed = &seed
+
+	return withContainer(ctx, container)
+}
+
+// GetCredentialSelectionSeed retrieves the stable sticky-session seed for upstream credential selection.
+func GetCredentialSelectionSeed(ctx context.Context) (string, bool) {
+	container := getContainer(ctx)
+	if container.CredentialSelectionSeed != nil {
+		return *container.CredentialSelectionSeed, true
+	}
+
+	return "", false
+}
+
+// WithPreferredCredential stores the credential row and fingerprint preferred by routing.
+func WithPreferredCredential(ctx context.Context, credentialID int, fingerprint string) context.Context {
+	container := getContainer(ctx)
+	if credentialID > 0 {
+		container.PreferredCredentialID = &credentialID
+	} else {
+		container.PreferredCredentialID = nil
+	}
+	container.PreferredCredentialFingerprint = &fingerprint
+
+	return withContainer(ctx, container)
+}
+
+// WithPreferredCredentialID stores the credential row preferred by routing.
+func WithPreferredCredentialID(ctx context.Context, credentialID int) context.Context {
+	container := getContainer(ctx)
+	if credentialID > 0 {
+		container.PreferredCredentialID = &credentialID
+	} else {
+		container.PreferredCredentialID = nil
+	}
+
+	return withContainer(ctx, container)
+}
+
+// GetPreferredCredentialID retrieves the credential row preferred by routing.
+func GetPreferredCredentialID(ctx context.Context) (int, bool) {
+	container := getContainer(ctx)
+	if container.PreferredCredentialID != nil {
+		return *container.PreferredCredentialID, true
+	}
+
+	return 0, false
+}
+
+// WithPreferredCredentialFingerprint stores the credential identity preferred by routing.
+func WithPreferredCredentialFingerprint(ctx context.Context, fingerprint string) context.Context {
+	container := getContainer(ctx)
+	container.PreferredCredentialFingerprint = &fingerprint
+
+	return withContainer(ctx, container)
+}
+
+// GetPreferredCredentialFingerprint retrieves the credential identity preferred by routing.
+func GetPreferredCredentialFingerprint(ctx context.Context) (string, bool) {
+	container := getContainer(ctx)
+	if container.PreferredCredentialFingerprint != nil {
+		return *container.PreferredCredentialFingerprint, true
+	}
+
+	return "", false
+}
+
 // WithProjectID stores the project ID in the context.
 func WithProjectID(ctx context.Context, projectID int) context.Context {
 	container := getContainer(ctx)
