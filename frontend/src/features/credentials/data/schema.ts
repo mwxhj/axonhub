@@ -4,6 +4,8 @@ import { channelStatusSchema, channelTypeSchema } from '@/features/channels/data
 
 export const credentialAuthKindSchema = z.enum(['api_key', 'oauth', 'azure', 'gcp', 'other']);
 export type CredentialAuthKind = z.infer<typeof credentialAuthKindSchema>;
+export const credentialSecretKindSchema = credentialAuthKindSchema;
+export type CredentialSecretKind = z.infer<typeof credentialSecretKindSchema>;
 
 export const credentialStatusSchema = z.enum(['enabled', 'disabled', 'archived']);
 export type CredentialStatus = z.infer<typeof credentialStatusSchema>;
@@ -39,9 +41,15 @@ export const credentialRefConnectionSchema = z.object({
 export const upstreamCredentialSchema = z.object({
   id: z.string(),
   name: z.string().optional().nullable(),
-  providerType: z.string(),
+  providerType: z.string().optional().nullable(),
   baseURL: z.string().optional().nullable(),
-  authKind: credentialAuthKindSchema,
+  authKind: credentialAuthKindSchema.optional().nullable(),
+  secretKind: credentialSecretKindSchema,
+  issuerScope: z.string().optional().nullable(),
+  keyHint: z.string().optional().nullable(),
+  quotaScopeID: z.number().int().optional().nullable(),
+  quotaStatus: z.string().optional().nullable(),
+  lastError: z.string().optional().nullable(),
   fingerprint: z.string(),
   status: credentialStatusSchema,
   weight: z.number().int(),
@@ -108,9 +116,11 @@ export type CredentialSecretInput = z.infer<typeof credentialSecretInputSchema>;
 
 export const createUpstreamCredentialInputSchema = z.object({
   name: z.string().optional(),
-  providerType: z.string().min(1, 'Provider type is required'),
+  providerType: z.string().optional(),
   baseURL: z.string().optional(),
-  authKind: credentialAuthKindSchema,
+  authKind: credentialAuthKindSchema.optional(),
+  secretKind: credentialSecretKindSchema.optional(),
+  issuerScope: z.string().optional(),
   secret: credentialSecretInputSchema,
   status: credentialStatusSchema.optional(),
   weight: z.number().int().positive().optional(),
@@ -159,6 +169,7 @@ export type CredentialFormValues = {
   providerType: string;
   baseURL: string;
   authKind: CredentialAuthKind;
+  issuerScope: string;
   apiKey: string;
   oauthAccessToken: string;
   oauthRefreshToken: string;

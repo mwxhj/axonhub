@@ -37,6 +37,12 @@ const (
 	FieldModelID = "model_id"
 	// FieldCredentialFingerprint holds the string denoting the credential_fingerprint field in the database.
 	FieldCredentialFingerprint = "credential_fingerprint"
+	// FieldCredentialNameSnapshot holds the string denoting the credential_name_snapshot field in the database.
+	FieldCredentialNameSnapshot = "credential_name_snapshot"
+	// FieldCredentialKeyHint holds the string denoting the credential_key_hint field in the database.
+	FieldCredentialKeyHint = "credential_key_hint"
+	// FieldCredentialSource holds the string denoting the credential_source field in the database.
+	FieldCredentialSource = "credential_source"
 	// FieldPromptTokens holds the string denoting the prompt_tokens field in the database.
 	FieldPromptTokens = "prompt_tokens"
 	// FieldCompletionTokens holds the string denoting the completion_tokens field in the database.
@@ -123,6 +129,9 @@ var Columns = []string{
 	FieldCredentialID,
 	FieldModelID,
 	FieldCredentialFingerprint,
+	FieldCredentialNameSnapshot,
+	FieldCredentialKeyHint,
+	FieldCredentialSource,
 	FieldPromptTokens,
 	FieldCompletionTokens,
 	FieldTotalTokens,
@@ -278,6 +287,21 @@ func ByModelID(opts ...sql.OrderTermOption) OrderOption {
 // ByCredentialFingerprint orders the results by the credential_fingerprint field.
 func ByCredentialFingerprint(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCredentialFingerprint, opts...).ToFunc()
+}
+
+// ByCredentialNameSnapshot orders the results by the credential_name_snapshot field.
+func ByCredentialNameSnapshot(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCredentialNameSnapshot, opts...).ToFunc()
+}
+
+// ByCredentialKeyHint orders the results by the credential_key_hint field.
+func ByCredentialKeyHint(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCredentialKeyHint, opts...).ToFunc()
+}
+
+// ByCredentialSource orders the results by the credential_source field.
+func ByCredentialSource(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCredentialSource, opts...).ToFunc()
 }
 
 // ByPromptTokens orders the results by the prompt_tokens field.

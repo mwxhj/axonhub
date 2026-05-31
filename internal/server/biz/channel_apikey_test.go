@@ -119,7 +119,7 @@ func TestChannelCredentialFingerprintForAPIKey_DeduplicatesByCredentialScope(t *
 	require.NotEmpty(t, fp1)
 	require.Equal(t, fp1, fp2)
 	require.NotEqual(t, fp1, differentKey)
-	require.NotEqual(t, fp1, differentBase)
+	require.Equal(t, fp1, differentBase)
 	require.NotContains(t, fp1, "shared-key")
 }
 

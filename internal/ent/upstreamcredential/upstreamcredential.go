@@ -32,6 +32,14 @@ const (
 	FieldBaseURL = "base_url"
 	// FieldAuthKind holds the string denoting the auth_kind field in the database.
 	FieldAuthKind = "auth_kind"
+	// FieldSecretKind holds the string denoting the secret_kind field in the database.
+	FieldSecretKind = "secret_kind"
+	// FieldIssuerScope holds the string denoting the issuer_scope field in the database.
+	FieldIssuerScope = "issuer_scope"
+	// FieldKeyHint holds the string denoting the key_hint field in the database.
+	FieldKeyHint = "key_hint"
+	// FieldQuotaScopeID holds the string denoting the quota_scope_id field in the database.
+	FieldQuotaScopeID = "quota_scope_id"
 	// FieldSecretPayload holds the string denoting the secret_payload field in the database.
 	FieldSecretPayload = "secret_payload"
 	// FieldFingerprint holds the string denoting the fingerprint field in the database.
@@ -40,6 +48,10 @@ const (
 	FieldStatus = "status"
 	// FieldWeight holds the string denoting the weight field in the database.
 	FieldWeight = "weight"
+	// FieldQuotaStatus holds the string denoting the quota_status field in the database.
+	FieldQuotaStatus = "quota_status"
+	// FieldLastError holds the string denoting the last_error field in the database.
+	FieldLastError = "last_error"
 	// FieldRemark holds the string denoting the remark field in the database.
 	FieldRemark = "remark"
 	// EdgeChannelRefs holds the string denoting the channel_refs edge name in mutations.
@@ -92,10 +104,16 @@ var Columns = []string{
 	FieldProviderType,
 	FieldBaseURL,
 	FieldAuthKind,
+	FieldSecretKind,
+	FieldIssuerScope,
+	FieldKeyHint,
+	FieldQuotaScopeID,
 	FieldSecretPayload,
 	FieldFingerprint,
 	FieldStatus,
 	FieldWeight,
+	FieldQuotaStatus,
+	FieldLastError,
 	FieldRemark,
 }
 
@@ -128,18 +146,31 @@ var (
 	DefaultDeletedAt int
 	// DefaultName holds the default value on creation for the "name" field.
 	DefaultName string
+	// DefaultProviderType holds the default value on creation for the "provider_type" field.
+	DefaultProviderType string
 	// DefaultBaseURL holds the default value on creation for the "base_url" field.
 	DefaultBaseURL string
+	// DefaultIssuerScope holds the default value on creation for the "issuer_scope" field.
+	DefaultIssuerScope string
+	// DefaultKeyHint holds the default value on creation for the "key_hint" field.
+	DefaultKeyHint string
 	// FingerprintValidator is a validator for the "fingerprint" field. It is called by the builders before save.
 	FingerprintValidator func(string) error
 	// DefaultWeight holds the default value on creation for the "weight" field.
 	DefaultWeight int
+	// DefaultQuotaStatus holds the default value on creation for the "quota_status" field.
+	DefaultQuotaStatus string
+	// DefaultLastError holds the default value on creation for the "last_error" field.
+	DefaultLastError string
 	// DefaultRemark holds the default value on creation for the "remark" field.
 	DefaultRemark string
 )
 
 // AuthKind defines the type for the "auth_kind" enum field.
 type AuthKind string
+
+// AuthKindAPIKey is the default value of the AuthKind enum.
+const DefaultAuthKind = AuthKindAPIKey
 
 // AuthKind values.
 const (
@@ -161,6 +192,35 @@ func AuthKindValidator(ak AuthKind) error {
 		return nil
 	default:
 		return fmt.Errorf("upstreamcredential: invalid enum value for auth_kind field: %q", ak)
+	}
+}
+
+// SecretKind defines the type for the "secret_kind" enum field.
+type SecretKind string
+
+// SecretKindAPIKey is the default value of the SecretKind enum.
+const DefaultSecretKind = SecretKindAPIKey
+
+// SecretKind values.
+const (
+	SecretKindAPIKey SecretKind = "api_key"
+	SecretKindOauth  SecretKind = "oauth"
+	SecretKindAzure  SecretKind = "azure"
+	SecretKindGcp    SecretKind = "gcp"
+	SecretKindOther  SecretKind = "other"
+)
+
+func (sk SecretKind) String() string {
+	return string(sk)
+}
+
+// SecretKindValidator is a validator for the "secret_kind" field enum values. It is called by the builders before save.
+func SecretKindValidator(sk SecretKind) error {
+	switch sk {
+	case SecretKindAPIKey, SecretKindOauth, SecretKindAzure, SecretKindGcp, SecretKindOther:
+		return nil
+	default:
+		return fmt.Errorf("upstreamcredential: invalid enum value for secret_kind field: %q", sk)
 	}
 }
 
@@ -234,6 +294,26 @@ func ByAuthKind(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAuthKind, opts...).ToFunc()
 }
 
+// BySecretKind orders the results by the secret_kind field.
+func BySecretKind(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSecretKind, opts...).ToFunc()
+}
+
+// ByIssuerScope orders the results by the issuer_scope field.
+func ByIssuerScope(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIssuerScope, opts...).ToFunc()
+}
+
+// ByKeyHint orders the results by the key_hint field.
+func ByKeyHint(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldKeyHint, opts...).ToFunc()
+}
+
+// ByQuotaScopeID orders the results by the quota_scope_id field.
+func ByQuotaScopeID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldQuotaScopeID, opts...).ToFunc()
+}
+
 // ByFingerprint orders the results by the fingerprint field.
 func ByFingerprint(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFingerprint, opts...).ToFunc()
@@ -247,6 +327,16 @@ func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 // ByWeight orders the results by the weight field.
 func ByWeight(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldWeight, opts...).ToFunc()
+}
+
+// ByQuotaStatus orders the results by the quota_status field.
+func ByQuotaStatus(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldQuotaStatus, opts...).ToFunc()
+}
+
+// ByLastError orders the results by the last_error field.
+func ByLastError(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastError, opts...).ToFunc()
 }
 
 // ByRemark orders the results by the remark field.
@@ -352,6 +442,24 @@ func (e *AuthKind) UnmarshalGQL(val interface{}) error {
 	*e = AuthKind(str)
 	if err := AuthKindValidator(*e); err != nil {
 		return fmt.Errorf("%s is not a valid AuthKind", str)
+	}
+	return nil
+}
+
+// MarshalGQL implements graphql.Marshaler interface.
+func (e SecretKind) MarshalGQL(w io.Writer) {
+	io.WriteString(w, strconv.Quote(e.String()))
+}
+
+// UnmarshalGQL implements graphql.Unmarshaler interface.
+func (e *SecretKind) UnmarshalGQL(val interface{}) error {
+	str, ok := val.(string)
+	if !ok {
+		return fmt.Errorf("enum %T must be a string", val)
+	}
+	*e = SecretKind(str)
+	if err := SecretKindValidator(*e); err != nil {
+		return fmt.Errorf("%s is not a valid SecretKind", str)
 	}
 	return nil
 }

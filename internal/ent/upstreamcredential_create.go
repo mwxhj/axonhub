@@ -89,6 +89,14 @@ func (_c *UpstreamCredentialCreate) SetProviderType(v string) *UpstreamCredentia
 	return _c
 }
 
+// SetNillableProviderType sets the "provider_type" field if the given value is not nil.
+func (_c *UpstreamCredentialCreate) SetNillableProviderType(v *string) *UpstreamCredentialCreate {
+	if v != nil {
+		_c.SetProviderType(*v)
+	}
+	return _c
+}
+
 // SetBaseURL sets the "base_url" field.
 func (_c *UpstreamCredentialCreate) SetBaseURL(v string) *UpstreamCredentialCreate {
 	_c.mutation.SetBaseURL(v)
@@ -106,6 +114,70 @@ func (_c *UpstreamCredentialCreate) SetNillableBaseURL(v *string) *UpstreamCrede
 // SetAuthKind sets the "auth_kind" field.
 func (_c *UpstreamCredentialCreate) SetAuthKind(v upstreamcredential.AuthKind) *UpstreamCredentialCreate {
 	_c.mutation.SetAuthKind(v)
+	return _c
+}
+
+// SetNillableAuthKind sets the "auth_kind" field if the given value is not nil.
+func (_c *UpstreamCredentialCreate) SetNillableAuthKind(v *upstreamcredential.AuthKind) *UpstreamCredentialCreate {
+	if v != nil {
+		_c.SetAuthKind(*v)
+	}
+	return _c
+}
+
+// SetSecretKind sets the "secret_kind" field.
+func (_c *UpstreamCredentialCreate) SetSecretKind(v upstreamcredential.SecretKind) *UpstreamCredentialCreate {
+	_c.mutation.SetSecretKind(v)
+	return _c
+}
+
+// SetNillableSecretKind sets the "secret_kind" field if the given value is not nil.
+func (_c *UpstreamCredentialCreate) SetNillableSecretKind(v *upstreamcredential.SecretKind) *UpstreamCredentialCreate {
+	if v != nil {
+		_c.SetSecretKind(*v)
+	}
+	return _c
+}
+
+// SetIssuerScope sets the "issuer_scope" field.
+func (_c *UpstreamCredentialCreate) SetIssuerScope(v string) *UpstreamCredentialCreate {
+	_c.mutation.SetIssuerScope(v)
+	return _c
+}
+
+// SetNillableIssuerScope sets the "issuer_scope" field if the given value is not nil.
+func (_c *UpstreamCredentialCreate) SetNillableIssuerScope(v *string) *UpstreamCredentialCreate {
+	if v != nil {
+		_c.SetIssuerScope(*v)
+	}
+	return _c
+}
+
+// SetKeyHint sets the "key_hint" field.
+func (_c *UpstreamCredentialCreate) SetKeyHint(v string) *UpstreamCredentialCreate {
+	_c.mutation.SetKeyHint(v)
+	return _c
+}
+
+// SetNillableKeyHint sets the "key_hint" field if the given value is not nil.
+func (_c *UpstreamCredentialCreate) SetNillableKeyHint(v *string) *UpstreamCredentialCreate {
+	if v != nil {
+		_c.SetKeyHint(*v)
+	}
+	return _c
+}
+
+// SetQuotaScopeID sets the "quota_scope_id" field.
+func (_c *UpstreamCredentialCreate) SetQuotaScopeID(v int) *UpstreamCredentialCreate {
+	_c.mutation.SetQuotaScopeID(v)
+	return _c
+}
+
+// SetNillableQuotaScopeID sets the "quota_scope_id" field if the given value is not nil.
+func (_c *UpstreamCredentialCreate) SetNillableQuotaScopeID(v *int) *UpstreamCredentialCreate {
+	if v != nil {
+		_c.SetQuotaScopeID(*v)
+	}
 	return _c
 }
 
@@ -145,6 +217,34 @@ func (_c *UpstreamCredentialCreate) SetWeight(v int) *UpstreamCredentialCreate {
 func (_c *UpstreamCredentialCreate) SetNillableWeight(v *int) *UpstreamCredentialCreate {
 	if v != nil {
 		_c.SetWeight(*v)
+	}
+	return _c
+}
+
+// SetQuotaStatus sets the "quota_status" field.
+func (_c *UpstreamCredentialCreate) SetQuotaStatus(v string) *UpstreamCredentialCreate {
+	_c.mutation.SetQuotaStatus(v)
+	return _c
+}
+
+// SetNillableQuotaStatus sets the "quota_status" field if the given value is not nil.
+func (_c *UpstreamCredentialCreate) SetNillableQuotaStatus(v *string) *UpstreamCredentialCreate {
+	if v != nil {
+		_c.SetQuotaStatus(*v)
+	}
+	return _c
+}
+
+// SetLastError sets the "last_error" field.
+func (_c *UpstreamCredentialCreate) SetLastError(v string) *UpstreamCredentialCreate {
+	_c.mutation.SetLastError(v)
+	return _c
+}
+
+// SetNillableLastError sets the "last_error" field if the given value is not nil.
+func (_c *UpstreamCredentialCreate) SetNillableLastError(v *string) *UpstreamCredentialCreate {
+	if v != nil {
+		_c.SetLastError(*v)
 	}
 	return _c
 }
@@ -282,9 +382,29 @@ func (_c *UpstreamCredentialCreate) defaults() error {
 		v := upstreamcredential.DefaultName
 		_c.mutation.SetName(v)
 	}
+	if _, ok := _c.mutation.ProviderType(); !ok {
+		v := upstreamcredential.DefaultProviderType
+		_c.mutation.SetProviderType(v)
+	}
 	if _, ok := _c.mutation.BaseURL(); !ok {
 		v := upstreamcredential.DefaultBaseURL
 		_c.mutation.SetBaseURL(v)
+	}
+	if _, ok := _c.mutation.AuthKind(); !ok {
+		v := upstreamcredential.DefaultAuthKind
+		_c.mutation.SetAuthKind(v)
+	}
+	if _, ok := _c.mutation.SecretKind(); !ok {
+		v := upstreamcredential.DefaultSecretKind
+		_c.mutation.SetSecretKind(v)
+	}
+	if _, ok := _c.mutation.IssuerScope(); !ok {
+		v := upstreamcredential.DefaultIssuerScope
+		_c.mutation.SetIssuerScope(v)
+	}
+	if _, ok := _c.mutation.KeyHint(); !ok {
+		v := upstreamcredential.DefaultKeyHint
+		_c.mutation.SetKeyHint(v)
 	}
 	if _, ok := _c.mutation.Status(); !ok {
 		v := upstreamcredential.DefaultStatus
@@ -293,6 +413,14 @@ func (_c *UpstreamCredentialCreate) defaults() error {
 	if _, ok := _c.mutation.Weight(); !ok {
 		v := upstreamcredential.DefaultWeight
 		_c.mutation.SetWeight(v)
+	}
+	if _, ok := _c.mutation.QuotaStatus(); !ok {
+		v := upstreamcredential.DefaultQuotaStatus
+		_c.mutation.SetQuotaStatus(v)
+	}
+	if _, ok := _c.mutation.LastError(); !ok {
+		v := upstreamcredential.DefaultLastError
+		_c.mutation.SetLastError(v)
 	}
 	if _, ok := _c.mutation.Remark(); !ok {
 		v := upstreamcredential.DefaultRemark
@@ -315,6 +443,14 @@ func (_c *UpstreamCredentialCreate) check() error {
 	if v, ok := _c.mutation.AuthKind(); ok {
 		if err := upstreamcredential.AuthKindValidator(v); err != nil {
 			return &ValidationError{Name: "auth_kind", err: fmt.Errorf(`ent: validator failed for field "UpstreamCredential.auth_kind": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.SecretKind(); !ok {
+		return &ValidationError{Name: "secret_kind", err: errors.New(`ent: missing required field "UpstreamCredential.secret_kind"`)}
+	}
+	if v, ok := _c.mutation.SecretKind(); ok {
+		if err := upstreamcredential.SecretKindValidator(v); err != nil {
+			return &ValidationError{Name: "secret_kind", err: fmt.Errorf(`ent: validator failed for field "UpstreamCredential.secret_kind": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.SecretPayload(); !ok {
@@ -394,6 +530,22 @@ func (_c *UpstreamCredentialCreate) createSpec() (*UpstreamCredential, *sqlgraph
 		_spec.SetField(upstreamcredential.FieldAuthKind, field.TypeEnum, value)
 		_node.AuthKind = value
 	}
+	if value, ok := _c.mutation.SecretKind(); ok {
+		_spec.SetField(upstreamcredential.FieldSecretKind, field.TypeEnum, value)
+		_node.SecretKind = value
+	}
+	if value, ok := _c.mutation.IssuerScope(); ok {
+		_spec.SetField(upstreamcredential.FieldIssuerScope, field.TypeString, value)
+		_node.IssuerScope = value
+	}
+	if value, ok := _c.mutation.KeyHint(); ok {
+		_spec.SetField(upstreamcredential.FieldKeyHint, field.TypeString, value)
+		_node.KeyHint = value
+	}
+	if value, ok := _c.mutation.QuotaScopeID(); ok {
+		_spec.SetField(upstreamcredential.FieldQuotaScopeID, field.TypeInt, value)
+		_node.QuotaScopeID = &value
+	}
 	if value, ok := _c.mutation.SecretPayload(); ok {
 		_spec.SetField(upstreamcredential.FieldSecretPayload, field.TypeJSON, value)
 		_node.SecretPayload = value
@@ -409,6 +561,14 @@ func (_c *UpstreamCredentialCreate) createSpec() (*UpstreamCredential, *sqlgraph
 	if value, ok := _c.mutation.Weight(); ok {
 		_spec.SetField(upstreamcredential.FieldWeight, field.TypeInt, value)
 		_node.Weight = value
+	}
+	if value, ok := _c.mutation.QuotaStatus(); ok {
+		_spec.SetField(upstreamcredential.FieldQuotaStatus, field.TypeString, value)
+		_node.QuotaStatus = value
+	}
+	if value, ok := _c.mutation.LastError(); ok {
+		_spec.SetField(upstreamcredential.FieldLastError, field.TypeString, value)
+		_node.LastError = value
 	}
 	if value, ok := _c.mutation.Remark(); ok {
 		_spec.SetField(upstreamcredential.FieldRemark, field.TypeString, value)
@@ -596,6 +756,78 @@ func (u *UpstreamCredentialUpsert) ClearBaseURL() *UpstreamCredentialUpsert {
 	return u
 }
 
+// SetSecretKind sets the "secret_kind" field.
+func (u *UpstreamCredentialUpsert) SetSecretKind(v upstreamcredential.SecretKind) *UpstreamCredentialUpsert {
+	u.Set(upstreamcredential.FieldSecretKind, v)
+	return u
+}
+
+// UpdateSecretKind sets the "secret_kind" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsert) UpdateSecretKind() *UpstreamCredentialUpsert {
+	u.SetExcluded(upstreamcredential.FieldSecretKind)
+	return u
+}
+
+// SetIssuerScope sets the "issuer_scope" field.
+func (u *UpstreamCredentialUpsert) SetIssuerScope(v string) *UpstreamCredentialUpsert {
+	u.Set(upstreamcredential.FieldIssuerScope, v)
+	return u
+}
+
+// UpdateIssuerScope sets the "issuer_scope" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsert) UpdateIssuerScope() *UpstreamCredentialUpsert {
+	u.SetExcluded(upstreamcredential.FieldIssuerScope)
+	return u
+}
+
+// ClearIssuerScope clears the value of the "issuer_scope" field.
+func (u *UpstreamCredentialUpsert) ClearIssuerScope() *UpstreamCredentialUpsert {
+	u.SetNull(upstreamcredential.FieldIssuerScope)
+	return u
+}
+
+// SetKeyHint sets the "key_hint" field.
+func (u *UpstreamCredentialUpsert) SetKeyHint(v string) *UpstreamCredentialUpsert {
+	u.Set(upstreamcredential.FieldKeyHint, v)
+	return u
+}
+
+// UpdateKeyHint sets the "key_hint" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsert) UpdateKeyHint() *UpstreamCredentialUpsert {
+	u.SetExcluded(upstreamcredential.FieldKeyHint)
+	return u
+}
+
+// ClearKeyHint clears the value of the "key_hint" field.
+func (u *UpstreamCredentialUpsert) ClearKeyHint() *UpstreamCredentialUpsert {
+	u.SetNull(upstreamcredential.FieldKeyHint)
+	return u
+}
+
+// SetQuotaScopeID sets the "quota_scope_id" field.
+func (u *UpstreamCredentialUpsert) SetQuotaScopeID(v int) *UpstreamCredentialUpsert {
+	u.Set(upstreamcredential.FieldQuotaScopeID, v)
+	return u
+}
+
+// UpdateQuotaScopeID sets the "quota_scope_id" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsert) UpdateQuotaScopeID() *UpstreamCredentialUpsert {
+	u.SetExcluded(upstreamcredential.FieldQuotaScopeID)
+	return u
+}
+
+// AddQuotaScopeID adds v to the "quota_scope_id" field.
+func (u *UpstreamCredentialUpsert) AddQuotaScopeID(v int) *UpstreamCredentialUpsert {
+	u.Add(upstreamcredential.FieldQuotaScopeID, v)
+	return u
+}
+
+// ClearQuotaScopeID clears the value of the "quota_scope_id" field.
+func (u *UpstreamCredentialUpsert) ClearQuotaScopeID() *UpstreamCredentialUpsert {
+	u.SetNull(upstreamcredential.FieldQuotaScopeID)
+	return u
+}
+
 // SetSecretPayload sets the "secret_payload" field.
 func (u *UpstreamCredentialUpsert) SetSecretPayload(v objects.UpstreamCredentialSecret) *UpstreamCredentialUpsert {
 	u.Set(upstreamcredential.FieldSecretPayload, v)
@@ -647,6 +879,42 @@ func (u *UpstreamCredentialUpsert) UpdateWeight() *UpstreamCredentialUpsert {
 // AddWeight adds v to the "weight" field.
 func (u *UpstreamCredentialUpsert) AddWeight(v int) *UpstreamCredentialUpsert {
 	u.Add(upstreamcredential.FieldWeight, v)
+	return u
+}
+
+// SetQuotaStatus sets the "quota_status" field.
+func (u *UpstreamCredentialUpsert) SetQuotaStatus(v string) *UpstreamCredentialUpsert {
+	u.Set(upstreamcredential.FieldQuotaStatus, v)
+	return u
+}
+
+// UpdateQuotaStatus sets the "quota_status" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsert) UpdateQuotaStatus() *UpstreamCredentialUpsert {
+	u.SetExcluded(upstreamcredential.FieldQuotaStatus)
+	return u
+}
+
+// ClearQuotaStatus clears the value of the "quota_status" field.
+func (u *UpstreamCredentialUpsert) ClearQuotaStatus() *UpstreamCredentialUpsert {
+	u.SetNull(upstreamcredential.FieldQuotaStatus)
+	return u
+}
+
+// SetLastError sets the "last_error" field.
+func (u *UpstreamCredentialUpsert) SetLastError(v string) *UpstreamCredentialUpsert {
+	u.Set(upstreamcredential.FieldLastError, v)
+	return u
+}
+
+// UpdateLastError sets the "last_error" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsert) UpdateLastError() *UpstreamCredentialUpsert {
+	u.SetExcluded(upstreamcredential.FieldLastError)
+	return u
+}
+
+// ClearLastError clears the value of the "last_error" field.
+func (u *UpstreamCredentialUpsert) ClearLastError() *UpstreamCredentialUpsert {
+	u.SetNull(upstreamcredential.FieldLastError)
 	return u
 }
 
@@ -796,6 +1064,90 @@ func (u *UpstreamCredentialUpsertOne) ClearBaseURL() *UpstreamCredentialUpsertOn
 	})
 }
 
+// SetSecretKind sets the "secret_kind" field.
+func (u *UpstreamCredentialUpsertOne) SetSecretKind(v upstreamcredential.SecretKind) *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.SetSecretKind(v)
+	})
+}
+
+// UpdateSecretKind sets the "secret_kind" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsertOne) UpdateSecretKind() *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.UpdateSecretKind()
+	})
+}
+
+// SetIssuerScope sets the "issuer_scope" field.
+func (u *UpstreamCredentialUpsertOne) SetIssuerScope(v string) *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.SetIssuerScope(v)
+	})
+}
+
+// UpdateIssuerScope sets the "issuer_scope" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsertOne) UpdateIssuerScope() *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.UpdateIssuerScope()
+	})
+}
+
+// ClearIssuerScope clears the value of the "issuer_scope" field.
+func (u *UpstreamCredentialUpsertOne) ClearIssuerScope() *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.ClearIssuerScope()
+	})
+}
+
+// SetKeyHint sets the "key_hint" field.
+func (u *UpstreamCredentialUpsertOne) SetKeyHint(v string) *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.SetKeyHint(v)
+	})
+}
+
+// UpdateKeyHint sets the "key_hint" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsertOne) UpdateKeyHint() *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.UpdateKeyHint()
+	})
+}
+
+// ClearKeyHint clears the value of the "key_hint" field.
+func (u *UpstreamCredentialUpsertOne) ClearKeyHint() *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.ClearKeyHint()
+	})
+}
+
+// SetQuotaScopeID sets the "quota_scope_id" field.
+func (u *UpstreamCredentialUpsertOne) SetQuotaScopeID(v int) *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.SetQuotaScopeID(v)
+	})
+}
+
+// AddQuotaScopeID adds v to the "quota_scope_id" field.
+func (u *UpstreamCredentialUpsertOne) AddQuotaScopeID(v int) *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.AddQuotaScopeID(v)
+	})
+}
+
+// UpdateQuotaScopeID sets the "quota_scope_id" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsertOne) UpdateQuotaScopeID() *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.UpdateQuotaScopeID()
+	})
+}
+
+// ClearQuotaScopeID clears the value of the "quota_scope_id" field.
+func (u *UpstreamCredentialUpsertOne) ClearQuotaScopeID() *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.ClearQuotaScopeID()
+	})
+}
+
 // SetSecretPayload sets the "secret_payload" field.
 func (u *UpstreamCredentialUpsertOne) SetSecretPayload(v objects.UpstreamCredentialSecret) *UpstreamCredentialUpsertOne {
 	return u.Update(func(s *UpstreamCredentialUpsert) {
@@ -856,6 +1208,48 @@ func (u *UpstreamCredentialUpsertOne) AddWeight(v int) *UpstreamCredentialUpsert
 func (u *UpstreamCredentialUpsertOne) UpdateWeight() *UpstreamCredentialUpsertOne {
 	return u.Update(func(s *UpstreamCredentialUpsert) {
 		s.UpdateWeight()
+	})
+}
+
+// SetQuotaStatus sets the "quota_status" field.
+func (u *UpstreamCredentialUpsertOne) SetQuotaStatus(v string) *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.SetQuotaStatus(v)
+	})
+}
+
+// UpdateQuotaStatus sets the "quota_status" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsertOne) UpdateQuotaStatus() *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.UpdateQuotaStatus()
+	})
+}
+
+// ClearQuotaStatus clears the value of the "quota_status" field.
+func (u *UpstreamCredentialUpsertOne) ClearQuotaStatus() *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.ClearQuotaStatus()
+	})
+}
+
+// SetLastError sets the "last_error" field.
+func (u *UpstreamCredentialUpsertOne) SetLastError(v string) *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.SetLastError(v)
+	})
+}
+
+// UpdateLastError sets the "last_error" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsertOne) UpdateLastError() *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.UpdateLastError()
+	})
+}
+
+// ClearLastError clears the value of the "last_error" field.
+func (u *UpstreamCredentialUpsertOne) ClearLastError() *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.ClearLastError()
 	})
 }
 
@@ -1174,6 +1568,90 @@ func (u *UpstreamCredentialUpsertBulk) ClearBaseURL() *UpstreamCredentialUpsertB
 	})
 }
 
+// SetSecretKind sets the "secret_kind" field.
+func (u *UpstreamCredentialUpsertBulk) SetSecretKind(v upstreamcredential.SecretKind) *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.SetSecretKind(v)
+	})
+}
+
+// UpdateSecretKind sets the "secret_kind" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsertBulk) UpdateSecretKind() *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.UpdateSecretKind()
+	})
+}
+
+// SetIssuerScope sets the "issuer_scope" field.
+func (u *UpstreamCredentialUpsertBulk) SetIssuerScope(v string) *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.SetIssuerScope(v)
+	})
+}
+
+// UpdateIssuerScope sets the "issuer_scope" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsertBulk) UpdateIssuerScope() *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.UpdateIssuerScope()
+	})
+}
+
+// ClearIssuerScope clears the value of the "issuer_scope" field.
+func (u *UpstreamCredentialUpsertBulk) ClearIssuerScope() *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.ClearIssuerScope()
+	})
+}
+
+// SetKeyHint sets the "key_hint" field.
+func (u *UpstreamCredentialUpsertBulk) SetKeyHint(v string) *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.SetKeyHint(v)
+	})
+}
+
+// UpdateKeyHint sets the "key_hint" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsertBulk) UpdateKeyHint() *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.UpdateKeyHint()
+	})
+}
+
+// ClearKeyHint clears the value of the "key_hint" field.
+func (u *UpstreamCredentialUpsertBulk) ClearKeyHint() *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.ClearKeyHint()
+	})
+}
+
+// SetQuotaScopeID sets the "quota_scope_id" field.
+func (u *UpstreamCredentialUpsertBulk) SetQuotaScopeID(v int) *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.SetQuotaScopeID(v)
+	})
+}
+
+// AddQuotaScopeID adds v to the "quota_scope_id" field.
+func (u *UpstreamCredentialUpsertBulk) AddQuotaScopeID(v int) *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.AddQuotaScopeID(v)
+	})
+}
+
+// UpdateQuotaScopeID sets the "quota_scope_id" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsertBulk) UpdateQuotaScopeID() *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.UpdateQuotaScopeID()
+	})
+}
+
+// ClearQuotaScopeID clears the value of the "quota_scope_id" field.
+func (u *UpstreamCredentialUpsertBulk) ClearQuotaScopeID() *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.ClearQuotaScopeID()
+	})
+}
+
 // SetSecretPayload sets the "secret_payload" field.
 func (u *UpstreamCredentialUpsertBulk) SetSecretPayload(v objects.UpstreamCredentialSecret) *UpstreamCredentialUpsertBulk {
 	return u.Update(func(s *UpstreamCredentialUpsert) {
@@ -1234,6 +1712,48 @@ func (u *UpstreamCredentialUpsertBulk) AddWeight(v int) *UpstreamCredentialUpser
 func (u *UpstreamCredentialUpsertBulk) UpdateWeight() *UpstreamCredentialUpsertBulk {
 	return u.Update(func(s *UpstreamCredentialUpsert) {
 		s.UpdateWeight()
+	})
+}
+
+// SetQuotaStatus sets the "quota_status" field.
+func (u *UpstreamCredentialUpsertBulk) SetQuotaStatus(v string) *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.SetQuotaStatus(v)
+	})
+}
+
+// UpdateQuotaStatus sets the "quota_status" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsertBulk) UpdateQuotaStatus() *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.UpdateQuotaStatus()
+	})
+}
+
+// ClearQuotaStatus clears the value of the "quota_status" field.
+func (u *UpstreamCredentialUpsertBulk) ClearQuotaStatus() *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.ClearQuotaStatus()
+	})
+}
+
+// SetLastError sets the "last_error" field.
+func (u *UpstreamCredentialUpsertBulk) SetLastError(v string) *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.SetLastError(v)
+	})
+}
+
+// UpdateLastError sets the "last_error" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsertBulk) UpdateLastError() *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.UpdateLastError()
+	})
+}
+
+// ClearLastError clears the value of the "last_error" field.
+func (u *UpstreamCredentialUpsertBulk) ClearLastError() *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.ClearLastError()
 	})
 }
 

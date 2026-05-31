@@ -37,6 +37,14 @@ const (
 	FieldModelID = "model_id"
 	// FieldCredentialFingerprint holds the string denoting the credential_fingerprint field in the database.
 	FieldCredentialFingerprint = "credential_fingerprint"
+	// FieldCredentialNameSnapshot holds the string denoting the credential_name_snapshot field in the database.
+	FieldCredentialNameSnapshot = "credential_name_snapshot"
+	// FieldCredentialKeyHint holds the string denoting the credential_key_hint field in the database.
+	FieldCredentialKeyHint = "credential_key_hint"
+	// FieldCredentialSource holds the string denoting the credential_source field in the database.
+	FieldCredentialSource = "credential_source"
+	// FieldCredentialQuotaStatusSnapshot holds the string denoting the credential_quota_status_snapshot field in the database.
+	FieldCredentialQuotaStatusSnapshot = "credential_quota_status_snapshot"
 	// FieldFormat holds the string denoting the format field in the database.
 	FieldFormat = "format"
 	// FieldRequestBody holds the string denoting the request_body field in the database.
@@ -114,6 +122,10 @@ var Columns = []string{
 	FieldExternalID,
 	FieldModelID,
 	FieldCredentialFingerprint,
+	FieldCredentialNameSnapshot,
+	FieldCredentialKeyHint,
+	FieldCredentialSource,
+	FieldCredentialQuotaStatusSnapshot,
 	FieldFormat,
 	FieldRequestBody,
 	FieldResponseBody,
@@ -239,6 +251,26 @@ func ByModelID(opts ...sql.OrderTermOption) OrderOption {
 // ByCredentialFingerprint orders the results by the credential_fingerprint field.
 func ByCredentialFingerprint(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCredentialFingerprint, opts...).ToFunc()
+}
+
+// ByCredentialNameSnapshot orders the results by the credential_name_snapshot field.
+func ByCredentialNameSnapshot(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCredentialNameSnapshot, opts...).ToFunc()
+}
+
+// ByCredentialKeyHint orders the results by the credential_key_hint field.
+func ByCredentialKeyHint(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCredentialKeyHint, opts...).ToFunc()
+}
+
+// ByCredentialSource orders the results by the credential_source field.
+func ByCredentialSource(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCredentialSource, opts...).ToFunc()
+}
+
+// ByCredentialQuotaStatusSnapshot orders the results by the credential_quota_status_snapshot field.
+func ByCredentialQuotaStatusSnapshot(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCredentialQuotaStatusSnapshot, opts...).ToFunc()
 }
 
 // ByFormat orders the results by the format field.

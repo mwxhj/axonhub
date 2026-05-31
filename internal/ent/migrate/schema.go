@@ -647,6 +647,10 @@ var (
 		{Name: "external_id", Type: field.TypeString, Nullable: true, Size: 512},
 		{Name: "model_id", Type: field.TypeString},
 		{Name: "credential_fingerprint", Type: field.TypeString, Nullable: true, Size: 128},
+		{Name: "credential_name_snapshot", Type: field.TypeString, Nullable: true},
+		{Name: "credential_key_hint", Type: field.TypeString, Nullable: true},
+		{Name: "credential_source", Type: field.TypeString, Nullable: true},
+		{Name: "credential_quota_status_snapshot", Type: field.TypeString, Nullable: true},
 		{Name: "format", Type: field.TypeString, Default: "openai/chat_completions"},
 		{Name: "request_body", Type: field.TypeJSON},
 		{Name: "response_body", Type: field.TypeJSON, Nullable: true},
@@ -672,25 +676,25 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "request_executions_channels_executions",
-				Columns:    []*schema.Column{RequestExecutionsColumns[19]},
+				Columns:    []*schema.Column{RequestExecutionsColumns[23]},
 				RefColumns: []*schema.Column{ChannelsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "request_executions_data_storages_executions",
-				Columns:    []*schema.Column{RequestExecutionsColumns[20]},
+				Columns:    []*schema.Column{RequestExecutionsColumns[24]},
 				RefColumns: []*schema.Column{DataStoragesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "request_executions_requests_executions",
-				Columns:    []*schema.Column{RequestExecutionsColumns[21]},
+				Columns:    []*schema.Column{RequestExecutionsColumns[25]},
 				RefColumns: []*schema.Column{RequestsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "request_executions_upstream_credentials_executions",
-				Columns:    []*schema.Column{RequestExecutionsColumns[22]},
+				Columns:    []*schema.Column{RequestExecutionsColumns[26]},
 				RefColumns: []*schema.Column{UpstreamCredentialsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -699,22 +703,22 @@ var (
 			{
 				Name:    "request_executions_by_request_id_status_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{RequestExecutionsColumns[21], RequestExecutionsColumns[13], RequestExecutionsColumns[1]},
+				Columns: []*schema.Column{RequestExecutionsColumns[25], RequestExecutionsColumns[17], RequestExecutionsColumns[1]},
 			},
 			{
 				Name:    "request_executions_by_request_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{RequestExecutionsColumns[21], RequestExecutionsColumns[1]},
+				Columns: []*schema.Column{RequestExecutionsColumns[25], RequestExecutionsColumns[1]},
 			},
 			{
 				Name:    "request_executions_by_channel_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{RequestExecutionsColumns[19], RequestExecutionsColumns[1]},
+				Columns: []*schema.Column{RequestExecutionsColumns[23], RequestExecutionsColumns[1]},
 			},
 			{
 				Name:    "request_executions_by_credential_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{RequestExecutionsColumns[22], RequestExecutionsColumns[1]},
+				Columns: []*schema.Column{RequestExecutionsColumns[26], RequestExecutionsColumns[1]},
 			},
 			{
 				Name:    "request_executions_by_credential_fingerprint_created_at",
@@ -862,13 +866,19 @@ var (
 		{Name: "updated_at", Type: field.TypeTime, Default: schema.Expr("CURRENT_TIMESTAMP")},
 		{Name: "deleted_at", Type: field.TypeInt, Default: 0},
 		{Name: "name", Type: field.TypeString, Nullable: true, Default: ""},
-		{Name: "provider_type", Type: field.TypeString},
+		{Name: "provider_type", Type: field.TypeString, Default: ""},
 		{Name: "base_url", Type: field.TypeString, Nullable: true, Default: ""},
-		{Name: "auth_kind", Type: field.TypeEnum, Enums: []string{"api_key", "oauth", "azure", "gcp", "other"}},
+		{Name: "auth_kind", Type: field.TypeEnum, Enums: []string{"api_key", "oauth", "azure", "gcp", "other"}, Default: "api_key"},
+		{Name: "secret_kind", Type: field.TypeEnum, Enums: []string{"api_key", "oauth", "azure", "gcp", "other"}, Default: "api_key"},
+		{Name: "issuer_scope", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "key_hint", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "quota_scope_id", Type: field.TypeInt, Nullable: true},
 		{Name: "secret_payload", Type: field.TypeJSON},
 		{Name: "fingerprint", Type: field.TypeString, Size: 128},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"enabled", "disabled", "archived"}, Default: "enabled"},
 		{Name: "weight", Type: field.TypeInt, Default: 100},
+		{Name: "quota_status", Type: field.TypeString, Nullable: true, Default: "unknown"},
+		{Name: "last_error", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "remark", Type: field.TypeString, Nullable: true, Default: ""},
 	}
 	// UpstreamCredentialsTable holds the schema information for the "upstream_credentials" table.
@@ -880,17 +890,27 @@ var (
 			{
 				Name:    "upstream_credentials_by_fingerprint",
 				Unique:  true,
-				Columns: []*schema.Column{UpstreamCredentialsColumns[9], UpstreamCredentialsColumns[3]},
+				Columns: []*schema.Column{UpstreamCredentialsColumns[13], UpstreamCredentialsColumns[3]},
 			},
 			{
 				Name:    "upstream_credentials_by_provider_type_status",
 				Unique:  false,
-				Columns: []*schema.Column{UpstreamCredentialsColumns[5], UpstreamCredentialsColumns[10]},
+				Columns: []*schema.Column{UpstreamCredentialsColumns[5], UpstreamCredentialsColumns[14]},
+			},
+			{
+				Name:    "upstream_credentials_by_issuer_scope_status",
+				Unique:  false,
+				Columns: []*schema.Column{UpstreamCredentialsColumns[9], UpstreamCredentialsColumns[14]},
 			},
 			{
 				Name:    "upstream_credentials_by_base_url",
 				Unique:  false,
 				Columns: []*schema.Column{UpstreamCredentialsColumns[6]},
+			},
+			{
+				Name:    "upstream_credentials_by_quota_scope_id",
+				Unique:  false,
+				Columns: []*schema.Column{UpstreamCredentialsColumns[11]},
 			},
 		},
 	}
@@ -902,6 +922,9 @@ var (
 		{Name: "api_key_id", Type: field.TypeInt, Nullable: true},
 		{Name: "model_id", Type: field.TypeString},
 		{Name: "credential_fingerprint", Type: field.TypeString, Nullable: true, Size: 128},
+		{Name: "credential_name_snapshot", Type: field.TypeString, Nullable: true},
+		{Name: "credential_key_hint", Type: field.TypeString, Nullable: true},
+		{Name: "credential_source", Type: field.TypeString, Nullable: true},
 		{Name: "prompt_tokens", Type: field.TypeInt64, Default: 0},
 		{Name: "completion_tokens", Type: field.TypeInt64, Default: 0},
 		{Name: "total_tokens", Type: field.TypeInt64, Default: 0},
@@ -932,25 +955,25 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "usage_logs_channels_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[23]},
+				Columns:    []*schema.Column{UsageLogsColumns[26]},
 				RefColumns: []*schema.Column{ChannelsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "usage_logs_projects_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[24]},
+				Columns:    []*schema.Column{UsageLogsColumns[27]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "usage_logs_requests_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[25]},
+				Columns:    []*schema.Column{UsageLogsColumns[28]},
 				RefColumns: []*schema.Column{RequestsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "usage_logs_upstream_credentials_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[26]},
+				Columns:    []*schema.Column{UsageLogsColumns[29]},
 				RefColumns: []*schema.Column{UpstreamCredentialsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -959,7 +982,7 @@ var (
 			{
 				Name:    "usage_logs_by_request_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[25]},
+				Columns: []*schema.Column{UsageLogsColumns[28]},
 			},
 			{
 				Name:    "usage_logs_by_created_at",
@@ -974,17 +997,17 @@ var (
 			{
 				Name:    "usage_logs_by_project_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[24], UsageLogsColumns[1]},
+				Columns: []*schema.Column{UsageLogsColumns[27], UsageLogsColumns[1]},
 			},
 			{
 				Name:    "usage_logs_by_channel_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[23], UsageLogsColumns[1]},
+				Columns: []*schema.Column{UsageLogsColumns[26], UsageLogsColumns[1]},
 			},
 			{
 				Name:    "usage_logs_by_credential_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[26], UsageLogsColumns[1]},
+				Columns: []*schema.Column{UsageLogsColumns[29], UsageLogsColumns[1]},
 			},
 			{
 				Name:    "usage_logs_by_credential_fingerprint_created_at",

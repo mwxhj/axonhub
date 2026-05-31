@@ -23,19 +23,19 @@ function CredentialsContent() {
     pageSizeStorageKey: 'credentials-table-page-size',
   });
   const [nameFilter, setNameFilter] = useState('');
-  const [providerFilter, setProviderFilter] = useState('');
+  const [issuerFilter, setIssuerFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<CredentialStatus | 'active'>('active');
 
   const debouncedNameFilter = useDebounce(nameFilter, 300);
-  const debouncedProviderFilter = useDebounce(providerFilter, 300);
+  const debouncedIssuerFilter = useDebounce(issuerFilter, 300);
 
   const whereClause = useMemo(() => {
     const where: Record<string, unknown> = {};
     if (debouncedNameFilter) {
       where.or = [{ nameContainsFold: debouncedNameFilter }, { fingerprintContainsFold: debouncedNameFilter }];
     }
-    if (debouncedProviderFilter) {
-      where.providerTypeContainsFold = debouncedProviderFilter;
+    if (debouncedIssuerFilter) {
+      where.issuerScopeContainsFold = debouncedIssuerFilter;
     }
     if (statusFilter === 'active') {
       where.statusIn = ['enabled', 'disabled'];
@@ -43,7 +43,7 @@ function CredentialsContent() {
       where.status = statusFilter;
     }
     return where;
-  }, [debouncedNameFilter, debouncedProviderFilter, statusFilter]);
+  }, [debouncedNameFilter, debouncedIssuerFilter, statusFilter]);
 
   const { data, isLoading } = useUpstreamCredentials({
     ...paginationArgs,
@@ -78,7 +78,7 @@ function CredentialsContent() {
         pageSize={pageSize}
         totalCount={data?.totalCount}
         nameFilter={nameFilter}
-        providerFilter={providerFilter}
+        issuerFilter={issuerFilter}
         statusFilter={statusFilter}
         onNextPage={handleNextPage}
         onPreviousPage={handlePreviousPage}
@@ -87,8 +87,8 @@ function CredentialsContent() {
           setNameFilter(filter);
           resetCursor();
         }}
-        onProviderFilterChange={(filter) => {
-          setProviderFilter(filter);
+        onIssuerFilterChange={(filter) => {
+          setIssuerFilter(filter);
           resetCursor();
         }}
         onStatusFilterChange={(filter) => {

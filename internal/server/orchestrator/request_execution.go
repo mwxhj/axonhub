@@ -88,6 +88,15 @@ func (m *persistRequestExecutionMiddleware) OnOutboundRawRequest(ctx context.Con
 	if state.CurrentCredentialFingerprint != "" {
 		ctx = contexts.WithChannelCredentialFingerprint(ctx, state.CurrentCredentialFingerprint)
 	}
+	if state.CurrentCredentialName != "" || state.CurrentCredentialKeyHint != "" || state.CurrentCredentialSource != "" || state.CurrentCredentialQuotaStatus != "" {
+		ctx = contexts.WithChannelCredentialMetadata(
+			ctx,
+			state.CurrentCredentialName,
+			state.CurrentCredentialKeyHint,
+			state.CurrentCredentialSource,
+			state.CurrentCredentialQuotaStatus,
+		)
+	}
 
 	requestExec, err := state.RequestService.CreateRequestExecution(
 		ctx,
@@ -105,6 +114,18 @@ func (m *persistRequestExecutionMiddleware) OnOutboundRawRequest(ctx context.Con
 	}
 	if state.CurrentCredentialFingerprint != "" {
 		requestExec.CredentialFingerprint = state.CurrentCredentialFingerprint
+	}
+	if state.CurrentCredentialName != "" {
+		requestExec.CredentialNameSnapshot = state.CurrentCredentialName
+	}
+	if state.CurrentCredentialKeyHint != "" {
+		requestExec.CredentialKeyHint = state.CurrentCredentialKeyHint
+	}
+	if state.CurrentCredentialSource != "" {
+		requestExec.CredentialSource = state.CurrentCredentialSource
+	}
+	if state.CurrentCredentialQuotaStatus != "" {
+		requestExec.CredentialQuotaStatusSnapshot = state.CurrentCredentialQuotaStatus
 	}
 
 	// Update request with channel ID after channel selection

@@ -678,6 +678,20 @@ func (svc *BackupService) restoreUpstreamCredentials(ctx context.Context, db *en
 		if credData == nil || credData.Fingerprint == "" {
 			continue
 		}
+		authKind := restoreCredentialAuthKind(credData)
+		secretKind := restoreCredentialSecretKind(credData)
+		issuerScope := credData.IssuerScope
+		if strings.TrimSpace(issuerScope) == "" {
+			issuerScope = biz.CredentialIssuerScope(credData.ProviderType, credData.BaseURL)
+		}
+		keyHint := credData.KeyHint
+		if strings.TrimSpace(keyHint) == "" {
+			keyHint = biz.CredentialKeyHintForSecret(secretKind.String(), credData.SecretPayload)
+		}
+		quotaStatus := strings.TrimSpace(credData.QuotaStatus)
+		if quotaStatus == "" {
+			quotaStatus = "unknown"
+		}
 
 		existing, err := db.UpstreamCredential.Query().
 			Where(upstreamcredential.Fingerprint(credData.Fingerprint)).
@@ -698,6 +712,11 @@ func (svc *BackupService) restoreUpstreamCredentials(ctx context.Context, db *en
 				update := db.UpstreamCredential.UpdateOneID(existing.ID).
 					SetName(credData.Name).
 					SetBaseURL(credData.BaseURL).
+					SetSecretKind(secretKind).
+					SetIssuerScope(issuerScope).
+					SetKeyHint(keyHint).
+					SetQuotaStatus(quotaStatus).
+					SetLastError(credData.LastError).
 					SetSecretPayload(credData.SecretPayload).
 					SetFingerprint(credData.Fingerprint).
 					SetStatus(credData.Status).
@@ -717,7 +736,12 @@ func (svc *BackupService) restoreUpstreamCredentials(ctx context.Context, db *en
 			SetName(credData.Name).
 			SetProviderType(credData.ProviderType).
 			SetBaseURL(credData.BaseURL).
-			SetAuthKind(credData.AuthKind).
+			SetAuthKind(authKind).
+			SetSecretKind(secretKind).
+			SetIssuerScope(issuerScope).
+			SetKeyHint(keyHint).
+			SetQuotaStatus(quotaStatus).
+			SetLastError(credData.LastError).
 			SetSecretPayload(credData.SecretPayload).
 			SetFingerprint(credData.Fingerprint).
 			SetStatus(credData.Status).
@@ -732,6 +756,38 @@ func (svc *BackupService) restoreUpstreamCredentials(ctx context.Context, db *en
 	}
 
 	return idMap, nil
+}
+
+func restoreCredentialAuthKind(credData *BackupUpstreamCredential) upstreamcredential.AuthKind {
+	if credData == nil {
+		return upstreamcredential.AuthKindOther
+	}
+	if upstreamcredential.AuthKindValidator(credData.AuthKind) == nil && credData.AuthKind != "" {
+		return credData.AuthKind
+	}
+
+	candidate := upstreamcredential.AuthKind(biz.CredentialSecretKindForSecret(credData.SecretPayload))
+	if upstreamcredential.AuthKindValidator(candidate) == nil {
+		return candidate
+	}
+
+	return upstreamcredential.AuthKindOther
+}
+
+func restoreCredentialSecretKind(credData *BackupUpstreamCredential) upstreamcredential.SecretKind {
+	if credData == nil {
+		return upstreamcredential.SecretKindOther
+	}
+	if upstreamcredential.SecretKindValidator(credData.SecretKind) == nil && credData.SecretKind != "" {
+		return credData.SecretKind
+	}
+
+	candidate := upstreamcredential.SecretKind(credData.AuthKind.String())
+	if upstreamcredential.SecretKindValidator(candidate) == nil {
+		return candidate
+	}
+
+	return upstreamcredential.SecretKind(biz.CredentialSecretKindForSecret(credData.SecretPayload))
 }
 
 func (svc *BackupService) restoreChannelCredentialRefs(

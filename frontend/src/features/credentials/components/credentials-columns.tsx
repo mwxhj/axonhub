@@ -27,21 +27,19 @@ export const createCredentialColumns = (t: TFunction): ColumnDef<UpstreamCredent
     },
   },
   {
-    accessorKey: 'providerType',
-    header: t('credentials.columns.provider'),
-    cell: ({ row }) => <Badge variant='outline'>{row.original.providerType}</Badge>,
+    accessorKey: 'keyHint',
+    header: t('credentials.columns.keyHint'),
+    cell: ({ row }) => <span className='text-muted-foreground font-mono text-xs'>{row.original.keyHint || '-'}</span>,
   },
   {
-    accessorKey: 'authKind',
-    header: t('credentials.columns.authKind'),
-    cell: ({ row }) => <span className='whitespace-nowrap'>{t(`credentials.authKinds.${row.original.authKind}`)}</span>,
+    accessorKey: 'secretKind',
+    header: t('credentials.columns.secretKind'),
+    cell: ({ row }) => <span className='whitespace-nowrap'>{t(`credentials.authKinds.${row.original.secretKind}`)}</span>,
   },
   {
-    accessorKey: 'baseURL',
-    header: t('credentials.columns.baseURL'),
-    cell: ({ row }) => (
-      <span className='text-muted-foreground block max-w-[260px] truncate font-mono text-xs'>{row.original.baseURL || '-'}</span>
-    ),
+    accessorKey: 'issuerScope',
+    header: t('credentials.columns.issuerScope'),
+    cell: ({ row }) => <Badge variant='outline'>{row.original.issuerScope || '-'}</Badge>,
   },
   {
     accessorKey: 'status',

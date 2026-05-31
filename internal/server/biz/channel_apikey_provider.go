@@ -9,6 +9,7 @@ import (
 
 	"github.com/looplj/axonhub/internal/contexts"
 	"github.com/looplj/axonhub/internal/log"
+	"github.com/looplj/axonhub/internal/objects"
 )
 
 // traceStickyLRUSize is the default LRU cache size for trace-to-key mappings.
@@ -187,10 +188,18 @@ func (p *TraceStickyKeyProvider) selectPreferredCredential(enabled []ChannelCred
 
 func (p *TraceStickyKeyProvider) storeSelectedCredential(ctx context.Context, selected ChannelCredentialView) {
 	contexts.WithChannelCredential(ctx, selected.CredentialID, selected.Secret.APIKey, selected.Fingerprint)
+	contexts.WithChannelCredentialMetadata(ctx, selected.Name, selected.KeyHint, selected.Source, selected.QuotaStatus)
 }
 
 func (p *TraceStickyKeyProvider) storeSelectedLegacyKey(ctx context.Context, selectedKey string) {
 	contexts.WithChannelCredential(ctx, 0, selectedKey, p.channel.CredentialFingerprintForAPIKey(selectedKey))
+	contexts.WithChannelCredentialMetadata(
+		ctx,
+		"",
+		CredentialKeyHintForSecret(channelCredentialAuthKindAPIKey, objects.UpstreamCredentialSecretFromAPIKey(selectedKey)),
+		ChannelCredentialSourceLegacy,
+		"",
+	)
 }
 
 // rendezvousSelect picks a key using Highest Random Weight (Rendezvous) hashing.

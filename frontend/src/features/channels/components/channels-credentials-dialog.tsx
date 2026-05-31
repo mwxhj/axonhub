@@ -64,7 +64,7 @@ function ChannelCredentialRow({ credential, refItem }: { credential: UpstreamCre
           <Badge variant={credential.status === 'enabled' ? 'default' : 'secondary'}>{t(`credentials.status.${credential.status}`)}</Badge>
         </div>
         <div className='text-muted-foreground mt-1 truncate text-xs'>
-          {t(`credentials.authKinds.${credential.authKind}`)} · {credential.baseURL || '-'}
+          {t(`credentials.authKinds.${credential.secretKind}`)} · {credential.keyHint || credential.issuerScope || '-'}
         </div>
       </div>
 
@@ -115,7 +115,6 @@ export function ChannelsCredentialsDialog({ open, onOpenChange, channel }: Chann
     {
       first: 200,
       where: {
-        providerType: channel.type,
         statusIn: ['enabled', 'disabled'],
       },
       orderBy: {

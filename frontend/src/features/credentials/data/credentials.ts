@@ -44,9 +44,12 @@ export type {
 const CREDENTIAL_FIELDS = `
   id
   name
-  providerType
-  baseURL
-  authKind
+  secretKind
+  issuerScope
+  keyHint
+  quotaScopeID
+  quotaStatus
+  lastError
   fingerprint
   status
   weight

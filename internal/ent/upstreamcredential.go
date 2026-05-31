@@ -33,6 +33,14 @@ type UpstreamCredential struct {
 	BaseURL string `json:"base_url,omitempty"`
 	// AuthKind holds the value of the "auth_kind" field.
 	AuthKind upstreamcredential.AuthKind `json:"auth_kind,omitempty"`
+	// Internal secret kind for the upstream account asset; not a channel/API-format setting
+	SecretKind upstreamcredential.SecretKind `json:"secret_kind,omitempty"`
+	// Coarse upstream issuer namespace used for credential identity; not the channel base URL
+	IssuerScope string `json:"issuer_scope,omitempty"`
+	// Safe display hint for the secret; never contains the full secret
+	KeyHint string `json:"key_hint,omitempty"`
+	// Optional shared quota/billing scope for credentials that belong to one upstream account pool
+	QuotaScopeID *int `json:"quota_scope_id,omitempty"`
 	// SecretPayload holds the value of the "secret_payload" field.
 	SecretPayload objects.UpstreamCredentialSecret `json:"-"`
 	// Safe upstream credential identity; never contains raw secret material
@@ -41,6 +49,10 @@ type UpstreamCredential struct {
 	Status upstreamcredential.Status `json:"status,omitempty"`
 	// Default credential selection weight inside eligible channel refs
 	Weight int `json:"weight,omitempty"`
+	// Latest credential-scoped quota or budget status summary
+	QuotaStatus string `json:"quota_status,omitempty"`
+	// Latest credential-scoped error summary safe for operator display
+	LastError string `json:"last_error,omitempty"`
 	// Remark holds the value of the "remark" field.
 	Remark string `json:"remark,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -114,9 +126,9 @@ func (*UpstreamCredential) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case upstreamcredential.FieldSecretPayload:
 			values[i] = new([]byte)
-		case upstreamcredential.FieldID, upstreamcredential.FieldDeletedAt, upstreamcredential.FieldWeight:
+		case upstreamcredential.FieldID, upstreamcredential.FieldDeletedAt, upstreamcredential.FieldQuotaScopeID, upstreamcredential.FieldWeight:
 			values[i] = new(sql.NullInt64)
-		case upstreamcredential.FieldName, upstreamcredential.FieldProviderType, upstreamcredential.FieldBaseURL, upstreamcredential.FieldAuthKind, upstreamcredential.FieldFingerprint, upstreamcredential.FieldStatus, upstreamcredential.FieldRemark:
+		case upstreamcredential.FieldName, upstreamcredential.FieldProviderType, upstreamcredential.FieldBaseURL, upstreamcredential.FieldAuthKind, upstreamcredential.FieldSecretKind, upstreamcredential.FieldIssuerScope, upstreamcredential.FieldKeyHint, upstreamcredential.FieldFingerprint, upstreamcredential.FieldStatus, upstreamcredential.FieldQuotaStatus, upstreamcredential.FieldLastError, upstreamcredential.FieldRemark:
 			values[i] = new(sql.NullString)
 		case upstreamcredential.FieldCreatedAt, upstreamcredential.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -183,6 +195,31 @@ func (_m *UpstreamCredential) assignValues(columns []string, values []any) error
 			} else if value.Valid {
 				_m.AuthKind = upstreamcredential.AuthKind(value.String)
 			}
+		case upstreamcredential.FieldSecretKind:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field secret_kind", values[i])
+			} else if value.Valid {
+				_m.SecretKind = upstreamcredential.SecretKind(value.String)
+			}
+		case upstreamcredential.FieldIssuerScope:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field issuer_scope", values[i])
+			} else if value.Valid {
+				_m.IssuerScope = value.String
+			}
+		case upstreamcredential.FieldKeyHint:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field key_hint", values[i])
+			} else if value.Valid {
+				_m.KeyHint = value.String
+			}
+		case upstreamcredential.FieldQuotaScopeID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field quota_scope_id", values[i])
+			} else if value.Valid {
+				_m.QuotaScopeID = new(int)
+				*_m.QuotaScopeID = int(value.Int64)
+			}
 		case upstreamcredential.FieldSecretPayload:
 			if value, ok := values[i].(*[]byte); !ok {
 				return fmt.Errorf("unexpected type %T for field secret_payload", values[i])
@@ -208,6 +245,18 @@ func (_m *UpstreamCredential) assignValues(columns []string, values []any) error
 				return fmt.Errorf("unexpected type %T for field weight", values[i])
 			} else if value.Valid {
 				_m.Weight = int(value.Int64)
+			}
+		case upstreamcredential.FieldQuotaStatus:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field quota_status", values[i])
+			} else if value.Valid {
+				_m.QuotaStatus = value.String
+			}
+		case upstreamcredential.FieldLastError:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field last_error", values[i])
+			} else if value.Valid {
+				_m.LastError = value.String
 			}
 		case upstreamcredential.FieldRemark:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -292,6 +341,20 @@ func (_m *UpstreamCredential) String() string {
 	builder.WriteString("auth_kind=")
 	builder.WriteString(fmt.Sprintf("%v", _m.AuthKind))
 	builder.WriteString(", ")
+	builder.WriteString("secret_kind=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SecretKind))
+	builder.WriteString(", ")
+	builder.WriteString("issuer_scope=")
+	builder.WriteString(_m.IssuerScope)
+	builder.WriteString(", ")
+	builder.WriteString("key_hint=")
+	builder.WriteString(_m.KeyHint)
+	builder.WriteString(", ")
+	if v := _m.QuotaScopeID; v != nil {
+		builder.WriteString("quota_scope_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
 	builder.WriteString("secret_payload=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("fingerprint=")
@@ -302,6 +365,12 @@ func (_m *UpstreamCredential) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("weight=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Weight))
+	builder.WriteString(", ")
+	builder.WriteString("quota_status=")
+	builder.WriteString(_m.QuotaStatus)
+	builder.WriteString(", ")
+	builder.WriteString("last_error=")
+	builder.WriteString(_m.LastError)
 	builder.WriteString(", ")
 	builder.WriteString("remark=")
 	builder.WriteString(_m.Remark)

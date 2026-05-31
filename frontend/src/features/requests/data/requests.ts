@@ -61,6 +61,16 @@ function buildRequestsQuery(permissions: { canViewApiKeys: boolean; canViewChann
                 node {
                   modelID
                   status
+                  credentialID
+                  credentialFingerprint
+                  credentialNameSnapshot
+                  credentialKeyHint
+                  credentialSource
+                  credential {
+                    id
+                    name
+                    keyHint
+                  }
                   channel {
                     id
                     name
@@ -231,6 +241,17 @@ function buildRequestExecutionsQuery(permissions: { canViewChannels: boolean }) 
                 createdAt
                 updatedAt
                 requestID${channelFields}
+                credentialID
+                credentialFingerprint
+                credentialNameSnapshot
+                credentialKeyHint
+                credentialSource
+                credentialQuotaStatusSnapshot
+                credential {
+                  id
+                  name
+                  keyHint
+                }
                 modelID
                 projectID
                 dataStorageID

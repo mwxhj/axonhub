@@ -21,6 +21,16 @@ request execution -> channel + credential + model
 
 Channels remain important, but they are policy views. Credentials represent real upstream account/cache/quota resources.
 
+Refined full-model boundary:
+
+```text
+Credential = upstream key/account asset, quota/budget state, operator metadata
+Channel = endpoint/API format/model/routing policy
+ExecutionTarget = selected channel + selected credential + actual model
+```
+
+Credential should not become a second place to configure channel behavior. In the full model, baseURL, API format, transformer settings, model support, priority, retry policy, and project/profile access restrictions all remain channel responsibilities.
+
 ## Current Implementation Clues
 
 Relevant current files:
@@ -51,7 +61,7 @@ Relevant current files:
 
 ### UpstreamCredential
 
-Represents a real upstream account or credential.
+Represents a real upstream key/account asset. It is intentionally smaller than a channel.
 
 Suggested fields:
 
@@ -59,14 +69,17 @@ Suggested fields:
 type UpstreamCredential struct {
     ID int
     Name string
-    Provider string
-    BaseURL string
-    AuthKind string
     SecretPayload encrypted JSON
     Fingerprint string
     Status string
     Weight int
     Remark string
+    SecretKind string
+    IssuerScope string
+    KeyHint string
+    QuotaScopeID *int
+    QuotaStatus string
+    LastError string
     CreatedAt time.Time
     UpdatedAt time.Time
 }
@@ -89,21 +102,36 @@ Recommended Ent schema fields:
 
 ```go
 field.String("name").Default("")
-field.Enum("provider_type").Values(...)
-field.String("base_url").Optional()
-field.Enum("auth_kind").Values("api_key", "oauth", "azure", "gcp", "other")
 field.JSON("secret_payload", objects.UpstreamCredentialSecret{}).Sensitive()
 field.String("fingerprint").Unique().MaxLen(128)
 field.Enum("status").Values("enabled", "disabled", "archived").Default("enabled")
 field.Int("weight").Default(100)
 field.String("remark").Optional()
+field.Enum("secret_kind").Values("api_key", "oauth", "azure", "gcp", "other")
+field.String("issuer_scope").Default("")
+field.String("key_hint").Default("")
+field.Int("quota_scope_id").Optional().Nillable()
+field.String("quota_status").Default("unknown")
+field.String("last_error").Default("")
 ```
 
 Indexes:
 
 * unique `fingerprint`.
-* non-unique `provider_type, status`.
-* non-unique `base_url`.
+* non-unique `status`.
+* non-unique `issuer_scope, status`.
+* non-unique `quota_scope_id`.
+
+Credential list/detail should not expose `secret_payload`.
+
+Fields that should not be on `UpstreamCredential` in the full model:
+
+* channel baseURL / endpoint URL.
+* API format such as OpenAI, Anthropic, Responses, Claude Code, or Codex.
+* supported model list or model mapping.
+* channel priority/order.
+* transformer or pass-through settings.
+* project/profile/API-key access restrictions.
 
 ### ChannelCredentialRef
 
@@ -182,9 +210,8 @@ Suggested API key fingerprint input:
 
 ```text
 v1
-provider
-normalized base URL
-auth kind = api_key
+issuer_scope
+secret_kind = api_key
 secret HMAC
 ```
 
@@ -192,9 +219,8 @@ Suggested OAuth fingerprint input:
 
 ```text
 v1
-provider
-normalized base URL
-auth kind = oauth
+issuer_scope
+secret_kind = oauth
 account identity if available
 project/account id if available
 fallback secret HMAC
@@ -204,7 +230,16 @@ Use an application secret/HMAC if available instead of plain hash so fingerprint
 
 Do not include channel ID in the fingerprint, otherwise duplicated credentials across channels will not deduplicate.
 
-Base URL inclusion is important because the same key string can have different meaning for official API, compatible proxy, Azure deployment, or custom gateways.
+Do not include full channel baseURL in the fingerprint by default. The same upstream key may be attached to multiple channels with different base URLs, model scopes, or endpoint routes in order to control routing. Splitting those into multiple credentials breaks quota, cache, and request observability.
+
+Use `issuer_scope` only as a coarse namespace to avoid false merges:
+
+* official OpenAI key: `openai`
+* official Anthropic key: `anthropic`
+* Azure/GCP/project-backed credential: account/resource/project identity where available
+* unknown OpenAI-compatible provider: inferred provider host or explicit issuer scope, not the whole endpoint URL
+
+If the issuer cannot be determined, prefer conservative dedupe within the same channel family but document the ambiguity in the UI. Operators can rename credentials or split/merge through management operations later.
 
 ## Locked Decisions
 
@@ -312,6 +347,7 @@ New cache:
 
 ```text
 credentialID/fingerprint -> QuotaCredentialStatus
+quotaScopeID -> shared QuotaCredentialStatus when multiple credentials share one account/billing pool
 channelID -> derived QuotaChannelStatus
 ```
 
@@ -343,6 +379,38 @@ Compatibility adapter:
 
 * For providers whose quota API still needs channel config, pass a resolved channel+credential view.
 * For providers where quota is inherently account-level, check credential directly and update all referencing channels through derived status.
+
+Provider quota result should persist on credential or quota scope, not on channel:
+
+```text
+CredentialQuotaState
+  credential_id
+  quota_scope_id nullable
+  scope: global | model | operation
+  status: available | warning | exhausted | cooldown | disabled | unknown
+  remaining_amount
+  limit_amount
+  unit: usd | token | request | credit | unknown
+  reset_at
+  exhausted_until
+  last_checked_at
+  last_error
+  source: provider_api | response_error | local_budget | manual | inferred
+```
+
+Local operator budgets should use the same credential-first shape. Example: a credential can be stopped after daily cost exceeds a configured budget even if the provider still has quota.
+
+Some providers expose account-level quota shared by multiple keys. The first full implementation may treat `credential_id` as the quota scope, but the schema should not block a later `QuotaScope` table:
+
+```text
+QuotaScope
+  id
+  name
+  issuer_scope
+  status
+```
+
+Multiple credentials can point to one `quota_scope_id` when evidence shows they share an upstream billing/account pool.
 
 ### Derived Channel Status
 
@@ -394,9 +462,11 @@ Add or derive fields for execution records:
 
 ```text
 credential_id nullable
+credential_name_snapshot nullable
 credential_fingerprint nullable
-credential_display_name nullable
-credential_auth_kind nullable
+credential_key_hint nullable
+credential_source nullable
+credential_quota_status_snapshot nullable
 ```
 
 Usage logs should be able to aggregate:
@@ -409,21 +479,24 @@ Usage logs should be able to aggregate:
 
 Do not store raw API key.
 
+Request list should expose the selected credential name and safe key hint as first-class columns alongside channel. This is required for diagnosing cache misses, cost spikes, and quota/rate-limit behavior.
+
 ## Frontend Design
 
 ### Credentials Page
 
-Purpose: manage real upstream accounts.
+Purpose: manage upstream key/account assets.
 
 Primary table columns:
 
 * name
-* provider
-* base URL
-* auth kind
-* fingerprint prefix
+* remark
+* key hint
 * status
+* weight
 * referenced channels count
+* quota status
+* quota remaining/reset when available
 * request count
 * cached tokens
 * cost
@@ -439,6 +512,8 @@ Actions:
 * test quota
 * view referencing channels
 
+Do not put baseURL, API format, model list, model mapping, priority, or transformer fields on this page except as read-only context through referenced channels.
+
 ### Channel Edit
 
 Replace or augment inline key arrays with credential references:
@@ -449,12 +524,23 @@ Replace or augment inline key arrays with credential references:
 * set per-channel credential weight override
 * show per-credential availability within this channel
 
+Channel edit remains responsible for:
+
+* provider/channel type
+* baseURL / endpoint
+* API format / transformer options
+* supported models and model mapping
+* priority, weight, retry, sticky policy
+* project/profile/API-key access restrictions
+
 ### Request Detail
 
 Show:
 
 * channel name
-* credential name/fingerprint
+* credential name
+* safe key hint
+* credential fingerprint prefix only if useful for debugging
 * actual model
 * cached tokens
 * sticky identity kind/reason where available
@@ -492,6 +578,13 @@ Create upstream credential entities and channel references:
 
 Add Credentials page and channel reference UI. After compatibility period, inline credential arrays become legacy import/export fields rather than the primary editing model.
 
+Channel cleanup target:
+
+* `credentials.apiKey`, `credentials.apiKeys`, inline GCP/Azure/OAuth secrets become import/legacy fallback only.
+* `disabled_api_keys` becomes compatibility-only or is replaced by credential/channel-ref scoped failure state.
+* channel-local API key round-robin is removed from normal execution.
+* provider quota and request observability stop treating channel as the key/account resource.
+
 ## Recommended Implementation Order
 
 When implementation begins, do not start with UI. Start with the execution contract:
@@ -514,7 +607,8 @@ The code implementation follows Phase 1 and intentionally avoids a full credenti
 Runtime identity:
 
 * `ChannelCredentialFingerprintForAPIKey(provider, baseURL, apiKey)` derives a deployment-global API-key fingerprint.
-* Fingerprint scope includes provider/channel type, normalized base URL, auth kind, and the API key secret.
+* Current code fingerprint scope still includes provider/channel type, normalized base URL, auth kind, and the API key secret. This is now considered an interim implementation detail, not the full-model target.
+* Full-model target should migrate fingerprint identity toward `issuer_scope + secret_kind + stable_secret_identity`, so channel baseURL does not split the same key into multiple credentials.
 * Fingerprint output is versioned (`cred:v1`) and does not expose raw secret text.
 * The current implementation uses SHA-256 truncation because credential identity is derived without injecting `SystemService` or config into channel runtime helpers. If the full credential table is added later, prefer HMAC with the system secret.
 
@@ -578,6 +672,17 @@ Update related schemas:
 
 Keep `credential_fingerprint` even after adding `credential_id` so historical rows remain queryable if a credential row is deleted or imported later.
 
+If current schemas already contain `provider_type`, `base_url`, or `auth_kind`, migrate them toward:
+
+```text
+secret_kind
+issuer_scope
+key_hint
+quota_scope_id
+```
+
+`provider_type/base_url/auth_kind` may remain as temporary compatibility fields during migration, but they should not drive the public credential concept or default fingerprint identity.
+
 ### Step 2: Migration And Legacy Adapter
 
 Migration algorithm:
@@ -585,12 +690,20 @@ Migration algorithm:
 ```text
 for each channel:
   collect legacy credential entries from credentials.apiKey and credentials.apiKeys
+  normalize and dedupe apiKey + apiKeys[] entries inside the channel
   skip OAuth JSON legacy apiKey when it belongs to OAuth-only provider
   for each entry:
-    compute fingerprint(provider_type, normalized_base_url, auth_kind, secret identity)
+    compute fingerprint(issuer_scope, secret_kind, stable secret identity)
     find or create UpstreamCredential by fingerprint
     create ChannelCredentialRef(channel_id, credential_id)
 ```
+
+Important migration correction:
+
+* `credentials.apiKey` and `credentials.apiKeys[]` are compatibility fields that may both contain real API keys.
+* If a channel has three real keys plus one stale legacy `apiKey`, migration can produce four credentials unless the collector dedupes by normalized key material.
+* Same raw key across multiple channels should become one credential unless `issuer_scope` proves they are different upstream resources.
+* Different channel baseURLs alone should not split credentials.
 
 Disabled legacy API keys:
 
@@ -631,6 +744,7 @@ Current API-key helpers become compatibility helpers:
 * `EnabledCredentialFingerprints()` reads credential views first.
 * `HasEnabledCredentialFingerprint()` reads credential views first.
 * API-key provider chooses from credential views, not raw strings.
+* Channel-local round-robin over raw `APIKeys` becomes legacy-only. Sticky-enabled execution must select one credential before transformer construction.
 
 ### Step 4: Routing And Execution Target
 
@@ -640,6 +754,8 @@ Update execution state:
 CurrentCredentialID int
 CurrentCredentialFingerprint string
 CurrentCredentialAPIKey string
+CurrentCredentialName string
+CurrentCredentialKeyHint string
 PreferredCredentialID int
 PreferredCredentialFingerprint string
 ```
@@ -722,7 +838,7 @@ Secret rules:
 
 * create/rotate accepts raw secret.
 * read/list never returns raw secret.
-* frontend can show safe metadata only: auth kind, provider, base URL, fingerprint prefix, status, referenced channel count.
+* frontend can show safe metadata only: name, remark, key hint, status, quota state, referenced channel count, and fingerprint prefix when debugging needs it.
 
 Update channel mutations:
 
@@ -735,7 +851,7 @@ Update channel mutations:
 Credentials page:
 
 * dense operations table, not a marketing view.
-* columns: name, provider, base URL, auth kind, status, fingerprint prefix, referenced channels, quota status, latest error, request count, cached tokens, cost, updated time.
+* columns: name, remark, key hint, status, weight, referenced channels, quota status, remaining/reset, latest error, request count, cached tokens, cost, updated time.
 * actions: create, edit, rotate secret, enable/disable, archive, test quota, view channels.
 
 Channel create/edit:
@@ -748,8 +864,8 @@ Channel create/edit:
 
 Request and usage views:
 
-* show credential name/fingerprint on request detail.
-* allow filter by credential fingerprint/id.
+* show credential name and safe key hint on request list/detail.
+* allow filter by credential id/fingerprint.
 * keep channel and credential columns separate.
 
 ### Step 9: Backup/Restore
@@ -770,8 +886,10 @@ Restore should:
 
 Backend:
 
-* migration dedupes same provider/baseURL/key into one credential.
-* migration does not merge same key across different base URLs/providers.
+* migration dedupes same issuer scope/secret kind/key into one credential.
+* migration dedupes legacy `apiKey` plus `apiKeys[]` duplicates inside the same channel.
+* migration does not split the same key only because channel baseURL differs.
+* migration does not merge same key across explicitly different issuer scopes.
 * channel runtime prefers credential refs over legacy inline credentials.
 * legacy-only channel still works.
 * sticky target stores credential ID and fingerprint.
@@ -780,17 +898,17 @@ Backend:
 * credential quota status derives channel quota status.
 * credential auth failure disables all refs.
 * channel 5xx does not disable credential globally.
-* request execution and usage log store credential ID/fingerprint.
+* request execution and usage log store credential ID/fingerprint and safe snapshot fields.
 * GraphQL list/detail never returns raw secret.
 * create/rotate accepts secret and then redacts it on read.
 
 Frontend:
 
 * credentials list renders without secrets.
-* create credential form submits provider/baseURL/auth secret.
+* create credential form submits secret plus display metadata, not channel routing fields.
 * rotate secret form does not display existing secret.
 * channel edit attaches/detaches credentials.
-* request detail shows credential identity.
+* request list/detail shows credential name and safe key hint.
 
 Migration/compat:
 
@@ -823,11 +941,11 @@ Frontend tests later:
 
 ### Fingerprint False Merge
 
-If fingerprint scope is too broad, two different upstream resources could merge. Include provider, normalized base URL, auth kind, and stable auth identity.
+If fingerprint scope is too broad, two different upstream resources could merge. Use `issuer_scope`, `secret_kind`, and stable auth identity. For unknown compatible providers, infer or require a coarse issuer scope when needed.
 
 ### Fingerprint False Split
 
-If fingerprint includes channel ID or mutable label fields, the same key across channels will not deduplicate. Avoid mutable fields.
+If fingerprint includes channel ID, full baseURL, model scope, endpoint path, or mutable label fields, the same key across channels will not deduplicate. Avoid mutable fields and channel routing fields.
 
 ### Secret Leakage
 

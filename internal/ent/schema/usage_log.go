@@ -60,6 +60,18 @@ func (UsageLog) Fields() []ent.Field {
 			Immutable().
 			MaxLen(128).
 			Comment("Safe upstream credential identity used for this request; never stores the raw secret"),
+		field.String("credential_name_snapshot").
+			Optional().
+			Immutable().
+			Comment("Credential display name captured when usage was logged"),
+		field.String("credential_key_hint").
+			Optional().
+			Immutable().
+			Comment("Safe credential key hint captured when usage was logged"),
+		field.String("credential_source").
+			Optional().
+			Immutable().
+			Comment("Credential source used for this request: ref, legacy, or unknown"),
 
 		// Core usage metrics from llm.Usage
 		field.Int64("prompt_tokens").Default(0).Comment("Number of tokens in the prompt"),

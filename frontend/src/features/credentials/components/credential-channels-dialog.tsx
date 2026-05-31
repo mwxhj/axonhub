@@ -17,7 +17,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { channelTypeSchema, type ChannelType } from '@/features/channels/data/schema';
 import { useCredentialsContext } from '../context/credentials-context';
 import {
   useAttachCredentialToChannel,
@@ -122,16 +121,10 @@ export function CredentialChannelsDialog() {
   );
 
   const attachedChannelIDs = useMemo(() => new Set(refs.map((ref) => ref.channelID)), [refs]);
-  const providerChannelType = useMemo<ChannelType | undefined>(() => {
-    const result = channelTypeSchema.safeParse(currentCredential?.providerType);
-    return result.success ? result.data : undefined;
-  }, [currentCredential?.providerType]);
-
   const { data: channels } = useAttachableChannels(
     {
       first: 200,
       where: {
-        ...(providerChannelType ? { type: providerChannelType } : {}),
         statusIn: ['enabled', 'disabled'],
       },
       orderBy: {

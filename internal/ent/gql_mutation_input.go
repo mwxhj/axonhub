@@ -1366,6 +1366,9 @@ type CreateUsageLogInput struct {
 	APIKeyID                           *int
 	ModelID                            string
 	CredentialFingerprint              *string
+	CredentialNameSnapshot             *string
+	CredentialKeyHint                  *string
+	CredentialSource                   *string
 	PromptTokens                       *int64
 	CompletionTokens                   *int64
 	TotalTokens                        *int64
@@ -1397,6 +1400,15 @@ func (i *CreateUsageLogInput) Mutate(m *UsageLogMutation) {
 	m.SetModelID(i.ModelID)
 	if v := i.CredentialFingerprint; v != nil {
 		m.SetCredentialFingerprint(*v)
+	}
+	if v := i.CredentialNameSnapshot; v != nil {
+		m.SetCredentialNameSnapshot(*v)
+	}
+	if v := i.CredentialKeyHint; v != nil {
+		m.SetCredentialKeyHint(*v)
+	}
+	if v := i.CredentialSource; v != nil {
+		m.SetCredentialSource(*v)
 	}
 	if v := i.PromptTokens; v != nil {
 		m.SetPromptTokens(*v)

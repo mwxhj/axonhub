@@ -375,6 +375,10 @@ func (p *PersistentOutboundTransformer) TransformRequest(ctx context.Context, ll
 	p.state.StickyResponseMessage = nil
 	p.state.CurrentCredentialID = 0
 	p.state.CurrentCredentialFingerprint = ""
+	p.state.CurrentCredentialName = ""
+	p.state.CurrentCredentialKeyHint = ""
+	p.state.CurrentCredentialSource = ""
+	p.state.CurrentCredentialQuotaStatus = ""
 	p.state.CurrentCredentialAPIKey = ""
 
 	p.wrapped = selectOutboundForCandidate(candidate)
@@ -434,6 +438,18 @@ func (p *PersistentOutboundTransformer) TransformRequest(ctx context.Context, ll
 	if fingerprint, ok := contexts.GetChannelCredentialFingerprint(ctx); ok {
 		p.state.CurrentCredentialFingerprint = fingerprint
 	}
+	if name, ok := contexts.GetChannelCredentialName(ctx); ok {
+		p.state.CurrentCredentialName = name
+	}
+	if keyHint, ok := contexts.GetChannelCredentialKeyHint(ctx); ok {
+		p.state.CurrentCredentialKeyHint = keyHint
+	}
+	if source, ok := contexts.GetChannelCredentialSource(ctx); ok {
+		p.state.CurrentCredentialSource = source
+	}
+	if quotaStatus, ok := contexts.GetChannelCredentialQuotaStatus(ctx); ok {
+		p.state.CurrentCredentialQuotaStatus = quotaStatus
+	}
 	if p.state.CurrentCredentialFingerprint == "" || p.state.CurrentCredentialID == 0 {
 		var only *biz.ChannelCredentialView
 		for _, view := range candidate.Channel.CredentialViews() {
@@ -453,6 +469,18 @@ func (p *PersistentOutboundTransformer) TransformRequest(ctx context.Context, ll
 			}
 			if p.state.CurrentCredentialFingerprint == "" {
 				p.state.CurrentCredentialFingerprint = only.Fingerprint
+			}
+			if p.state.CurrentCredentialName == "" {
+				p.state.CurrentCredentialName = only.Name
+			}
+			if p.state.CurrentCredentialKeyHint == "" {
+				p.state.CurrentCredentialKeyHint = only.KeyHint
+			}
+			if p.state.CurrentCredentialSource == "" {
+				p.state.CurrentCredentialSource = only.Source
+			}
+			if p.state.CurrentCredentialQuotaStatus == "" {
+				p.state.CurrentCredentialQuotaStatus = only.QuotaStatus
 			}
 		}
 	}

@@ -88,6 +88,9 @@ type CreateUsageLogParams struct {
 	ActualModelID         string // The channel actual model ID, not the request model ID.
 	CredentialID          int
 	CredentialFingerprint string
+	CredentialName        string
+	CredentialKeyHint     string
+	CredentialSource      string
 	Usage                 *llm.Usage
 	Source                usagelog.Source
 	Format                string
@@ -128,6 +131,21 @@ func (s *UsageLogService) CreateUsageLog(ctx context.Context, params CreateUsage
 		mut = mut.SetCredentialID(params.CredentialID)
 	} else if credentialID, ok := contexts.GetChannelCredentialID(ctx); ok && credentialID > 0 {
 		mut = mut.SetCredentialID(credentialID)
+	}
+	if params.CredentialName != "" {
+		mut = mut.SetCredentialNameSnapshot(params.CredentialName)
+	} else if name, ok := contexts.GetChannelCredentialName(ctx); ok && name != "" {
+		mut = mut.SetCredentialNameSnapshot(name)
+	}
+	if params.CredentialKeyHint != "" {
+		mut = mut.SetCredentialKeyHint(params.CredentialKeyHint)
+	} else if keyHint, ok := contexts.GetChannelCredentialKeyHint(ctx); ok && keyHint != "" {
+		mut = mut.SetCredentialKeyHint(keyHint)
+	}
+	if params.CredentialSource != "" {
+		mut = mut.SetCredentialSource(params.CredentialSource)
+	} else if source, ok := contexts.GetChannelCredentialSource(ctx); ok && source != "" {
+		mut = mut.SetCredentialSource(source)
 	}
 
 	// Set prompt tokens details if available
@@ -205,6 +223,9 @@ func (s *UsageLogService) CreateUsageLogFromRequest(
 		ActualModelID:         requestExec.ModelID,
 		CredentialID:          requestExec.CredentialID,
 		CredentialFingerprint: requestExec.CredentialFingerprint,
+		CredentialName:        requestExec.CredentialNameSnapshot,
+		CredentialKeyHint:     requestExec.CredentialKeyHint,
+		CredentialSource:      requestExec.CredentialSource,
 		Usage:                 usage,
 		Source:                usagelog.Source(request.Source),
 		Format:                request.Format,

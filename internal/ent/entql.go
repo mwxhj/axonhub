@@ -432,28 +432,32 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 		Type: "RequestExecution",
 		Fields: map[string]*sqlgraph.FieldSpec{
-			requestexecution.FieldCreatedAt:                  {Type: field.TypeTime, Column: requestexecution.FieldCreatedAt},
-			requestexecution.FieldUpdatedAt:                  {Type: field.TypeTime, Column: requestexecution.FieldUpdatedAt},
-			requestexecution.FieldProjectID:                  {Type: field.TypeInt, Column: requestexecution.FieldProjectID},
-			requestexecution.FieldRequestID:                  {Type: field.TypeInt, Column: requestexecution.FieldRequestID},
-			requestexecution.FieldChannelID:                  {Type: field.TypeInt, Column: requestexecution.FieldChannelID},
-			requestexecution.FieldCredentialID:               {Type: field.TypeInt, Column: requestexecution.FieldCredentialID},
-			requestexecution.FieldDataStorageID:              {Type: field.TypeInt, Column: requestexecution.FieldDataStorageID},
-			requestexecution.FieldExternalID:                 {Type: field.TypeString, Column: requestexecution.FieldExternalID},
-			requestexecution.FieldModelID:                    {Type: field.TypeString, Column: requestexecution.FieldModelID},
-			requestexecution.FieldCredentialFingerprint:      {Type: field.TypeString, Column: requestexecution.FieldCredentialFingerprint},
-			requestexecution.FieldFormat:                     {Type: field.TypeString, Column: requestexecution.FieldFormat},
-			requestexecution.FieldRequestBody:                {Type: field.TypeJSON, Column: requestexecution.FieldRequestBody},
-			requestexecution.FieldResponseBody:               {Type: field.TypeJSON, Column: requestexecution.FieldResponseBody},
-			requestexecution.FieldResponseChunks:             {Type: field.TypeJSON, Column: requestexecution.FieldResponseChunks},
-			requestexecution.FieldErrorMessage:               {Type: field.TypeString, Column: requestexecution.FieldErrorMessage},
-			requestexecution.FieldResponseStatusCode:         {Type: field.TypeInt, Column: requestexecution.FieldResponseStatusCode},
-			requestexecution.FieldStatus:                     {Type: field.TypeEnum, Column: requestexecution.FieldStatus},
-			requestexecution.FieldStream:                     {Type: field.TypeBool, Column: requestexecution.FieldStream},
-			requestexecution.FieldMetricsLatencyMs:           {Type: field.TypeInt64, Column: requestexecution.FieldMetricsLatencyMs},
-			requestexecution.FieldMetricsFirstTokenLatencyMs: {Type: field.TypeInt64, Column: requestexecution.FieldMetricsFirstTokenLatencyMs},
-			requestexecution.FieldMetricsReasoningDurationMs: {Type: field.TypeInt64, Column: requestexecution.FieldMetricsReasoningDurationMs},
-			requestexecution.FieldRequestHeaders:             {Type: field.TypeJSON, Column: requestexecution.FieldRequestHeaders},
+			requestexecution.FieldCreatedAt:                     {Type: field.TypeTime, Column: requestexecution.FieldCreatedAt},
+			requestexecution.FieldUpdatedAt:                     {Type: field.TypeTime, Column: requestexecution.FieldUpdatedAt},
+			requestexecution.FieldProjectID:                     {Type: field.TypeInt, Column: requestexecution.FieldProjectID},
+			requestexecution.FieldRequestID:                     {Type: field.TypeInt, Column: requestexecution.FieldRequestID},
+			requestexecution.FieldChannelID:                     {Type: field.TypeInt, Column: requestexecution.FieldChannelID},
+			requestexecution.FieldCredentialID:                  {Type: field.TypeInt, Column: requestexecution.FieldCredentialID},
+			requestexecution.FieldDataStorageID:                 {Type: field.TypeInt, Column: requestexecution.FieldDataStorageID},
+			requestexecution.FieldExternalID:                    {Type: field.TypeString, Column: requestexecution.FieldExternalID},
+			requestexecution.FieldModelID:                       {Type: field.TypeString, Column: requestexecution.FieldModelID},
+			requestexecution.FieldCredentialFingerprint:         {Type: field.TypeString, Column: requestexecution.FieldCredentialFingerprint},
+			requestexecution.FieldCredentialNameSnapshot:        {Type: field.TypeString, Column: requestexecution.FieldCredentialNameSnapshot},
+			requestexecution.FieldCredentialKeyHint:             {Type: field.TypeString, Column: requestexecution.FieldCredentialKeyHint},
+			requestexecution.FieldCredentialSource:              {Type: field.TypeString, Column: requestexecution.FieldCredentialSource},
+			requestexecution.FieldCredentialQuotaStatusSnapshot: {Type: field.TypeString, Column: requestexecution.FieldCredentialQuotaStatusSnapshot},
+			requestexecution.FieldFormat:                        {Type: field.TypeString, Column: requestexecution.FieldFormat},
+			requestexecution.FieldRequestBody:                   {Type: field.TypeJSON, Column: requestexecution.FieldRequestBody},
+			requestexecution.FieldResponseBody:                  {Type: field.TypeJSON, Column: requestexecution.FieldResponseBody},
+			requestexecution.FieldResponseChunks:                {Type: field.TypeJSON, Column: requestexecution.FieldResponseChunks},
+			requestexecution.FieldErrorMessage:                  {Type: field.TypeString, Column: requestexecution.FieldErrorMessage},
+			requestexecution.FieldResponseStatusCode:            {Type: field.TypeInt, Column: requestexecution.FieldResponseStatusCode},
+			requestexecution.FieldStatus:                        {Type: field.TypeEnum, Column: requestexecution.FieldStatus},
+			requestexecution.FieldStream:                        {Type: field.TypeBool, Column: requestexecution.FieldStream},
+			requestexecution.FieldMetricsLatencyMs:              {Type: field.TypeInt64, Column: requestexecution.FieldMetricsLatencyMs},
+			requestexecution.FieldMetricsFirstTokenLatencyMs:    {Type: field.TypeInt64, Column: requestexecution.FieldMetricsFirstTokenLatencyMs},
+			requestexecution.FieldMetricsReasoningDurationMs:    {Type: field.TypeInt64, Column: requestexecution.FieldMetricsReasoningDurationMs},
+			requestexecution.FieldRequestHeaders:                {Type: field.TypeJSON, Column: requestexecution.FieldRequestHeaders},
 		},
 	}
 	graph.Nodes[17] = &sqlgraph.Node{
@@ -547,10 +551,16 @@ var schemaGraph = func() *sqlgraph.Schema {
 			upstreamcredential.FieldProviderType:  {Type: field.TypeString, Column: upstreamcredential.FieldProviderType},
 			upstreamcredential.FieldBaseURL:       {Type: field.TypeString, Column: upstreamcredential.FieldBaseURL},
 			upstreamcredential.FieldAuthKind:      {Type: field.TypeEnum, Column: upstreamcredential.FieldAuthKind},
+			upstreamcredential.FieldSecretKind:    {Type: field.TypeEnum, Column: upstreamcredential.FieldSecretKind},
+			upstreamcredential.FieldIssuerScope:   {Type: field.TypeString, Column: upstreamcredential.FieldIssuerScope},
+			upstreamcredential.FieldKeyHint:       {Type: field.TypeString, Column: upstreamcredential.FieldKeyHint},
+			upstreamcredential.FieldQuotaScopeID:  {Type: field.TypeInt, Column: upstreamcredential.FieldQuotaScopeID},
 			upstreamcredential.FieldSecretPayload: {Type: field.TypeJSON, Column: upstreamcredential.FieldSecretPayload},
 			upstreamcredential.FieldFingerprint:   {Type: field.TypeString, Column: upstreamcredential.FieldFingerprint},
 			upstreamcredential.FieldStatus:        {Type: field.TypeEnum, Column: upstreamcredential.FieldStatus},
 			upstreamcredential.FieldWeight:        {Type: field.TypeInt, Column: upstreamcredential.FieldWeight},
+			upstreamcredential.FieldQuotaStatus:   {Type: field.TypeString, Column: upstreamcredential.FieldQuotaStatus},
+			upstreamcredential.FieldLastError:     {Type: field.TypeString, Column: upstreamcredential.FieldLastError},
 			upstreamcredential.FieldRemark:        {Type: field.TypeString, Column: upstreamcredential.FieldRemark},
 		},
 	}
@@ -574,6 +584,9 @@ var schemaGraph = func() *sqlgraph.Schema {
 			usagelog.FieldCredentialID:                       {Type: field.TypeInt, Column: usagelog.FieldCredentialID},
 			usagelog.FieldModelID:                            {Type: field.TypeString, Column: usagelog.FieldModelID},
 			usagelog.FieldCredentialFingerprint:              {Type: field.TypeString, Column: usagelog.FieldCredentialFingerprint},
+			usagelog.FieldCredentialNameSnapshot:             {Type: field.TypeString, Column: usagelog.FieldCredentialNameSnapshot},
+			usagelog.FieldCredentialKeyHint:                  {Type: field.TypeString, Column: usagelog.FieldCredentialKeyHint},
+			usagelog.FieldCredentialSource:                   {Type: field.TypeString, Column: usagelog.FieldCredentialSource},
 			usagelog.FieldPromptTokens:                       {Type: field.TypeInt64, Column: usagelog.FieldPromptTokens},
 			usagelog.FieldCompletionTokens:                   {Type: field.TypeInt64, Column: usagelog.FieldCompletionTokens},
 			usagelog.FieldTotalTokens:                        {Type: field.TypeInt64, Column: usagelog.FieldTotalTokens},
@@ -3696,6 +3709,26 @@ func (f *RequestExecutionFilter) WhereCredentialFingerprint(p entql.StringP) {
 	f.Where(p.Field(requestexecution.FieldCredentialFingerprint))
 }
 
+// WhereCredentialNameSnapshot applies the entql string predicate on the credential_name_snapshot field.
+func (f *RequestExecutionFilter) WhereCredentialNameSnapshot(p entql.StringP) {
+	f.Where(p.Field(requestexecution.FieldCredentialNameSnapshot))
+}
+
+// WhereCredentialKeyHint applies the entql string predicate on the credential_key_hint field.
+func (f *RequestExecutionFilter) WhereCredentialKeyHint(p entql.StringP) {
+	f.Where(p.Field(requestexecution.FieldCredentialKeyHint))
+}
+
+// WhereCredentialSource applies the entql string predicate on the credential_source field.
+func (f *RequestExecutionFilter) WhereCredentialSource(p entql.StringP) {
+	f.Where(p.Field(requestexecution.FieldCredentialSource))
+}
+
+// WhereCredentialQuotaStatusSnapshot applies the entql string predicate on the credential_quota_status_snapshot field.
+func (f *RequestExecutionFilter) WhereCredentialQuotaStatusSnapshot(p entql.StringP) {
+	f.Where(p.Field(requestexecution.FieldCredentialQuotaStatusSnapshot))
+}
+
 // WhereFormat applies the entql string predicate on the format field.
 func (f *RequestExecutionFilter) WhereFormat(p entql.StringP) {
 	f.Where(p.Field(requestexecution.FieldFormat))
@@ -4264,6 +4297,26 @@ func (f *UpstreamCredentialFilter) WhereAuthKind(p entql.StringP) {
 	f.Where(p.Field(upstreamcredential.FieldAuthKind))
 }
 
+// WhereSecretKind applies the entql string predicate on the secret_kind field.
+func (f *UpstreamCredentialFilter) WhereSecretKind(p entql.StringP) {
+	f.Where(p.Field(upstreamcredential.FieldSecretKind))
+}
+
+// WhereIssuerScope applies the entql string predicate on the issuer_scope field.
+func (f *UpstreamCredentialFilter) WhereIssuerScope(p entql.StringP) {
+	f.Where(p.Field(upstreamcredential.FieldIssuerScope))
+}
+
+// WhereKeyHint applies the entql string predicate on the key_hint field.
+func (f *UpstreamCredentialFilter) WhereKeyHint(p entql.StringP) {
+	f.Where(p.Field(upstreamcredential.FieldKeyHint))
+}
+
+// WhereQuotaScopeID applies the entql int predicate on the quota_scope_id field.
+func (f *UpstreamCredentialFilter) WhereQuotaScopeID(p entql.IntP) {
+	f.Where(p.Field(upstreamcredential.FieldQuotaScopeID))
+}
+
 // WhereSecretPayload applies the entql json.RawMessage predicate on the secret_payload field.
 func (f *UpstreamCredentialFilter) WhereSecretPayload(p entql.BytesP) {
 	f.Where(p.Field(upstreamcredential.FieldSecretPayload))
@@ -4282,6 +4335,16 @@ func (f *UpstreamCredentialFilter) WhereStatus(p entql.StringP) {
 // WhereWeight applies the entql int predicate on the weight field.
 func (f *UpstreamCredentialFilter) WhereWeight(p entql.IntP) {
 	f.Where(p.Field(upstreamcredential.FieldWeight))
+}
+
+// WhereQuotaStatus applies the entql string predicate on the quota_status field.
+func (f *UpstreamCredentialFilter) WhereQuotaStatus(p entql.StringP) {
+	f.Where(p.Field(upstreamcredential.FieldQuotaStatus))
+}
+
+// WhereLastError applies the entql string predicate on the last_error field.
+func (f *UpstreamCredentialFilter) WhereLastError(p entql.StringP) {
+	f.Where(p.Field(upstreamcredential.FieldLastError))
 }
 
 // WhereRemark applies the entql string predicate on the remark field.
@@ -4428,6 +4491,21 @@ func (f *UsageLogFilter) WhereModelID(p entql.StringP) {
 // WhereCredentialFingerprint applies the entql string predicate on the credential_fingerprint field.
 func (f *UsageLogFilter) WhereCredentialFingerprint(p entql.StringP) {
 	f.Where(p.Field(usagelog.FieldCredentialFingerprint))
+}
+
+// WhereCredentialNameSnapshot applies the entql string predicate on the credential_name_snapshot field.
+func (f *UsageLogFilter) WhereCredentialNameSnapshot(p entql.StringP) {
+	f.Where(p.Field(usagelog.FieldCredentialNameSnapshot))
+}
+
+// WhereCredentialKeyHint applies the entql string predicate on the credential_key_hint field.
+func (f *UsageLogFilter) WhereCredentialKeyHint(p entql.StringP) {
+	f.Where(p.Field(usagelog.FieldCredentialKeyHint))
+}
+
+// WhereCredentialSource applies the entql string predicate on the credential_source field.
+func (f *UsageLogFilter) WhereCredentialSource(p entql.StringP) {
+	f.Where(p.Field(usagelog.FieldCredentialSource))
 }
 
 // WherePromptTokens applies the entql int64 predicate on the prompt_tokens field.

@@ -61,6 +61,22 @@ func (RequestExecution) Fields() []ent.Field {
 			Immutable().
 			MaxLen(128).
 			Comment("Safe upstream credential identity used for this execution; never stores the raw secret"),
+		field.String("credential_name_snapshot").
+			Optional().
+			Immutable().
+			Comment("Credential display name captured at execution time"),
+		field.String("credential_key_hint").
+			Optional().
+			Immutable().
+			Comment("Safe credential key hint captured at execution time"),
+		field.String("credential_source").
+			Optional().
+			Immutable().
+			Comment("Credential source used for this execution: ref, legacy, or unknown"),
+		field.String("credential_quota_status_snapshot").
+			Optional().
+			Immutable().
+			Comment("Credential quota/budget status captured at execution time when known"),
 		//  The format of the request, e.g: openai/chat_completions, claude/messages, openai/response.
 		field.String("format").Immutable().Default("openai/chat_completions"),
 		// The original request to the provider.

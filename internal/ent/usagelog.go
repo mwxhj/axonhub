@@ -41,6 +41,12 @@ type UsageLog struct {
 	ModelID string `json:"model_id,omitempty"`
 	// Safe upstream credential identity used for this request; never stores the raw secret
 	CredentialFingerprint string `json:"credential_fingerprint,omitempty"`
+	// Credential display name captured when usage was logged
+	CredentialNameSnapshot string `json:"credential_name_snapshot,omitempty"`
+	// Safe credential key hint captured when usage was logged
+	CredentialKeyHint string `json:"credential_key_hint,omitempty"`
+	// Credential source used for this request: ref, legacy, or unknown
+	CredentialSource string `json:"credential_source,omitempty"`
 	// Number of tokens in the prompt
 	PromptTokens int64 `json:"prompt_tokens,omitempty"`
 	// Number of tokens in the completion
@@ -153,7 +159,7 @@ func (*UsageLog) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case usagelog.FieldID, usagelog.FieldRequestID, usagelog.FieldAPIKeyID, usagelog.FieldProjectID, usagelog.FieldChannelID, usagelog.FieldCredentialID, usagelog.FieldPromptTokens, usagelog.FieldCompletionTokens, usagelog.FieldTotalTokens, usagelog.FieldPromptAudioTokens, usagelog.FieldPromptCachedTokens, usagelog.FieldPromptWriteCachedTokens, usagelog.FieldPromptWriteCachedTokens5m, usagelog.FieldPromptWriteCachedTokens1h, usagelog.FieldCompletionAudioTokens, usagelog.FieldCompletionReasoningTokens, usagelog.FieldCompletionAcceptedPredictionTokens, usagelog.FieldCompletionRejectedPredictionTokens:
 			values[i] = new(sql.NullInt64)
-		case usagelog.FieldModelID, usagelog.FieldCredentialFingerprint, usagelog.FieldSource, usagelog.FieldFormat, usagelog.FieldCostPriceReferenceID:
+		case usagelog.FieldModelID, usagelog.FieldCredentialFingerprint, usagelog.FieldCredentialNameSnapshot, usagelog.FieldCredentialKeyHint, usagelog.FieldCredentialSource, usagelog.FieldSource, usagelog.FieldFormat, usagelog.FieldCostPriceReferenceID:
 			values[i] = new(sql.NullString)
 		case usagelog.FieldCreatedAt, usagelog.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -231,6 +237,24 @@ func (_m *UsageLog) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field credential_fingerprint", values[i])
 			} else if value.Valid {
 				_m.CredentialFingerprint = value.String
+			}
+		case usagelog.FieldCredentialNameSnapshot:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field credential_name_snapshot", values[i])
+			} else if value.Valid {
+				_m.CredentialNameSnapshot = value.String
+			}
+		case usagelog.FieldCredentialKeyHint:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field credential_key_hint", values[i])
+			} else if value.Valid {
+				_m.CredentialKeyHint = value.String
+			}
+		case usagelog.FieldCredentialSource:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field credential_source", values[i])
+			} else if value.Valid {
+				_m.CredentialSource = value.String
 			}
 		case usagelog.FieldPromptTokens:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -419,6 +443,15 @@ func (_m *UsageLog) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("credential_fingerprint=")
 	builder.WriteString(_m.CredentialFingerprint)
+	builder.WriteString(", ")
+	builder.WriteString("credential_name_snapshot=")
+	builder.WriteString(_m.CredentialNameSnapshot)
+	builder.WriteString(", ")
+	builder.WriteString("credential_key_hint=")
+	builder.WriteString(_m.CredentialKeyHint)
+	builder.WriteString(", ")
+	builder.WriteString("credential_source=")
+	builder.WriteString(_m.CredentialSource)
 	builder.WriteString(", ")
 	builder.WriteString("prompt_tokens=")
 	builder.WriteString(fmt.Sprintf("%v", _m.PromptTokens))

@@ -67,6 +67,14 @@ type PersistenceState struct {
 	CurrentCredentialID int
 	// CurrentCredentialFingerprint stores the safe upstream credential identity selected for the current attempt.
 	CurrentCredentialFingerprint string
+	// CurrentCredentialName stores a safe display name snapshot for the selected credential.
+	CurrentCredentialName string
+	// CurrentCredentialKeyHint stores a non-secret key/account hint for the selected credential.
+	CurrentCredentialKeyHint string
+	// CurrentCredentialSource stores whether the credential came from refs or legacy channel config.
+	CurrentCredentialSource string
+	// CurrentCredentialQuotaStatus stores the latest credential quota status known at selection time.
+	CurrentCredentialQuotaStatus string
 	// PreferredCredentialID stores the sticky credential row selected by routing when known.
 	PreferredCredentialID int
 	// PreferredCredentialFingerprint stores the sticky credential identity selected by routing.

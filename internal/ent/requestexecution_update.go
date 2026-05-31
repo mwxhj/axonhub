@@ -342,6 +342,18 @@ func (_u *RequestExecutionUpdate) sqlSave(ctx context.Context) (_node int, err e
 	if _u.mutation.CredentialFingerprintCleared() {
 		_spec.ClearField(requestexecution.FieldCredentialFingerprint, field.TypeString)
 	}
+	if _u.mutation.CredentialNameSnapshotCleared() {
+		_spec.ClearField(requestexecution.FieldCredentialNameSnapshot, field.TypeString)
+	}
+	if _u.mutation.CredentialKeyHintCleared() {
+		_spec.ClearField(requestexecution.FieldCredentialKeyHint, field.TypeString)
+	}
+	if _u.mutation.CredentialSourceCleared() {
+		_spec.ClearField(requestexecution.FieldCredentialSource, field.TypeString)
+	}
+	if _u.mutation.CredentialQuotaStatusSnapshotCleared() {
+		_spec.ClearField(requestexecution.FieldCredentialQuotaStatusSnapshot, field.TypeString)
+	}
 	if value, ok := _u.mutation.ResponseBody(); ok {
 		_spec.SetField(requestexecution.FieldResponseBody, field.TypeJSON, value)
 	}
@@ -782,6 +794,18 @@ func (_u *RequestExecutionUpdateOne) sqlSave(ctx context.Context) (_node *Reques
 	}
 	if _u.mutation.CredentialFingerprintCleared() {
 		_spec.ClearField(requestexecution.FieldCredentialFingerprint, field.TypeString)
+	}
+	if _u.mutation.CredentialNameSnapshotCleared() {
+		_spec.ClearField(requestexecution.FieldCredentialNameSnapshot, field.TypeString)
+	}
+	if _u.mutation.CredentialKeyHintCleared() {
+		_spec.ClearField(requestexecution.FieldCredentialKeyHint, field.TypeString)
+	}
+	if _u.mutation.CredentialSourceCleared() {
+		_spec.ClearField(requestexecution.FieldCredentialSource, field.TypeString)
+	}
+	if _u.mutation.CredentialQuotaStatusSnapshotCleared() {
+		_spec.ClearField(requestexecution.FieldCredentialQuotaStatusSnapshot, field.TypeString)
 	}
 	if value, ok := _u.mutation.ResponseBody(); ok {
 		_spec.SetField(requestexecution.FieldResponseBody, field.TypeJSON, value)

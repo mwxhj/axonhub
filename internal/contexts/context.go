@@ -139,6 +139,17 @@ func WithChannelCredential(ctx context.Context, credentialID int, apiKey string,
 	return withContainer(ctx, container)
 }
 
+// WithChannelCredentialMetadata stores safe selected credential display metadata.
+func WithChannelCredentialMetadata(ctx context.Context, name string, keyHint string, source string, quotaStatus string) context.Context {
+	container := getContainer(ctx)
+	container.ChannelCredentialName = &name
+	container.ChannelCredentialKeyHint = &keyHint
+	container.ChannelCredentialSource = &source
+	container.ChannelCredentialQuotaStatus = &quotaStatus
+
+	return withContainer(ctx, container)
+}
+
 // WithChannelCredentialID stores the selected channel credential row ID in the context.
 func WithChannelCredentialID(ctx context.Context, credentialID int) context.Context {
 	container := getContainer(ctx)
@@ -159,6 +170,78 @@ func GetChannelCredentialID(ctx context.Context) (int, bool) {
 	}
 
 	return 0, false
+}
+
+// WithChannelCredentialName stores the selected credential display name.
+func WithChannelCredentialName(ctx context.Context, name string) context.Context {
+	container := getContainer(ctx)
+	container.ChannelCredentialName = &name
+
+	return withContainer(ctx, container)
+}
+
+// GetChannelCredentialName retrieves the selected credential display name.
+func GetChannelCredentialName(ctx context.Context) (string, bool) {
+	container := getContainer(ctx)
+	if container.ChannelCredentialName != nil {
+		return *container.ChannelCredentialName, true
+	}
+
+	return "", false
+}
+
+// WithChannelCredentialKeyHint stores the selected credential safe key hint.
+func WithChannelCredentialKeyHint(ctx context.Context, keyHint string) context.Context {
+	container := getContainer(ctx)
+	container.ChannelCredentialKeyHint = &keyHint
+
+	return withContainer(ctx, container)
+}
+
+// GetChannelCredentialKeyHint retrieves the selected credential safe key hint.
+func GetChannelCredentialKeyHint(ctx context.Context) (string, bool) {
+	container := getContainer(ctx)
+	if container.ChannelCredentialKeyHint != nil {
+		return *container.ChannelCredentialKeyHint, true
+	}
+
+	return "", false
+}
+
+// WithChannelCredentialSource stores the selected credential source.
+func WithChannelCredentialSource(ctx context.Context, source string) context.Context {
+	container := getContainer(ctx)
+	container.ChannelCredentialSource = &source
+
+	return withContainer(ctx, container)
+}
+
+// GetChannelCredentialSource retrieves the selected credential source.
+func GetChannelCredentialSource(ctx context.Context) (string, bool) {
+	container := getContainer(ctx)
+	if container.ChannelCredentialSource != nil {
+		return *container.ChannelCredentialSource, true
+	}
+
+	return "", false
+}
+
+// WithChannelCredentialQuotaStatus stores the selected credential quota status.
+func WithChannelCredentialQuotaStatus(ctx context.Context, status string) context.Context {
+	container := getContainer(ctx)
+	container.ChannelCredentialQuotaStatus = &status
+
+	return withContainer(ctx, container)
+}
+
+// GetChannelCredentialQuotaStatus retrieves the selected credential quota status.
+func GetChannelCredentialQuotaStatus(ctx context.Context) (string, bool) {
+	container := getContainer(ctx)
+	if container.ChannelCredentialQuotaStatus != nil {
+		return *container.ChannelCredentialQuotaStatus, true
+	}
+
+	return "", false
 }
 
 // WithChannelCredentialFingerprint stores the selected channel credential fingerprint in the context.

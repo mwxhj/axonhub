@@ -688,11 +688,11 @@ func init() {
 	// requestexecution.CredentialFingerprintValidator is a validator for the "credential_fingerprint" field. It is called by the builders before save.
 	requestexecution.CredentialFingerprintValidator = requestexecutionDescCredentialFingerprint.Validators[0].(func(string) error)
 	// requestexecutionDescFormat is the schema descriptor for format field.
-	requestexecutionDescFormat := requestexecutionFields[8].Descriptor()
+	requestexecutionDescFormat := requestexecutionFields[12].Descriptor()
 	// requestexecution.DefaultFormat holds the default value on creation for the format field.
 	requestexecution.DefaultFormat = requestexecutionDescFormat.Default.(string)
 	// requestexecutionDescStream is the schema descriptor for stream field.
-	requestexecutionDescStream := requestexecutionFields[15].Descriptor()
+	requestexecutionDescStream := requestexecutionFields[19].Descriptor()
 	// requestexecution.DefaultStream holds the default value on creation for the stream field.
 	requestexecution.DefaultStream = requestexecutionDescStream.Default.(bool)
 	roleMixin := schema.Role{}.Mixin()
@@ -856,20 +856,40 @@ func init() {
 	upstreamcredentialDescName := upstreamcredentialFields[0].Descriptor()
 	// upstreamcredential.DefaultName holds the default value on creation for the name field.
 	upstreamcredential.DefaultName = upstreamcredentialDescName.Default.(string)
+	// upstreamcredentialDescProviderType is the schema descriptor for provider_type field.
+	upstreamcredentialDescProviderType := upstreamcredentialFields[1].Descriptor()
+	// upstreamcredential.DefaultProviderType holds the default value on creation for the provider_type field.
+	upstreamcredential.DefaultProviderType = upstreamcredentialDescProviderType.Default.(string)
 	// upstreamcredentialDescBaseURL is the schema descriptor for base_url field.
 	upstreamcredentialDescBaseURL := upstreamcredentialFields[2].Descriptor()
 	// upstreamcredential.DefaultBaseURL holds the default value on creation for the base_url field.
 	upstreamcredential.DefaultBaseURL = upstreamcredentialDescBaseURL.Default.(string)
+	// upstreamcredentialDescIssuerScope is the schema descriptor for issuer_scope field.
+	upstreamcredentialDescIssuerScope := upstreamcredentialFields[5].Descriptor()
+	// upstreamcredential.DefaultIssuerScope holds the default value on creation for the issuer_scope field.
+	upstreamcredential.DefaultIssuerScope = upstreamcredentialDescIssuerScope.Default.(string)
+	// upstreamcredentialDescKeyHint is the schema descriptor for key_hint field.
+	upstreamcredentialDescKeyHint := upstreamcredentialFields[6].Descriptor()
+	// upstreamcredential.DefaultKeyHint holds the default value on creation for the key_hint field.
+	upstreamcredential.DefaultKeyHint = upstreamcredentialDescKeyHint.Default.(string)
 	// upstreamcredentialDescFingerprint is the schema descriptor for fingerprint field.
-	upstreamcredentialDescFingerprint := upstreamcredentialFields[5].Descriptor()
+	upstreamcredentialDescFingerprint := upstreamcredentialFields[9].Descriptor()
 	// upstreamcredential.FingerprintValidator is a validator for the "fingerprint" field. It is called by the builders before save.
 	upstreamcredential.FingerprintValidator = upstreamcredentialDescFingerprint.Validators[0].(func(string) error)
 	// upstreamcredentialDescWeight is the schema descriptor for weight field.
-	upstreamcredentialDescWeight := upstreamcredentialFields[7].Descriptor()
+	upstreamcredentialDescWeight := upstreamcredentialFields[11].Descriptor()
 	// upstreamcredential.DefaultWeight holds the default value on creation for the weight field.
 	upstreamcredential.DefaultWeight = upstreamcredentialDescWeight.Default.(int)
+	// upstreamcredentialDescQuotaStatus is the schema descriptor for quota_status field.
+	upstreamcredentialDescQuotaStatus := upstreamcredentialFields[12].Descriptor()
+	// upstreamcredential.DefaultQuotaStatus holds the default value on creation for the quota_status field.
+	upstreamcredential.DefaultQuotaStatus = upstreamcredentialDescQuotaStatus.Default.(string)
+	// upstreamcredentialDescLastError is the schema descriptor for last_error field.
+	upstreamcredentialDescLastError := upstreamcredentialFields[13].Descriptor()
+	// upstreamcredential.DefaultLastError holds the default value on creation for the last_error field.
+	upstreamcredential.DefaultLastError = upstreamcredentialDescLastError.Default.(string)
 	// upstreamcredentialDescRemark is the schema descriptor for remark field.
-	upstreamcredentialDescRemark := upstreamcredentialFields[8].Descriptor()
+	upstreamcredentialDescRemark := upstreamcredentialFields[14].Descriptor()
 	// upstreamcredential.DefaultRemark holds the default value on creation for the remark field.
 	upstreamcredential.DefaultRemark = upstreamcredentialDescRemark.Default.(string)
 	usagelogMixin := schema.UsageLog{}.Mixin()
@@ -905,59 +925,59 @@ func init() {
 	// usagelog.CredentialFingerprintValidator is a validator for the "credential_fingerprint" field. It is called by the builders before save.
 	usagelog.CredentialFingerprintValidator = usagelogDescCredentialFingerprint.Validators[0].(func(string) error)
 	// usagelogDescPromptTokens is the schema descriptor for prompt_tokens field.
-	usagelogDescPromptTokens := usagelogFields[7].Descriptor()
+	usagelogDescPromptTokens := usagelogFields[10].Descriptor()
 	// usagelog.DefaultPromptTokens holds the default value on creation for the prompt_tokens field.
 	usagelog.DefaultPromptTokens = usagelogDescPromptTokens.Default.(int64)
 	// usagelogDescCompletionTokens is the schema descriptor for completion_tokens field.
-	usagelogDescCompletionTokens := usagelogFields[8].Descriptor()
+	usagelogDescCompletionTokens := usagelogFields[11].Descriptor()
 	// usagelog.DefaultCompletionTokens holds the default value on creation for the completion_tokens field.
 	usagelog.DefaultCompletionTokens = usagelogDescCompletionTokens.Default.(int64)
 	// usagelogDescTotalTokens is the schema descriptor for total_tokens field.
-	usagelogDescTotalTokens := usagelogFields[9].Descriptor()
+	usagelogDescTotalTokens := usagelogFields[12].Descriptor()
 	// usagelog.DefaultTotalTokens holds the default value on creation for the total_tokens field.
 	usagelog.DefaultTotalTokens = usagelogDescTotalTokens.Default.(int64)
 	// usagelogDescPromptAudioTokens is the schema descriptor for prompt_audio_tokens field.
-	usagelogDescPromptAudioTokens := usagelogFields[10].Descriptor()
+	usagelogDescPromptAudioTokens := usagelogFields[13].Descriptor()
 	// usagelog.DefaultPromptAudioTokens holds the default value on creation for the prompt_audio_tokens field.
 	usagelog.DefaultPromptAudioTokens = usagelogDescPromptAudioTokens.Default.(int64)
 	// usagelogDescPromptCachedTokens is the schema descriptor for prompt_cached_tokens field.
-	usagelogDescPromptCachedTokens := usagelogFields[11].Descriptor()
+	usagelogDescPromptCachedTokens := usagelogFields[14].Descriptor()
 	// usagelog.DefaultPromptCachedTokens holds the default value on creation for the prompt_cached_tokens field.
 	usagelog.DefaultPromptCachedTokens = usagelogDescPromptCachedTokens.Default.(int64)
 	// usagelogDescPromptWriteCachedTokens is the schema descriptor for prompt_write_cached_tokens field.
-	usagelogDescPromptWriteCachedTokens := usagelogFields[12].Descriptor()
+	usagelogDescPromptWriteCachedTokens := usagelogFields[15].Descriptor()
 	// usagelog.DefaultPromptWriteCachedTokens holds the default value on creation for the prompt_write_cached_tokens field.
 	usagelog.DefaultPromptWriteCachedTokens = usagelogDescPromptWriteCachedTokens.Default.(int64)
 	// usagelogDescPromptWriteCachedTokens5m is the schema descriptor for prompt_write_cached_tokens_5m field.
-	usagelogDescPromptWriteCachedTokens5m := usagelogFields[13].Descriptor()
+	usagelogDescPromptWriteCachedTokens5m := usagelogFields[16].Descriptor()
 	// usagelog.DefaultPromptWriteCachedTokens5m holds the default value on creation for the prompt_write_cached_tokens_5m field.
 	usagelog.DefaultPromptWriteCachedTokens5m = usagelogDescPromptWriteCachedTokens5m.Default.(int64)
 	// usagelogDescPromptWriteCachedTokens1h is the schema descriptor for prompt_write_cached_tokens_1h field.
-	usagelogDescPromptWriteCachedTokens1h := usagelogFields[14].Descriptor()
+	usagelogDescPromptWriteCachedTokens1h := usagelogFields[17].Descriptor()
 	// usagelog.DefaultPromptWriteCachedTokens1h holds the default value on creation for the prompt_write_cached_tokens_1h field.
 	usagelog.DefaultPromptWriteCachedTokens1h = usagelogDescPromptWriteCachedTokens1h.Default.(int64)
 	// usagelogDescCompletionAudioTokens is the schema descriptor for completion_audio_tokens field.
-	usagelogDescCompletionAudioTokens := usagelogFields[15].Descriptor()
+	usagelogDescCompletionAudioTokens := usagelogFields[18].Descriptor()
 	// usagelog.DefaultCompletionAudioTokens holds the default value on creation for the completion_audio_tokens field.
 	usagelog.DefaultCompletionAudioTokens = usagelogDescCompletionAudioTokens.Default.(int64)
 	// usagelogDescCompletionReasoningTokens is the schema descriptor for completion_reasoning_tokens field.
-	usagelogDescCompletionReasoningTokens := usagelogFields[16].Descriptor()
+	usagelogDescCompletionReasoningTokens := usagelogFields[19].Descriptor()
 	// usagelog.DefaultCompletionReasoningTokens holds the default value on creation for the completion_reasoning_tokens field.
 	usagelog.DefaultCompletionReasoningTokens = usagelogDescCompletionReasoningTokens.Default.(int64)
 	// usagelogDescCompletionAcceptedPredictionTokens is the schema descriptor for completion_accepted_prediction_tokens field.
-	usagelogDescCompletionAcceptedPredictionTokens := usagelogFields[17].Descriptor()
+	usagelogDescCompletionAcceptedPredictionTokens := usagelogFields[20].Descriptor()
 	// usagelog.DefaultCompletionAcceptedPredictionTokens holds the default value on creation for the completion_accepted_prediction_tokens field.
 	usagelog.DefaultCompletionAcceptedPredictionTokens = usagelogDescCompletionAcceptedPredictionTokens.Default.(int64)
 	// usagelogDescCompletionRejectedPredictionTokens is the schema descriptor for completion_rejected_prediction_tokens field.
-	usagelogDescCompletionRejectedPredictionTokens := usagelogFields[18].Descriptor()
+	usagelogDescCompletionRejectedPredictionTokens := usagelogFields[21].Descriptor()
 	// usagelog.DefaultCompletionRejectedPredictionTokens holds the default value on creation for the completion_rejected_prediction_tokens field.
 	usagelog.DefaultCompletionRejectedPredictionTokens = usagelogDescCompletionRejectedPredictionTokens.Default.(int64)
 	// usagelogDescFormat is the schema descriptor for format field.
-	usagelogDescFormat := usagelogFields[20].Descriptor()
+	usagelogDescFormat := usagelogFields[23].Descriptor()
 	// usagelog.DefaultFormat holds the default value on creation for the format field.
 	usagelog.DefaultFormat = usagelogDescFormat.Default.(string)
 	// usagelogDescCostItems is the schema descriptor for cost_items field.
-	usagelogDescCostItems := usagelogFields[22].Descriptor()
+	usagelogDescCostItems := usagelogFields[25].Descriptor()
 	// usagelog.DefaultCostItems holds the default value on creation for the cost_items field.
 	usagelog.DefaultCostItems = usagelogDescCostItems.Default.([]objects.CostItem)
 	userMixin := schema.User{}.Mixin()

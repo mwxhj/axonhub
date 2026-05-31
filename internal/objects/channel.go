@@ -232,14 +232,28 @@ func (c *ChannelCredentials) GetAllAPIKeys() []string {
 	}
 
 	var keys []string
+	seen := make(map[string]struct{}, len(c.APIKeys)+1)
+	addKey := func(key string) {
+		key = strings.TrimSpace(key)
+		if key == "" {
+			return
+		}
+		if _, ok := seen[key]; ok {
+			return
+		}
+		seen[key] = struct{}{}
+		keys = append(keys, key)
+	}
 
 	// Add legacy APIKey if present (only if not OAuth credential)
 	if c.APIKey != "" && !c.IsOAuth() {
-		keys = append(keys, c.APIKey)
+		addKey(c.APIKey)
 	}
 
 	// Add new APIKeys
-	keys = append(keys, c.APIKeys...)
+	for _, key := range c.APIKeys {
+		addKey(key)
+	}
 
 	return keys
 }

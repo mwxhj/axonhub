@@ -9,7 +9,6 @@ import (
 
 	"github.com/looplj/axonhub/internal/authz"
 	"github.com/looplj/axonhub/internal/ent"
-	"github.com/looplj/axonhub/internal/ent/channel"
 	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/log"
@@ -38,9 +37,11 @@ func NewUpstreamCredentialService(params UpstreamCredentialServiceParams) *Upstr
 
 type CreateUpstreamCredentialInput struct {
 	Name         *string
-	ProviderType string
+	ProviderType *string
 	BaseURL      *string
-	AuthKind     upstreamcredential.AuthKind
+	AuthKind     *upstreamcredential.AuthKind
+	SecretKind   *upstreamcredential.SecretKind
+	IssuerScope  *string
 	Secret       objects.UpstreamCredentialSecret
 	Status       *upstreamcredential.Status
 	Weight       *int
@@ -79,7 +80,9 @@ type MigrateLegacyCredentialsPayload struct {
 }
 
 func (svc *UpstreamCredentialService) CreateUpstreamCredential(ctx context.Context, input CreateUpstreamCredentialInput) (*ent.UpstreamCredential, error) {
-	fingerprint := ChannelCredentialFingerprintForSecret(input.ProviderType, stringValuePtr(input.BaseURL), input.AuthKind.String(), input.Secret)
+	secretKind := resolveCredentialSecretKind(input.SecretKind, input.AuthKind, input.Secret)
+	issuerScope := resolveCredentialIssuerScope(input.IssuerScope, input.ProviderType, input.BaseURL, input.Secret)
+	fingerprint := CredentialFingerprintForSecret(issuerScope, secretKind.String(), input.Secret)
 	if fingerprint == "" {
 		return nil, fmt.Errorf("credential secret is empty or unsupported")
 	}
@@ -95,9 +98,12 @@ func (svc *UpstreamCredentialService) CreateUpstreamCredential(ctx context.Conte
 	}
 
 	create := svc.entFromContext(ctx).UpstreamCredential.Create().
-		SetProviderType(strings.TrimSpace(input.ProviderType)).
+		SetProviderType(strings.TrimSpace(stringValuePtr(input.ProviderType))).
 		SetBaseURL(normalizeCredentialBaseURL(stringValuePtr(input.BaseURL))).
-		SetAuthKind(input.AuthKind).
+		SetAuthKind(authKindFromSecretKind(secretKind)).
+		SetSecretKind(secretKind).
+		SetIssuerScope(issuerScope).
+		SetKeyHint(CredentialKeyHintForSecret(secretKind.String(), input.Secret)).
 		SetSecretPayload(input.Secret).
 		SetFingerprint(fingerprint)
 
@@ -156,7 +162,12 @@ func (svc *UpstreamCredentialService) RotateUpstreamCredentialSecret(ctx context
 		return nil, fmt.Errorf("failed to get upstream credential: %w", err)
 	}
 
-	fingerprint := ChannelCredentialFingerprintForSecret(existing.ProviderType, existing.BaseURL, existing.AuthKind.String(), input.Secret)
+	secretKind := existing.SecretKind
+	issuerScope := existing.IssuerScope
+	if strings.TrimSpace(issuerScope) == "" {
+		issuerScope = CredentialIssuerScope(existing.ProviderType, existing.BaseURL)
+	}
+	fingerprint := CredentialFingerprintForSecret(issuerScope, secretKind.String(), input.Secret)
 	if fingerprint == "" {
 		return nil, fmt.Errorf("credential secret is empty or unsupported")
 	}
@@ -177,6 +188,9 @@ func (svc *UpstreamCredentialService) RotateUpstreamCredentialSecret(ctx context
 	credential, err := svc.entFromContext(ctx).UpstreamCredential.UpdateOneID(id).
 		SetSecretPayload(input.Secret).
 		SetFingerprint(fingerprint).
+		SetSecretKind(secretKind).
+		SetIssuerScope(issuerScope).
+		SetKeyHint(CredentialKeyHintForSecret(secretKind.String(), input.Secret)).
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to rotate upstream credential secret: %w", err)
@@ -365,11 +379,19 @@ func (svc *UpstreamCredentialService) findOrCreateCredentialForChannel(ctx conte
 		return existing, false, nil
 	}
 
+	viewSecretKind := upstreamcredential.SecretKind(resolveViewSecretKind(view))
+	if upstreamcredential.SecretKindValidator(viewSecretKind) != nil {
+		viewSecretKind = upstreamcredential.SecretKindOther
+	}
+
 	create := svc.entFromContext(ctx).UpstreamCredential.Create().
 		SetName(defaultCredentialName(ch, view, idx)).
 		SetProviderType(ch.Type.String()).
 		SetBaseURL(normalizeCredentialBaseURL(ch.BaseURL)).
 		SetAuthKind(upstreamcredential.AuthKind(view.AuthKind)).
+		SetSecretKind(viewSecretKind).
+		SetIssuerScope(resolveViewIssuerScope(ch, view)).
+		SetKeyHint(view.KeyHint).
 		SetSecretPayload(view.Secret).
 		SetFingerprint(view.Fingerprint).
 		SetWeight(normalizeCredentialWeight(view.Weight)).
@@ -465,6 +487,86 @@ func stringValuePtr(value *string) string {
 	return *value
 }
 
+func resolveCredentialSecretKind(secretKind *upstreamcredential.SecretKind, authKind *upstreamcredential.AuthKind, secret objects.UpstreamCredentialSecret) upstreamcredential.SecretKind {
+	if secretKind != nil && upstreamcredential.SecretKindValidator(*secretKind) == nil {
+		return *secretKind
+	}
+	if authKind != nil {
+		candidate := upstreamcredential.SecretKind(authKind.String())
+		if upstreamcredential.SecretKindValidator(candidate) == nil {
+			return candidate
+		}
+	}
+
+	candidate := upstreamcredential.SecretKind(CredentialSecretKindForSecret(secret))
+	if upstreamcredential.SecretKindValidator(candidate) == nil {
+		return candidate
+	}
+
+	return upstreamcredential.SecretKindOther
+}
+
+func resolveCredentialIssuerScope(issuerScope *string, providerType *string, baseURL *string, secret objects.UpstreamCredentialSecret) string {
+	if value := strings.TrimSpace(stringValuePtr(issuerScope)); value != "" {
+		return normalizeCredentialFingerprintPart(value)
+	}
+	if value := inferCredentialIssuerScopeFromSecret(secret); value != "" {
+		return value
+	}
+
+	return CredentialIssuerScope(stringValuePtr(providerType), stringValuePtr(baseURL))
+}
+
+func inferCredentialIssuerScopeFromSecret(secret objects.UpstreamCredentialSecret) string {
+	key := strings.TrimSpace(secret.APIKey)
+	switch {
+	case strings.HasPrefix(key, "sk-ant-"):
+		return "anthropic"
+	case strings.HasPrefix(key, "sk-proj-"), strings.HasPrefix(key, "sk-admin-"), strings.HasPrefix(key, "sk-"):
+		return "openai"
+	case secret.GCP != nil:
+		if projectID := strings.TrimSpace(secret.GCP.ProjectID); projectID != "" {
+			return "gcp:" + normalizeCredentialFingerprintPart(projectID)
+		}
+		return "google"
+	case secret.OAuth != nil:
+		return "openai"
+	}
+
+	return ""
+}
+
+func authKindFromSecretKind(secretKind upstreamcredential.SecretKind) upstreamcredential.AuthKind {
+	candidate := upstreamcredential.AuthKind(secretKind.String())
+	if upstreamcredential.AuthKindValidator(candidate) == nil {
+		return candidate
+	}
+
+	return upstreamcredential.AuthKindOther
+}
+
+func resolveViewSecretKind(view ChannelCredentialView) string {
+	if kind := normalizeCredentialFingerprintPart(view.SecretKind); kind != "" {
+		return kind
+	}
+	if kind := normalizeCredentialFingerprintPart(view.AuthKind); kind != "" {
+		return kind
+	}
+
+	return CredentialSecretKindForSecret(view.Secret)
+}
+
+func resolveViewIssuerScope(ch *ent.Channel, view ChannelCredentialView) string {
+	if scope := strings.TrimSpace(view.IssuerScope); scope != "" {
+		return scope
+	}
+	if ch == nil {
+		return "unknown"
+	}
+
+	return CredentialIssuerScope(ch.Type.String(), ch.BaseURL)
+}
+
 func channelWithResolvedCredentials(ch *ent.Channel) *ent.Channel {
 	if ch == nil {
 		return nil
@@ -511,17 +613,4 @@ func channelCredentialAuthKindForSecret(secret objects.UpstreamCredentialSecret)
 	default:
 		return upstreamcredential.AuthKindOther
 	}
-}
-
-func channelsForCredentialPredicate(credential *ent.UpstreamCredential) []channel.Type {
-	if credential == nil || credential.ProviderType == "" {
-		return nil
-	}
-
-	t := channel.Type(credential.ProviderType)
-	if err := channel.TypeValidator(t); err != nil {
-		return nil
-	}
-
-	return []channel.Type{t}
 }

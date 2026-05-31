@@ -101,6 +101,87 @@ func (_u *UpstreamCredentialUpdate) ClearBaseURL() *UpstreamCredentialUpdate {
 	return _u
 }
 
+// SetSecretKind sets the "secret_kind" field.
+func (_u *UpstreamCredentialUpdate) SetSecretKind(v upstreamcredential.SecretKind) *UpstreamCredentialUpdate {
+	_u.mutation.SetSecretKind(v)
+	return _u
+}
+
+// SetNillableSecretKind sets the "secret_kind" field if the given value is not nil.
+func (_u *UpstreamCredentialUpdate) SetNillableSecretKind(v *upstreamcredential.SecretKind) *UpstreamCredentialUpdate {
+	if v != nil {
+		_u.SetSecretKind(*v)
+	}
+	return _u
+}
+
+// SetIssuerScope sets the "issuer_scope" field.
+func (_u *UpstreamCredentialUpdate) SetIssuerScope(v string) *UpstreamCredentialUpdate {
+	_u.mutation.SetIssuerScope(v)
+	return _u
+}
+
+// SetNillableIssuerScope sets the "issuer_scope" field if the given value is not nil.
+func (_u *UpstreamCredentialUpdate) SetNillableIssuerScope(v *string) *UpstreamCredentialUpdate {
+	if v != nil {
+		_u.SetIssuerScope(*v)
+	}
+	return _u
+}
+
+// ClearIssuerScope clears the value of the "issuer_scope" field.
+func (_u *UpstreamCredentialUpdate) ClearIssuerScope() *UpstreamCredentialUpdate {
+	_u.mutation.ClearIssuerScope()
+	return _u
+}
+
+// SetKeyHint sets the "key_hint" field.
+func (_u *UpstreamCredentialUpdate) SetKeyHint(v string) *UpstreamCredentialUpdate {
+	_u.mutation.SetKeyHint(v)
+	return _u
+}
+
+// SetNillableKeyHint sets the "key_hint" field if the given value is not nil.
+func (_u *UpstreamCredentialUpdate) SetNillableKeyHint(v *string) *UpstreamCredentialUpdate {
+	if v != nil {
+		_u.SetKeyHint(*v)
+	}
+	return _u
+}
+
+// ClearKeyHint clears the value of the "key_hint" field.
+func (_u *UpstreamCredentialUpdate) ClearKeyHint() *UpstreamCredentialUpdate {
+	_u.mutation.ClearKeyHint()
+	return _u
+}
+
+// SetQuotaScopeID sets the "quota_scope_id" field.
+func (_u *UpstreamCredentialUpdate) SetQuotaScopeID(v int) *UpstreamCredentialUpdate {
+	_u.mutation.ResetQuotaScopeID()
+	_u.mutation.SetQuotaScopeID(v)
+	return _u
+}
+
+// SetNillableQuotaScopeID sets the "quota_scope_id" field if the given value is not nil.
+func (_u *UpstreamCredentialUpdate) SetNillableQuotaScopeID(v *int) *UpstreamCredentialUpdate {
+	if v != nil {
+		_u.SetQuotaScopeID(*v)
+	}
+	return _u
+}
+
+// AddQuotaScopeID adds value to the "quota_scope_id" field.
+func (_u *UpstreamCredentialUpdate) AddQuotaScopeID(v int) *UpstreamCredentialUpdate {
+	_u.mutation.AddQuotaScopeID(v)
+	return _u
+}
+
+// ClearQuotaScopeID clears the value of the "quota_scope_id" field.
+func (_u *UpstreamCredentialUpdate) ClearQuotaScopeID() *UpstreamCredentialUpdate {
+	_u.mutation.ClearQuotaScopeID()
+	return _u
+}
+
 // SetSecretPayload sets the "secret_payload" field.
 func (_u *UpstreamCredentialUpdate) SetSecretPayload(v objects.UpstreamCredentialSecret) *UpstreamCredentialUpdate {
 	_u.mutation.SetSecretPayload(v)
@@ -161,6 +242,46 @@ func (_u *UpstreamCredentialUpdate) SetNillableWeight(v *int) *UpstreamCredentia
 // AddWeight adds value to the "weight" field.
 func (_u *UpstreamCredentialUpdate) AddWeight(v int) *UpstreamCredentialUpdate {
 	_u.mutation.AddWeight(v)
+	return _u
+}
+
+// SetQuotaStatus sets the "quota_status" field.
+func (_u *UpstreamCredentialUpdate) SetQuotaStatus(v string) *UpstreamCredentialUpdate {
+	_u.mutation.SetQuotaStatus(v)
+	return _u
+}
+
+// SetNillableQuotaStatus sets the "quota_status" field if the given value is not nil.
+func (_u *UpstreamCredentialUpdate) SetNillableQuotaStatus(v *string) *UpstreamCredentialUpdate {
+	if v != nil {
+		_u.SetQuotaStatus(*v)
+	}
+	return _u
+}
+
+// ClearQuotaStatus clears the value of the "quota_status" field.
+func (_u *UpstreamCredentialUpdate) ClearQuotaStatus() *UpstreamCredentialUpdate {
+	_u.mutation.ClearQuotaStatus()
+	return _u
+}
+
+// SetLastError sets the "last_error" field.
+func (_u *UpstreamCredentialUpdate) SetLastError(v string) *UpstreamCredentialUpdate {
+	_u.mutation.SetLastError(v)
+	return _u
+}
+
+// SetNillableLastError sets the "last_error" field if the given value is not nil.
+func (_u *UpstreamCredentialUpdate) SetNillableLastError(v *string) *UpstreamCredentialUpdate {
+	if v != nil {
+		_u.SetLastError(*v)
+	}
+	return _u
+}
+
+// ClearLastError clears the value of the "last_error" field.
+func (_u *UpstreamCredentialUpdate) ClearLastError() *UpstreamCredentialUpdate {
+	_u.mutation.ClearLastError()
 	return _u
 }
 
@@ -377,6 +498,11 @@ func (_u *UpstreamCredentialUpdate) defaults() error {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *UpstreamCredentialUpdate) check() error {
+	if v, ok := _u.mutation.SecretKind(); ok {
+		if err := upstreamcredential.SecretKindValidator(v); err != nil {
+			return &ValidationError{Name: "secret_kind", err: fmt.Errorf(`ent: validator failed for field "UpstreamCredential.secret_kind": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Fingerprint(); ok {
 		if err := upstreamcredential.FingerprintValidator(v); err != nil {
 			return &ValidationError{Name: "fingerprint", err: fmt.Errorf(`ent: validator failed for field "UpstreamCredential.fingerprint": %w`, err)}
@@ -429,6 +555,30 @@ func (_u *UpstreamCredentialUpdate) sqlSave(ctx context.Context) (_node int, err
 	if _u.mutation.BaseURLCleared() {
 		_spec.ClearField(upstreamcredential.FieldBaseURL, field.TypeString)
 	}
+	if value, ok := _u.mutation.SecretKind(); ok {
+		_spec.SetField(upstreamcredential.FieldSecretKind, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.IssuerScope(); ok {
+		_spec.SetField(upstreamcredential.FieldIssuerScope, field.TypeString, value)
+	}
+	if _u.mutation.IssuerScopeCleared() {
+		_spec.ClearField(upstreamcredential.FieldIssuerScope, field.TypeString)
+	}
+	if value, ok := _u.mutation.KeyHint(); ok {
+		_spec.SetField(upstreamcredential.FieldKeyHint, field.TypeString, value)
+	}
+	if _u.mutation.KeyHintCleared() {
+		_spec.ClearField(upstreamcredential.FieldKeyHint, field.TypeString)
+	}
+	if value, ok := _u.mutation.QuotaScopeID(); ok {
+		_spec.SetField(upstreamcredential.FieldQuotaScopeID, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedQuotaScopeID(); ok {
+		_spec.AddField(upstreamcredential.FieldQuotaScopeID, field.TypeInt, value)
+	}
+	if _u.mutation.QuotaScopeIDCleared() {
+		_spec.ClearField(upstreamcredential.FieldQuotaScopeID, field.TypeInt)
+	}
 	if value, ok := _u.mutation.SecretPayload(); ok {
 		_spec.SetField(upstreamcredential.FieldSecretPayload, field.TypeJSON, value)
 	}
@@ -443,6 +593,18 @@ func (_u *UpstreamCredentialUpdate) sqlSave(ctx context.Context) (_node int, err
 	}
 	if value, ok := _u.mutation.AddedWeight(); ok {
 		_spec.AddField(upstreamcredential.FieldWeight, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.QuotaStatus(); ok {
+		_spec.SetField(upstreamcredential.FieldQuotaStatus, field.TypeString, value)
+	}
+	if _u.mutation.QuotaStatusCleared() {
+		_spec.ClearField(upstreamcredential.FieldQuotaStatus, field.TypeString)
+	}
+	if value, ok := _u.mutation.LastError(); ok {
+		_spec.SetField(upstreamcredential.FieldLastError, field.TypeString, value)
+	}
+	if _u.mutation.LastErrorCleared() {
+		_spec.ClearField(upstreamcredential.FieldLastError, field.TypeString)
 	}
 	if value, ok := _u.mutation.Remark(); ok {
 		_spec.SetField(upstreamcredential.FieldRemark, field.TypeString, value)
@@ -719,6 +881,87 @@ func (_u *UpstreamCredentialUpdateOne) ClearBaseURL() *UpstreamCredentialUpdateO
 	return _u
 }
 
+// SetSecretKind sets the "secret_kind" field.
+func (_u *UpstreamCredentialUpdateOne) SetSecretKind(v upstreamcredential.SecretKind) *UpstreamCredentialUpdateOne {
+	_u.mutation.SetSecretKind(v)
+	return _u
+}
+
+// SetNillableSecretKind sets the "secret_kind" field if the given value is not nil.
+func (_u *UpstreamCredentialUpdateOne) SetNillableSecretKind(v *upstreamcredential.SecretKind) *UpstreamCredentialUpdateOne {
+	if v != nil {
+		_u.SetSecretKind(*v)
+	}
+	return _u
+}
+
+// SetIssuerScope sets the "issuer_scope" field.
+func (_u *UpstreamCredentialUpdateOne) SetIssuerScope(v string) *UpstreamCredentialUpdateOne {
+	_u.mutation.SetIssuerScope(v)
+	return _u
+}
+
+// SetNillableIssuerScope sets the "issuer_scope" field if the given value is not nil.
+func (_u *UpstreamCredentialUpdateOne) SetNillableIssuerScope(v *string) *UpstreamCredentialUpdateOne {
+	if v != nil {
+		_u.SetIssuerScope(*v)
+	}
+	return _u
+}
+
+// ClearIssuerScope clears the value of the "issuer_scope" field.
+func (_u *UpstreamCredentialUpdateOne) ClearIssuerScope() *UpstreamCredentialUpdateOne {
+	_u.mutation.ClearIssuerScope()
+	return _u
+}
+
+// SetKeyHint sets the "key_hint" field.
+func (_u *UpstreamCredentialUpdateOne) SetKeyHint(v string) *UpstreamCredentialUpdateOne {
+	_u.mutation.SetKeyHint(v)
+	return _u
+}
+
+// SetNillableKeyHint sets the "key_hint" field if the given value is not nil.
+func (_u *UpstreamCredentialUpdateOne) SetNillableKeyHint(v *string) *UpstreamCredentialUpdateOne {
+	if v != nil {
+		_u.SetKeyHint(*v)
+	}
+	return _u
+}
+
+// ClearKeyHint clears the value of the "key_hint" field.
+func (_u *UpstreamCredentialUpdateOne) ClearKeyHint() *UpstreamCredentialUpdateOne {
+	_u.mutation.ClearKeyHint()
+	return _u
+}
+
+// SetQuotaScopeID sets the "quota_scope_id" field.
+func (_u *UpstreamCredentialUpdateOne) SetQuotaScopeID(v int) *UpstreamCredentialUpdateOne {
+	_u.mutation.ResetQuotaScopeID()
+	_u.mutation.SetQuotaScopeID(v)
+	return _u
+}
+
+// SetNillableQuotaScopeID sets the "quota_scope_id" field if the given value is not nil.
+func (_u *UpstreamCredentialUpdateOne) SetNillableQuotaScopeID(v *int) *UpstreamCredentialUpdateOne {
+	if v != nil {
+		_u.SetQuotaScopeID(*v)
+	}
+	return _u
+}
+
+// AddQuotaScopeID adds value to the "quota_scope_id" field.
+func (_u *UpstreamCredentialUpdateOne) AddQuotaScopeID(v int) *UpstreamCredentialUpdateOne {
+	_u.mutation.AddQuotaScopeID(v)
+	return _u
+}
+
+// ClearQuotaScopeID clears the value of the "quota_scope_id" field.
+func (_u *UpstreamCredentialUpdateOne) ClearQuotaScopeID() *UpstreamCredentialUpdateOne {
+	_u.mutation.ClearQuotaScopeID()
+	return _u
+}
+
 // SetSecretPayload sets the "secret_payload" field.
 func (_u *UpstreamCredentialUpdateOne) SetSecretPayload(v objects.UpstreamCredentialSecret) *UpstreamCredentialUpdateOne {
 	_u.mutation.SetSecretPayload(v)
@@ -779,6 +1022,46 @@ func (_u *UpstreamCredentialUpdateOne) SetNillableWeight(v *int) *UpstreamCreden
 // AddWeight adds value to the "weight" field.
 func (_u *UpstreamCredentialUpdateOne) AddWeight(v int) *UpstreamCredentialUpdateOne {
 	_u.mutation.AddWeight(v)
+	return _u
+}
+
+// SetQuotaStatus sets the "quota_status" field.
+func (_u *UpstreamCredentialUpdateOne) SetQuotaStatus(v string) *UpstreamCredentialUpdateOne {
+	_u.mutation.SetQuotaStatus(v)
+	return _u
+}
+
+// SetNillableQuotaStatus sets the "quota_status" field if the given value is not nil.
+func (_u *UpstreamCredentialUpdateOne) SetNillableQuotaStatus(v *string) *UpstreamCredentialUpdateOne {
+	if v != nil {
+		_u.SetQuotaStatus(*v)
+	}
+	return _u
+}
+
+// ClearQuotaStatus clears the value of the "quota_status" field.
+func (_u *UpstreamCredentialUpdateOne) ClearQuotaStatus() *UpstreamCredentialUpdateOne {
+	_u.mutation.ClearQuotaStatus()
+	return _u
+}
+
+// SetLastError sets the "last_error" field.
+func (_u *UpstreamCredentialUpdateOne) SetLastError(v string) *UpstreamCredentialUpdateOne {
+	_u.mutation.SetLastError(v)
+	return _u
+}
+
+// SetNillableLastError sets the "last_error" field if the given value is not nil.
+func (_u *UpstreamCredentialUpdateOne) SetNillableLastError(v *string) *UpstreamCredentialUpdateOne {
+	if v != nil {
+		_u.SetLastError(*v)
+	}
+	return _u
+}
+
+// ClearLastError clears the value of the "last_error" field.
+func (_u *UpstreamCredentialUpdateOne) ClearLastError() *UpstreamCredentialUpdateOne {
+	_u.mutation.ClearLastError()
 	return _u
 }
 
@@ -1008,6 +1291,11 @@ func (_u *UpstreamCredentialUpdateOne) defaults() error {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *UpstreamCredentialUpdateOne) check() error {
+	if v, ok := _u.mutation.SecretKind(); ok {
+		if err := upstreamcredential.SecretKindValidator(v); err != nil {
+			return &ValidationError{Name: "secret_kind", err: fmt.Errorf(`ent: validator failed for field "UpstreamCredential.secret_kind": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Fingerprint(); ok {
 		if err := upstreamcredential.FingerprintValidator(v); err != nil {
 			return &ValidationError{Name: "fingerprint", err: fmt.Errorf(`ent: validator failed for field "UpstreamCredential.fingerprint": %w`, err)}
@@ -1077,6 +1365,30 @@ func (_u *UpstreamCredentialUpdateOne) sqlSave(ctx context.Context) (_node *Upst
 	if _u.mutation.BaseURLCleared() {
 		_spec.ClearField(upstreamcredential.FieldBaseURL, field.TypeString)
 	}
+	if value, ok := _u.mutation.SecretKind(); ok {
+		_spec.SetField(upstreamcredential.FieldSecretKind, field.TypeEnum, value)
+	}
+	if value, ok := _u.mutation.IssuerScope(); ok {
+		_spec.SetField(upstreamcredential.FieldIssuerScope, field.TypeString, value)
+	}
+	if _u.mutation.IssuerScopeCleared() {
+		_spec.ClearField(upstreamcredential.FieldIssuerScope, field.TypeString)
+	}
+	if value, ok := _u.mutation.KeyHint(); ok {
+		_spec.SetField(upstreamcredential.FieldKeyHint, field.TypeString, value)
+	}
+	if _u.mutation.KeyHintCleared() {
+		_spec.ClearField(upstreamcredential.FieldKeyHint, field.TypeString)
+	}
+	if value, ok := _u.mutation.QuotaScopeID(); ok {
+		_spec.SetField(upstreamcredential.FieldQuotaScopeID, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedQuotaScopeID(); ok {
+		_spec.AddField(upstreamcredential.FieldQuotaScopeID, field.TypeInt, value)
+	}
+	if _u.mutation.QuotaScopeIDCleared() {
+		_spec.ClearField(upstreamcredential.FieldQuotaScopeID, field.TypeInt)
+	}
 	if value, ok := _u.mutation.SecretPayload(); ok {
 		_spec.SetField(upstreamcredential.FieldSecretPayload, field.TypeJSON, value)
 	}
@@ -1091,6 +1403,18 @@ func (_u *UpstreamCredentialUpdateOne) sqlSave(ctx context.Context) (_node *Upst
 	}
 	if value, ok := _u.mutation.AddedWeight(); ok {
 		_spec.AddField(upstreamcredential.FieldWeight, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.QuotaStatus(); ok {
+		_spec.SetField(upstreamcredential.FieldQuotaStatus, field.TypeString, value)
+	}
+	if _u.mutation.QuotaStatusCleared() {
+		_spec.ClearField(upstreamcredential.FieldQuotaStatus, field.TypeString)
+	}
+	if value, ok := _u.mutation.LastError(); ok {
+		_spec.SetField(upstreamcredential.FieldLastError, field.TypeString, value)
+	}
+	if _u.mutation.LastErrorCleared() {
+		_spec.ClearField(upstreamcredential.FieldLastError, field.TypeString)
 	}
 	if value, ok := _u.mutation.Remark(); ok {
 		_spec.SetField(upstreamcredential.FieldRemark, field.TypeString, value)

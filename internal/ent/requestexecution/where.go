@@ -105,6 +105,26 @@ func CredentialFingerprint(v string) predicate.RequestExecution {
 	return predicate.RequestExecution(sql.FieldEQ(FieldCredentialFingerprint, v))
 }
 
+// CredentialNameSnapshot applies equality check predicate on the "credential_name_snapshot" field. It's identical to CredentialNameSnapshotEQ.
+func CredentialNameSnapshot(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialKeyHint applies equality check predicate on the "credential_key_hint" field. It's identical to CredentialKeyHintEQ.
+func CredentialKeyHint(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldCredentialKeyHint, v))
+}
+
+// CredentialSource applies equality check predicate on the "credential_source" field. It's identical to CredentialSourceEQ.
+func CredentialSource(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldCredentialSource, v))
+}
+
+// CredentialQuotaStatusSnapshot applies equality check predicate on the "credential_quota_status_snapshot" field. It's identical to CredentialQuotaStatusSnapshotEQ.
+func CredentialQuotaStatusSnapshot(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldCredentialQuotaStatusSnapshot, v))
+}
+
 // Format applies equality check predicate on the "format" field. It's identical to FormatEQ.
 func Format(v string) predicate.RequestExecution {
 	return predicate.RequestExecution(sql.FieldEQ(FieldFormat, v))
@@ -583,6 +603,306 @@ func CredentialFingerprintEqualFold(v string) predicate.RequestExecution {
 // CredentialFingerprintContainsFold applies the ContainsFold predicate on the "credential_fingerprint" field.
 func CredentialFingerprintContainsFold(v string) predicate.RequestExecution {
 	return predicate.RequestExecution(sql.FieldContainsFold(FieldCredentialFingerprint, v))
+}
+
+// CredentialNameSnapshotEQ applies the EQ predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotNEQ applies the NEQ predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotNEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNEQ(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotIn applies the In predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIn(FieldCredentialNameSnapshot, vs...))
+}
+
+// CredentialNameSnapshotNotIn applies the NotIn predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotNotIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotIn(FieldCredentialNameSnapshot, vs...))
+}
+
+// CredentialNameSnapshotGT applies the GT predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotGT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGT(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotGTE applies the GTE predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotGTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGTE(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotLT applies the LT predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotLT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLT(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotLTE applies the LTE predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotLTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLTE(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotContains applies the Contains predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotContains(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContains(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotHasPrefix applies the HasPrefix predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotHasPrefix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasPrefix(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotHasSuffix applies the HasSuffix predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotHasSuffix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasSuffix(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotIsNil applies the IsNil predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotIsNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIsNull(FieldCredentialNameSnapshot))
+}
+
+// CredentialNameSnapshotNotNil applies the NotNil predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotNotNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotNull(FieldCredentialNameSnapshot))
+}
+
+// CredentialNameSnapshotEqualFold applies the EqualFold predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotEqualFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEqualFold(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotContainsFold applies the ContainsFold predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotContainsFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContainsFold(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialKeyHintEQ applies the EQ predicate on the "credential_key_hint" field.
+func CredentialKeyHintEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintNEQ applies the NEQ predicate on the "credential_key_hint" field.
+func CredentialKeyHintNEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNEQ(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintIn applies the In predicate on the "credential_key_hint" field.
+func CredentialKeyHintIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIn(FieldCredentialKeyHint, vs...))
+}
+
+// CredentialKeyHintNotIn applies the NotIn predicate on the "credential_key_hint" field.
+func CredentialKeyHintNotIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotIn(FieldCredentialKeyHint, vs...))
+}
+
+// CredentialKeyHintGT applies the GT predicate on the "credential_key_hint" field.
+func CredentialKeyHintGT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGT(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintGTE applies the GTE predicate on the "credential_key_hint" field.
+func CredentialKeyHintGTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGTE(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintLT applies the LT predicate on the "credential_key_hint" field.
+func CredentialKeyHintLT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLT(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintLTE applies the LTE predicate on the "credential_key_hint" field.
+func CredentialKeyHintLTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLTE(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintContains applies the Contains predicate on the "credential_key_hint" field.
+func CredentialKeyHintContains(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContains(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintHasPrefix applies the HasPrefix predicate on the "credential_key_hint" field.
+func CredentialKeyHintHasPrefix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasPrefix(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintHasSuffix applies the HasSuffix predicate on the "credential_key_hint" field.
+func CredentialKeyHintHasSuffix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasSuffix(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintIsNil applies the IsNil predicate on the "credential_key_hint" field.
+func CredentialKeyHintIsNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIsNull(FieldCredentialKeyHint))
+}
+
+// CredentialKeyHintNotNil applies the NotNil predicate on the "credential_key_hint" field.
+func CredentialKeyHintNotNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotNull(FieldCredentialKeyHint))
+}
+
+// CredentialKeyHintEqualFold applies the EqualFold predicate on the "credential_key_hint" field.
+func CredentialKeyHintEqualFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEqualFold(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintContainsFold applies the ContainsFold predicate on the "credential_key_hint" field.
+func CredentialKeyHintContainsFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContainsFold(FieldCredentialKeyHint, v))
+}
+
+// CredentialSourceEQ applies the EQ predicate on the "credential_source" field.
+func CredentialSourceEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldCredentialSource, v))
+}
+
+// CredentialSourceNEQ applies the NEQ predicate on the "credential_source" field.
+func CredentialSourceNEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNEQ(FieldCredentialSource, v))
+}
+
+// CredentialSourceIn applies the In predicate on the "credential_source" field.
+func CredentialSourceIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIn(FieldCredentialSource, vs...))
+}
+
+// CredentialSourceNotIn applies the NotIn predicate on the "credential_source" field.
+func CredentialSourceNotIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotIn(FieldCredentialSource, vs...))
+}
+
+// CredentialSourceGT applies the GT predicate on the "credential_source" field.
+func CredentialSourceGT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGT(FieldCredentialSource, v))
+}
+
+// CredentialSourceGTE applies the GTE predicate on the "credential_source" field.
+func CredentialSourceGTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGTE(FieldCredentialSource, v))
+}
+
+// CredentialSourceLT applies the LT predicate on the "credential_source" field.
+func CredentialSourceLT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLT(FieldCredentialSource, v))
+}
+
+// CredentialSourceLTE applies the LTE predicate on the "credential_source" field.
+func CredentialSourceLTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLTE(FieldCredentialSource, v))
+}
+
+// CredentialSourceContains applies the Contains predicate on the "credential_source" field.
+func CredentialSourceContains(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContains(FieldCredentialSource, v))
+}
+
+// CredentialSourceHasPrefix applies the HasPrefix predicate on the "credential_source" field.
+func CredentialSourceHasPrefix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasPrefix(FieldCredentialSource, v))
+}
+
+// CredentialSourceHasSuffix applies the HasSuffix predicate on the "credential_source" field.
+func CredentialSourceHasSuffix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasSuffix(FieldCredentialSource, v))
+}
+
+// CredentialSourceIsNil applies the IsNil predicate on the "credential_source" field.
+func CredentialSourceIsNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIsNull(FieldCredentialSource))
+}
+
+// CredentialSourceNotNil applies the NotNil predicate on the "credential_source" field.
+func CredentialSourceNotNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotNull(FieldCredentialSource))
+}
+
+// CredentialSourceEqualFold applies the EqualFold predicate on the "credential_source" field.
+func CredentialSourceEqualFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEqualFold(FieldCredentialSource, v))
+}
+
+// CredentialSourceContainsFold applies the ContainsFold predicate on the "credential_source" field.
+func CredentialSourceContainsFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContainsFold(FieldCredentialSource, v))
+}
+
+// CredentialQuotaStatusSnapshotEQ applies the EQ predicate on the "credential_quota_status_snapshot" field.
+func CredentialQuotaStatusSnapshotEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldCredentialQuotaStatusSnapshot, v))
+}
+
+// CredentialQuotaStatusSnapshotNEQ applies the NEQ predicate on the "credential_quota_status_snapshot" field.
+func CredentialQuotaStatusSnapshotNEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNEQ(FieldCredentialQuotaStatusSnapshot, v))
+}
+
+// CredentialQuotaStatusSnapshotIn applies the In predicate on the "credential_quota_status_snapshot" field.
+func CredentialQuotaStatusSnapshotIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIn(FieldCredentialQuotaStatusSnapshot, vs...))
+}
+
+// CredentialQuotaStatusSnapshotNotIn applies the NotIn predicate on the "credential_quota_status_snapshot" field.
+func CredentialQuotaStatusSnapshotNotIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotIn(FieldCredentialQuotaStatusSnapshot, vs...))
+}
+
+// CredentialQuotaStatusSnapshotGT applies the GT predicate on the "credential_quota_status_snapshot" field.
+func CredentialQuotaStatusSnapshotGT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGT(FieldCredentialQuotaStatusSnapshot, v))
+}
+
+// CredentialQuotaStatusSnapshotGTE applies the GTE predicate on the "credential_quota_status_snapshot" field.
+func CredentialQuotaStatusSnapshotGTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGTE(FieldCredentialQuotaStatusSnapshot, v))
+}
+
+// CredentialQuotaStatusSnapshotLT applies the LT predicate on the "credential_quota_status_snapshot" field.
+func CredentialQuotaStatusSnapshotLT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLT(FieldCredentialQuotaStatusSnapshot, v))
+}
+
+// CredentialQuotaStatusSnapshotLTE applies the LTE predicate on the "credential_quota_status_snapshot" field.
+func CredentialQuotaStatusSnapshotLTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLTE(FieldCredentialQuotaStatusSnapshot, v))
+}
+
+// CredentialQuotaStatusSnapshotContains applies the Contains predicate on the "credential_quota_status_snapshot" field.
+func CredentialQuotaStatusSnapshotContains(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContains(FieldCredentialQuotaStatusSnapshot, v))
+}
+
+// CredentialQuotaStatusSnapshotHasPrefix applies the HasPrefix predicate on the "credential_quota_status_snapshot" field.
+func CredentialQuotaStatusSnapshotHasPrefix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasPrefix(FieldCredentialQuotaStatusSnapshot, v))
+}
+
+// CredentialQuotaStatusSnapshotHasSuffix applies the HasSuffix predicate on the "credential_quota_status_snapshot" field.
+func CredentialQuotaStatusSnapshotHasSuffix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasSuffix(FieldCredentialQuotaStatusSnapshot, v))
+}
+
+// CredentialQuotaStatusSnapshotIsNil applies the IsNil predicate on the "credential_quota_status_snapshot" field.
+func CredentialQuotaStatusSnapshotIsNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIsNull(FieldCredentialQuotaStatusSnapshot))
+}
+
+// CredentialQuotaStatusSnapshotNotNil applies the NotNil predicate on the "credential_quota_status_snapshot" field.
+func CredentialQuotaStatusSnapshotNotNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotNull(FieldCredentialQuotaStatusSnapshot))
+}
+
+// CredentialQuotaStatusSnapshotEqualFold applies the EqualFold predicate on the "credential_quota_status_snapshot" field.
+func CredentialQuotaStatusSnapshotEqualFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEqualFold(FieldCredentialQuotaStatusSnapshot, v))
+}
+
+// CredentialQuotaStatusSnapshotContainsFold applies the ContainsFold predicate on the "credential_quota_status_snapshot" field.
+func CredentialQuotaStatusSnapshotContainsFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContainsFold(FieldCredentialQuotaStatusSnapshot, v))
 }
 
 // FormatEQ applies the EQ predicate on the "format" field.

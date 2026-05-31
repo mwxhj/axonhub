@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"slices"
 	"strings"
@@ -20,6 +21,7 @@ const (
 	channelCredentialAuthKindOAuth      = "oauth"
 	channelCredentialAuthKindAzure      = "azure"
 	channelCredentialAuthKindGCP        = "gcp"
+	channelCredentialAuthKindOther      = "other"
 )
 
 const (
@@ -32,8 +34,13 @@ const (
 // resource while preserving legacy transformer inputs.
 type ChannelCredentialView struct {
 	CredentialID int
+	Name         string
 	Fingerprint  string
 	AuthKind     string
+	SecretKind   string
+	IssuerScope  string
+	KeyHint      string
+	QuotaStatus  string
 	Secret       objects.UpstreamCredentialSecret
 	Enabled      bool
 	Weight       int
@@ -41,29 +48,126 @@ type ChannelCredentialView struct {
 }
 
 // ChannelCredentialFingerprintForAPIKey returns a stable, non-secret identity
-// for an upstream API key within a provider/baseURL scope.
+// for an upstream API key within a coarse issuer scope. The baseURL parameter is
+// kept for legacy callers, but channel endpoint routing must not split
+// credential identity by default.
 func ChannelCredentialFingerprintForAPIKey(provider string, baseURL string, apiKey string) string {
 	apiKey = strings.TrimSpace(apiKey)
 	if apiKey == "" {
 		return ""
 	}
 
-	return channelCredentialFingerprint(provider, baseURL, channelCredentialAuthKindAPIKey, apiKey)
+	return channelCredentialFingerprint(CredentialIssuerScope(provider, baseURL), channelCredentialAuthKindAPIKey, apiKey)
 }
 
 func ChannelCredentialFingerprintForSecret(provider string, baseURL string, authKind string, secret objects.UpstreamCredentialSecret) string {
-	switch normalizeCredentialFingerprintPart(authKind) {
+	return CredentialFingerprintForSecret(CredentialIssuerScope(provider, baseURL), CredentialSecretKindForAuthKind(authKind, secret), secret)
+}
+
+func CredentialFingerprintForSecret(issuerScope string, secretKind string, secret objects.UpstreamCredentialSecret) string {
+	switch normalizeCredentialFingerprintPart(secretKind) {
 	case channelCredentialAuthKindAPIKey:
-		return ChannelCredentialFingerprintForAPIKey(provider, baseURL, secret.APIKey)
+		return channelCredentialFingerprint(issuerScope, channelCredentialAuthKindAPIKey, secret.APIKey)
 	case channelCredentialAuthKindOAuth:
-		return channelCredentialFingerprint(provider, baseURL, channelCredentialAuthKindOAuth, stableOAuthCredentialMaterial(secret))
+		return channelCredentialFingerprint(issuerScope, channelCredentialAuthKindOAuth, stableOAuthCredentialMaterial(secret))
 	case channelCredentialAuthKindAzure:
-		return channelCredentialFingerprint(provider, baseURL, channelCredentialAuthKindAzure, credentialSecretMaterialForAuthKind(channelCredentialAuthKindAzure, secret))
+		return channelCredentialFingerprint(issuerScope, channelCredentialAuthKindAzure, credentialSecretMaterialForAuthKind(channelCredentialAuthKindAzure, secret))
 	case channelCredentialAuthKindGCP:
-		return channelCredentialFingerprint(provider, baseURL, channelCredentialAuthKindGCP, credentialSecretMaterialForAuthKind(channelCredentialAuthKindGCP, secret))
+		return channelCredentialFingerprint(issuerScope, channelCredentialAuthKindGCP, credentialSecretMaterialForAuthKind(channelCredentialAuthKindGCP, secret))
 	default:
-		return channelCredentialFingerprint(provider, baseURL, authKind, credentialSecretMaterialForAuthKind(authKind, secret))
+		return channelCredentialFingerprint(issuerScope, channelCredentialAuthKindOther, credentialSecretMaterialForAuthKind(secretKind, secret))
 	}
+}
+
+func CredentialSecretKindForAuthKind(authKind string, secret objects.UpstreamCredentialSecret) string {
+	normalized := normalizeCredentialFingerprintPart(authKind)
+	if normalized != "" && normalized != channelCredentialAuthKindOther {
+		return normalized
+	}
+
+	return CredentialSecretKindForSecret(secret)
+}
+
+func CredentialSecretKindForSecret(secret objects.UpstreamCredentialSecret) string {
+	switch {
+	case secret.OAuth != nil:
+		return channelCredentialAuthKindOAuth
+	case secret.GCP != nil:
+		return channelCredentialAuthKindGCP
+	case secret.Azure != nil:
+		return channelCredentialAuthKindAzure
+	case strings.TrimSpace(secret.APIKey) != "":
+		return channelCredentialAuthKindAPIKey
+	default:
+		return channelCredentialAuthKindOther
+	}
+}
+
+func CredentialKeyHintForSecret(secretKind string, secret objects.UpstreamCredentialSecret) string {
+	switch normalizeCredentialFingerprintPart(secretKind) {
+	case channelCredentialAuthKindOAuth:
+		if identity := stableOAuthCredentialMaterial(secret); identity != "" && !strings.Contains(identity, "token:") {
+			return safeHint(identity)
+		}
+		return safeHint(secret.APIKey)
+	case channelCredentialAuthKindGCP:
+		if secret.GCP != nil && strings.TrimSpace(secret.GCP.ProjectID) != "" {
+			return "gcp:" + strings.TrimSpace(secret.GCP.ProjectID)
+		}
+	case channelCredentialAuthKindAzure:
+		if secret.Azure != nil && strings.TrimSpace(secret.Azure.APIVersion) != "" {
+			return "azure:" + strings.TrimSpace(secret.Azure.APIVersion)
+		}
+	}
+
+	return safeHint(secret.APIKey)
+}
+
+func CredentialIssuerScope(provider string, baseURL string) string {
+	provider = normalizeCredentialFingerprintPart(provider)
+	switch provider {
+	case "openai", "openai_responses", "codex":
+		return "openai"
+	case "anthropic", "anthropic_fake":
+		return "anthropic"
+	case "anthropic_aws":
+		return "anthropic_aws"
+	case "anthropic_gcp", "claudecode":
+		return "anthropic_gcp"
+	case "gemini", "gemini_openai":
+		return "google_gemini"
+	case "gemini_vertex":
+		return "google_vertex"
+	case "deepseek", "deepseek_anthropic":
+		return "deepseek"
+	case "moonshot", "moonshot_anthropic", "moonshot_coding":
+		return "moonshot"
+	case "zhipu", "zhipu_anthropic", "zai", "zai_anthropic":
+		return "zai"
+	case "xiaomi", "xiaomi_anthropic":
+		return "xiaomi"
+	case "volcengine", "volcengine_anthropic":
+		return "volcengine"
+	case "longcat", "longcat_anthropic":
+		return "longcat"
+	case "minimax", "minimax_anthropic":
+		return "minimax"
+	case "aihubmix", "aihubmix_anthropic":
+		return "aihubmix"
+	case "bailian", "bailian_anthropic":
+		return "bailian"
+	case "nanogpt", "nanogpt_responses":
+		return "nanogpt"
+	}
+	if provider != "" {
+		return provider
+	}
+
+	if host := normalizedCredentialHost(baseURL); host != "" {
+		return host
+	}
+
+	return "unknown"
 }
 
 // CredentialFingerprintForAPIKey returns a stable, non-secret identity for one
@@ -157,6 +261,9 @@ func legacyCredentialViewsForAPIKeys(c *Channel, keys []string) []ChannelCredent
 		views = append(views, ChannelCredentialView{
 			Fingerprint: fingerprint,
 			AuthKind:    channelCredentialAuthKindAPIKey,
+			SecretKind:  channelCredentialAuthKindAPIKey,
+			IssuerScope: CredentialIssuerScope(c.Type.String(), c.BaseURL),
+			KeyHint:     CredentialKeyHintForSecret(channelCredentialAuthKindAPIKey, objects.UpstreamCredentialSecretFromAPIKey(key)),
 			Secret:      objects.UpstreamCredentialSecretFromAPIKey(key),
 			Enabled:     true,
 			Weight:      100,
@@ -247,8 +354,13 @@ func credentialViewsFromRefs(c *ent.Channel) []ChannelCredentialView {
 
 		views = append(views, ChannelCredentialView{
 			CredentialID: credential.ID,
+			Name:         credential.Name,
 			Fingerprint:  credential.Fingerprint,
 			AuthKind:     credential.AuthKind.String(),
+			SecretKind:   credential.SecretKind.String(),
+			IssuerScope:  credential.IssuerScope,
+			KeyHint:      credential.KeyHint,
+			QuotaStatus:  credential.QuotaStatus,
 			Secret:       credential.SecretPayload,
 			Enabled:      enabled,
 			Weight:       weight,
@@ -294,6 +406,9 @@ func legacyCredentialViews(c *ent.Channel) []ChannelCredentialView {
 			views = append(views, ChannelCredentialView{
 				Fingerprint: fingerprint,
 				AuthKind:    channelCredentialAuthKindOAuth,
+				SecretKind:  channelCredentialAuthKindOAuth,
+				IssuerScope: CredentialIssuerScope(c.Type.String(), c.BaseURL),
+				KeyHint:     CredentialKeyHintForSecret(channelCredentialAuthKindOAuth, secret),
 				Secret:      secret,
 				Enabled:     true,
 				Weight:      100,
@@ -317,6 +432,9 @@ func legacyCredentialViews(c *ent.Channel) []ChannelCredentialView {
 		views = append(views, ChannelCredentialView{
 			Fingerprint: fingerprint,
 			AuthKind:    channelCredentialAuthKindAPIKey,
+			SecretKind:  channelCredentialAuthKindAPIKey,
+			IssuerScope: CredentialIssuerScope(c.Type.String(), c.BaseURL),
+			KeyHint:     CredentialKeyHintForSecret(channelCredentialAuthKindAPIKey, objects.UpstreamCredentialSecretFromAPIKey(key)),
 			Secret:      objects.UpstreamCredentialSecretFromAPIKey(key),
 			Enabled:     !legacyAPIKeyDisabled(c.DisabledAPIKeys, key),
 			Weight:      100,
@@ -331,6 +449,9 @@ func legacyCredentialViews(c *ent.Channel) []ChannelCredentialView {
 			views = append(views, ChannelCredentialView{
 				Fingerprint: fingerprint,
 				AuthKind:    channelCredentialAuthKindGCP,
+				SecretKind:  channelCredentialAuthKindGCP,
+				IssuerScope: CredentialIssuerScope(c.Type.String(), c.BaseURL),
+				KeyHint:     CredentialKeyHintForSecret(channelCredentialAuthKindGCP, secret),
 				Secret:      secret,
 				Enabled:     true,
 				Weight:      100,
@@ -346,6 +467,9 @@ func legacyCredentialViews(c *ent.Channel) []ChannelCredentialView {
 			views = append(views, ChannelCredentialView{
 				Fingerprint: fingerprint,
 				AuthKind:    channelCredentialAuthKindAzure,
+				SecretKind:  channelCredentialAuthKindAzure,
+				IssuerScope: CredentialIssuerScope(c.Type.String(), c.BaseURL),
+				KeyHint:     CredentialKeyHintForSecret(channelCredentialAuthKindAzure, secret),
 				Secret:      secret,
 				Enabled:     true,
 				Weight:      100,
@@ -594,16 +718,15 @@ func jsonPathString(value any, path ...string) string {
 	return strings.TrimSpace(result)
 }
 
-func channelCredentialFingerprint(provider string, baseURL string, authKind string, secret string) string {
+func channelCredentialFingerprint(issuerScope string, secretKind string, secret string) string {
 	if strings.TrimSpace(secret) == "" {
 		return ""
 	}
 
 	parts := []string{
 		channelCredentialFingerprintVersion,
-		normalizeCredentialFingerprintPart(provider),
-		normalizeCredentialBaseURL(baseURL),
-		normalizeCredentialFingerprintPart(authKind),
+		normalizeCredentialFingerprintPart(issuerScope),
+		normalizeCredentialFingerprintPart(secretKind),
 		secret,
 	}
 
@@ -634,4 +757,33 @@ func normalizeCredentialBaseURL(value string) string {
 	parsed.Fragment = ""
 
 	return parsed.String()
+}
+
+func normalizedCredentialHost(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.Host == "" {
+		return strings.TrimRight(strings.ToLower(value), "/")
+	}
+
+	return strings.ToLower(parsed.Hostname())
+}
+
+func safeHint(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	if len(value) <= 4 {
+		return fmt.Sprintf("len:%d", len(value))
+	}
+	if len(value) <= 12 {
+		return "..." + value[len(value)-4:]
+	}
+
+	return value[:4] + "..." + value[len(value)-6:]
 }

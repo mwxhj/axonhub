@@ -47,9 +47,8 @@ export function EditCredentialDialog() {
       reset({
         ...defaultCredentialFormValues,
         name: currentCredential.name ?? '',
-        providerType: currentCredential.providerType,
-        baseURL: currentCredential.baseURL ?? '',
-        authKind: currentCredential.authKind,
+        authKind: currentCredential.secretKind,
+        issuerScope: currentCredential.issuerScope ?? '',
         status: currentCredential.status,
         weight: currentCredential.weight,
         remark: currentCredential.remark ?? '',
@@ -90,18 +89,18 @@ export function EditCredentialDialog() {
 
             <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
               <div className='grid gap-2'>
-                <Label>{t('credentials.fields.providerType')}</Label>
-                <Input value={currentCredential?.providerType ?? ''} readOnly className='bg-muted' />
+                <Label>{t('credentials.fields.secretKind')}</Label>
+                <Input value={currentCredential ? t(`credentials.authKinds.${currentCredential.secretKind}`) : ''} readOnly className='bg-muted' />
               </div>
               <div className='grid gap-2'>
-                <Label>{t('credentials.fields.authKind')}</Label>
-                <Input value={currentCredential ? t(`credentials.authKinds.${currentCredential.authKind}`) : ''} readOnly className='bg-muted' />
+                <Label>{t('credentials.fields.keyHint')}</Label>
+                <Input value={currentCredential?.keyHint ?? ''} readOnly className='bg-muted' />
               </div>
             </div>
 
             <div className='grid gap-2'>
-              <Label>{t('credentials.fields.baseURL')}</Label>
-              <Input value={currentCredential?.baseURL ?? ''} readOnly className='bg-muted' />
+              <Label>{t('credentials.fields.issuerScope')}</Label>
+              <Input value={currentCredential?.issuerScope ?? ''} readOnly className='bg-muted' />
             </div>
 
             <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>

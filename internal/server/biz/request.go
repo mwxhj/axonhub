@@ -322,6 +322,18 @@ func (s *RequestService) CreateRequestExecution(
 	if credentialID, ok := contexts.GetChannelCredentialID(ctx); ok && credentialID > 0 {
 		mut = mut.SetCredentialID(credentialID)
 	}
+	if name, ok := contexts.GetChannelCredentialName(ctx); ok && name != "" {
+		mut = mut.SetCredentialNameSnapshot(name)
+	}
+	if keyHint, ok := contexts.GetChannelCredentialKeyHint(ctx); ok && keyHint != "" {
+		mut = mut.SetCredentialKeyHint(keyHint)
+	}
+	if source, ok := contexts.GetChannelCredentialSource(ctx); ok && source != "" {
+		mut = mut.SetCredentialSource(source)
+	}
+	if quotaStatus, ok := contexts.GetChannelCredentialQuotaStatus(ctx); ok && quotaStatus != "" {
+		mut = mut.SetCredentialQuotaStatusSnapshot(quotaStatus)
+	}
 
 	// Use the same data storage as the request
 	if request.DataStorageID != 0 {

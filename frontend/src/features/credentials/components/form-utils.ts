@@ -13,6 +13,7 @@ export const defaultCredentialFormValues: CredentialFormValues = {
   providerType: 'openai',
   baseURL: '',
   authKind: 'api_key',
+  issuerScope: '',
   apiKey: '',
   oauthAccessToken: '',
   oauthRefreshToken: '',
@@ -92,9 +93,8 @@ export function buildCredentialSecret(values: CredentialFormValues): CredentialS
 export function buildCreateCredentialInput(values: CredentialFormValues): CreateUpstreamCredentialInput {
   return {
     name: clean(values.name),
-    providerType: clean(values.providerType) ?? 'openai',
-    baseURL: clean(values.baseURL),
-    authKind: values.authKind,
+    secretKind: values.authKind,
+    issuerScope: clean(values.issuerScope),
     secret: buildCredentialSecret(values),
     status: values.status,
     weight: Number(values.weight) || 100,

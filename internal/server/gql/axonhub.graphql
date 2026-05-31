@@ -233,9 +233,11 @@ input UpstreamCredentialSecretInput {
 
 input CreateUpstreamCredentialInput {
   name: String
-  providerType: String!
+  providerType: String
   baseURL: String
-  authKind: UpstreamCredentialAuthKind!
+  authKind: UpstreamCredentialAuthKind
+  secretKind: UpstreamCredentialSecretKind
+  issuerScope: String
   secret: UpstreamCredentialSecretInput!
   status: UpstreamCredentialStatus
   weight: Int

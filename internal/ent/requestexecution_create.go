@@ -151,6 +151,62 @@ func (_c *RequestExecutionCreate) SetNillableCredentialFingerprint(v *string) *R
 	return _c
 }
 
+// SetCredentialNameSnapshot sets the "credential_name_snapshot" field.
+func (_c *RequestExecutionCreate) SetCredentialNameSnapshot(v string) *RequestExecutionCreate {
+	_c.mutation.SetCredentialNameSnapshot(v)
+	return _c
+}
+
+// SetNillableCredentialNameSnapshot sets the "credential_name_snapshot" field if the given value is not nil.
+func (_c *RequestExecutionCreate) SetNillableCredentialNameSnapshot(v *string) *RequestExecutionCreate {
+	if v != nil {
+		_c.SetCredentialNameSnapshot(*v)
+	}
+	return _c
+}
+
+// SetCredentialKeyHint sets the "credential_key_hint" field.
+func (_c *RequestExecutionCreate) SetCredentialKeyHint(v string) *RequestExecutionCreate {
+	_c.mutation.SetCredentialKeyHint(v)
+	return _c
+}
+
+// SetNillableCredentialKeyHint sets the "credential_key_hint" field if the given value is not nil.
+func (_c *RequestExecutionCreate) SetNillableCredentialKeyHint(v *string) *RequestExecutionCreate {
+	if v != nil {
+		_c.SetCredentialKeyHint(*v)
+	}
+	return _c
+}
+
+// SetCredentialSource sets the "credential_source" field.
+func (_c *RequestExecutionCreate) SetCredentialSource(v string) *RequestExecutionCreate {
+	_c.mutation.SetCredentialSource(v)
+	return _c
+}
+
+// SetNillableCredentialSource sets the "credential_source" field if the given value is not nil.
+func (_c *RequestExecutionCreate) SetNillableCredentialSource(v *string) *RequestExecutionCreate {
+	if v != nil {
+		_c.SetCredentialSource(*v)
+	}
+	return _c
+}
+
+// SetCredentialQuotaStatusSnapshot sets the "credential_quota_status_snapshot" field.
+func (_c *RequestExecutionCreate) SetCredentialQuotaStatusSnapshot(v string) *RequestExecutionCreate {
+	_c.mutation.SetCredentialQuotaStatusSnapshot(v)
+	return _c
+}
+
+// SetNillableCredentialQuotaStatusSnapshot sets the "credential_quota_status_snapshot" field if the given value is not nil.
+func (_c *RequestExecutionCreate) SetNillableCredentialQuotaStatusSnapshot(v *string) *RequestExecutionCreate {
+	if v != nil {
+		_c.SetCredentialQuotaStatusSnapshot(*v)
+	}
+	return _c
+}
+
 // SetFormat sets the "format" field.
 func (_c *RequestExecutionCreate) SetFormat(v string) *RequestExecutionCreate {
 	_c.mutation.SetFormat(v)
@@ -447,6 +503,22 @@ func (_c *RequestExecutionCreate) createSpec() (*RequestExecution, *sqlgraph.Cre
 	if value, ok := _c.mutation.CredentialFingerprint(); ok {
 		_spec.SetField(requestexecution.FieldCredentialFingerprint, field.TypeString, value)
 		_node.CredentialFingerprint = value
+	}
+	if value, ok := _c.mutation.CredentialNameSnapshot(); ok {
+		_spec.SetField(requestexecution.FieldCredentialNameSnapshot, field.TypeString, value)
+		_node.CredentialNameSnapshot = value
+	}
+	if value, ok := _c.mutation.CredentialKeyHint(); ok {
+		_spec.SetField(requestexecution.FieldCredentialKeyHint, field.TypeString, value)
+		_node.CredentialKeyHint = value
+	}
+	if value, ok := _c.mutation.CredentialSource(); ok {
+		_spec.SetField(requestexecution.FieldCredentialSource, field.TypeString, value)
+		_node.CredentialSource = value
+	}
+	if value, ok := _c.mutation.CredentialQuotaStatusSnapshot(); ok {
+		_spec.SetField(requestexecution.FieldCredentialQuotaStatusSnapshot, field.TypeString, value)
+		_node.CredentialQuotaStatusSnapshot = value
 	}
 	if value, ok := _c.mutation.Format(); ok {
 		_spec.SetField(requestexecution.FieldFormat, field.TypeString, value)
@@ -860,6 +932,18 @@ func (u *RequestExecutionUpsertOne) UpdateNewValues() *RequestExecutionUpsertOne
 		}
 		if _, exists := u.create.mutation.CredentialFingerprint(); exists {
 			s.SetIgnore(requestexecution.FieldCredentialFingerprint)
+		}
+		if _, exists := u.create.mutation.CredentialNameSnapshot(); exists {
+			s.SetIgnore(requestexecution.FieldCredentialNameSnapshot)
+		}
+		if _, exists := u.create.mutation.CredentialKeyHint(); exists {
+			s.SetIgnore(requestexecution.FieldCredentialKeyHint)
+		}
+		if _, exists := u.create.mutation.CredentialSource(); exists {
+			s.SetIgnore(requestexecution.FieldCredentialSource)
+		}
+		if _, exists := u.create.mutation.CredentialQuotaStatusSnapshot(); exists {
+			s.SetIgnore(requestexecution.FieldCredentialQuotaStatusSnapshot)
 		}
 		if _, exists := u.create.mutation.Format(); exists {
 			s.SetIgnore(requestexecution.FieldFormat)
@@ -1345,6 +1429,18 @@ func (u *RequestExecutionUpsertBulk) UpdateNewValues() *RequestExecutionUpsertBu
 			}
 			if _, exists := b.mutation.CredentialFingerprint(); exists {
 				s.SetIgnore(requestexecution.FieldCredentialFingerprint)
+			}
+			if _, exists := b.mutation.CredentialNameSnapshot(); exists {
+				s.SetIgnore(requestexecution.FieldCredentialNameSnapshot)
+			}
+			if _, exists := b.mutation.CredentialKeyHint(); exists {
+				s.SetIgnore(requestexecution.FieldCredentialKeyHint)
+			}
+			if _, exists := b.mutation.CredentialSource(); exists {
+				s.SetIgnore(requestexecution.FieldCredentialSource)
+			}
+			if _, exists := b.mutation.CredentialQuotaStatusSnapshot(); exists {
+				s.SetIgnore(requestexecution.FieldCredentialQuotaStatusSnapshot)
 			}
 			if _, exists := b.mutation.Format(); exists {
 				s.SetIgnore(requestexecution.FieldFormat)

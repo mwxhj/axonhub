@@ -100,6 +100,21 @@ func CredentialFingerprint(v string) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldEQ(FieldCredentialFingerprint, v))
 }
 
+// CredentialNameSnapshot applies equality check predicate on the "credential_name_snapshot" field. It's identical to CredentialNameSnapshotEQ.
+func CredentialNameSnapshot(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialKeyHint applies equality check predicate on the "credential_key_hint" field. It's identical to CredentialKeyHintEQ.
+func CredentialKeyHint(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldCredentialKeyHint, v))
+}
+
+// CredentialSource applies equality check predicate on the "credential_source" field. It's identical to CredentialSourceEQ.
+func CredentialSource(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldCredentialSource, v))
+}
+
 // PromptTokens applies equality check predicate on the "prompt_tokens" field. It's identical to PromptTokensEQ.
 func PromptTokens(v int64) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldEQ(FieldPromptTokens, v))
@@ -543,6 +558,231 @@ func CredentialFingerprintEqualFold(v string) predicate.UsageLog {
 // CredentialFingerprintContainsFold applies the ContainsFold predicate on the "credential_fingerprint" field.
 func CredentialFingerprintContainsFold(v string) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldContainsFold(FieldCredentialFingerprint, v))
+}
+
+// CredentialNameSnapshotEQ applies the EQ predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotEQ(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotNEQ applies the NEQ predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotNEQ(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNEQ(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotIn applies the In predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotIn(vs ...string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIn(FieldCredentialNameSnapshot, vs...))
+}
+
+// CredentialNameSnapshotNotIn applies the NotIn predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotNotIn(vs ...string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotIn(FieldCredentialNameSnapshot, vs...))
+}
+
+// CredentialNameSnapshotGT applies the GT predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotGT(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldGT(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotGTE applies the GTE predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotGTE(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldGTE(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotLT applies the LT predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotLT(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldLT(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotLTE applies the LTE predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotLTE(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldLTE(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotContains applies the Contains predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotContains(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldContains(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotHasPrefix applies the HasPrefix predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotHasPrefix(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldHasPrefix(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotHasSuffix applies the HasSuffix predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotHasSuffix(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldHasSuffix(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotIsNil applies the IsNil predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotIsNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIsNull(FieldCredentialNameSnapshot))
+}
+
+// CredentialNameSnapshotNotNil applies the NotNil predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotNotNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotNull(FieldCredentialNameSnapshot))
+}
+
+// CredentialNameSnapshotEqualFold applies the EqualFold predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotEqualFold(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEqualFold(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialNameSnapshotContainsFold applies the ContainsFold predicate on the "credential_name_snapshot" field.
+func CredentialNameSnapshotContainsFold(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldContainsFold(FieldCredentialNameSnapshot, v))
+}
+
+// CredentialKeyHintEQ applies the EQ predicate on the "credential_key_hint" field.
+func CredentialKeyHintEQ(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintNEQ applies the NEQ predicate on the "credential_key_hint" field.
+func CredentialKeyHintNEQ(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNEQ(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintIn applies the In predicate on the "credential_key_hint" field.
+func CredentialKeyHintIn(vs ...string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIn(FieldCredentialKeyHint, vs...))
+}
+
+// CredentialKeyHintNotIn applies the NotIn predicate on the "credential_key_hint" field.
+func CredentialKeyHintNotIn(vs ...string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotIn(FieldCredentialKeyHint, vs...))
+}
+
+// CredentialKeyHintGT applies the GT predicate on the "credential_key_hint" field.
+func CredentialKeyHintGT(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldGT(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintGTE applies the GTE predicate on the "credential_key_hint" field.
+func CredentialKeyHintGTE(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldGTE(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintLT applies the LT predicate on the "credential_key_hint" field.
+func CredentialKeyHintLT(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldLT(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintLTE applies the LTE predicate on the "credential_key_hint" field.
+func CredentialKeyHintLTE(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldLTE(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintContains applies the Contains predicate on the "credential_key_hint" field.
+func CredentialKeyHintContains(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldContains(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintHasPrefix applies the HasPrefix predicate on the "credential_key_hint" field.
+func CredentialKeyHintHasPrefix(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldHasPrefix(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintHasSuffix applies the HasSuffix predicate on the "credential_key_hint" field.
+func CredentialKeyHintHasSuffix(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldHasSuffix(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintIsNil applies the IsNil predicate on the "credential_key_hint" field.
+func CredentialKeyHintIsNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIsNull(FieldCredentialKeyHint))
+}
+
+// CredentialKeyHintNotNil applies the NotNil predicate on the "credential_key_hint" field.
+func CredentialKeyHintNotNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotNull(FieldCredentialKeyHint))
+}
+
+// CredentialKeyHintEqualFold applies the EqualFold predicate on the "credential_key_hint" field.
+func CredentialKeyHintEqualFold(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEqualFold(FieldCredentialKeyHint, v))
+}
+
+// CredentialKeyHintContainsFold applies the ContainsFold predicate on the "credential_key_hint" field.
+func CredentialKeyHintContainsFold(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldContainsFold(FieldCredentialKeyHint, v))
+}
+
+// CredentialSourceEQ applies the EQ predicate on the "credential_source" field.
+func CredentialSourceEQ(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldCredentialSource, v))
+}
+
+// CredentialSourceNEQ applies the NEQ predicate on the "credential_source" field.
+func CredentialSourceNEQ(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNEQ(FieldCredentialSource, v))
+}
+
+// CredentialSourceIn applies the In predicate on the "credential_source" field.
+func CredentialSourceIn(vs ...string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIn(FieldCredentialSource, vs...))
+}
+
+// CredentialSourceNotIn applies the NotIn predicate on the "credential_source" field.
+func CredentialSourceNotIn(vs ...string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotIn(FieldCredentialSource, vs...))
+}
+
+// CredentialSourceGT applies the GT predicate on the "credential_source" field.
+func CredentialSourceGT(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldGT(FieldCredentialSource, v))
+}
+
+// CredentialSourceGTE applies the GTE predicate on the "credential_source" field.
+func CredentialSourceGTE(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldGTE(FieldCredentialSource, v))
+}
+
+// CredentialSourceLT applies the LT predicate on the "credential_source" field.
+func CredentialSourceLT(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldLT(FieldCredentialSource, v))
+}
+
+// CredentialSourceLTE applies the LTE predicate on the "credential_source" field.
+func CredentialSourceLTE(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldLTE(FieldCredentialSource, v))
+}
+
+// CredentialSourceContains applies the Contains predicate on the "credential_source" field.
+func CredentialSourceContains(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldContains(FieldCredentialSource, v))
+}
+
+// CredentialSourceHasPrefix applies the HasPrefix predicate on the "credential_source" field.
+func CredentialSourceHasPrefix(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldHasPrefix(FieldCredentialSource, v))
+}
+
+// CredentialSourceHasSuffix applies the HasSuffix predicate on the "credential_source" field.
+func CredentialSourceHasSuffix(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldHasSuffix(FieldCredentialSource, v))
+}
+
+// CredentialSourceIsNil applies the IsNil predicate on the "credential_source" field.
+func CredentialSourceIsNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIsNull(FieldCredentialSource))
+}
+
+// CredentialSourceNotNil applies the NotNil predicate on the "credential_source" field.
+func CredentialSourceNotNil() predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotNull(FieldCredentialSource))
+}
+
+// CredentialSourceEqualFold applies the EqualFold predicate on the "credential_source" field.
+func CredentialSourceEqualFold(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEqualFold(FieldCredentialSource, v))
+}
+
+// CredentialSourceContainsFold applies the ContainsFold predicate on the "credential_source" field.
+func CredentialSourceContainsFold(v string) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldContainsFold(FieldCredentialSource, v))
 }
 
 // PromptTokensEQ applies the EQ predicate on the "prompt_tokens" field.

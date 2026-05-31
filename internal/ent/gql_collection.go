@@ -4383,6 +4383,26 @@ func (_q *RequestExecutionQuery) collectField(ctx context.Context, oneNode bool,
 				selectedFields = append(selectedFields, requestexecution.FieldCredentialFingerprint)
 				fieldSeen[requestexecution.FieldCredentialFingerprint] = struct{}{}
 			}
+		case "credentialNameSnapshot":
+			if _, ok := fieldSeen[requestexecution.FieldCredentialNameSnapshot]; !ok {
+				selectedFields = append(selectedFields, requestexecution.FieldCredentialNameSnapshot)
+				fieldSeen[requestexecution.FieldCredentialNameSnapshot] = struct{}{}
+			}
+		case "credentialKeyHint":
+			if _, ok := fieldSeen[requestexecution.FieldCredentialKeyHint]; !ok {
+				selectedFields = append(selectedFields, requestexecution.FieldCredentialKeyHint)
+				fieldSeen[requestexecution.FieldCredentialKeyHint] = struct{}{}
+			}
+		case "credentialSource":
+			if _, ok := fieldSeen[requestexecution.FieldCredentialSource]; !ok {
+				selectedFields = append(selectedFields, requestexecution.FieldCredentialSource)
+				fieldSeen[requestexecution.FieldCredentialSource] = struct{}{}
+			}
+		case "credentialQuotaStatusSnapshot":
+			if _, ok := fieldSeen[requestexecution.FieldCredentialQuotaStatusSnapshot]; !ok {
+				selectedFields = append(selectedFields, requestexecution.FieldCredentialQuotaStatusSnapshot)
+				fieldSeen[requestexecution.FieldCredentialQuotaStatusSnapshot] = struct{}{}
+			}
 		case "format":
 			if _, ok := fieldSeen[requestexecution.FieldFormat]; !ok {
 				selectedFields = append(selectedFields, requestexecution.FieldFormat)
@@ -5688,6 +5708,26 @@ func (_q *UpstreamCredentialQuery) collectField(ctx context.Context, oneNode boo
 				selectedFields = append(selectedFields, upstreamcredential.FieldAuthKind)
 				fieldSeen[upstreamcredential.FieldAuthKind] = struct{}{}
 			}
+		case "secretKind":
+			if _, ok := fieldSeen[upstreamcredential.FieldSecretKind]; !ok {
+				selectedFields = append(selectedFields, upstreamcredential.FieldSecretKind)
+				fieldSeen[upstreamcredential.FieldSecretKind] = struct{}{}
+			}
+		case "issuerScope":
+			if _, ok := fieldSeen[upstreamcredential.FieldIssuerScope]; !ok {
+				selectedFields = append(selectedFields, upstreamcredential.FieldIssuerScope)
+				fieldSeen[upstreamcredential.FieldIssuerScope] = struct{}{}
+			}
+		case "keyHint":
+			if _, ok := fieldSeen[upstreamcredential.FieldKeyHint]; !ok {
+				selectedFields = append(selectedFields, upstreamcredential.FieldKeyHint)
+				fieldSeen[upstreamcredential.FieldKeyHint] = struct{}{}
+			}
+		case "quotaScopeID":
+			if _, ok := fieldSeen[upstreamcredential.FieldQuotaScopeID]; !ok {
+				selectedFields = append(selectedFields, upstreamcredential.FieldQuotaScopeID)
+				fieldSeen[upstreamcredential.FieldQuotaScopeID] = struct{}{}
+			}
 		case "fingerprint":
 			if _, ok := fieldSeen[upstreamcredential.FieldFingerprint]; !ok {
 				selectedFields = append(selectedFields, upstreamcredential.FieldFingerprint)
@@ -5702,6 +5742,16 @@ func (_q *UpstreamCredentialQuery) collectField(ctx context.Context, oneNode boo
 			if _, ok := fieldSeen[upstreamcredential.FieldWeight]; !ok {
 				selectedFields = append(selectedFields, upstreamcredential.FieldWeight)
 				fieldSeen[upstreamcredential.FieldWeight] = struct{}{}
+			}
+		case "quotaStatus":
+			if _, ok := fieldSeen[upstreamcredential.FieldQuotaStatus]; !ok {
+				selectedFields = append(selectedFields, upstreamcredential.FieldQuotaStatus)
+				fieldSeen[upstreamcredential.FieldQuotaStatus] = struct{}{}
+			}
+		case "lastError":
+			if _, ok := fieldSeen[upstreamcredential.FieldLastError]; !ok {
+				selectedFields = append(selectedFields, upstreamcredential.FieldLastError)
+				fieldSeen[upstreamcredential.FieldLastError] = struct{}{}
 			}
 		case "remark":
 			if _, ok := fieldSeen[upstreamcredential.FieldRemark]; !ok {
@@ -5896,6 +5946,21 @@ func (_q *UsageLogQuery) collectField(ctx context.Context, oneNode bool, opCtx *
 			if _, ok := fieldSeen[usagelog.FieldCredentialFingerprint]; !ok {
 				selectedFields = append(selectedFields, usagelog.FieldCredentialFingerprint)
 				fieldSeen[usagelog.FieldCredentialFingerprint] = struct{}{}
+			}
+		case "credentialNameSnapshot":
+			if _, ok := fieldSeen[usagelog.FieldCredentialNameSnapshot]; !ok {
+				selectedFields = append(selectedFields, usagelog.FieldCredentialNameSnapshot)
+				fieldSeen[usagelog.FieldCredentialNameSnapshot] = struct{}{}
+			}
+		case "credentialKeyHint":
+			if _, ok := fieldSeen[usagelog.FieldCredentialKeyHint]; !ok {
+				selectedFields = append(selectedFields, usagelog.FieldCredentialKeyHint)
+				fieldSeen[usagelog.FieldCredentialKeyHint] = struct{}{}
+			}
+		case "credentialSource":
+			if _, ok := fieldSeen[usagelog.FieldCredentialSource]; !ok {
+				selectedFields = append(selectedFields, usagelog.FieldCredentialSource)
+				fieldSeen[usagelog.FieldCredentialSource] = struct{}{}
 			}
 		case "promptTokens":
 			if _, ok := fieldSeen[usagelog.FieldPromptTokens]; !ok {

@@ -33,6 +33,22 @@ type contextContainer struct {
 	// selected for the channel request when the channel uses credential refs.
 	ChannelCredentialID *int
 
+	// ChannelCredentialName stores a safe display name snapshot for the
+	// selected upstream credential.
+	ChannelCredentialName *string
+
+	// ChannelCredentialKeyHint stores a non-secret key/account hint for the
+	// selected upstream credential.
+	ChannelCredentialKeyHint *string
+
+	// ChannelCredentialSource stores whether the selected credential came from
+	// first-class refs, legacy inline channel credentials, or another source.
+	ChannelCredentialSource *string
+
+	// ChannelCredentialQuotaStatus stores the latest credential quota/budget
+	// status known at selection time.
+	ChannelCredentialQuotaStatus *string
+
 	// CredentialSelectionSeed stores the sticky-session identity used by
 	// channel credential providers to keep related requests on the same
 	// upstream credential/cache pool.

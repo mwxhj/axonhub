@@ -2060,6 +2060,18 @@ input CreateUsageLogInput {
   """
   credentialFingerprint: String
   """
+  Credential display name captured when usage was logged
+  """
+  credentialNameSnapshot: String
+  """
+  Safe credential key hint captured when usage was logged
+  """
+  credentialKeyHint: String
+  """
+  Credential source used for this request: ref, legacy, or unknown
+  """
+  credentialSource: String
+  """
   Number of tokens in the prompt
   """
   promptTokens: Int
@@ -4870,6 +4882,22 @@ type RequestExecution implements Node {
   Safe upstream credential identity used for this execution; never stores the raw secret
   """
   credentialFingerprint: String
+  """
+  Credential display name captured at execution time
+  """
+  credentialNameSnapshot: String
+  """
+  Safe credential key hint captured at execution time
+  """
+  credentialKeyHint: String
+  """
+  Credential source used for this execution: ref, legacy, or unknown
+  """
+  credentialSource: String
+  """
+  Credential quota/budget status captured at execution time when known
+  """
+  credentialQuotaStatusSnapshot: String
   format: String!
   requestBody: JSONRawMessage! @goField(forceResolver: true)
   responseBody: JSONRawMessage @goField(forceResolver: true)
@@ -5094,6 +5122,78 @@ input RequestExecutionWhereInput {
   credentialFingerprintNotNil: Boolean
   credentialFingerprintEqualFold: String
   credentialFingerprintContainsFold: String
+  """
+  credential_name_snapshot field predicates
+  """
+  credentialNameSnapshot: String
+  credentialNameSnapshotNEQ: String
+  credentialNameSnapshotIn: [String!]
+  credentialNameSnapshotNotIn: [String!]
+  credentialNameSnapshotGT: String
+  credentialNameSnapshotGTE: String
+  credentialNameSnapshotLT: String
+  credentialNameSnapshotLTE: String
+  credentialNameSnapshotContains: String
+  credentialNameSnapshotHasPrefix: String
+  credentialNameSnapshotHasSuffix: String
+  credentialNameSnapshotIsNil: Boolean
+  credentialNameSnapshotNotNil: Boolean
+  credentialNameSnapshotEqualFold: String
+  credentialNameSnapshotContainsFold: String
+  """
+  credential_key_hint field predicates
+  """
+  credentialKeyHint: String
+  credentialKeyHintNEQ: String
+  credentialKeyHintIn: [String!]
+  credentialKeyHintNotIn: [String!]
+  credentialKeyHintGT: String
+  credentialKeyHintGTE: String
+  credentialKeyHintLT: String
+  credentialKeyHintLTE: String
+  credentialKeyHintContains: String
+  credentialKeyHintHasPrefix: String
+  credentialKeyHintHasSuffix: String
+  credentialKeyHintIsNil: Boolean
+  credentialKeyHintNotNil: Boolean
+  credentialKeyHintEqualFold: String
+  credentialKeyHintContainsFold: String
+  """
+  credential_source field predicates
+  """
+  credentialSource: String
+  credentialSourceNEQ: String
+  credentialSourceIn: [String!]
+  credentialSourceNotIn: [String!]
+  credentialSourceGT: String
+  credentialSourceGTE: String
+  credentialSourceLT: String
+  credentialSourceLTE: String
+  credentialSourceContains: String
+  credentialSourceHasPrefix: String
+  credentialSourceHasSuffix: String
+  credentialSourceIsNil: Boolean
+  credentialSourceNotNil: Boolean
+  credentialSourceEqualFold: String
+  credentialSourceContainsFold: String
+  """
+  credential_quota_status_snapshot field predicates
+  """
+  credentialQuotaStatusSnapshot: String
+  credentialQuotaStatusSnapshotNEQ: String
+  credentialQuotaStatusSnapshotIn: [String!]
+  credentialQuotaStatusSnapshotNotIn: [String!]
+  credentialQuotaStatusSnapshotGT: String
+  credentialQuotaStatusSnapshotGTE: String
+  credentialQuotaStatusSnapshotLT: String
+  credentialQuotaStatusSnapshotLTE: String
+  credentialQuotaStatusSnapshotContains: String
+  credentialQuotaStatusSnapshotHasPrefix: String
+  credentialQuotaStatusSnapshotHasSuffix: String
+  credentialQuotaStatusSnapshotIsNil: Boolean
+  credentialQuotaStatusSnapshotNotNil: Boolean
+  credentialQuotaStatusSnapshotEqualFold: String
+  credentialQuotaStatusSnapshotContainsFold: String
   """
   format field predicates
   """
@@ -6746,6 +6846,22 @@ type UpstreamCredential implements Node {
   baseURL: String
   authKind: UpstreamCredentialAuthKind!
   """
+  Internal secret kind for the upstream account asset; not a channel/API-format setting
+  """
+  secretKind: UpstreamCredentialSecretKind!
+  """
+  Coarse upstream issuer namespace used for credential identity; not the channel base URL
+  """
+  issuerScope: String
+  """
+  Safe display hint for the secret; never contains the full secret
+  """
+  keyHint: String
+  """
+  Optional shared quota/billing scope for credentials that belong to one upstream account pool
+  """
+  quotaScopeID: Int
+  """
   Safe upstream credential identity; never contains raw secret material
   """
   fingerprint: String!
@@ -6754,6 +6870,14 @@ type UpstreamCredential implements Node {
   Default credential selection weight inside eligible channel refs
   """
   weight: Int!
+  """
+  Latest credential-scoped quota or budget status summary
+  """
+  quotaStatus: String
+  """
+  Latest credential-scoped error summary safe for operator display
+  """
+  lastError: String
   remark: String
   channelRefs(
     """
@@ -6913,9 +7037,24 @@ enum UpstreamCredentialOrderField {
   PROVIDER_TYPE
   BASE_URL
   AUTH_KIND
+  SECRET_KIND
+  ISSUER_SCOPE
+  KEY_HINT
+  QUOTA_SCOPE_ID
   FINGERPRINT
   STATUS
   WEIGHT
+  QUOTA_STATUS
+}
+"""
+UpstreamCredentialSecretKind is enum for the field secret_kind
+"""
+enum UpstreamCredentialSecretKind @goModel(model: "github.com/looplj/axonhub/internal/ent/upstreamcredential.SecretKind") {
+  api_key
+  oauth
+  azure
+  gcp
+  other
 }
 """
 UpstreamCredentialStatus is enum for the field status
@@ -7026,6 +7165,62 @@ input UpstreamCredentialWhereInput {
   authKindIn: [UpstreamCredentialAuthKind!]
   authKindNotIn: [UpstreamCredentialAuthKind!]
   """
+  secret_kind field predicates
+  """
+  secretKind: UpstreamCredentialSecretKind
+  secretKindNEQ: UpstreamCredentialSecretKind
+  secretKindIn: [UpstreamCredentialSecretKind!]
+  secretKindNotIn: [UpstreamCredentialSecretKind!]
+  """
+  issuer_scope field predicates
+  """
+  issuerScope: String
+  issuerScopeNEQ: String
+  issuerScopeIn: [String!]
+  issuerScopeNotIn: [String!]
+  issuerScopeGT: String
+  issuerScopeGTE: String
+  issuerScopeLT: String
+  issuerScopeLTE: String
+  issuerScopeContains: String
+  issuerScopeHasPrefix: String
+  issuerScopeHasSuffix: String
+  issuerScopeIsNil: Boolean
+  issuerScopeNotNil: Boolean
+  issuerScopeEqualFold: String
+  issuerScopeContainsFold: String
+  """
+  key_hint field predicates
+  """
+  keyHint: String
+  keyHintNEQ: String
+  keyHintIn: [String!]
+  keyHintNotIn: [String!]
+  keyHintGT: String
+  keyHintGTE: String
+  keyHintLT: String
+  keyHintLTE: String
+  keyHintContains: String
+  keyHintHasPrefix: String
+  keyHintHasSuffix: String
+  keyHintIsNil: Boolean
+  keyHintNotNil: Boolean
+  keyHintEqualFold: String
+  keyHintContainsFold: String
+  """
+  quota_scope_id field predicates
+  """
+  quotaScopeID: Int
+  quotaScopeIDNEQ: Int
+  quotaScopeIDIn: [Int!]
+  quotaScopeIDNotIn: [Int!]
+  quotaScopeIDGT: Int
+  quotaScopeIDGTE: Int
+  quotaScopeIDLT: Int
+  quotaScopeIDLTE: Int
+  quotaScopeIDIsNil: Boolean
+  quotaScopeIDNotNil: Boolean
+  """
   fingerprint field predicates
   """
   fingerprint: String
@@ -7059,6 +7254,42 @@ input UpstreamCredentialWhereInput {
   weightGTE: Int
   weightLT: Int
   weightLTE: Int
+  """
+  quota_status field predicates
+  """
+  quotaStatus: String
+  quotaStatusNEQ: String
+  quotaStatusIn: [String!]
+  quotaStatusNotIn: [String!]
+  quotaStatusGT: String
+  quotaStatusGTE: String
+  quotaStatusLT: String
+  quotaStatusLTE: String
+  quotaStatusContains: String
+  quotaStatusHasPrefix: String
+  quotaStatusHasSuffix: String
+  quotaStatusIsNil: Boolean
+  quotaStatusNotNil: Boolean
+  quotaStatusEqualFold: String
+  quotaStatusContainsFold: String
+  """
+  last_error field predicates
+  """
+  lastError: String
+  lastErrorNEQ: String
+  lastErrorIn: [String!]
+  lastErrorNotIn: [String!]
+  lastErrorGT: String
+  lastErrorGTE: String
+  lastErrorLT: String
+  lastErrorLTE: String
+  lastErrorContains: String
+  lastErrorHasPrefix: String
+  lastErrorHasSuffix: String
+  lastErrorIsNil: Boolean
+  lastErrorNotNil: Boolean
+  lastErrorEqualFold: String
+  lastErrorContainsFold: String
   """
   remark field predicates
   """
@@ -7127,6 +7358,18 @@ type UsageLog implements Node {
   Safe upstream credential identity used for this request; never stores the raw secret
   """
   credentialFingerprint: String
+  """
+  Credential display name captured when usage was logged
+  """
+  credentialNameSnapshot: String
+  """
+  Safe credential key hint captured when usage was logged
+  """
+  credentialKeyHint: String
+  """
+  Credential source used for this request: ref, legacy, or unknown
+  """
+  credentialSource: String
   """
   Number of tokens in the prompt
   """
@@ -7378,6 +7621,60 @@ input UsageLogWhereInput {
   credentialFingerprintNotNil: Boolean
   credentialFingerprintEqualFold: String
   credentialFingerprintContainsFold: String
+  """
+  credential_name_snapshot field predicates
+  """
+  credentialNameSnapshot: String
+  credentialNameSnapshotNEQ: String
+  credentialNameSnapshotIn: [String!]
+  credentialNameSnapshotNotIn: [String!]
+  credentialNameSnapshotGT: String
+  credentialNameSnapshotGTE: String
+  credentialNameSnapshotLT: String
+  credentialNameSnapshotLTE: String
+  credentialNameSnapshotContains: String
+  credentialNameSnapshotHasPrefix: String
+  credentialNameSnapshotHasSuffix: String
+  credentialNameSnapshotIsNil: Boolean
+  credentialNameSnapshotNotNil: Boolean
+  credentialNameSnapshotEqualFold: String
+  credentialNameSnapshotContainsFold: String
+  """
+  credential_key_hint field predicates
+  """
+  credentialKeyHint: String
+  credentialKeyHintNEQ: String
+  credentialKeyHintIn: [String!]
+  credentialKeyHintNotIn: [String!]
+  credentialKeyHintGT: String
+  credentialKeyHintGTE: String
+  credentialKeyHintLT: String
+  credentialKeyHintLTE: String
+  credentialKeyHintContains: String
+  credentialKeyHintHasPrefix: String
+  credentialKeyHintHasSuffix: String
+  credentialKeyHintIsNil: Boolean
+  credentialKeyHintNotNil: Boolean
+  credentialKeyHintEqualFold: String
+  credentialKeyHintContainsFold: String
+  """
+  credential_source field predicates
+  """
+  credentialSource: String
+  credentialSourceNEQ: String
+  credentialSourceIn: [String!]
+  credentialSourceNotIn: [String!]
+  credentialSourceGT: String
+  credentialSourceGTE: String
+  credentialSourceLT: String
+  credentialSourceLTE: String
+  credentialSourceContains: String
+  credentialSourceHasPrefix: String
+  credentialSourceHasSuffix: String
+  credentialSourceIsNil: Boolean
+  credentialSourceNotNil: Boolean
+  credentialSourceEqualFold: String
+  credentialSourceContainsFold: String
   """
   prompt_tokens field predicates
   """

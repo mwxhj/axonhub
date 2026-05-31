@@ -85,6 +85,21 @@ func BaseURL(v string) predicate.UpstreamCredential {
 	return predicate.UpstreamCredential(sql.FieldEQ(FieldBaseURL, v))
 }
 
+// IssuerScope applies equality check predicate on the "issuer_scope" field. It's identical to IssuerScopeEQ.
+func IssuerScope(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldEQ(FieldIssuerScope, v))
+}
+
+// KeyHint applies equality check predicate on the "key_hint" field. It's identical to KeyHintEQ.
+func KeyHint(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldEQ(FieldKeyHint, v))
+}
+
+// QuotaScopeID applies equality check predicate on the "quota_scope_id" field. It's identical to QuotaScopeIDEQ.
+func QuotaScopeID(v int) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldEQ(FieldQuotaScopeID, v))
+}
+
 // Fingerprint applies equality check predicate on the "fingerprint" field. It's identical to FingerprintEQ.
 func Fingerprint(v string) predicate.UpstreamCredential {
 	return predicate.UpstreamCredential(sql.FieldEQ(FieldFingerprint, v))
@@ -93,6 +108,16 @@ func Fingerprint(v string) predicate.UpstreamCredential {
 // Weight applies equality check predicate on the "weight" field. It's identical to WeightEQ.
 func Weight(v int) predicate.UpstreamCredential {
 	return predicate.UpstreamCredential(sql.FieldEQ(FieldWeight, v))
+}
+
+// QuotaStatus applies equality check predicate on the "quota_status" field. It's identical to QuotaStatusEQ.
+func QuotaStatus(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldEQ(FieldQuotaStatus, v))
+}
+
+// LastError applies equality check predicate on the "last_error" field. It's identical to LastErrorEQ.
+func LastError(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldEQ(FieldLastError, v))
 }
 
 // Remark applies equality check predicate on the "remark" field. It's identical to RemarkEQ.
@@ -455,6 +480,226 @@ func AuthKindNotIn(vs ...AuthKind) predicate.UpstreamCredential {
 	return predicate.UpstreamCredential(sql.FieldNotIn(FieldAuthKind, vs...))
 }
 
+// SecretKindEQ applies the EQ predicate on the "secret_kind" field.
+func SecretKindEQ(v SecretKind) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldEQ(FieldSecretKind, v))
+}
+
+// SecretKindNEQ applies the NEQ predicate on the "secret_kind" field.
+func SecretKindNEQ(v SecretKind) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNEQ(FieldSecretKind, v))
+}
+
+// SecretKindIn applies the In predicate on the "secret_kind" field.
+func SecretKindIn(vs ...SecretKind) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldIn(FieldSecretKind, vs...))
+}
+
+// SecretKindNotIn applies the NotIn predicate on the "secret_kind" field.
+func SecretKindNotIn(vs ...SecretKind) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNotIn(FieldSecretKind, vs...))
+}
+
+// IssuerScopeEQ applies the EQ predicate on the "issuer_scope" field.
+func IssuerScopeEQ(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldEQ(FieldIssuerScope, v))
+}
+
+// IssuerScopeNEQ applies the NEQ predicate on the "issuer_scope" field.
+func IssuerScopeNEQ(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNEQ(FieldIssuerScope, v))
+}
+
+// IssuerScopeIn applies the In predicate on the "issuer_scope" field.
+func IssuerScopeIn(vs ...string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldIn(FieldIssuerScope, vs...))
+}
+
+// IssuerScopeNotIn applies the NotIn predicate on the "issuer_scope" field.
+func IssuerScopeNotIn(vs ...string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNotIn(FieldIssuerScope, vs...))
+}
+
+// IssuerScopeGT applies the GT predicate on the "issuer_scope" field.
+func IssuerScopeGT(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldGT(FieldIssuerScope, v))
+}
+
+// IssuerScopeGTE applies the GTE predicate on the "issuer_scope" field.
+func IssuerScopeGTE(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldGTE(FieldIssuerScope, v))
+}
+
+// IssuerScopeLT applies the LT predicate on the "issuer_scope" field.
+func IssuerScopeLT(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldLT(FieldIssuerScope, v))
+}
+
+// IssuerScopeLTE applies the LTE predicate on the "issuer_scope" field.
+func IssuerScopeLTE(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldLTE(FieldIssuerScope, v))
+}
+
+// IssuerScopeContains applies the Contains predicate on the "issuer_scope" field.
+func IssuerScopeContains(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldContains(FieldIssuerScope, v))
+}
+
+// IssuerScopeHasPrefix applies the HasPrefix predicate on the "issuer_scope" field.
+func IssuerScopeHasPrefix(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldHasPrefix(FieldIssuerScope, v))
+}
+
+// IssuerScopeHasSuffix applies the HasSuffix predicate on the "issuer_scope" field.
+func IssuerScopeHasSuffix(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldHasSuffix(FieldIssuerScope, v))
+}
+
+// IssuerScopeIsNil applies the IsNil predicate on the "issuer_scope" field.
+func IssuerScopeIsNil() predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldIsNull(FieldIssuerScope))
+}
+
+// IssuerScopeNotNil applies the NotNil predicate on the "issuer_scope" field.
+func IssuerScopeNotNil() predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNotNull(FieldIssuerScope))
+}
+
+// IssuerScopeEqualFold applies the EqualFold predicate on the "issuer_scope" field.
+func IssuerScopeEqualFold(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldEqualFold(FieldIssuerScope, v))
+}
+
+// IssuerScopeContainsFold applies the ContainsFold predicate on the "issuer_scope" field.
+func IssuerScopeContainsFold(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldContainsFold(FieldIssuerScope, v))
+}
+
+// KeyHintEQ applies the EQ predicate on the "key_hint" field.
+func KeyHintEQ(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldEQ(FieldKeyHint, v))
+}
+
+// KeyHintNEQ applies the NEQ predicate on the "key_hint" field.
+func KeyHintNEQ(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNEQ(FieldKeyHint, v))
+}
+
+// KeyHintIn applies the In predicate on the "key_hint" field.
+func KeyHintIn(vs ...string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldIn(FieldKeyHint, vs...))
+}
+
+// KeyHintNotIn applies the NotIn predicate on the "key_hint" field.
+func KeyHintNotIn(vs ...string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNotIn(FieldKeyHint, vs...))
+}
+
+// KeyHintGT applies the GT predicate on the "key_hint" field.
+func KeyHintGT(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldGT(FieldKeyHint, v))
+}
+
+// KeyHintGTE applies the GTE predicate on the "key_hint" field.
+func KeyHintGTE(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldGTE(FieldKeyHint, v))
+}
+
+// KeyHintLT applies the LT predicate on the "key_hint" field.
+func KeyHintLT(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldLT(FieldKeyHint, v))
+}
+
+// KeyHintLTE applies the LTE predicate on the "key_hint" field.
+func KeyHintLTE(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldLTE(FieldKeyHint, v))
+}
+
+// KeyHintContains applies the Contains predicate on the "key_hint" field.
+func KeyHintContains(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldContains(FieldKeyHint, v))
+}
+
+// KeyHintHasPrefix applies the HasPrefix predicate on the "key_hint" field.
+func KeyHintHasPrefix(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldHasPrefix(FieldKeyHint, v))
+}
+
+// KeyHintHasSuffix applies the HasSuffix predicate on the "key_hint" field.
+func KeyHintHasSuffix(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldHasSuffix(FieldKeyHint, v))
+}
+
+// KeyHintIsNil applies the IsNil predicate on the "key_hint" field.
+func KeyHintIsNil() predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldIsNull(FieldKeyHint))
+}
+
+// KeyHintNotNil applies the NotNil predicate on the "key_hint" field.
+func KeyHintNotNil() predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNotNull(FieldKeyHint))
+}
+
+// KeyHintEqualFold applies the EqualFold predicate on the "key_hint" field.
+func KeyHintEqualFold(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldEqualFold(FieldKeyHint, v))
+}
+
+// KeyHintContainsFold applies the ContainsFold predicate on the "key_hint" field.
+func KeyHintContainsFold(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldContainsFold(FieldKeyHint, v))
+}
+
+// QuotaScopeIDEQ applies the EQ predicate on the "quota_scope_id" field.
+func QuotaScopeIDEQ(v int) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldEQ(FieldQuotaScopeID, v))
+}
+
+// QuotaScopeIDNEQ applies the NEQ predicate on the "quota_scope_id" field.
+func QuotaScopeIDNEQ(v int) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNEQ(FieldQuotaScopeID, v))
+}
+
+// QuotaScopeIDIn applies the In predicate on the "quota_scope_id" field.
+func QuotaScopeIDIn(vs ...int) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldIn(FieldQuotaScopeID, vs...))
+}
+
+// QuotaScopeIDNotIn applies the NotIn predicate on the "quota_scope_id" field.
+func QuotaScopeIDNotIn(vs ...int) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNotIn(FieldQuotaScopeID, vs...))
+}
+
+// QuotaScopeIDGT applies the GT predicate on the "quota_scope_id" field.
+func QuotaScopeIDGT(v int) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldGT(FieldQuotaScopeID, v))
+}
+
+// QuotaScopeIDGTE applies the GTE predicate on the "quota_scope_id" field.
+func QuotaScopeIDGTE(v int) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldGTE(FieldQuotaScopeID, v))
+}
+
+// QuotaScopeIDLT applies the LT predicate on the "quota_scope_id" field.
+func QuotaScopeIDLT(v int) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldLT(FieldQuotaScopeID, v))
+}
+
+// QuotaScopeIDLTE applies the LTE predicate on the "quota_scope_id" field.
+func QuotaScopeIDLTE(v int) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldLTE(FieldQuotaScopeID, v))
+}
+
+// QuotaScopeIDIsNil applies the IsNil predicate on the "quota_scope_id" field.
+func QuotaScopeIDIsNil() predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldIsNull(FieldQuotaScopeID))
+}
+
+// QuotaScopeIDNotNil applies the NotNil predicate on the "quota_scope_id" field.
+func QuotaScopeIDNotNil() predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNotNull(FieldQuotaScopeID))
+}
+
 // FingerprintEQ applies the EQ predicate on the "fingerprint" field.
 func FingerprintEQ(v string) predicate.UpstreamCredential {
 	return predicate.UpstreamCredential(sql.FieldEQ(FieldFingerprint, v))
@@ -578,6 +823,156 @@ func WeightLT(v int) predicate.UpstreamCredential {
 // WeightLTE applies the LTE predicate on the "weight" field.
 func WeightLTE(v int) predicate.UpstreamCredential {
 	return predicate.UpstreamCredential(sql.FieldLTE(FieldWeight, v))
+}
+
+// QuotaStatusEQ applies the EQ predicate on the "quota_status" field.
+func QuotaStatusEQ(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldEQ(FieldQuotaStatus, v))
+}
+
+// QuotaStatusNEQ applies the NEQ predicate on the "quota_status" field.
+func QuotaStatusNEQ(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNEQ(FieldQuotaStatus, v))
+}
+
+// QuotaStatusIn applies the In predicate on the "quota_status" field.
+func QuotaStatusIn(vs ...string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldIn(FieldQuotaStatus, vs...))
+}
+
+// QuotaStatusNotIn applies the NotIn predicate on the "quota_status" field.
+func QuotaStatusNotIn(vs ...string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNotIn(FieldQuotaStatus, vs...))
+}
+
+// QuotaStatusGT applies the GT predicate on the "quota_status" field.
+func QuotaStatusGT(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldGT(FieldQuotaStatus, v))
+}
+
+// QuotaStatusGTE applies the GTE predicate on the "quota_status" field.
+func QuotaStatusGTE(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldGTE(FieldQuotaStatus, v))
+}
+
+// QuotaStatusLT applies the LT predicate on the "quota_status" field.
+func QuotaStatusLT(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldLT(FieldQuotaStatus, v))
+}
+
+// QuotaStatusLTE applies the LTE predicate on the "quota_status" field.
+func QuotaStatusLTE(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldLTE(FieldQuotaStatus, v))
+}
+
+// QuotaStatusContains applies the Contains predicate on the "quota_status" field.
+func QuotaStatusContains(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldContains(FieldQuotaStatus, v))
+}
+
+// QuotaStatusHasPrefix applies the HasPrefix predicate on the "quota_status" field.
+func QuotaStatusHasPrefix(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldHasPrefix(FieldQuotaStatus, v))
+}
+
+// QuotaStatusHasSuffix applies the HasSuffix predicate on the "quota_status" field.
+func QuotaStatusHasSuffix(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldHasSuffix(FieldQuotaStatus, v))
+}
+
+// QuotaStatusIsNil applies the IsNil predicate on the "quota_status" field.
+func QuotaStatusIsNil() predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldIsNull(FieldQuotaStatus))
+}
+
+// QuotaStatusNotNil applies the NotNil predicate on the "quota_status" field.
+func QuotaStatusNotNil() predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNotNull(FieldQuotaStatus))
+}
+
+// QuotaStatusEqualFold applies the EqualFold predicate on the "quota_status" field.
+func QuotaStatusEqualFold(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldEqualFold(FieldQuotaStatus, v))
+}
+
+// QuotaStatusContainsFold applies the ContainsFold predicate on the "quota_status" field.
+func QuotaStatusContainsFold(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldContainsFold(FieldQuotaStatus, v))
+}
+
+// LastErrorEQ applies the EQ predicate on the "last_error" field.
+func LastErrorEQ(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldEQ(FieldLastError, v))
+}
+
+// LastErrorNEQ applies the NEQ predicate on the "last_error" field.
+func LastErrorNEQ(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNEQ(FieldLastError, v))
+}
+
+// LastErrorIn applies the In predicate on the "last_error" field.
+func LastErrorIn(vs ...string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldIn(FieldLastError, vs...))
+}
+
+// LastErrorNotIn applies the NotIn predicate on the "last_error" field.
+func LastErrorNotIn(vs ...string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNotIn(FieldLastError, vs...))
+}
+
+// LastErrorGT applies the GT predicate on the "last_error" field.
+func LastErrorGT(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldGT(FieldLastError, v))
+}
+
+// LastErrorGTE applies the GTE predicate on the "last_error" field.
+func LastErrorGTE(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldGTE(FieldLastError, v))
+}
+
+// LastErrorLT applies the LT predicate on the "last_error" field.
+func LastErrorLT(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldLT(FieldLastError, v))
+}
+
+// LastErrorLTE applies the LTE predicate on the "last_error" field.
+func LastErrorLTE(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldLTE(FieldLastError, v))
+}
+
+// LastErrorContains applies the Contains predicate on the "last_error" field.
+func LastErrorContains(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldContains(FieldLastError, v))
+}
+
+// LastErrorHasPrefix applies the HasPrefix predicate on the "last_error" field.
+func LastErrorHasPrefix(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldHasPrefix(FieldLastError, v))
+}
+
+// LastErrorHasSuffix applies the HasSuffix predicate on the "last_error" field.
+func LastErrorHasSuffix(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldHasSuffix(FieldLastError, v))
+}
+
+// LastErrorIsNil applies the IsNil predicate on the "last_error" field.
+func LastErrorIsNil() predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldIsNull(FieldLastError))
+}
+
+// LastErrorNotNil applies the NotNil predicate on the "last_error" field.
+func LastErrorNotNil() predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNotNull(FieldLastError))
+}
+
+// LastErrorEqualFold applies the EqualFold predicate on the "last_error" field.
+func LastErrorEqualFold(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldEqualFold(FieldLastError, v))
+}
+
+// LastErrorContainsFold applies the ContainsFold predicate on the "last_error" field.
+func LastErrorContainsFold(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldContainsFold(FieldLastError, v))
 }
 
 // RemarkEQ applies the EQ predicate on the "remark" field.

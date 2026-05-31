@@ -137,6 +137,48 @@ func (_c *UsageLogCreate) SetNillableCredentialFingerprint(v *string) *UsageLogC
 	return _c
 }
 
+// SetCredentialNameSnapshot sets the "credential_name_snapshot" field.
+func (_c *UsageLogCreate) SetCredentialNameSnapshot(v string) *UsageLogCreate {
+	_c.mutation.SetCredentialNameSnapshot(v)
+	return _c
+}
+
+// SetNillableCredentialNameSnapshot sets the "credential_name_snapshot" field if the given value is not nil.
+func (_c *UsageLogCreate) SetNillableCredentialNameSnapshot(v *string) *UsageLogCreate {
+	if v != nil {
+		_c.SetCredentialNameSnapshot(*v)
+	}
+	return _c
+}
+
+// SetCredentialKeyHint sets the "credential_key_hint" field.
+func (_c *UsageLogCreate) SetCredentialKeyHint(v string) *UsageLogCreate {
+	_c.mutation.SetCredentialKeyHint(v)
+	return _c
+}
+
+// SetNillableCredentialKeyHint sets the "credential_key_hint" field if the given value is not nil.
+func (_c *UsageLogCreate) SetNillableCredentialKeyHint(v *string) *UsageLogCreate {
+	if v != nil {
+		_c.SetCredentialKeyHint(*v)
+	}
+	return _c
+}
+
+// SetCredentialSource sets the "credential_source" field.
+func (_c *UsageLogCreate) SetCredentialSource(v string) *UsageLogCreate {
+	_c.mutation.SetCredentialSource(v)
+	return _c
+}
+
+// SetNillableCredentialSource sets the "credential_source" field if the given value is not nil.
+func (_c *UsageLogCreate) SetNillableCredentialSource(v *string) *UsageLogCreate {
+	if v != nil {
+		_c.SetCredentialSource(*v)
+	}
+	return _c
+}
+
 // SetPromptTokens sets the "prompt_tokens" field.
 func (_c *UsageLogCreate) SetPromptTokens(v int64) *UsageLogCreate {
 	_c.mutation.SetPromptTokens(v)
@@ -593,6 +635,18 @@ func (_c *UsageLogCreate) createSpec() (*UsageLog, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CredentialFingerprint(); ok {
 		_spec.SetField(usagelog.FieldCredentialFingerprint, field.TypeString, value)
 		_node.CredentialFingerprint = value
+	}
+	if value, ok := _c.mutation.CredentialNameSnapshot(); ok {
+		_spec.SetField(usagelog.FieldCredentialNameSnapshot, field.TypeString, value)
+		_node.CredentialNameSnapshot = value
+	}
+	if value, ok := _c.mutation.CredentialKeyHint(); ok {
+		_spec.SetField(usagelog.FieldCredentialKeyHint, field.TypeString, value)
+		_node.CredentialKeyHint = value
+	}
+	if value, ok := _c.mutation.CredentialSource(); ok {
+		_spec.SetField(usagelog.FieldCredentialSource, field.TypeString, value)
+		_node.CredentialSource = value
 	}
 	if value, ok := _c.mutation.PromptTokens(); ok {
 		_spec.SetField(usagelog.FieldPromptTokens, field.TypeInt64, value)
@@ -1158,6 +1212,15 @@ func (u *UsageLogUpsertOne) UpdateNewValues() *UsageLogUpsertOne {
 		}
 		if _, exists := u.create.mutation.CredentialFingerprint(); exists {
 			s.SetIgnore(usagelog.FieldCredentialFingerprint)
+		}
+		if _, exists := u.create.mutation.CredentialNameSnapshot(); exists {
+			s.SetIgnore(usagelog.FieldCredentialNameSnapshot)
+		}
+		if _, exists := u.create.mutation.CredentialKeyHint(); exists {
+			s.SetIgnore(usagelog.FieldCredentialKeyHint)
+		}
+		if _, exists := u.create.mutation.CredentialSource(); exists {
+			s.SetIgnore(usagelog.FieldCredentialSource)
 		}
 		if _, exists := u.create.mutation.Source(); exists {
 			s.SetIgnore(usagelog.FieldSource)
@@ -1794,6 +1857,15 @@ func (u *UsageLogUpsertBulk) UpdateNewValues() *UsageLogUpsertBulk {
 			}
 			if _, exists := b.mutation.CredentialFingerprint(); exists {
 				s.SetIgnore(usagelog.FieldCredentialFingerprint)
+			}
+			if _, exists := b.mutation.CredentialNameSnapshot(); exists {
+				s.SetIgnore(usagelog.FieldCredentialNameSnapshot)
+			}
+			if _, exists := b.mutation.CredentialKeyHint(); exists {
+				s.SetIgnore(usagelog.FieldCredentialKeyHint)
+			}
+			if _, exists := b.mutation.CredentialSource(); exists {
+				s.SetIgnore(usagelog.FieldCredentialSource)
 			}
 			if _, exists := b.mutation.Source(); exists {
 				s.SetIgnore(usagelog.FieldSource)

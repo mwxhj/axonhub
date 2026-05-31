@@ -7,10 +7,18 @@ Make upstream credentials a first-class routing, sticky-session, quota, and obse
 The target design is:
 
 ```text
-channel = routing/model policy view
-credential = real upstream identity/cache/quota/limit resource
+channel = routing/model/API-format/endpoint policy
+credential = upstream key/account asset, quota state, operator remark
 execution target = channel + credential + model
 ```
+
+This task originally described credentials as provider/baseURL/auth-kind scoped resources. After the sticky-session and prompt-cache analysis, the full target is narrower and cleaner:
+
+* Credential is not a mini channel.
+* Credential should not own baseURL, API format, model list, transformer settings, priority, or endpoint policy.
+* Credential should primarily own the secret/key, display name, remark, enabled state, weight, quota state, usage state, and failure state.
+* Channel owns provider/type, baseURL, API format, supported models, model mapping, priority, retry/sticky policy, and access restrictions.
+* Runtime execution is always a concrete `channel + credential` target.
 
 ## Problem
 
@@ -54,20 +62,23 @@ This is especially important for OpenAI-style prompt caching:
 
 ## Target Data Model
 
-Introduce an upstream credential concept. Exact schema names can change during implementation, but the model should represent:
+Introduce upstream credentials as global key/account assets. Exact schema names can change during implementation, but the model should represent:
 
 ```text
 UpstreamCredential
   id
   deployment-global scope
-  provider type
-  normalized base URL / endpoint scope
-  auth kind: api_key | oauth | gcp | azure | other
   encrypted secret payload
   fingerprint
-  display name / remark
+  display name
+  remark
   enabled status
   weight
+  quota state / budget state
+  latest credential-scoped error
+  safe key hint
+  internal secret kind: api_key | oauth | gcp | azure | other
+  optional quota_scope_id
   created_at / updated_at
 
 ChannelCredentialRef
@@ -78,13 +89,34 @@ ChannelCredentialRef
   model/include constraints if needed later
 ```
 
-Credential fingerprint should identify the same real upstream account without storing or exposing the raw secret:
+Channel remains the place for endpoint and protocol configuration:
 
 ```text
-fingerprint = hash(provider + normalized_base_url + auth_kind + stable_auth_identity)
+Channel
+  provider/channel type
+  base_url / endpoint
+  api format and transformer settings
+  supported models and model mapping
+  priority and ordering weight
+  retry/sticky policy
+  project/profile/api-key access restrictions
+  channel-level health/queue/circuit state
 ```
 
-For API keys, `stable_auth_identity` can be a keyed hash of the secret. For OAuth, it should use the best stable account/project identity available, falling back to a secure hash of the credential payload if necessary.
+Credential fingerprint should identify the same upstream key/account without storing or exposing raw secret material:
+
+```text
+fingerprint = hash(issuer_scope + secret_kind + stable_secret_identity)
+```
+
+`issuer_scope` is not the channel baseURL. It is a coarse upstream identity namespace used only to prevent false merges:
+
+* official OpenAI key: `openai`
+* official Anthropic key: `anthropic`
+* Azure/GCP/project-backed credential: account/resource/project identity when available
+* unknown OpenAI-compatible provider: a small inferred issuer scope such as provider host, not the full endpoint URL
+
+For normal API-key routing, the same raw key attached to multiple channels should dedupe to one credential even when those channels have different model scopes or endpoint routes. `baseURL` should not split credentials by default.
 
 ## Routing Requirements
 
@@ -147,12 +179,27 @@ If one channel references multiple credentials:
 
 ## Quota Requirements
 
-Provider quota status should support credential-level state:
+Provider quota status should be credential-first:
 
 ```text
-credential_id/fingerprint -> quota status
-credential_id/fingerprint + model scope -> optional quota status
-channel_id -> derived aggregate status
+credential_id/fingerprint -> credential quota status
+credential_id/fingerprint + model/operation scope -> optional quota limit status
+quota_scope_id -> optional shared account/billing pool
+channel_id -> derived aggregate status from attached credentials
+```
+
+Credential quota state should support both provider-observed quota and local operator budgets:
+
+```text
+status: available | warning | exhausted | cooldown | disabled | unknown
+remaining_amount
+limit_amount
+unit: usd | token | request | credit | unknown
+reset_at
+exhausted_until
+last_checked_at
+last_error
+source: provider_api | response_error | local_budget | manual | inferred
 ```
 
 Channel status is derived from its referenced credentials:
@@ -161,7 +208,9 @@ Channel status is derived from its referenced credentials:
 * warning if usable credentials remain but at least one relevant credential is warning.
 * exhausted if no eligible credential remains because all referenced credentials are exhausted/unavailable for the request.
 
-Provider quota checkers should be able to check a credential directly. If a provider only supports channel-level checking today, the design should adapt it through a channel-to-credential wrapper rather than keeping credential state invisible.
+Provider quota checkers should check the selected credential where possible. If a provider needs endpoint/channel context to query quota, the checker receives the execution target view (`channel + credential`) but persists the result on the credential or quota scope.
+
+Some providers expose account-level quota shared by multiple keys. The first implementation may treat credential as the quota scope, but the full model should allow `quota_scope_id` so multiple credentials can share one quota pool later.
 
 ## Failure Handling Requirements
 
@@ -188,13 +237,17 @@ Temporary network/5xx failures should follow existing retry/circuit-breaker sema
 
 ## Observability Requirements
 
-Request execution records should capture the selected credential identity without leaking secret values:
+Request execution records should capture the selected credential identity without leaking secret values. Store enough snapshot data that old request records remain readable after a credential is renamed or archived:
 
 ```text
 channel_id
-credential_id or credential_fingerprint
-credential_display_name
-credential_key_prefix/suffix if already allowed and safe
+channel_name_snapshot
+credential_id nullable
+credential_name_snapshot
+credential_fingerprint
+credential_key_hint
+credential_source: ref | legacy | unknown
+credential_quota_status_snapshot
 actual_model_id
 cache read/write indicators where available
 ```
@@ -211,14 +264,33 @@ Request list/detail and metrics should eventually show:
 
 ## Frontend Requirements
 
-The final UX should make credentials manageable as first-class resources. A complete version likely needs:
+The final UX should make credentials manageable as key/account assets, not as channel configuration.
 
-* A Credentials page for global upstream credentials.
-* Channel edit UI that attaches/detaches credentials instead of only editing inline key arrays.
-* Channel detail showing referenced credentials and status.
-* Credential detail showing channels that reference it.
-* Per-credential status, quota, recent errors, request count, cached token totals, and cost.
-* Migration UI or compatibility behavior for existing inline credentials.
+Credentials page:
+
+* list credentials with name, remark, safe key hint, status, weight, quota status, usage/cost summary, latest credential-scoped error, and referenced channel count.
+* create credential by entering secret and optional display metadata.
+* rotate secret without revealing the old secret.
+* enable/disable credential.
+* view and navigate to channels that reference the credential.
+* show quota/budget state and recent usage by credential.
+
+Credentials page should not require users to configure baseURL, API format, model support, transformer mode, or priority.
+
+Channel create/edit:
+
+* channel owns provider/type, baseURL, API format, models, priority, routing policy, and access restrictions.
+* attach/detach existing credentials.
+* create a credential inline and attach it.
+* enable/disable a channel credential ref.
+* set per-channel credential weight override if needed.
+* show attached credential quota/status without exposing raw secrets.
+
+Request/usage views:
+
+* request list and detail show selected credential name and safe key hint.
+* usage and cost can be filtered/grouped by credential.
+* channel and credential columns remain separate.
 
 The UI must not expose raw secrets after creation/update.
 
@@ -228,8 +300,9 @@ Existing data must continue to work:
 
 * `credentials.apiKey` becomes one credential.
 * `credentials.apiKeys[]` becomes multiple credentials.
+* if both legacy `apiKey` and `apiKeys[]` contain the same key, they dedupe to one credential.
 * existing disabled API keys should migrate to credential disabled/cooldown state where possible.
-* duplicated same raw key across channels should map to the same fingerprinted credential if provider/baseURL/auth scope matches.
+* duplicated same raw key across channels should map to the same credential unless an explicit issuer scope proves they are different upstream resources.
 * old backup/restore data must remain importable.
 
 Migration should avoid duplicating capacity:
@@ -264,20 +337,23 @@ Building/pushing a Docker image is still out of scope unless explicitly requeste
 
 ### Backend Model
 
-Add first-class credential storage:
+Add first-class credential storage. The full model intentionally keeps endpoint/protocol fields off credentials:
 
 ```text
 UpstreamCredential
   id
   name
-  provider_type
-  base_url
-  auth_kind
   secret_payload
   fingerprint
   status
   weight
   remark
+  secret_kind
+  issuer_scope
+  key_hint
+  quota_scope_id nullable
+  quota_status fields or edge
+  last_error fields
   created_at
   updated_at
 
@@ -293,13 +369,22 @@ ChannelCredentialRef
 
 Credential ownership remains deployment-global. Projects, API keys, and profiles continue to restrict access through channels; they do not need duplicated upstream credentials per project.
 
+Channel should be cleaned up over time so these fields become legacy import/compatibility only:
+
+* inline `credentials.apiKey`
+* inline `credentials.apiKeys`
+* inline credential-specific GCP/Azure/OAuth payloads when they are used only as secrets
+* `disabled_api_keys`
+* key round-robin state
+* key-level quota/failure state stored under channel
+
 ### Migration
 
 Existing inline channel credentials must be migrated into credential rows:
 
 * `credentials.apiKey` becomes one `UpstreamCredential`.
 * `credentials.apiKeys[]` becomes multiple `UpstreamCredential` rows.
-* same provider/baseURL/auth kind/key must dedupe to one credential row.
+* same issuer scope/secret kind/secret identity must dedupe to one credential row.
 * channels get `ChannelCredentialRef` rows pointing to deduped credentials.
 * existing disabled API keys should become credential disabled/cooldown state where the failure is credential-scoped.
 * inline credentials remain readable as legacy import/export fallback during compatibility period.
@@ -341,6 +426,8 @@ Provider quota should be credential-first:
 * derive channel status from attached credentials.
 * aggregate credential quota into channel list/detail UI.
 * unknown/unsupported quota must not falsely exhaust channels.
+* support local budgets at credential scope.
+* allow a future shared `quota_scope_id` when multiple credentials share one account/billing pool.
 
 Failure scope:
 
@@ -351,7 +438,7 @@ Failure scope:
 
 Add a global Credentials page:
 
-* list credentials with name, provider, base URL, auth kind, status, fingerprint prefix, referenced channels count, quota status, latest error, usage/cost summary.
+* list credentials with name, remark, safe key hint, status, weight, referenced channels count, quota status, latest error, usage/cost summary.
 * create credential.
 * edit display fields and weight.
 * rotate secret without revealing the old secret.
@@ -369,8 +456,9 @@ Update Channel create/edit:
 
 Update Request/Usage/Quota visibility:
 
-* show credential name/fingerprint in request execution detail.
-* allow usage filtering/grouping by credential fingerprint.
+* show credential name and safe key hint in request list/detail.
+* preserve credential name snapshot in request records.
+* allow usage filtering/grouping by credential id/fingerprint.
 * show per-credential quota/status inside channel quota UI.
 
 ## Acceptance Criteria
@@ -394,17 +482,21 @@ Full model acceptance:
 
 * [ ] `UpstreamCredential` schema exists with safe fingerprint and secret payload storage.
 * [ ] `ChannelCredentialRef` schema exists and supports enabled state plus weight override.
+* [ ] Credential schema does not require channel endpoint/API-format/model fields such as baseURL or transformer format.
 * [ ] Inline channel credentials are migrated/deduped into credential rows.
+* [ ] Legacy `credentials.apiKey` and `credentials.apiKeys[]` are deduped and do not create duplicate credentials for the same key.
 * [ ] Runtime channel construction prefers credential refs and only falls back to inline legacy credentials when refs are missing.
 * [ ] Sticky binding persists `channelID + credentialID + credentialFingerprint`.
 * [ ] Provider quota can be checked and cached by credential row.
+* [ ] Local budget/quota state can be represented at credential scope.
 * [ ] Channel quota status is derived from attached credential rows.
 * [ ] Credential-scoped failures disable/cool the credential across all channel refs.
 * [ ] Channel-scoped failures do not globally disable shared credentials.
 * [ ] GraphQL exposes credential CRUD and channel attach/detach operations without returning raw secrets.
 * [ ] Credentials page supports list/create/edit/rotate/enable/disable and referencing channel visibility.
 * [ ] Channel create/edit UI supports attach/detach credentials and legacy import compatibility.
-* [ ] Request detail and usage views show selected credential identity.
+* [ ] Request list/detail and usage views show selected credential name/safe hint.
+* [ ] Request execution persists credential snapshot fields for renamed/deleted credentials.
 * [ ] Backup/restore remains compatible with legacy inline credentials.
 
 ## Resolved Decisions
@@ -412,6 +504,8 @@ Full model acceptance:
 * Project/profile credential restrictions are not part of the first full implementation. Channel restrictions remain the access-control boundary.
 * Quota should be credential-level first, with optional per-limit/per-model detail when providers expose it.
 * The next implementation should physically introduce credential tables and migrate inline secrets, while keeping legacy fallback for import/export compatibility.
+* Credential is a key/account asset, not a route. BaseURL, API format, model list, priority, and transformer settings belong to channel.
+* Credential identity should dedupe the same upstream key across channels. Use a coarse `issuer_scope` only to avoid false merges across unrelated providers.
 
 ## Definition Of Done
 

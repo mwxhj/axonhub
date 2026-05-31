@@ -7071,6 +7071,62 @@ var (
 			}
 		},
 	}
+	// UpstreamCredentialOrderFieldSecretKind orders UpstreamCredential by secret_kind.
+	UpstreamCredentialOrderFieldSecretKind = &UpstreamCredentialOrderField{
+		Value: func(_m *UpstreamCredential) (ent.Value, error) {
+			return _m.SecretKind, nil
+		},
+		column: upstreamcredential.FieldSecretKind,
+		toTerm: upstreamcredential.BySecretKind,
+		toCursor: func(_m *UpstreamCredential) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.SecretKind,
+			}
+		},
+	}
+	// UpstreamCredentialOrderFieldIssuerScope orders UpstreamCredential by issuer_scope.
+	UpstreamCredentialOrderFieldIssuerScope = &UpstreamCredentialOrderField{
+		Value: func(_m *UpstreamCredential) (ent.Value, error) {
+			return _m.IssuerScope, nil
+		},
+		column: upstreamcredential.FieldIssuerScope,
+		toTerm: upstreamcredential.ByIssuerScope,
+		toCursor: func(_m *UpstreamCredential) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.IssuerScope,
+			}
+		},
+	}
+	// UpstreamCredentialOrderFieldKeyHint orders UpstreamCredential by key_hint.
+	UpstreamCredentialOrderFieldKeyHint = &UpstreamCredentialOrderField{
+		Value: func(_m *UpstreamCredential) (ent.Value, error) {
+			return _m.KeyHint, nil
+		},
+		column: upstreamcredential.FieldKeyHint,
+		toTerm: upstreamcredential.ByKeyHint,
+		toCursor: func(_m *UpstreamCredential) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.KeyHint,
+			}
+		},
+	}
+	// UpstreamCredentialOrderFieldQuotaScopeID orders UpstreamCredential by quota_scope_id.
+	UpstreamCredentialOrderFieldQuotaScopeID = &UpstreamCredentialOrderField{
+		Value: func(_m *UpstreamCredential) (ent.Value, error) {
+			return _m.QuotaScopeID, nil
+		},
+		column: upstreamcredential.FieldQuotaScopeID,
+		toTerm: upstreamcredential.ByQuotaScopeID,
+		toCursor: func(_m *UpstreamCredential) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.QuotaScopeID,
+			}
+		},
+	}
 	// UpstreamCredentialOrderFieldFingerprint orders UpstreamCredential by fingerprint.
 	UpstreamCredentialOrderFieldFingerprint = &UpstreamCredentialOrderField{
 		Value: func(_m *UpstreamCredential) (ent.Value, error) {
@@ -7113,6 +7169,20 @@ var (
 			}
 		},
 	}
+	// UpstreamCredentialOrderFieldQuotaStatus orders UpstreamCredential by quota_status.
+	UpstreamCredentialOrderFieldQuotaStatus = &UpstreamCredentialOrderField{
+		Value: func(_m *UpstreamCredential) (ent.Value, error) {
+			return _m.QuotaStatus, nil
+		},
+		column: upstreamcredential.FieldQuotaStatus,
+		toTerm: upstreamcredential.ByQuotaStatus,
+		toCursor: func(_m *UpstreamCredential) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.QuotaStatus,
+			}
+		},
+	}
 )
 
 // String implement fmt.Stringer interface.
@@ -7131,12 +7201,22 @@ func (f UpstreamCredentialOrderField) String() string {
 		str = "BASE_URL"
 	case UpstreamCredentialOrderFieldAuthKind.column:
 		str = "AUTH_KIND"
+	case UpstreamCredentialOrderFieldSecretKind.column:
+		str = "SECRET_KIND"
+	case UpstreamCredentialOrderFieldIssuerScope.column:
+		str = "ISSUER_SCOPE"
+	case UpstreamCredentialOrderFieldKeyHint.column:
+		str = "KEY_HINT"
+	case UpstreamCredentialOrderFieldQuotaScopeID.column:
+		str = "QUOTA_SCOPE_ID"
 	case UpstreamCredentialOrderFieldFingerprint.column:
 		str = "FINGERPRINT"
 	case UpstreamCredentialOrderFieldStatus.column:
 		str = "STATUS"
 	case UpstreamCredentialOrderFieldWeight.column:
 		str = "WEIGHT"
+	case UpstreamCredentialOrderFieldQuotaStatus.column:
+		str = "QUOTA_STATUS"
 	}
 	return str
 }
@@ -7165,12 +7245,22 @@ func (f *UpstreamCredentialOrderField) UnmarshalGQL(v interface{}) error {
 		*f = *UpstreamCredentialOrderFieldBaseURL
 	case "AUTH_KIND":
 		*f = *UpstreamCredentialOrderFieldAuthKind
+	case "SECRET_KIND":
+		*f = *UpstreamCredentialOrderFieldSecretKind
+	case "ISSUER_SCOPE":
+		*f = *UpstreamCredentialOrderFieldIssuerScope
+	case "KEY_HINT":
+		*f = *UpstreamCredentialOrderFieldKeyHint
+	case "QUOTA_SCOPE_ID":
+		*f = *UpstreamCredentialOrderFieldQuotaScopeID
 	case "FINGERPRINT":
 		*f = *UpstreamCredentialOrderFieldFingerprint
 	case "STATUS":
 		*f = *UpstreamCredentialOrderFieldStatus
 	case "WEIGHT":
 		*f = *UpstreamCredentialOrderFieldWeight
+	case "QUOTA_STATUS":
+		*f = *UpstreamCredentialOrderFieldQuotaStatus
 	default:
 		return fmt.Errorf("%s is not a valid UpstreamCredentialOrderField", str)
 	}

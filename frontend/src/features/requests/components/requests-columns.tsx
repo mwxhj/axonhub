@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { ColumnDef } from '@tanstack/react-table';
 import { IconRoute, IconArrowsJoin2 } from '@tabler/icons-react';
 import { zhCN, enUS } from 'date-fns/locale';
-import { ArrowLeftRight, FileText } from 'lucide-react';
+import { ArrowLeftRight, FileText, Key } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { extractNumberID } from '@/lib/utils';
 import { formatDuration } from '@/utils/format-duration';
@@ -280,6 +280,70 @@ export function useRequestsColumns(options?: UseRequestsColumnsOptions): ColumnD
           },
         ] as ColumnDef<Request>[])
       : []),
+    // API Key column - only show if user has permission to view API keys
+    ...(permissions.canViewChannels
+      ? ([
+          {
+            id: 'credential',
+            accessorFn: (row) => row.executions?.edges?.[0]?.node?.credentialID || '',
+            header: ({ column }) => <DataTableColumnHeader column={column} title={t('requests.columns.credential')} />,
+            enableSorting: false,
+            enableHiding: true,
+            cell: ({ row }) => {
+              const executions = row.original.executions?.edges?.map((edge) => edge.node).filter((exe) => !!exe) || [];
+              const latest = executions[0];
+              const credentialName = latest?.credentialNameSnapshot || latest?.credential?.name || '';
+              const keyHint = latest?.credentialKeyHint || latest?.credential?.keyHint || '';
+              const label = credentialName || keyHint || latest?.credentialFingerprint || '-';
+
+              if (executions.length > 1) {
+                return (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type='button'
+                        className='flex w-fit max-w-[180px] cursor-help items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 transition-colors hover:bg-sky-100 dark:border-sky-800/50 dark:bg-sky-900/30 dark:text-sky-300 dark:hover:bg-sky-900/50'
+                      >
+                        <Key className='h-3.5 w-3.5 shrink-0 opacity-80' />
+                        <span className='truncate'>{label}</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side='right' className='border-sky-200 bg-white p-0 dark:bg-zinc-900'>
+                      <div className='flex min-w-[260px] flex-col gap-1 p-2'>
+                        {executions.map((exe, idx) => {
+                          const name = exe.credentialNameSnapshot || exe.credential?.name || '';
+                          const hint = exe.credentialKeyHint || exe.credential?.keyHint || '';
+                          return (
+                            <div key={exe.id || idx} className='hover:bg-muted/50 flex items-center gap-2 rounded-md px-2 py-1.5'>
+                              <Badge className={`${getStatusColor(exe.status || '')} h-5 shrink-0 px-1.5 text-[10px] font-bold uppercase`}>
+                                {t(`requests.status.${exe.status}`)}
+                              </Badge>
+                              <div className='flex min-w-0 flex-col'>
+                                <span className='text-foreground truncate text-xs font-semibold'>
+                                  {name || hint || t('requests.columns.unknown')}
+                                </span>
+                                {hint && <span className='text-muted-foreground truncate font-mono text-[10px]'>{hint}</span>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              }
+
+              return (
+                <div className='max-w-[180px] px-2'>
+                  <div className='truncate font-mono text-xs'>{label}</div>
+                  {keyHint && credentialName && <div className='text-muted-foreground truncate font-mono text-[10px]'>{keyHint}</div>}
+                </div>
+              );
+            },
+          },
+        ] as ColumnDef<Request>[])
+      : []),
+
     // API Key column - only show if user has permission to view API keys
     ...(permissions.canViewApiKeys
       ? ([

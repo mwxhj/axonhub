@@ -43,6 +43,14 @@ type RequestExecution struct {
 	ModelID string `json:"model_id,omitempty"`
 	// Safe upstream credential identity used for this execution; never stores the raw secret
 	CredentialFingerprint string `json:"credential_fingerprint,omitempty"`
+	// Credential display name captured at execution time
+	CredentialNameSnapshot string `json:"credential_name_snapshot,omitempty"`
+	// Safe credential key hint captured at execution time
+	CredentialKeyHint string `json:"credential_key_hint,omitempty"`
+	// Credential source used for this execution: ref, legacy, or unknown
+	CredentialSource string `json:"credential_source,omitempty"`
+	// Credential quota/budget status captured at execution time when known
+	CredentialQuotaStatusSnapshot string `json:"credential_quota_status_snapshot,omitempty"`
 	// Format holds the value of the "format" field.
 	Format string `json:"format,omitempty"`
 	// RequestBody holds the value of the "request_body" field.
@@ -145,7 +153,7 @@ func (*RequestExecution) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case requestexecution.FieldID, requestexecution.FieldProjectID, requestexecution.FieldRequestID, requestexecution.FieldChannelID, requestexecution.FieldCredentialID, requestexecution.FieldDataStorageID, requestexecution.FieldResponseStatusCode, requestexecution.FieldMetricsLatencyMs, requestexecution.FieldMetricsFirstTokenLatencyMs, requestexecution.FieldMetricsReasoningDurationMs:
 			values[i] = new(sql.NullInt64)
-		case requestexecution.FieldExternalID, requestexecution.FieldModelID, requestexecution.FieldCredentialFingerprint, requestexecution.FieldFormat, requestexecution.FieldErrorMessage, requestexecution.FieldStatus:
+		case requestexecution.FieldExternalID, requestexecution.FieldModelID, requestexecution.FieldCredentialFingerprint, requestexecution.FieldCredentialNameSnapshot, requestexecution.FieldCredentialKeyHint, requestexecution.FieldCredentialSource, requestexecution.FieldCredentialQuotaStatusSnapshot, requestexecution.FieldFormat, requestexecution.FieldErrorMessage, requestexecution.FieldStatus:
 			values[i] = new(sql.NullString)
 		case requestexecution.FieldCreatedAt, requestexecution.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -229,6 +237,30 @@ func (_m *RequestExecution) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field credential_fingerprint", values[i])
 			} else if value.Valid {
 				_m.CredentialFingerprint = value.String
+			}
+		case requestexecution.FieldCredentialNameSnapshot:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field credential_name_snapshot", values[i])
+			} else if value.Valid {
+				_m.CredentialNameSnapshot = value.String
+			}
+		case requestexecution.FieldCredentialKeyHint:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field credential_key_hint", values[i])
+			} else if value.Valid {
+				_m.CredentialKeyHint = value.String
+			}
+		case requestexecution.FieldCredentialSource:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field credential_source", values[i])
+			} else if value.Valid {
+				_m.CredentialSource = value.String
+			}
+		case requestexecution.FieldCredentialQuotaStatusSnapshot:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field credential_quota_status_snapshot", values[i])
+			} else if value.Valid {
+				_m.CredentialQuotaStatusSnapshot = value.String
 			}
 		case requestexecution.FieldFormat:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -399,6 +431,18 @@ func (_m *RequestExecution) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("credential_fingerprint=")
 	builder.WriteString(_m.CredentialFingerprint)
+	builder.WriteString(", ")
+	builder.WriteString("credential_name_snapshot=")
+	builder.WriteString(_m.CredentialNameSnapshot)
+	builder.WriteString(", ")
+	builder.WriteString("credential_key_hint=")
+	builder.WriteString(_m.CredentialKeyHint)
+	builder.WriteString(", ")
+	builder.WriteString("credential_source=")
+	builder.WriteString(_m.CredentialSource)
+	builder.WriteString(", ")
+	builder.WriteString("credential_quota_status_snapshot=")
+	builder.WriteString(_m.CredentialQuotaStatusSnapshot)
 	builder.WriteString(", ")
 	builder.WriteString("format=")
 	builder.WriteString(_m.Format)

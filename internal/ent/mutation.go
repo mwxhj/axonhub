@@ -18683,6 +18683,10 @@ type RequestExecutionMutation struct {
 	external_id                       *string
 	model_id                          *string
 	credential_fingerprint            *string
+	credential_name_snapshot          *string
+	credential_key_hint               *string
+	credential_source                 *string
+	credential_quota_status_snapshot  *string
 	format                            *string
 	request_body                      *objects.JSONRawMessage
 	appendrequest_body                objects.JSONRawMessage
@@ -19258,6 +19262,202 @@ func (m *RequestExecutionMutation) CredentialFingerprintCleared() bool {
 func (m *RequestExecutionMutation) ResetCredentialFingerprint() {
 	m.credential_fingerprint = nil
 	delete(m.clearedFields, requestexecution.FieldCredentialFingerprint)
+}
+
+// SetCredentialNameSnapshot sets the "credential_name_snapshot" field.
+func (m *RequestExecutionMutation) SetCredentialNameSnapshot(s string) {
+	m.credential_name_snapshot = &s
+}
+
+// CredentialNameSnapshot returns the value of the "credential_name_snapshot" field in the mutation.
+func (m *RequestExecutionMutation) CredentialNameSnapshot() (r string, exists bool) {
+	v := m.credential_name_snapshot
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCredentialNameSnapshot returns the old "credential_name_snapshot" field's value of the RequestExecution entity.
+// If the RequestExecution object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestExecutionMutation) OldCredentialNameSnapshot(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCredentialNameSnapshot is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCredentialNameSnapshot requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCredentialNameSnapshot: %w", err)
+	}
+	return oldValue.CredentialNameSnapshot, nil
+}
+
+// ClearCredentialNameSnapshot clears the value of the "credential_name_snapshot" field.
+func (m *RequestExecutionMutation) ClearCredentialNameSnapshot() {
+	m.credential_name_snapshot = nil
+	m.clearedFields[requestexecution.FieldCredentialNameSnapshot] = struct{}{}
+}
+
+// CredentialNameSnapshotCleared returns if the "credential_name_snapshot" field was cleared in this mutation.
+func (m *RequestExecutionMutation) CredentialNameSnapshotCleared() bool {
+	_, ok := m.clearedFields[requestexecution.FieldCredentialNameSnapshot]
+	return ok
+}
+
+// ResetCredentialNameSnapshot resets all changes to the "credential_name_snapshot" field.
+func (m *RequestExecutionMutation) ResetCredentialNameSnapshot() {
+	m.credential_name_snapshot = nil
+	delete(m.clearedFields, requestexecution.FieldCredentialNameSnapshot)
+}
+
+// SetCredentialKeyHint sets the "credential_key_hint" field.
+func (m *RequestExecutionMutation) SetCredentialKeyHint(s string) {
+	m.credential_key_hint = &s
+}
+
+// CredentialKeyHint returns the value of the "credential_key_hint" field in the mutation.
+func (m *RequestExecutionMutation) CredentialKeyHint() (r string, exists bool) {
+	v := m.credential_key_hint
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCredentialKeyHint returns the old "credential_key_hint" field's value of the RequestExecution entity.
+// If the RequestExecution object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestExecutionMutation) OldCredentialKeyHint(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCredentialKeyHint is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCredentialKeyHint requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCredentialKeyHint: %w", err)
+	}
+	return oldValue.CredentialKeyHint, nil
+}
+
+// ClearCredentialKeyHint clears the value of the "credential_key_hint" field.
+func (m *RequestExecutionMutation) ClearCredentialKeyHint() {
+	m.credential_key_hint = nil
+	m.clearedFields[requestexecution.FieldCredentialKeyHint] = struct{}{}
+}
+
+// CredentialKeyHintCleared returns if the "credential_key_hint" field was cleared in this mutation.
+func (m *RequestExecutionMutation) CredentialKeyHintCleared() bool {
+	_, ok := m.clearedFields[requestexecution.FieldCredentialKeyHint]
+	return ok
+}
+
+// ResetCredentialKeyHint resets all changes to the "credential_key_hint" field.
+func (m *RequestExecutionMutation) ResetCredentialKeyHint() {
+	m.credential_key_hint = nil
+	delete(m.clearedFields, requestexecution.FieldCredentialKeyHint)
+}
+
+// SetCredentialSource sets the "credential_source" field.
+func (m *RequestExecutionMutation) SetCredentialSource(s string) {
+	m.credential_source = &s
+}
+
+// CredentialSource returns the value of the "credential_source" field in the mutation.
+func (m *RequestExecutionMutation) CredentialSource() (r string, exists bool) {
+	v := m.credential_source
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCredentialSource returns the old "credential_source" field's value of the RequestExecution entity.
+// If the RequestExecution object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestExecutionMutation) OldCredentialSource(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCredentialSource is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCredentialSource requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCredentialSource: %w", err)
+	}
+	return oldValue.CredentialSource, nil
+}
+
+// ClearCredentialSource clears the value of the "credential_source" field.
+func (m *RequestExecutionMutation) ClearCredentialSource() {
+	m.credential_source = nil
+	m.clearedFields[requestexecution.FieldCredentialSource] = struct{}{}
+}
+
+// CredentialSourceCleared returns if the "credential_source" field was cleared in this mutation.
+func (m *RequestExecutionMutation) CredentialSourceCleared() bool {
+	_, ok := m.clearedFields[requestexecution.FieldCredentialSource]
+	return ok
+}
+
+// ResetCredentialSource resets all changes to the "credential_source" field.
+func (m *RequestExecutionMutation) ResetCredentialSource() {
+	m.credential_source = nil
+	delete(m.clearedFields, requestexecution.FieldCredentialSource)
+}
+
+// SetCredentialQuotaStatusSnapshot sets the "credential_quota_status_snapshot" field.
+func (m *RequestExecutionMutation) SetCredentialQuotaStatusSnapshot(s string) {
+	m.credential_quota_status_snapshot = &s
+}
+
+// CredentialQuotaStatusSnapshot returns the value of the "credential_quota_status_snapshot" field in the mutation.
+func (m *RequestExecutionMutation) CredentialQuotaStatusSnapshot() (r string, exists bool) {
+	v := m.credential_quota_status_snapshot
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCredentialQuotaStatusSnapshot returns the old "credential_quota_status_snapshot" field's value of the RequestExecution entity.
+// If the RequestExecution object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestExecutionMutation) OldCredentialQuotaStatusSnapshot(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCredentialQuotaStatusSnapshot is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCredentialQuotaStatusSnapshot requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCredentialQuotaStatusSnapshot: %w", err)
+	}
+	return oldValue.CredentialQuotaStatusSnapshot, nil
+}
+
+// ClearCredentialQuotaStatusSnapshot clears the value of the "credential_quota_status_snapshot" field.
+func (m *RequestExecutionMutation) ClearCredentialQuotaStatusSnapshot() {
+	m.credential_quota_status_snapshot = nil
+	m.clearedFields[requestexecution.FieldCredentialQuotaStatusSnapshot] = struct{}{}
+}
+
+// CredentialQuotaStatusSnapshotCleared returns if the "credential_quota_status_snapshot" field was cleared in this mutation.
+func (m *RequestExecutionMutation) CredentialQuotaStatusSnapshotCleared() bool {
+	_, ok := m.clearedFields[requestexecution.FieldCredentialQuotaStatusSnapshot]
+	return ok
+}
+
+// ResetCredentialQuotaStatusSnapshot resets all changes to the "credential_quota_status_snapshot" field.
+func (m *RequestExecutionMutation) ResetCredentialQuotaStatusSnapshot() {
+	m.credential_quota_status_snapshot = nil
+	delete(m.clearedFields, requestexecution.FieldCredentialQuotaStatusSnapshot)
 }
 
 // SetFormat sets the "format" field.
@@ -20085,7 +20285,7 @@ func (m *RequestExecutionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RequestExecutionMutation) Fields() []string {
-	fields := make([]string, 0, 22)
+	fields := make([]string, 0, 26)
 	if m.created_at != nil {
 		fields = append(fields, requestexecution.FieldCreatedAt)
 	}
@@ -20115,6 +20315,18 @@ func (m *RequestExecutionMutation) Fields() []string {
 	}
 	if m.credential_fingerprint != nil {
 		fields = append(fields, requestexecution.FieldCredentialFingerprint)
+	}
+	if m.credential_name_snapshot != nil {
+		fields = append(fields, requestexecution.FieldCredentialNameSnapshot)
+	}
+	if m.credential_key_hint != nil {
+		fields = append(fields, requestexecution.FieldCredentialKeyHint)
+	}
+	if m.credential_source != nil {
+		fields = append(fields, requestexecution.FieldCredentialSource)
+	}
+	if m.credential_quota_status_snapshot != nil {
+		fields = append(fields, requestexecution.FieldCredentialQuotaStatusSnapshot)
 	}
 	if m.format != nil {
 		fields = append(fields, requestexecution.FieldFormat)
@@ -20180,6 +20392,14 @@ func (m *RequestExecutionMutation) Field(name string) (ent.Value, bool) {
 		return m.ModelID()
 	case requestexecution.FieldCredentialFingerprint:
 		return m.CredentialFingerprint()
+	case requestexecution.FieldCredentialNameSnapshot:
+		return m.CredentialNameSnapshot()
+	case requestexecution.FieldCredentialKeyHint:
+		return m.CredentialKeyHint()
+	case requestexecution.FieldCredentialSource:
+		return m.CredentialSource()
+	case requestexecution.FieldCredentialQuotaStatusSnapshot:
+		return m.CredentialQuotaStatusSnapshot()
 	case requestexecution.FieldFormat:
 		return m.Format()
 	case requestexecution.FieldRequestBody:
@@ -20233,6 +20453,14 @@ func (m *RequestExecutionMutation) OldField(ctx context.Context, name string) (e
 		return m.OldModelID(ctx)
 	case requestexecution.FieldCredentialFingerprint:
 		return m.OldCredentialFingerprint(ctx)
+	case requestexecution.FieldCredentialNameSnapshot:
+		return m.OldCredentialNameSnapshot(ctx)
+	case requestexecution.FieldCredentialKeyHint:
+		return m.OldCredentialKeyHint(ctx)
+	case requestexecution.FieldCredentialSource:
+		return m.OldCredentialSource(ctx)
+	case requestexecution.FieldCredentialQuotaStatusSnapshot:
+		return m.OldCredentialQuotaStatusSnapshot(ctx)
 	case requestexecution.FieldFormat:
 		return m.OldFormat(ctx)
 	case requestexecution.FieldRequestBody:
@@ -20335,6 +20563,34 @@ func (m *RequestExecutionMutation) SetField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCredentialFingerprint(v)
+		return nil
+	case requestexecution.FieldCredentialNameSnapshot:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCredentialNameSnapshot(v)
+		return nil
+	case requestexecution.FieldCredentialKeyHint:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCredentialKeyHint(v)
+		return nil
+	case requestexecution.FieldCredentialSource:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCredentialSource(v)
+		return nil
+	case requestexecution.FieldCredentialQuotaStatusSnapshot:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCredentialQuotaStatusSnapshot(v)
 		return nil
 	case requestexecution.FieldFormat:
 		v, ok := value.(string)
@@ -20528,6 +20784,18 @@ func (m *RequestExecutionMutation) ClearedFields() []string {
 	if m.FieldCleared(requestexecution.FieldCredentialFingerprint) {
 		fields = append(fields, requestexecution.FieldCredentialFingerprint)
 	}
+	if m.FieldCleared(requestexecution.FieldCredentialNameSnapshot) {
+		fields = append(fields, requestexecution.FieldCredentialNameSnapshot)
+	}
+	if m.FieldCleared(requestexecution.FieldCredentialKeyHint) {
+		fields = append(fields, requestexecution.FieldCredentialKeyHint)
+	}
+	if m.FieldCleared(requestexecution.FieldCredentialSource) {
+		fields = append(fields, requestexecution.FieldCredentialSource)
+	}
+	if m.FieldCleared(requestexecution.FieldCredentialQuotaStatusSnapshot) {
+		fields = append(fields, requestexecution.FieldCredentialQuotaStatusSnapshot)
+	}
 	if m.FieldCleared(requestexecution.FieldResponseBody) {
 		fields = append(fields, requestexecution.FieldResponseBody)
 	}
@@ -20580,6 +20848,18 @@ func (m *RequestExecutionMutation) ClearField(name string) error {
 		return nil
 	case requestexecution.FieldCredentialFingerprint:
 		m.ClearCredentialFingerprint()
+		return nil
+	case requestexecution.FieldCredentialNameSnapshot:
+		m.ClearCredentialNameSnapshot()
+		return nil
+	case requestexecution.FieldCredentialKeyHint:
+		m.ClearCredentialKeyHint()
+		return nil
+	case requestexecution.FieldCredentialSource:
+		m.ClearCredentialSource()
+		return nil
+	case requestexecution.FieldCredentialQuotaStatusSnapshot:
+		m.ClearCredentialQuotaStatusSnapshot()
 		return nil
 	case requestexecution.FieldResponseBody:
 		m.ClearResponseBody()
@@ -20642,6 +20922,18 @@ func (m *RequestExecutionMutation) ResetField(name string) error {
 		return nil
 	case requestexecution.FieldCredentialFingerprint:
 		m.ResetCredentialFingerprint()
+		return nil
+	case requestexecution.FieldCredentialNameSnapshot:
+		m.ResetCredentialNameSnapshot()
+		return nil
+	case requestexecution.FieldCredentialKeyHint:
+		m.ResetCredentialKeyHint()
+		return nil
+	case requestexecution.FieldCredentialSource:
+		m.ResetCredentialSource()
+		return nil
+	case requestexecution.FieldCredentialQuotaStatusSnapshot:
+		m.ResetCredentialQuotaStatusSnapshot()
 		return nil
 	case requestexecution.FieldFormat:
 		m.ResetFormat()
@@ -23751,11 +24043,18 @@ type UpstreamCredentialMutation struct {
 	provider_type                  *string
 	base_url                       *string
 	auth_kind                      *upstreamcredential.AuthKind
+	secret_kind                    *upstreamcredential.SecretKind
+	issuer_scope                   *string
+	key_hint                       *string
+	quota_scope_id                 *int
+	addquota_scope_id              *int
 	secret_payload                 *objects.UpstreamCredentialSecret
 	fingerprint                    *string
 	status                         *upstreamcredential.Status
 	weight                         *int
 	addweight                      *int
+	quota_status                   *string
+	last_error                     *string
 	remark                         *string
 	clearedFields                  map[string]struct{}
 	channel_refs                   map[int]struct{}
@@ -24171,6 +24470,210 @@ func (m *UpstreamCredentialMutation) ResetAuthKind() {
 	m.auth_kind = nil
 }
 
+// SetSecretKind sets the "secret_kind" field.
+func (m *UpstreamCredentialMutation) SetSecretKind(uk upstreamcredential.SecretKind) {
+	m.secret_kind = &uk
+}
+
+// SecretKind returns the value of the "secret_kind" field in the mutation.
+func (m *UpstreamCredentialMutation) SecretKind() (r upstreamcredential.SecretKind, exists bool) {
+	v := m.secret_kind
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSecretKind returns the old "secret_kind" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldSecretKind(ctx context.Context) (v upstreamcredential.SecretKind, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSecretKind is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSecretKind requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSecretKind: %w", err)
+	}
+	return oldValue.SecretKind, nil
+}
+
+// ResetSecretKind resets all changes to the "secret_kind" field.
+func (m *UpstreamCredentialMutation) ResetSecretKind() {
+	m.secret_kind = nil
+}
+
+// SetIssuerScope sets the "issuer_scope" field.
+func (m *UpstreamCredentialMutation) SetIssuerScope(s string) {
+	m.issuer_scope = &s
+}
+
+// IssuerScope returns the value of the "issuer_scope" field in the mutation.
+func (m *UpstreamCredentialMutation) IssuerScope() (r string, exists bool) {
+	v := m.issuer_scope
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIssuerScope returns the old "issuer_scope" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldIssuerScope(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIssuerScope is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIssuerScope requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIssuerScope: %w", err)
+	}
+	return oldValue.IssuerScope, nil
+}
+
+// ClearIssuerScope clears the value of the "issuer_scope" field.
+func (m *UpstreamCredentialMutation) ClearIssuerScope() {
+	m.issuer_scope = nil
+	m.clearedFields[upstreamcredential.FieldIssuerScope] = struct{}{}
+}
+
+// IssuerScopeCleared returns if the "issuer_scope" field was cleared in this mutation.
+func (m *UpstreamCredentialMutation) IssuerScopeCleared() bool {
+	_, ok := m.clearedFields[upstreamcredential.FieldIssuerScope]
+	return ok
+}
+
+// ResetIssuerScope resets all changes to the "issuer_scope" field.
+func (m *UpstreamCredentialMutation) ResetIssuerScope() {
+	m.issuer_scope = nil
+	delete(m.clearedFields, upstreamcredential.FieldIssuerScope)
+}
+
+// SetKeyHint sets the "key_hint" field.
+func (m *UpstreamCredentialMutation) SetKeyHint(s string) {
+	m.key_hint = &s
+}
+
+// KeyHint returns the value of the "key_hint" field in the mutation.
+func (m *UpstreamCredentialMutation) KeyHint() (r string, exists bool) {
+	v := m.key_hint
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldKeyHint returns the old "key_hint" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldKeyHint(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldKeyHint is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldKeyHint requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldKeyHint: %w", err)
+	}
+	return oldValue.KeyHint, nil
+}
+
+// ClearKeyHint clears the value of the "key_hint" field.
+func (m *UpstreamCredentialMutation) ClearKeyHint() {
+	m.key_hint = nil
+	m.clearedFields[upstreamcredential.FieldKeyHint] = struct{}{}
+}
+
+// KeyHintCleared returns if the "key_hint" field was cleared in this mutation.
+func (m *UpstreamCredentialMutation) KeyHintCleared() bool {
+	_, ok := m.clearedFields[upstreamcredential.FieldKeyHint]
+	return ok
+}
+
+// ResetKeyHint resets all changes to the "key_hint" field.
+func (m *UpstreamCredentialMutation) ResetKeyHint() {
+	m.key_hint = nil
+	delete(m.clearedFields, upstreamcredential.FieldKeyHint)
+}
+
+// SetQuotaScopeID sets the "quota_scope_id" field.
+func (m *UpstreamCredentialMutation) SetQuotaScopeID(i int) {
+	m.quota_scope_id = &i
+	m.addquota_scope_id = nil
+}
+
+// QuotaScopeID returns the value of the "quota_scope_id" field in the mutation.
+func (m *UpstreamCredentialMutation) QuotaScopeID() (r int, exists bool) {
+	v := m.quota_scope_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuotaScopeID returns the old "quota_scope_id" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldQuotaScopeID(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuotaScopeID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuotaScopeID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuotaScopeID: %w", err)
+	}
+	return oldValue.QuotaScopeID, nil
+}
+
+// AddQuotaScopeID adds i to the "quota_scope_id" field.
+func (m *UpstreamCredentialMutation) AddQuotaScopeID(i int) {
+	if m.addquota_scope_id != nil {
+		*m.addquota_scope_id += i
+	} else {
+		m.addquota_scope_id = &i
+	}
+}
+
+// AddedQuotaScopeID returns the value that was added to the "quota_scope_id" field in this mutation.
+func (m *UpstreamCredentialMutation) AddedQuotaScopeID() (r int, exists bool) {
+	v := m.addquota_scope_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearQuotaScopeID clears the value of the "quota_scope_id" field.
+func (m *UpstreamCredentialMutation) ClearQuotaScopeID() {
+	m.quota_scope_id = nil
+	m.addquota_scope_id = nil
+	m.clearedFields[upstreamcredential.FieldQuotaScopeID] = struct{}{}
+}
+
+// QuotaScopeIDCleared returns if the "quota_scope_id" field was cleared in this mutation.
+func (m *UpstreamCredentialMutation) QuotaScopeIDCleared() bool {
+	_, ok := m.clearedFields[upstreamcredential.FieldQuotaScopeID]
+	return ok
+}
+
+// ResetQuotaScopeID resets all changes to the "quota_scope_id" field.
+func (m *UpstreamCredentialMutation) ResetQuotaScopeID() {
+	m.quota_scope_id = nil
+	m.addquota_scope_id = nil
+	delete(m.clearedFields, upstreamcredential.FieldQuotaScopeID)
+}
+
 // SetSecretPayload sets the "secret_payload" field.
 func (m *UpstreamCredentialMutation) SetSecretPayload(ocs objects.UpstreamCredentialSecret) {
 	m.secret_payload = &ocs
@@ -24333,6 +24836,104 @@ func (m *UpstreamCredentialMutation) AddedWeight() (r int, exists bool) {
 func (m *UpstreamCredentialMutation) ResetWeight() {
 	m.weight = nil
 	m.addweight = nil
+}
+
+// SetQuotaStatus sets the "quota_status" field.
+func (m *UpstreamCredentialMutation) SetQuotaStatus(s string) {
+	m.quota_status = &s
+}
+
+// QuotaStatus returns the value of the "quota_status" field in the mutation.
+func (m *UpstreamCredentialMutation) QuotaStatus() (r string, exists bool) {
+	v := m.quota_status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuotaStatus returns the old "quota_status" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldQuotaStatus(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuotaStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuotaStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuotaStatus: %w", err)
+	}
+	return oldValue.QuotaStatus, nil
+}
+
+// ClearQuotaStatus clears the value of the "quota_status" field.
+func (m *UpstreamCredentialMutation) ClearQuotaStatus() {
+	m.quota_status = nil
+	m.clearedFields[upstreamcredential.FieldQuotaStatus] = struct{}{}
+}
+
+// QuotaStatusCleared returns if the "quota_status" field was cleared in this mutation.
+func (m *UpstreamCredentialMutation) QuotaStatusCleared() bool {
+	_, ok := m.clearedFields[upstreamcredential.FieldQuotaStatus]
+	return ok
+}
+
+// ResetQuotaStatus resets all changes to the "quota_status" field.
+func (m *UpstreamCredentialMutation) ResetQuotaStatus() {
+	m.quota_status = nil
+	delete(m.clearedFields, upstreamcredential.FieldQuotaStatus)
+}
+
+// SetLastError sets the "last_error" field.
+func (m *UpstreamCredentialMutation) SetLastError(s string) {
+	m.last_error = &s
+}
+
+// LastError returns the value of the "last_error" field in the mutation.
+func (m *UpstreamCredentialMutation) LastError() (r string, exists bool) {
+	v := m.last_error
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastError returns the old "last_error" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldLastError(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastError is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastError requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastError: %w", err)
+	}
+	return oldValue.LastError, nil
+}
+
+// ClearLastError clears the value of the "last_error" field.
+func (m *UpstreamCredentialMutation) ClearLastError() {
+	m.last_error = nil
+	m.clearedFields[upstreamcredential.FieldLastError] = struct{}{}
+}
+
+// LastErrorCleared returns if the "last_error" field was cleared in this mutation.
+func (m *UpstreamCredentialMutation) LastErrorCleared() bool {
+	_, ok := m.clearedFields[upstreamcredential.FieldLastError]
+	return ok
+}
+
+// ResetLastError resets all changes to the "last_error" field.
+func (m *UpstreamCredentialMutation) ResetLastError() {
+	m.last_error = nil
+	delete(m.clearedFields, upstreamcredential.FieldLastError)
 }
 
 // SetRemark sets the "remark" field.
@@ -24634,7 +25235,7 @@ func (m *UpstreamCredentialMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UpstreamCredentialMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 18)
 	if m.created_at != nil {
 		fields = append(fields, upstreamcredential.FieldCreatedAt)
 	}
@@ -24656,6 +25257,18 @@ func (m *UpstreamCredentialMutation) Fields() []string {
 	if m.auth_kind != nil {
 		fields = append(fields, upstreamcredential.FieldAuthKind)
 	}
+	if m.secret_kind != nil {
+		fields = append(fields, upstreamcredential.FieldSecretKind)
+	}
+	if m.issuer_scope != nil {
+		fields = append(fields, upstreamcredential.FieldIssuerScope)
+	}
+	if m.key_hint != nil {
+		fields = append(fields, upstreamcredential.FieldKeyHint)
+	}
+	if m.quota_scope_id != nil {
+		fields = append(fields, upstreamcredential.FieldQuotaScopeID)
+	}
 	if m.secret_payload != nil {
 		fields = append(fields, upstreamcredential.FieldSecretPayload)
 	}
@@ -24667,6 +25280,12 @@ func (m *UpstreamCredentialMutation) Fields() []string {
 	}
 	if m.weight != nil {
 		fields = append(fields, upstreamcredential.FieldWeight)
+	}
+	if m.quota_status != nil {
+		fields = append(fields, upstreamcredential.FieldQuotaStatus)
+	}
+	if m.last_error != nil {
+		fields = append(fields, upstreamcredential.FieldLastError)
 	}
 	if m.remark != nil {
 		fields = append(fields, upstreamcredential.FieldRemark)
@@ -24693,6 +25312,14 @@ func (m *UpstreamCredentialMutation) Field(name string) (ent.Value, bool) {
 		return m.BaseURL()
 	case upstreamcredential.FieldAuthKind:
 		return m.AuthKind()
+	case upstreamcredential.FieldSecretKind:
+		return m.SecretKind()
+	case upstreamcredential.FieldIssuerScope:
+		return m.IssuerScope()
+	case upstreamcredential.FieldKeyHint:
+		return m.KeyHint()
+	case upstreamcredential.FieldQuotaScopeID:
+		return m.QuotaScopeID()
 	case upstreamcredential.FieldSecretPayload:
 		return m.SecretPayload()
 	case upstreamcredential.FieldFingerprint:
@@ -24701,6 +25328,10 @@ func (m *UpstreamCredentialMutation) Field(name string) (ent.Value, bool) {
 		return m.Status()
 	case upstreamcredential.FieldWeight:
 		return m.Weight()
+	case upstreamcredential.FieldQuotaStatus:
+		return m.QuotaStatus()
+	case upstreamcredential.FieldLastError:
+		return m.LastError()
 	case upstreamcredential.FieldRemark:
 		return m.Remark()
 	}
@@ -24726,6 +25357,14 @@ func (m *UpstreamCredentialMutation) OldField(ctx context.Context, name string) 
 		return m.OldBaseURL(ctx)
 	case upstreamcredential.FieldAuthKind:
 		return m.OldAuthKind(ctx)
+	case upstreamcredential.FieldSecretKind:
+		return m.OldSecretKind(ctx)
+	case upstreamcredential.FieldIssuerScope:
+		return m.OldIssuerScope(ctx)
+	case upstreamcredential.FieldKeyHint:
+		return m.OldKeyHint(ctx)
+	case upstreamcredential.FieldQuotaScopeID:
+		return m.OldQuotaScopeID(ctx)
 	case upstreamcredential.FieldSecretPayload:
 		return m.OldSecretPayload(ctx)
 	case upstreamcredential.FieldFingerprint:
@@ -24734,6 +25373,10 @@ func (m *UpstreamCredentialMutation) OldField(ctx context.Context, name string) 
 		return m.OldStatus(ctx)
 	case upstreamcredential.FieldWeight:
 		return m.OldWeight(ctx)
+	case upstreamcredential.FieldQuotaStatus:
+		return m.OldQuotaStatus(ctx)
+	case upstreamcredential.FieldLastError:
+		return m.OldLastError(ctx)
 	case upstreamcredential.FieldRemark:
 		return m.OldRemark(ctx)
 	}
@@ -24794,6 +25437,34 @@ func (m *UpstreamCredentialMutation) SetField(name string, value ent.Value) erro
 		}
 		m.SetAuthKind(v)
 		return nil
+	case upstreamcredential.FieldSecretKind:
+		v, ok := value.(upstreamcredential.SecretKind)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSecretKind(v)
+		return nil
+	case upstreamcredential.FieldIssuerScope:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIssuerScope(v)
+		return nil
+	case upstreamcredential.FieldKeyHint:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetKeyHint(v)
+		return nil
+	case upstreamcredential.FieldQuotaScopeID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuotaScopeID(v)
+		return nil
 	case upstreamcredential.FieldSecretPayload:
 		v, ok := value.(objects.UpstreamCredentialSecret)
 		if !ok {
@@ -24822,6 +25493,20 @@ func (m *UpstreamCredentialMutation) SetField(name string, value ent.Value) erro
 		}
 		m.SetWeight(v)
 		return nil
+	case upstreamcredential.FieldQuotaStatus:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuotaStatus(v)
+		return nil
+	case upstreamcredential.FieldLastError:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastError(v)
+		return nil
 	case upstreamcredential.FieldRemark:
 		v, ok := value.(string)
 		if !ok {
@@ -24840,6 +25525,9 @@ func (m *UpstreamCredentialMutation) AddedFields() []string {
 	if m.adddeleted_at != nil {
 		fields = append(fields, upstreamcredential.FieldDeletedAt)
 	}
+	if m.addquota_scope_id != nil {
+		fields = append(fields, upstreamcredential.FieldQuotaScopeID)
+	}
 	if m.addweight != nil {
 		fields = append(fields, upstreamcredential.FieldWeight)
 	}
@@ -24853,6 +25541,8 @@ func (m *UpstreamCredentialMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case upstreamcredential.FieldDeletedAt:
 		return m.AddedDeletedAt()
+	case upstreamcredential.FieldQuotaScopeID:
+		return m.AddedQuotaScopeID()
 	case upstreamcredential.FieldWeight:
 		return m.AddedWeight()
 	}
@@ -24870,6 +25560,13 @@ func (m *UpstreamCredentialMutation) AddField(name string, value ent.Value) erro
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddDeletedAt(v)
+		return nil
+	case upstreamcredential.FieldQuotaScopeID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddQuotaScopeID(v)
 		return nil
 	case upstreamcredential.FieldWeight:
 		v, ok := value.(int)
@@ -24891,6 +25588,21 @@ func (m *UpstreamCredentialMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(upstreamcredential.FieldBaseURL) {
 		fields = append(fields, upstreamcredential.FieldBaseURL)
+	}
+	if m.FieldCleared(upstreamcredential.FieldIssuerScope) {
+		fields = append(fields, upstreamcredential.FieldIssuerScope)
+	}
+	if m.FieldCleared(upstreamcredential.FieldKeyHint) {
+		fields = append(fields, upstreamcredential.FieldKeyHint)
+	}
+	if m.FieldCleared(upstreamcredential.FieldQuotaScopeID) {
+		fields = append(fields, upstreamcredential.FieldQuotaScopeID)
+	}
+	if m.FieldCleared(upstreamcredential.FieldQuotaStatus) {
+		fields = append(fields, upstreamcredential.FieldQuotaStatus)
+	}
+	if m.FieldCleared(upstreamcredential.FieldLastError) {
+		fields = append(fields, upstreamcredential.FieldLastError)
 	}
 	if m.FieldCleared(upstreamcredential.FieldRemark) {
 		fields = append(fields, upstreamcredential.FieldRemark)
@@ -24914,6 +25626,21 @@ func (m *UpstreamCredentialMutation) ClearField(name string) error {
 		return nil
 	case upstreamcredential.FieldBaseURL:
 		m.ClearBaseURL()
+		return nil
+	case upstreamcredential.FieldIssuerScope:
+		m.ClearIssuerScope()
+		return nil
+	case upstreamcredential.FieldKeyHint:
+		m.ClearKeyHint()
+		return nil
+	case upstreamcredential.FieldQuotaScopeID:
+		m.ClearQuotaScopeID()
+		return nil
+	case upstreamcredential.FieldQuotaStatus:
+		m.ClearQuotaStatus()
+		return nil
+	case upstreamcredential.FieldLastError:
+		m.ClearLastError()
 		return nil
 	case upstreamcredential.FieldRemark:
 		m.ClearRemark()
@@ -24947,6 +25674,18 @@ func (m *UpstreamCredentialMutation) ResetField(name string) error {
 	case upstreamcredential.FieldAuthKind:
 		m.ResetAuthKind()
 		return nil
+	case upstreamcredential.FieldSecretKind:
+		m.ResetSecretKind()
+		return nil
+	case upstreamcredential.FieldIssuerScope:
+		m.ResetIssuerScope()
+		return nil
+	case upstreamcredential.FieldKeyHint:
+		m.ResetKeyHint()
+		return nil
+	case upstreamcredential.FieldQuotaScopeID:
+		m.ResetQuotaScopeID()
+		return nil
 	case upstreamcredential.FieldSecretPayload:
 		m.ResetSecretPayload()
 		return nil
@@ -24958,6 +25697,12 @@ func (m *UpstreamCredentialMutation) ResetField(name string) error {
 		return nil
 	case upstreamcredential.FieldWeight:
 		m.ResetWeight()
+		return nil
+	case upstreamcredential.FieldQuotaStatus:
+		m.ResetQuotaStatus()
+		return nil
+	case upstreamcredential.FieldLastError:
+		m.ResetLastError()
 		return nil
 	case upstreamcredential.FieldRemark:
 		m.ResetRemark()
@@ -25140,6 +25885,9 @@ type UsageLogMutation struct {
 	addapi_key_id                            *int
 	model_id                                 *string
 	credential_fingerprint                   *string
+	credential_name_snapshot                 *string
+	credential_key_hint                      *string
+	credential_source                        *string
 	prompt_tokens                            *int64
 	addprompt_tokens                         *int64
 	completion_tokens                        *int64
@@ -25678,6 +26426,153 @@ func (m *UsageLogMutation) CredentialFingerprintCleared() bool {
 func (m *UsageLogMutation) ResetCredentialFingerprint() {
 	m.credential_fingerprint = nil
 	delete(m.clearedFields, usagelog.FieldCredentialFingerprint)
+}
+
+// SetCredentialNameSnapshot sets the "credential_name_snapshot" field.
+func (m *UsageLogMutation) SetCredentialNameSnapshot(s string) {
+	m.credential_name_snapshot = &s
+}
+
+// CredentialNameSnapshot returns the value of the "credential_name_snapshot" field in the mutation.
+func (m *UsageLogMutation) CredentialNameSnapshot() (r string, exists bool) {
+	v := m.credential_name_snapshot
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCredentialNameSnapshot returns the old "credential_name_snapshot" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldCredentialNameSnapshot(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCredentialNameSnapshot is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCredentialNameSnapshot requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCredentialNameSnapshot: %w", err)
+	}
+	return oldValue.CredentialNameSnapshot, nil
+}
+
+// ClearCredentialNameSnapshot clears the value of the "credential_name_snapshot" field.
+func (m *UsageLogMutation) ClearCredentialNameSnapshot() {
+	m.credential_name_snapshot = nil
+	m.clearedFields[usagelog.FieldCredentialNameSnapshot] = struct{}{}
+}
+
+// CredentialNameSnapshotCleared returns if the "credential_name_snapshot" field was cleared in this mutation.
+func (m *UsageLogMutation) CredentialNameSnapshotCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldCredentialNameSnapshot]
+	return ok
+}
+
+// ResetCredentialNameSnapshot resets all changes to the "credential_name_snapshot" field.
+func (m *UsageLogMutation) ResetCredentialNameSnapshot() {
+	m.credential_name_snapshot = nil
+	delete(m.clearedFields, usagelog.FieldCredentialNameSnapshot)
+}
+
+// SetCredentialKeyHint sets the "credential_key_hint" field.
+func (m *UsageLogMutation) SetCredentialKeyHint(s string) {
+	m.credential_key_hint = &s
+}
+
+// CredentialKeyHint returns the value of the "credential_key_hint" field in the mutation.
+func (m *UsageLogMutation) CredentialKeyHint() (r string, exists bool) {
+	v := m.credential_key_hint
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCredentialKeyHint returns the old "credential_key_hint" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldCredentialKeyHint(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCredentialKeyHint is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCredentialKeyHint requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCredentialKeyHint: %w", err)
+	}
+	return oldValue.CredentialKeyHint, nil
+}
+
+// ClearCredentialKeyHint clears the value of the "credential_key_hint" field.
+func (m *UsageLogMutation) ClearCredentialKeyHint() {
+	m.credential_key_hint = nil
+	m.clearedFields[usagelog.FieldCredentialKeyHint] = struct{}{}
+}
+
+// CredentialKeyHintCleared returns if the "credential_key_hint" field was cleared in this mutation.
+func (m *UsageLogMutation) CredentialKeyHintCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldCredentialKeyHint]
+	return ok
+}
+
+// ResetCredentialKeyHint resets all changes to the "credential_key_hint" field.
+func (m *UsageLogMutation) ResetCredentialKeyHint() {
+	m.credential_key_hint = nil
+	delete(m.clearedFields, usagelog.FieldCredentialKeyHint)
+}
+
+// SetCredentialSource sets the "credential_source" field.
+func (m *UsageLogMutation) SetCredentialSource(s string) {
+	m.credential_source = &s
+}
+
+// CredentialSource returns the value of the "credential_source" field in the mutation.
+func (m *UsageLogMutation) CredentialSource() (r string, exists bool) {
+	v := m.credential_source
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCredentialSource returns the old "credential_source" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldCredentialSource(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCredentialSource is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCredentialSource requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCredentialSource: %w", err)
+	}
+	return oldValue.CredentialSource, nil
+}
+
+// ClearCredentialSource clears the value of the "credential_source" field.
+func (m *UsageLogMutation) ClearCredentialSource() {
+	m.credential_source = nil
+	m.clearedFields[usagelog.FieldCredentialSource] = struct{}{}
+}
+
+// CredentialSourceCleared returns if the "credential_source" field was cleared in this mutation.
+func (m *UsageLogMutation) CredentialSourceCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldCredentialSource]
+	return ok
+}
+
+// ResetCredentialSource resets all changes to the "credential_source" field.
+func (m *UsageLogMutation) ResetCredentialSource() {
+	m.credential_source = nil
+	delete(m.clearedFields, usagelog.FieldCredentialSource)
 }
 
 // SetPromptTokens sets the "prompt_tokens" field.
@@ -26876,7 +27771,7 @@ func (m *UsageLogMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UsageLogMutation) Fields() []string {
-	fields := make([]string, 0, 26)
+	fields := make([]string, 0, 29)
 	if m.created_at != nil {
 		fields = append(fields, usagelog.FieldCreatedAt)
 	}
@@ -26903,6 +27798,15 @@ func (m *UsageLogMutation) Fields() []string {
 	}
 	if m.credential_fingerprint != nil {
 		fields = append(fields, usagelog.FieldCredentialFingerprint)
+	}
+	if m.credential_name_snapshot != nil {
+		fields = append(fields, usagelog.FieldCredentialNameSnapshot)
+	}
+	if m.credential_key_hint != nil {
+		fields = append(fields, usagelog.FieldCredentialKeyHint)
+	}
+	if m.credential_source != nil {
+		fields = append(fields, usagelog.FieldCredentialSource)
 	}
 	if m.prompt_tokens != nil {
 		fields = append(fields, usagelog.FieldPromptTokens)
@@ -26981,6 +27885,12 @@ func (m *UsageLogMutation) Field(name string) (ent.Value, bool) {
 		return m.ModelID()
 	case usagelog.FieldCredentialFingerprint:
 		return m.CredentialFingerprint()
+	case usagelog.FieldCredentialNameSnapshot:
+		return m.CredentialNameSnapshot()
+	case usagelog.FieldCredentialKeyHint:
+		return m.CredentialKeyHint()
+	case usagelog.FieldCredentialSource:
+		return m.CredentialSource()
 	case usagelog.FieldPromptTokens:
 		return m.PromptTokens()
 	case usagelog.FieldCompletionTokens:
@@ -27042,6 +27952,12 @@ func (m *UsageLogMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldModelID(ctx)
 	case usagelog.FieldCredentialFingerprint:
 		return m.OldCredentialFingerprint(ctx)
+	case usagelog.FieldCredentialNameSnapshot:
+		return m.OldCredentialNameSnapshot(ctx)
+	case usagelog.FieldCredentialKeyHint:
+		return m.OldCredentialKeyHint(ctx)
+	case usagelog.FieldCredentialSource:
+		return m.OldCredentialSource(ctx)
 	case usagelog.FieldPromptTokens:
 		return m.OldPromptTokens(ctx)
 	case usagelog.FieldCompletionTokens:
@@ -27147,6 +28063,27 @@ func (m *UsageLogMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCredentialFingerprint(v)
+		return nil
+	case usagelog.FieldCredentialNameSnapshot:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCredentialNameSnapshot(v)
+		return nil
+	case usagelog.FieldCredentialKeyHint:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCredentialKeyHint(v)
+		return nil
+	case usagelog.FieldCredentialSource:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCredentialSource(v)
 		return nil
 	case usagelog.FieldPromptTokens:
 		v, ok := value.(int64)
@@ -27480,6 +28417,15 @@ func (m *UsageLogMutation) ClearedFields() []string {
 	if m.FieldCleared(usagelog.FieldCredentialFingerprint) {
 		fields = append(fields, usagelog.FieldCredentialFingerprint)
 	}
+	if m.FieldCleared(usagelog.FieldCredentialNameSnapshot) {
+		fields = append(fields, usagelog.FieldCredentialNameSnapshot)
+	}
+	if m.FieldCleared(usagelog.FieldCredentialKeyHint) {
+		fields = append(fields, usagelog.FieldCredentialKeyHint)
+	}
+	if m.FieldCleared(usagelog.FieldCredentialSource) {
+		fields = append(fields, usagelog.FieldCredentialSource)
+	}
 	if m.FieldCleared(usagelog.FieldPromptAudioTokens) {
 		fields = append(fields, usagelog.FieldPromptAudioTokens)
 	}
@@ -27541,6 +28487,15 @@ func (m *UsageLogMutation) ClearField(name string) error {
 		return nil
 	case usagelog.FieldCredentialFingerprint:
 		m.ClearCredentialFingerprint()
+		return nil
+	case usagelog.FieldCredentialNameSnapshot:
+		m.ClearCredentialNameSnapshot()
+		return nil
+	case usagelog.FieldCredentialKeyHint:
+		m.ClearCredentialKeyHint()
+		return nil
+	case usagelog.FieldCredentialSource:
+		m.ClearCredentialSource()
 		return nil
 	case usagelog.FieldPromptAudioTokens:
 		m.ClearPromptAudioTokens()
@@ -27612,6 +28567,15 @@ func (m *UsageLogMutation) ResetField(name string) error {
 		return nil
 	case usagelog.FieldCredentialFingerprint:
 		m.ResetCredentialFingerprint()
+		return nil
+	case usagelog.FieldCredentialNameSnapshot:
+		m.ResetCredentialNameSnapshot()
+		return nil
+	case usagelog.FieldCredentialKeyHint:
+		m.ResetCredentialKeyHint()
+		return nil
+	case usagelog.FieldCredentialSource:
+		m.ResetCredentialSource()
 		return nil
 	case usagelog.FieldPromptTokens:
 		m.ResetPromptTokens()

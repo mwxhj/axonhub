@@ -16,15 +16,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { CHANNEL_CONFIGS } from '@/features/channels/data/config_channels';
-import type { ChannelType } from '@/features/channels/data/schema';
 import { useCredentialsContext } from '../context/credentials-context';
 import { useCreateUpstreamCredential } from '../data/credentials';
 import type { CredentialAuthKind, CredentialFormValues, CredentialStatus } from '../data/schema';
 import { CredentialSecretFields } from './credential-secret-fields';
 import { buildCreateCredentialInput, defaultCredentialFormValues } from './form-utils';
 
-const providerTypes = Object.keys(CHANNEL_CONFIGS).sort() as ChannelType[];
 const authKinds: CredentialAuthKind[] = ['api_key', 'oauth', 'azure', 'gcp', 'other'];
 const statuses: CredentialStatus[] = ['enabled', 'disabled', 'archived'];
 
@@ -46,7 +43,6 @@ export function CreateCredentialDialog() {
   });
 
   const authKind = watch('authKind');
-  const providerType = watch('providerType') as ChannelType;
   const status = watch('status');
 
   useEffect(() => {
@@ -76,25 +72,9 @@ export function CreateCredentialDialog() {
                 <Input id='credential-name' {...register('name')} />
               </div>
               <div className='grid gap-2'>
-                <Label htmlFor='credential-provider-type'>{t('credentials.fields.providerType')}</Label>
-                <Select value={providerType} onValueChange={(value) => setValue('providerType', value)}>
-                  <SelectTrigger id='credential-provider-type'>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {providerTypes.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor='credential-issuer-scope'>{t('credentials.fields.issuerScope')}</Label>
+                <Input id='credential-issuer-scope' placeholder='openai' {...register('issuerScope')} />
               </div>
-            </div>
-
-            <div className='grid gap-2'>
-              <Label htmlFor='credential-base-url'>{t('credentials.fields.baseURL')}</Label>
-              <Input id='credential-base-url' placeholder={CHANNEL_CONFIGS[providerType]?.baseURL} {...register('baseURL')} />
             </div>
 
             <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>

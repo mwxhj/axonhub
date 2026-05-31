@@ -31,8 +31,12 @@ func (UpstreamCredential) Indexes() []ent.Index {
 			Unique(),
 		index.Fields("provider_type", "status").
 			StorageKey("upstream_credentials_by_provider_type_status"),
+		index.Fields("issuer_scope", "status").
+			StorageKey("upstream_credentials_by_issuer_scope_status"),
 		index.Fields("base_url").
 			StorageKey("upstream_credentials_by_base_url"),
+		index.Fields("quota_scope_id").
+			StorageKey("upstream_credentials_by_quota_scope_id"),
 	}
 }
 
@@ -46,6 +50,7 @@ func (UpstreamCredential) Fields() []ent.Field {
 			),
 		field.String("provider_type").
 			Immutable().
+			Default("").
 			Comment("Provider or channel type scope used to identify the upstream credential").
 			Annotations(
 				entgql.OrderField("PROVIDER_TYPE"),
@@ -59,9 +64,38 @@ func (UpstreamCredential) Fields() []ent.Field {
 			),
 		field.Enum("auth_kind").
 			Values("api_key", "oauth", "azure", "gcp", "other").
+			Default("api_key").
 			Immutable().
 			Annotations(
 				entgql.OrderField("AUTH_KIND"),
+			),
+		field.Enum("secret_kind").
+			Values("api_key", "oauth", "azure", "gcp", "other").
+			Default("api_key").
+			Comment("Internal secret kind for the upstream account asset; not a channel/API-format setting").
+			Annotations(
+				entgql.OrderField("SECRET_KIND"),
+			),
+		field.String("issuer_scope").
+			Optional().
+			Default("").
+			Comment("Coarse upstream issuer namespace used for credential identity; not the channel base URL").
+			Annotations(
+				entgql.OrderField("ISSUER_SCOPE"),
+			),
+		field.String("key_hint").
+			Optional().
+			Default("").
+			Comment("Safe display hint for the secret; never contains the full secret").
+			Annotations(
+				entgql.OrderField("KEY_HINT"),
+			),
+		field.Int("quota_scope_id").
+			Optional().
+			Nillable().
+			Comment("Optional shared quota/billing scope for credentials that belong to one upstream account pool").
+			Annotations(
+				entgql.OrderField("QUOTA_SCOPE_ID"),
 			),
 		field.JSON("secret_payload", objects.UpstreamCredentialSecret{}).
 			Sensitive().
@@ -86,6 +120,17 @@ func (UpstreamCredential) Fields() []ent.Field {
 			Annotations(
 				entgql.OrderField("WEIGHT"),
 			),
+		field.String("quota_status").
+			Optional().
+			Default("unknown").
+			Comment("Latest credential-scoped quota or budget status summary").
+			Annotations(
+				entgql.OrderField("QUOTA_STATUS"),
+			),
+		field.String("last_error").
+			Optional().
+			Default("").
+			Comment("Latest credential-scoped error summary safe for operator display"),
 		field.String("remark").
 			Optional().
 			Default(""),
