@@ -30,6 +30,7 @@ Creates `.trellis/.developer` (gitignored) + `.trellis/workspace/<your-name>/`.
 
 - `.trellis/spec/<package>/<layer>/index.md` — entry point with **Pre-Development Checklist** + **Quality Check**. Actual guidelines live in the `.md` files it points to.
 - `.trellis/spec/guides/index.md` — cross-package thinking guides.
+- Backend routing work must read `.trellis/spec/backend/routing-guidelines.md` before implementation. Sticky-session is an internal cache-locality strategy: bind `stickyKey -> successful target` for 5 minutes, never cross priority tiers for stickiness, and let normal retry/fallback own failures.
 
 ```bash
 python3 ./.trellis/scripts/get_context.py --mode packages   # list packages / layers

@@ -10,6 +10,16 @@ This directory contains guidelines for backend development. Fill in each file wi
 
 ---
 
+## Pre-Development Checklist
+
+Before changing backend routing, load balancing, retry/fallback, provider quota, credential handling, or circuit-breaker behavior:
+
+- [ ] Read [Routing Guidelines](./routing-guidelines.md), especially the sticky-session routing contract.
+- [ ] Confirm whether the change can affect priority tiers, weight semantics, retry/fallback, or upstream cache locality.
+- [ ] Confirm sticky-session writes happen only after upstream success and never from candidate selection alone.
+
+---
+
 ## Guidelines Index
 
 | Guide | Description | Status |
@@ -17,6 +27,7 @@ This directory contains guidelines for backend development. Fill in each file wi
 | [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
 | [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations | To fill |
 | [Error Handling](./error-handling.md) | Error types, handling strategies | To fill |
+| [Routing Guidelines](./routing-guidelines.md) | Channel routing, sticky-session, retry/fallback, credential/quota contracts | Active |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
 | [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | To fill |
 
