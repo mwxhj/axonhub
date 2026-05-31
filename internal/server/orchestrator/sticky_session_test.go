@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -448,18 +449,16 @@ func TestStickySessionRouter_SkipsBoundPrimaryWhenIneligible(t *testing.T) {
 	require.Equal(t, 1, channelID)
 }
 
-func TestStickySessionRouter_SkipsBoundPrimaryWhenCircuitOpen(t *testing.T) {
+func TestStickySessionRouter_DoesNotConsultCircuitBreakerForBoundPrimary(t *testing.T) {
 	store := NewStickySessionBindingStore(5 * time.Minute)
 	store.Bind("key", 1)
 	cb := biz.NewModelCircuitBreaker()
 	for range 5 {
 		cb.RecordError(context.Background(), 1, "gpt-4")
 	}
-	router := NewStickySessionRouter(
-		store,
-		fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}},
-		cb,
-	)
+	require.Equal(t, biz.StateOpen, cb.GetModelCircuitBreakerStats(context.Background(), 1, "gpt-4").State)
+
+	router := NewStickySessionRouter(store, fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}})
 
 	ordered := router.Order(context.Background(), StickySessionOrderRequest{
 		Request: &llm.Request{Model: "gpt-4"},
@@ -475,10 +474,58 @@ func TestStickySessionRouter_SkipsBoundPrimaryWhenCircuitOpen(t *testing.T) {
 	})
 
 	require.NotEmpty(t, ordered)
-	require.Equal(t, 2, ordered[0].Channel.ID)
+	require.Equal(t, 1, ordered[0].Channel.ID)
 	channelID, ok := store.Get("key")
 	require.True(t, ok)
 	require.Equal(t, 1, channelID)
+}
+
+func TestModelCircuitBreakerMiddleware_InactiveForStickySession(t *testing.T) {
+	cb := biz.NewModelCircuitBreaker()
+	for range 5 {
+		cb.RecordError(context.Background(), 1, "gpt-4")
+	}
+	require.Equal(t, biz.StateOpen, cb.GetModelCircuitBreakerStats(context.Background(), 1, "gpt-4").State)
+
+	outbound := &PersistentOutboundTransformer{
+		state: &PersistenceState{
+			OriginalModel: "gpt-4",
+			CurrentCandidate: &ChannelModelsCandidate{
+				Channel: &biz.Channel{Channel: &ent.Channel{ID: 1, Name: "channel"}},
+			},
+		},
+	}
+	middleware := withModelCircuitBreaker(outbound, cb, biz.LoadBalancerStrategyStickySession)
+
+	request := &httpclient.Request{}
+	got, err := middleware.OnOutboundRawRequest(context.Background(), request)
+	require.NoError(t, err)
+	require.Same(t, request, got)
+
+	middleware.OnOutboundRawError(context.Background(), errors.New("upstream failed"))
+	require.Equal(t, 5, cb.GetModelCircuitBreakerStats(context.Background(), 1, "gpt-4").ConsecutiveFailures)
+}
+
+func TestModelCircuitBreakerMiddleware_StillSkipsForCircuitBreaker(t *testing.T) {
+	cb := biz.NewModelCircuitBreaker()
+	for range 5 {
+		cb.RecordError(context.Background(), 1, "gpt-4")
+	}
+	require.Equal(t, biz.StateOpen, cb.GetModelCircuitBreakerStats(context.Background(), 1, "gpt-4").State)
+
+	outbound := &PersistentOutboundTransformer{
+		state: &PersistenceState{
+			OriginalModel: "gpt-4",
+			CurrentCandidate: &ChannelModelsCandidate{
+				Channel: &biz.Channel{Channel: &ent.Channel{ID: 1, Name: "channel"}},
+			},
+		},
+	}
+	middleware := withModelCircuitBreaker(outbound, cb, biz.LoadBalancerStrategyCircuitBreaker)
+
+	got, err := middleware.OnOutboundRawRequest(context.Background(), &httpclient.Request{})
+	require.ErrorIs(t, err, errSkipCandidateByCircuitBreaker)
+	require.Nil(t, got)
 }
 
 func TestStickySessionBindingMiddleware_BindsSuccessfulFallbackChannel(t *testing.T) {

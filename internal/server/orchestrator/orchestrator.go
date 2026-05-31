@@ -65,7 +65,7 @@ func NewChatCompletionOrchestrator(
 		NewWeightStrategy(), NewModelAwareCircuitBreakerStrategy(modelCircuitBreaker), rateLimitStrategy, quotaStrategy)
 
 	stickySessionStore := NewStickySessionBindingStore(stickySessionBindingTTL)
-	stickySessionRouter := NewStickySessionRouter(stickySessionStore, NewDefaultStickyKeyExtractor(), modelCircuitBreaker)
+	stickySessionRouter := NewStickySessionRouter(stickySessionStore, NewDefaultStickyKeyExtractor())
 
 	return &ChatCompletionOrchestrator{
 		Inbound:            inbound,

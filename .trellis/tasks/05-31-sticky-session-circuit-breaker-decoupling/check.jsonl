@@ -1,0 +1,2 @@
+{"file":".trellis/spec/backend/index.md","reason":"Reviewer must verify backend routing pre-development checklist was followed."}
+{"file":".trellis/spec/backend/routing-guidelines.md","reason":"Reviewer must verify sticky-session remains decoupled from circuit-breaker health management and tests cover the contract."}

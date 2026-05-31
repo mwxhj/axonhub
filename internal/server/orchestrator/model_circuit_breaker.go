@@ -36,8 +36,14 @@ func (m *modelCircuitBreakerTracker) Name() string {
 	return "model-circuit-breaker-tracker"
 }
 
+func (m *modelCircuitBreakerTracker) enabled() bool {
+	return m != nil &&
+		m.strategy == biz.LoadBalancerStrategyCircuitBreaker &&
+		m.modelCircuitBreaker != nil
+}
+
 func (m *modelCircuitBreakerTracker) OnOutboundRawRequest(ctx context.Context, request *httpclient.Request) (*httpclient.Request, error) {
-	if (m.strategy != biz.LoadBalancerStrategyCircuitBreaker && m.strategy != biz.LoadBalancerStrategyStickySession) || m.modelCircuitBreaker == nil {
+	if !m.enabled() {
 		return request, nil
 	}
 
@@ -69,7 +75,7 @@ func (m *modelCircuitBreakerTracker) OnOutboundRawRequest(ctx context.Context, r
 }
 
 func (m *modelCircuitBreakerTracker) OnOutboundLlmResponse(ctx context.Context, response *llm.Response) (*llm.Response, error) {
-	if m.outbound == nil || m.outbound.state == nil || m.modelCircuitBreaker == nil {
+	if !m.enabled() || m.outbound == nil || m.outbound.state == nil {
 		return response, nil
 	}
 
@@ -83,7 +89,7 @@ func (m *modelCircuitBreakerTracker) OnOutboundLlmResponse(ctx context.Context, 
 }
 
 func (m *modelCircuitBreakerTracker) OnOutboundRawError(ctx context.Context, err error) {
-	if m.outbound == nil || m.outbound.state == nil || m.modelCircuitBreaker == nil {
+	if !m.enabled() || m.outbound == nil || m.outbound.state == nil {
 		return
 	}
 
@@ -108,7 +114,7 @@ func (m *modelCircuitBreakerTracker) OnOutboundRawError(ctx context.Context, err
 }
 
 func (m *modelCircuitBreakerTracker) OnOutboundLlmStream(ctx context.Context, stream streams.Stream[*llm.Response]) (streams.Stream[*llm.Response], error) {
-	if m.outbound == nil || m.outbound.state == nil || m.modelCircuitBreaker == nil {
+	if !m.enabled() || m.outbound == nil || m.outbound.state == nil {
 		return stream, nil
 	}
 	return &probeReleasingStream{
@@ -129,7 +135,7 @@ func (m *modelCircuitBreakerTracker) OnOutboundLlmStream(ctx context.Context, st
 }
 
 func (m *modelCircuitBreakerTracker) releaseProbeLease() {
-	if m.outbound == nil || m.outbound.state == nil || m.modelCircuitBreaker == nil {
+	if !m.enabled() || m.outbound == nil || m.outbound.state == nil {
 		return
 	}
 

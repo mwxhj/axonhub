@@ -794,21 +794,14 @@ type StickySessionOrderRequest struct {
 }
 
 type StickySessionRouter struct {
-	store               StickySessionStore
-	extractor           StickyKeyExtractor
-	modelCircuitBreaker *biz.ModelCircuitBreaker
+	store     StickySessionStore
+	extractor StickyKeyExtractor
 }
 
-func NewStickySessionRouter(store StickySessionStore, extractor StickyKeyExtractor, modelCircuitBreaker ...*biz.ModelCircuitBreaker) *StickySessionRouter {
-	var cb *biz.ModelCircuitBreaker
-	if len(modelCircuitBreaker) > 0 {
-		cb = modelCircuitBreaker[0]
-	}
-
+func NewStickySessionRouter(store StickySessionStore, extractor StickyKeyExtractor) *StickySessionRouter {
 	return &StickySessionRouter{
-		store:               store,
-		extractor:           extractor,
-		modelCircuitBreaker: cb,
+		store:     store,
+		extractor: extractor,
 	}
 }
 
@@ -1054,38 +1047,10 @@ func (r *StickySessionRouter) eligibleCandidates(ctx context.Context, req Sticky
 		if !req.LoadBalancer.IsStickyPrimaryEligible(ctx, candidate, req.Request.Model, useStream) {
 			continue
 		}
-		if r != nil && r.modelCircuitBreaker != nil && stickyCircuitOpen(ctx, r.modelCircuitBreaker, req, candidate) {
-			continue
-		}
 		result = append(result, candidate)
 	}
 
 	return result
-}
-
-func stickyCircuitOpen(ctx context.Context, cb *biz.ModelCircuitBreaker, req StickySessionOrderRequest, candidate *ChannelModelsCandidate) bool {
-	if cb == nil || candidate == nil || candidate.Channel == nil {
-		return false
-	}
-
-	modelID := stickyRequestedModel(req)
-	if modelID == "" {
-		return false
-	}
-
-	stats := cb.GetModelCircuitBreakerStats(ctx, candidate.Channel.ID, modelID)
-	return stats != nil && stats.State == biz.StateOpen
-}
-
-func stickyRequestedModel(req StickySessionOrderRequest) string {
-	if req.State != nil && req.State.OriginalModel != "" {
-		return req.State.OriginalModel
-	}
-	if req.Request != nil {
-		return req.Request.Model
-	}
-
-	return ""
 }
 
 func randomBestTierCandidate(candidates []*ChannelModelsCandidate) *ChannelModelsCandidate {
