@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend spec index for final verification scope."}
+{"file": ".trellis/spec/backend/routing-guidelines.md", "reason": "Verify sticky-session, priority, credential, quota, retry, and fallback behavior after cleanup."}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Verify schema/migration/backup behavior for credential and quota scope changes."}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Verify operator-facing and API errors remain structured and non-leaky."}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Quality gate for tests, generated code consistency, and regression risk."}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Check cross-layer data flow from UI forms to runtime routing and usage accounting."}
