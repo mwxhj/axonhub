@@ -139,3 +139,36 @@ Made channels routing-only in product flows, removed local credential quota from
 ### Next Steps
 
 - None - task complete
+
+
+## Session 5: Credential key quota and OAuth credential creation
+
+**Date**: 2026-06-01
+**Task**: Credential key quota and OAuth credential creation
+**Branch**: `unstable`
+
+### Summary
+
+Restored credential-local quota as a key feature, moved OAuth credential creation into credential flows, clarified provider/local quota separation, and updated routing/spec tests.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ed86881` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
