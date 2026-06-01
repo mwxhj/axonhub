@@ -40,3 +40,36 @@ Implemented credential scoped routing/quota and request observability, documente
 ### Next Steps
 
 - None - task complete
+
+
+## Session 2: Credential quota clarity and archive
+
+**Date**: 2026-06-01
+**Task**: Credential quota clarity and archive
+**Branch**: `unstable`
+
+### Summary
+
+Clarified local/provider quota UI, added quota reset defaults and validation, and introduced explicit credential archive mutation and dialog.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4446a30` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
