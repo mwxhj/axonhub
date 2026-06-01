@@ -12,7 +12,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { useCredentialsContext } from '../context/credentials-context';
 import { useUpdateUpstreamCredential } from '../data/credentials';
 import type { CredentialFormValues, CredentialStatus } from '../data/schema';
-import { CredentialQuotaFields } from './credential-quota-fields';
 import { buildUpdateCredentialInput, defaultCredentialFormValues } from './form-utils';
 
 const statuses: CredentialStatus[] = ['enabled', 'disabled', 'archived'];
@@ -42,20 +41,6 @@ export function EditCredentialDialog() {
         ...defaultCredentialFormValues,
         name: currentCredential.name ?? '',
         status: currentCredential.status,
-        quotaScopeMode: currentCredential.quotaScope ? 'new' : currentCredential.quotaScopeID ? 'shared' : 'none',
-        quotaScopeID: currentCredential.quotaScopeID ?? '',
-        quotaScopeName: currentCredential.quotaScope?.name ?? '',
-        quotaUnit: currentCredential.quotaScope?.unit ?? 'usd',
-        quotaLimitAmount: currentCredential.quotaScope?.limitAmount ?? '',
-        quotaUsedAmount: currentCredential.quotaScope?.usedAmount ?? '',
-        quotaResetPolicy: currentCredential.quotaScope?.resetPolicy ?? 'none',
-        quotaResetAt: currentCredential.quotaScope?.resetAt ? currentCredential.quotaScope.resetAt.slice(0, 16) : '',
-        quotaWindowStartedAt: currentCredential.quotaScope?.windowStartedAt
-          ? currentCredential.quotaScope.windowStartedAt.slice(0, 16)
-          : '',
-        quotaWarningThresholdPercent: currentCredential.quotaScope?.warningThresholdPercent ?? 80,
-        quotaOverLimitAction: currentCredential.quotaScope?.overLimitAction ?? 'warn',
-        quotaRemark: currentCredential.quotaScope?.remark ?? '',
         remark: currentCredential.remark ?? '',
       });
     }
@@ -122,8 +107,6 @@ export function EditCredentialDialog() {
                 </SelectContent>
               </Select>
             </div>
-
-            <CredentialQuotaFields register={register} setValue={setValue} watch={watch} errors={errors} />
 
             <div className='grid gap-2'>
               <Label htmlFor='edit-credential-remark'>{t('credentials.fields.remark')}</Label>

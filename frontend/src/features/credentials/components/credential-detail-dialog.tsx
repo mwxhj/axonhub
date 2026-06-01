@@ -13,7 +13,6 @@ import { useCredentialsContext } from '../context/credentials-context';
 import { useUpstreamCredentialDetail } from '../data/credentials';
 import type {
   CredentialExecution,
-  CredentialQuotaScope,
   CredentialRef,
   CredentialUsageLog,
   ProviderQuotaStatus,
@@ -68,57 +67,8 @@ function providerQuotaStatuses(credential: UpstreamCredentialDetail): ProviderQu
   return credential.providerQuotaStatuses ?? [];
 }
 
-function quotaStatusLabel(status: string | null | undefined, t: TFunction) {
-  return status ? t(`credentials.quota.status.${status}`, { defaultValue: status }) : t('credentials.quota.status.unknown');
-}
-
 function providerQuotaStatusLabel(status: string | null | undefined, t: TFunction) {
   return status ? t(`credentials.providerQuota.status.${status}`, { defaultValue: status }) : t('credentials.providerQuota.status.unknown');
-}
-
-function decimalLabel(value?: string | null) {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : '-';
-}
-
-function remainingLabel(quota?: CredentialQuotaScope | null) {
-  if (!quota?.limitAmount || !quota.usedAmount) {
-    return '-';
-  }
-
-  const limit = Number(quota.limitAmount);
-  const used = Number(quota.usedAmount);
-  if (!Number.isFinite(limit) || !Number.isFinite(used)) {
-    return '-';
-  }
-
-  const remaining = limit - used;
-  return String(Number.isInteger(remaining) ? remaining : Number(remaining.toFixed(6)));
-}
-
-function localQuotaBlocksRouting(quota?: CredentialQuotaScope | null) {
-  if (!quota) {
-    return false;
-  }
-
-  const resetAt = quota.resetAt ? new Date(quota.resetAt) : null;
-  const resetDue = resetAt ? resetAt.getTime() <= Date.now() : false;
-  if (resetDue && ['daily', 'monthly', 'custom'].includes(quota.resetPolicy ?? '')) {
-    return false;
-  }
-
-  if (quota.status === 'disabled') {
-    return true;
-  }
-  if (quota.status === 'paused') {
-    const pauseUntil = quota.pauseUntil ? new Date(quota.pauseUntil) : null;
-    return !pauseUntil || pauseUntil.getTime() > Date.now();
-  }
-  if (quota.status === 'exhausted') {
-    return quota.overLimitAction === 'pause' || quota.overLimitAction === 'disable';
-  }
-
-  return false;
 }
 
 function routingAvailabilityKey(credential: UpstreamCredentialDetail, refs: CredentialRef[], providerStatuses: ProviderQuotaStatus[]) {
@@ -130,9 +80,6 @@ function routingAvailabilityKey(credential: UpstreamCredentialDetail, refs: Cred
   }
   if (refs.filter((ref) => ref.enabled).length === 0) {
     return 'noEnabledRefs';
-  }
-  if (localQuotaBlocksRouting(credential.quotaScope)) {
-    return 'blockedLocalQuota';
   }
   if (providerStatuses.some((status) => !status.ready || status.status === 'exhausted')) {
     return 'blockedProviderQuota';
@@ -160,7 +107,6 @@ export function CredentialDetailDialog() {
     setOpen(dialog);
   };
 
-  const quota = credential?.quotaScope;
   const refs = credential ? channelRefs(credential) : [];
   const enabledRefs = refs.filter((ref) => ref.enabled);
   const providerStatuses = credential ? providerQuotaStatuses(credential) : [];
@@ -184,7 +130,6 @@ export function CredentialDetailDialog() {
               <Badge variant={credential.status === 'enabled' ? 'default' : 'secondary'}>
                 {t(`credentials.status.${credential.status}`)}
               </Badge>
-              <Badge variant='outline'>{quota ? quotaStatusLabel(quota.status, t) : t('credentials.quota.none')}</Badge>
               <Badge variant={routingKey === 'selectable' ? 'default' : 'secondary'}>
                 {t(`credentials.routingAvailability.${routingKey}`)}
               </Badge>
@@ -216,7 +161,6 @@ export function CredentialDetailDialog() {
                   />
                   <Field label={t('credentials.fields.status')} value={t(`credentials.status.${credential.status}`)} />
                   <Field label={t('credentials.columns.channels')} value={`${enabledRefs.length} / ${refs.length}`} />
-                  <Field label={t('credentials.columns.localQuota')} value={quota?.name || t('credentials.quota.none')} />
                   <Field
                     label={t('credentials.columns.providerQuota')}
                     value={providerStatuses.length || t('credentials.providerQuota.empty')}
@@ -256,48 +200,6 @@ export function CredentialDetailDialog() {
 
               <TabsContent value='quota' className='mt-4 space-y-4'>
                 <section className='space-y-3 rounded-md border p-3'>
-                  <div className='flex flex-wrap items-center justify-between gap-2'>
-                    <h4 className='text-sm font-medium'>{t('credentials.quota.localTitle')}</h4>
-                    <Badge variant='outline'>{quota ? quotaStatusLabel(quota.status, t) : t('credentials.quota.none')}</Badge>
-                  </div>
-                  {quota ? (
-                    <div className='grid gap-4 md:grid-cols-3'>
-                      <Field label={t('credentials.fields.quotaScopeName')} value={quota.name || t('credentials.quota.defaultScope')} />
-                      <Field
-                        label={t('credentials.fields.quotaUnit')}
-                        value={quota.unit ? t(`credentials.quota.units.${quota.unit}`) : '-'}
-                      />
-                      <Field label={t('credentials.fields.quotaLimitAmount')} value={decimalLabel(quota.limitAmount)} mono />
-                      <Field label={t('credentials.fields.quotaUsedAmount')} value={decimalLabel(quota.usedAmount)} mono />
-                      <Field label={t('credentials.fields.quotaRemainingAmount')} value={remainingLabel(quota)} mono />
-                      <Field label={t('credentials.fields.quotaWarningThresholdPercent')} value={quota.warningThresholdPercent} />
-                      <Field
-                        label={t('credentials.fields.quotaResetPolicy')}
-                        value={quota.resetPolicy ? t(`credentials.quota.resetPolicies.${quota.resetPolicy}`) : '-'}
-                      />
-                      <Field label={t('credentials.fields.quotaWindowStartedAt')} value={dateLabel(quota.windowStartedAt)} />
-                      <Field label={t('credentials.fields.quotaResetAt')} value={dateLabel(quota.resetAt)} />
-                      <Field
-                        label={t('credentials.fields.quotaOverLimitAction')}
-                        value={quota.overLimitAction ? t(`credentials.quota.overLimitActions.${quota.overLimitAction}`) : '-'}
-                      />
-                      <Field
-                        label={t('credentials.fields.quotaSource')}
-                        value={quota.source ? t(`credentials.quota.sources.${quota.source}`, { defaultValue: quota.source }) : '-'}
-                      />
-                    </div>
-                  ) : (
-                    <div className='text-muted-foreground text-sm'>{t('credentials.quota.noneScopeHint')}</div>
-                  )}
-                  {(quota?.lastError || quota?.remark) && (
-                    <div className='grid gap-3 border-t pt-3'>
-                      {quota?.lastError && <Field label={t('credentials.detail.latestError')} value={quota.lastError} />}
-                      {quota?.remark && <Field label={t('credentials.fields.quotaRemark')} value={quota.remark} />}
-                    </div>
-                  )}
-                </section>
-
-                <section className='space-y-3 rounded-md border p-3'>
                   <h4 className='text-sm font-medium'>{t('credentials.providerQuota.title')}</h4>
                   {providerStatuses.length > 0 ? (
                     <div className='space-y-3'>
@@ -336,10 +238,6 @@ export function CredentialDetailDialog() {
                   <div className='grid gap-4 md:grid-cols-3'>
                     <Field label={t('credentials.fields.status')} value={t(`credentials.status.${credential.status}`)} />
                     <Field label={t('credentials.detail.enabledRefs')} value={`${enabledRefs.length} / ${refs.length}`} />
-                    <Field
-                      label={t('credentials.detail.localQuotaBlocksRouting')}
-                      value={localQuotaBlocksRouting(quota) ? t('credentials.common.yes') : t('credentials.common.no')}
-                    />
                     <Field
                       label={t('credentials.detail.providerQuotaBlocksRouting')}
                       value={

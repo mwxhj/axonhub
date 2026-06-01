@@ -15,7 +15,6 @@ import (
 	"github.com/looplj/axonhub/internal/authz"
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/channel"
-	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/server/biz/provider_quota"
@@ -285,7 +284,6 @@ type ProviderQuotaService struct {
 	credentialIDCache    sync.Map
 	credentialQuotaCache sync.Map
 	resourceScopeCache   sync.Map
-	quotaScopeCache      sync.Map
 }
 
 func NewProviderQuotaService(params ProviderQuotaServiceParams) *ProviderQuotaService {
@@ -501,9 +499,6 @@ func (svc *ProviderQuotaService) loadQuotaCache(ctx context.Context) {
 		if r.ResourceScopeKey != "" {
 			svc.resourceScopeCache.Store(r.ResourceScopeKey, status)
 		}
-		if r.QuotaScopeID > 0 {
-			svc.quotaScopeCache.Store(r.QuotaScopeID, status)
-		}
 		for _, credentialStatus := range extractCredentialQuotaStatusesFromQuotaData(r.QuotaData) {
 			if credentialStatus.CredentialID > 0 {
 				svc.credentialIDCache.Store(credentialStatus.CredentialID, credentialStatus)
@@ -513,9 +508,6 @@ func (svc *ProviderQuotaService) loadQuotaCache(ctx context.Context) {
 			}
 			if credentialStatus.ResourceScopeKey != "" {
 				svc.resourceScopeCache.Store(credentialStatus.ResourceScopeKey, credentialStatus)
-			}
-			if credentialStatus.QuotaScopeID > 0 {
-				svc.quotaScopeCache.Store(credentialStatus.QuotaScopeID, credentialStatus)
 			}
 		}
 	}
@@ -591,24 +583,6 @@ func (svc *ProviderQuotaService) GetResourceScopeQuotaStatus(resourceScopeKey st
 	return status
 }
 
-func (svc *ProviderQuotaService) GetQuotaScopeQuotaStatus(quotaScopeID int) *QuotaChannelStatus {
-	if quotaScopeID <= 0 {
-		return nil
-	}
-
-	val, ok := svc.quotaScopeCache.Load(quotaScopeID)
-	if !ok {
-		return nil
-	}
-
-	status, ok := val.(*QuotaChannelStatus)
-	if !ok {
-		return nil
-	}
-
-	return status
-}
-
 func (svc *ProviderQuotaService) updateQuotaCache(channelID int, status providerquotastatus.Status, ready bool, limits []provider_quota.QuotaLimitStatus) {
 	svc.updateQuotaCacheForCredentialTarget(channelID, quotaCredentialTarget{}, status, ready, limits)
 }
@@ -658,9 +632,6 @@ func (svc *ProviderQuotaService) storeCredentialQuotaStatusForTarget(target quot
 	}
 	if target.ResourceScopeKey != "" {
 		svc.resourceScopeCache.Store(target.ResourceScopeKey, quotaStatus)
-	}
-	if target.QuotaScopeID > 0 {
-		svc.quotaScopeCache.Store(target.QuotaScopeID, quotaStatus)
 	}
 }
 
@@ -857,16 +828,13 @@ func (t quotaCredentialTarget) hasIdentity() bool {
 	return t.CredentialID > 0 ||
 		t.CredentialFingerprint != "" ||
 		t.SecretFingerprint != "" ||
-		t.ResourceScopeKey != "" ||
-		t.QuotaScopeID > 0
+		t.ResourceScopeKey != ""
 }
 
 func providerQuotaScopeKey(channelID int, target quotaCredentialTarget) string {
 	switch {
 	case strings.TrimSpace(target.ResourceScopeKey) != "":
 		return "resource:" + strings.TrimSpace(target.ResourceScopeKey)
-	case target.QuotaScopeID > 0:
-		return fmt.Sprintf("quota_scope:%d", target.QuotaScopeID)
 	case target.CredentialID > 0:
 		return fmt.Sprintf("credential_id:%d", target.CredentialID)
 	case strings.TrimSpace(target.SecretFingerprint) != "":
@@ -1143,37 +1111,6 @@ func (svc *ProviderQuotaService) persistCredentialQuotaObservation(ctx context.C
 		}
 	}
 
-	if target.QuotaScopeID > 0 {
-		update := svc.db.CredentialQuotaScope.UpdateOneID(target.QuotaScopeID).
-			SetStatus(providerQuotaScopeStatus(status)).
-			SetSource(credentialquotascope.SourceProviderAPI)
-		if quotaData.NextResetAt != nil {
-			update.SetResetAt(*quotaData.NextResetAt)
-		}
-		if lastError != "" {
-			update.SetLastError(lastError)
-		} else {
-			update.SetLastError("")
-		}
-		if _, err := update.Save(ctx); err != nil {
-			log.Warn(ctx, "Failed to update credential quota scope observation",
-				log.Int("quota_scope_id", target.QuotaScopeID),
-				log.Cause(err))
-		}
-	}
-}
-
-func providerQuotaScopeStatus(status string) credentialquotascope.Status {
-	switch providerquotastatus.Status(status) {
-	case providerquotastatus.StatusAvailable:
-		return credentialquotascope.StatusAvailable
-	case providerquotastatus.StatusWarning:
-		return credentialquotascope.StatusWarning
-	case providerquotastatus.StatusExhausted:
-		return credentialquotascope.StatusExhausted
-	default:
-		return credentialquotascope.StatusUnknown
-	}
 }
 
 func (svc *ProviderQuotaService) saveQuotaStatus(
@@ -1651,7 +1588,7 @@ func extractCredentialQuotaStatusesFromQuotaData(data map[string]any) []*QuotaCh
 		secretFingerprint, _ := statusMap["secret_fingerprint"].(string)
 		resourceScopeKey, _ := statusMap["resource_scope_key"].(string)
 		quotaScopeID := intFromAny(statusMap["quota_scope_id"])
-		if (credentialID <= 0 && fingerprint == "" && secretFingerprint == "" && resourceScopeKey == "" && quotaScopeID <= 0) || statusText == "" {
+		if (credentialID <= 0 && fingerprint == "" && secretFingerprint == "" && resourceScopeKey == "") || statusText == "" {
 			continue
 		}
 

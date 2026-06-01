@@ -414,7 +414,7 @@ func TestUpstreamCredentialService_DeleteRemovesRefsAndAllowsSecretRecreate(t *t
 	require.Equal(t, "new", recreated.Name)
 }
 
-func TestCredentialViewsFromRefsMarksExhaustedQuotaScopeUnavailable(t *testing.T) {
+func TestCredentialViewsFromRefsIgnoresExhaustedLocalQuotaScope(t *testing.T) {
 	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
 	defer client.Close()
 
@@ -476,11 +476,11 @@ func TestCredentialViewsFromRefsMarksExhaustedQuotaScopeUnavailable(t *testing.T
 
 	views := credentialViewsFromRefs(reloaded)
 	require.Len(t, views, 1)
-	require.False(t, runtimeCredentialViews(views)[0].Enabled)
-	require.Empty(t, enabledAPIKeyCredentialViews(views))
+	require.True(t, runtimeCredentialViews(views)[0].Enabled)
+	require.Len(t, enabledAPIKeyCredentialViews(views), 1)
 }
 
-func TestCredentialViewsFromRefsSkipsOnlyExhaustedQuotaScope(t *testing.T) {
+func TestCredentialViewsFromRefsKeepsAllLocalQuotaScopesSelectable(t *testing.T) {
 	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
 	defer client.Close()
 
@@ -556,45 +556,51 @@ func TestCredentialViewsFromRefsSkipsOnlyExhaustedQuotaScope(t *testing.T) {
 	views := credentialViewsFromRefs(reloaded)
 	require.Len(t, views, 2)
 	enabledViews := enabledAPIKeyCredentialViews(views)
-	require.Len(t, enabledViews, 1)
-	require.Equal(t, availableCredential.ID, enabledViews[0].CredentialID)
-	require.Equal(t, "sk-available", enabledViews[0].Secret.APIKey)
+	require.Len(t, enabledViews, 2)
+	require.ElementsMatch(t,
+		[]int{exhaustedCredential.ID, availableCredential.ID},
+		[]int{enabledViews[0].CredentialID, enabledViews[1].CredentialID},
+	)
 }
 
-func TestCredentialViewQuotaSelectableHonorsScopeActionAndPauseUntil(t *testing.T) {
+func TestCredentialViewQuotaSelectableIgnoresLocalScopeStatus(t *testing.T) {
 	now := time.Now()
 
-	require.True(t, quotaScopeViewSelectable(ChannelCredentialView{
+	require.True(t, credentialViewQuotaSelectable(ChannelCredentialView{
 		QuotaScopeStatus:          credentialquotascope.StatusExhausted.String(),
 		QuotaScopeOverLimitAction: credentialquotascope.OverLimitActionWarn.String(),
-	}, now))
+	}))
 
-	require.False(t, quotaScopeViewSelectable(ChannelCredentialView{
+	require.True(t, credentialViewQuotaSelectable(ChannelCredentialView{
 		QuotaScopeStatus:          credentialquotascope.StatusExhausted.String(),
 		QuotaScopeOverLimitAction: credentialquotascope.OverLimitActionPause.String(),
-	}, now))
+	}))
 
-	require.False(t, quotaScopeViewSelectable(ChannelCredentialView{
+	require.True(t, credentialViewQuotaSelectable(ChannelCredentialView{
 		QuotaScopeStatus:     credentialquotascope.StatusPaused.String(),
 		QuotaScopePauseUntil: lo.ToPtr(now.Add(time.Minute)),
-	}, now))
+	}))
 
-	require.True(t, quotaScopeViewSelectable(ChannelCredentialView{
+	require.True(t, credentialViewQuotaSelectable(ChannelCredentialView{
 		QuotaScopeStatus:     credentialquotascope.StatusPaused.String(),
 		QuotaScopePauseUntil: lo.ToPtr(now.Add(-time.Minute)),
-	}, now))
+	}))
 
-	require.False(t, quotaScopeViewSelectable(ChannelCredentialView{
+	require.True(t, credentialViewQuotaSelectable(ChannelCredentialView{
 		QuotaScopeStatus: credentialquotascope.StatusDisabled.String(),
-	}, now))
+	}))
 
-	require.True(t, quotaScopeViewSelectable(ChannelCredentialView{
+	require.True(t, credentialViewQuotaSelectable(ChannelCredentialView{
 		QuotaScopeStatus:          credentialquotascope.StatusPaused.String(),
 		QuotaScopePauseUntil:      lo.ToPtr(now.Add(time.Hour)),
 		QuotaScopeResetPolicy:     credentialquotascope.ResetPolicyDaily.String(),
 		QuotaScopeResetAt:         lo.ToPtr(now.Add(-time.Minute)),
 		QuotaScopeOverLimitAction: credentialquotascope.OverLimitActionPause.String(),
-	}, now))
+	}))
+
+	require.False(t, credentialViewQuotaSelectable(ChannelCredentialView{QuotaStatus: "exhausted"}))
+	require.False(t, credentialViewQuotaSelectable(ChannelCredentialView{QuotaStatus: "paused"}))
+	require.False(t, credentialViewQuotaSelectable(ChannelCredentialView{QuotaStatus: "disabled"}))
 }
 
 func TestChannelCredentialViewsReevaluateExpiredQuotaReset(t *testing.T) {
@@ -683,8 +689,56 @@ func TestBuildChannelKeepsQuotaPausedCredentialLoadable(t *testing.T) {
 	built, err := NewChannelServiceForTest(client).buildChannelWithTransformer(reloaded)
 	require.NoError(t, err)
 	require.NotNil(t, built)
-	require.Empty(t, built.cachedEnabledAPIKeys)
+	require.Equal(t, []string{"sk-paused-loadable"}, built.cachedEnabledAPIKeys)
 	require.Len(t, authCapableAPIKeyCredentialViews(built.cachedCredentialViews), 1)
+}
+
+func TestUpstreamCredentialService_MigrateLegacyCredentialsIgnoresDisabledAPIKeys(t *testing.T) {
+	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
+	defer client.Close()
+
+	ctx := context.Background()
+	ctx = ent.NewContext(ctx, client)
+	ctx = authz.WithTestBypass(ctx)
+
+	ch, err := client.Channel.Create().
+		SetName("legacy disabled key").
+		SetType(channel.TypeOpenai).
+		SetBaseURL("https://api.openai.com/v1").
+		SetCredentials(objects.ChannelCredentials{APIKeys: []string{"sk-disabled-legacy"}}).
+		SetDisabledAPIKeys([]objects.DisabledAPIKey{{
+			Key:       "sk-disabled-legacy",
+			ErrorCode: 401,
+			Reason:    "legacy local disable state",
+		}}).
+		SetSupportedModels([]string{"gpt-4"}).
+		SetDefaultTestModel("gpt-4").
+		Save(ctx)
+	require.NoError(t, err)
+
+	svc := NewUpstreamCredentialService(UpstreamCredentialServiceParams{Ent: client})
+	payload, err := svc.MigrateLegacyChannelCredentials(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, payload.MigratedChannels)
+	require.Equal(t, 1, payload.CreatedCredentials)
+	require.Equal(t, 1, payload.CreatedRefs)
+
+	credential, err := client.UpstreamCredential.Query().Only(ctx)
+	require.NoError(t, err)
+	require.Equal(t, upstreamcredential.StatusEnabled, credential.Status)
+
+	ref, err := client.ChannelCredentialRef.Query().
+		Where(
+			channelcredentialref.ChannelID(ch.ID),
+			channelcredentialref.CredentialID(credential.ID),
+		).
+		Only(ctx)
+	require.NoError(t, err)
+	require.True(t, ref.Enabled)
+
+	legacy, err := client.Channel.Get(ctx, ch.ID)
+	require.NoError(t, err)
+	require.Len(t, legacy.DisabledAPIKeys, 1)
 }
 
 func TestUpstreamCredentialService_RotateSameSecretKeepsCredentialIdentity(t *testing.T) {

@@ -17,7 +17,6 @@ func quotaStatusForChannel(provider ProviderQuotaStatusProvider, channel *biz.Ch
 	}
 
 	credentialStatuses := make([]*biz.QuotaChannelStatus, 0, len(views))
-	seenQuotaScopes := map[int]struct{}{}
 	seenResourceScopes := map[string]struct{}{}
 	seenIDs := map[int]struct{}{}
 	seenFingerprints := map[string]struct{}{}
@@ -29,13 +28,7 @@ func quotaStatusForChannel(provider ProviderQuotaStatusProvider, channel *biz.Ch
 		}
 
 		var status *biz.QuotaChannelStatus
-		if view.QuotaScopeID > 0 {
-			if _, ok := seenQuotaScopes[view.QuotaScopeID]; !ok {
-				seenQuotaScopes[view.QuotaScopeID] = struct{}{}
-				status = provider.GetQuotaScopeQuotaStatus(view.QuotaScopeID)
-			}
-		}
-		if status == nil && view.ResourceScopeKey != "" {
+		if view.ResourceScopeKey != "" {
 			if _, ok := seenResourceScopes[view.ResourceScopeKey]; !ok {
 				seenResourceScopes[view.ResourceScopeKey] = struct{}{}
 				status = provider.GetResourceScopeQuotaStatus(view.ResourceScopeKey)
@@ -79,11 +72,6 @@ func quotaStatusForCredentialView(provider ProviderQuotaStatusProvider, view biz
 		return nil
 	}
 
-	if view.QuotaScopeID > 0 {
-		if status := provider.GetQuotaScopeQuotaStatus(view.QuotaScopeID); status != nil {
-			return status
-		}
-	}
 	if view.ResourceScopeKey != "" {
 		if status := provider.GetResourceScopeQuotaStatus(view.ResourceScopeKey); status != nil {
 			return status

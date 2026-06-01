@@ -15,6 +15,8 @@ Read this section before changing any of:
 - Credential-aware routing, provider quota accounting, or channel/key dedupe.
 - Model circuit-breaker middleware or any raw-request middleware that can skip a candidate.
 
+For channel credential ownership, OAuth migration, provider quota ownership, and local quota removal, read [Credential Routing Model](./credential-routing-model.md) first.
+
 Sticky-session exists to preserve upstream cache locality. It is not a health-management system and must not replace the existing retry/fallback path.
 
 ### 2. Signatures
@@ -158,17 +160,17 @@ Rules:
 
 ---
 
-## Credential / Quota Execution Observability
+## Credential / Provider Quota Execution Observability
 
 ### 1. Scope / Trigger
 
 Read this section before changing:
 
 - Channel credential resolution, legacy credential adapters, or upstream API-key providers.
-- `RequestExecution`, `UsageLog`, provider quota status, credential quota scope, or request log UI fields.
+- `RequestExecution`, `UsageLog`, provider quota status, legacy quota-scope snapshot fields, or request log UI fields.
 - Any route that can retry/fallback across multiple channels or credentials.
 
-The execution target is `channel + credential + resource scope + model`. Request records must show the safe credential identity used by each attempt, while quota status must be tracked at credential/resource/quota-scope granularity instead of only at channel granularity.
+The execution target is `channel + credential + resource scope + model`. Request records must show the safe credential identity used by each attempt, while provider quota status must be tracked at credential/key granularity instead of only at channel granularity. `CredentialQuotaScope` local quota is not route availability state.
 
 ### 2. Signatures
 
@@ -188,6 +190,8 @@ credential_source
 credential_quota_status_snapshot
 ```
 
+`quota_scope_*` snapshot fields are legacy metadata. They must not be interpreted as local quota route-availability state under the credential-routing model.
+
 Required provider quota target metadata:
 
 ```text
@@ -203,6 +207,8 @@ ready
 quota_data
 ```
 
+`quota_scope_id` may exist as legacy metadata on provider quota rows. It is not provider quota identity and must not reintroduce local quota routing decisions.
+
 ### 3. Contracts
 
 - `credential_key_hint`, fingerprints, and resource scope are safe operator identifiers. Raw upstream secrets must never be stored in request records, GraphQL responses, logs, tooltips, or exports.
@@ -211,8 +217,8 @@ quota_data
 - Provider quota checks for multiple API keys must update credential-level cache/status for each checked key and store per-key summaries in aggregate quota data.
 - Provider quota row identity is `provider_type + scope_key`; `channel_id` is last-observed metadata. Startup migrations must backfill legacy `scope_key="channel"` rows with a channel ID to `channel:<id>` before loading provider quota cache.
 - Provider quota cache loads must be deterministic when old duplicate rows exist: read rows in ascending `updated_at`/ID order so the newest provider/scope observation overwrites older cache entries.
-- Provider quota status should update `UpstreamCredential.quota_status` and, when a quota scope is known, `CredentialQuotaScope.status/source/last_error/reset_at`.
-- `CredentialQuotaScope` is the shared budget pool. Multiple credentials may point to the same `quota_scope_id`; quota accounting and routing availability must respect that shared status.
+- Provider quota status should update `UpstreamCredential.quota_status` and credential/key-target `ProviderQuotaStatus` rows. Do not update `CredentialQuotaScope` as provider quota truth.
+- `CredentialQuotaScope` is legacy/local quota surface for this model. Runtime routing availability must not depend on it.
 - Candidate quota filtering must narrow the executable credential views before outbound selection. A channel must not remain eligible because one key is available while the API-key provider can still select another exhausted key.
 - When outbound transformers hold API-key providers from the original channel snapshot, routing must pass a candidate-scoped credential allow-list through context so the provider can only choose credentials kept by the current candidate/quota decision.
 - In de-prioritize mode, channel ordering may keep exhausted channels in the candidate set, but if a channel has both exhausted and available credentials, the provider should still avoid the exhausted credential when an available credential exists.
@@ -224,9 +230,9 @@ quota_data
 | Credential selected from first-class ref | Persist credential ID, safe name, key hint, source `ref`, fingerprint, secret fingerprint, resource scope, and quota scope snapshots. |
 | Credential selected from legacy inline channel key | Persist safe key hint/fingerprint/resource scope and source `legacy`; never persist the raw key. |
 | Request retries across credentials | Create one `RequestExecution` per attempt and snapshot that attempt's credential, not only the final channel. |
-| Credential/quota scope is renamed or archived later | Old request records remain readable from snapshots. |
+| Credential is renamed, archived, or deleted later | Old request records remain readable from snapshots. |
 | Provider quota check fails for one key | Mark that credential observation unknown/unready, retain safe error, and do not overwrite unrelated credential status. |
-| Shared quota scope is exhausted/paused/disabled | Only credentials/resources attached to that scope become unavailable; unrelated credentials remain eligible. |
+| Local quota scope is exhausted/paused/disabled | Do not use it to block route availability under the credential-routing model. |
 
 ### 5. Good / Base / Bad Cases
 
@@ -241,8 +247,9 @@ quota_data
 When changing credential/quota observability, add or update tests for:
 
 - `CreateRequestExecution` stores credential/resource/quota snapshots from context.
-- `UsageLog` stores the same safe credential/resource/quota identity and increments the selected quota scope.
-- Provider quota status updates credential/quota scope observations and cache entries for the selected target.
+- `UsageLog` stores the same safe credential/resource/quota identity from context without persisting raw secrets.
+- Provider quota status updates credential/key observations and cache entries for the selected target.
+- Provider quota status does not use `CredentialQuotaScope` local quota as provider quota truth or route availability state.
 - Provider quota startup migration rewrites legacy `scope_key="channel"` rows with channel IDs to `channel:<id>` before cache load.
 - Provider quota cache load keeps the latest row when duplicate provider/scope rows exist.
 - Provider quota aggregate rows clear stale credential target metadata when the row returns to channel-level aggregate status.
@@ -263,23 +270,24 @@ provider quota check -> update channel status only -> request UI shows channel/a
 ```text
 credential resolver -> context safe credential target
 -> request execution / usage log snapshot
--> provider quota updates credential/resource/quota scope
--> request UI displays credential name + key hint + source + resource/quota scope
+-> provider quota updates credential/key provider status
+-> request UI displays credential name + key hint + source + provider quota status
 ```
 
 ---
 
-## Credential Local Quota And Archive Product Contract
+## Credential Archive/Delete Product Contract
 
 ### 1. Scope / Trigger
 
 Read this section before changing:
 
-- `CreateCredentialQuotaScopeInput` or `UpdateCredentialQuotaScopeInput` handling.
 - GraphQL credential archive/delete mutations.
-- Credentials UI fields that display quota state or routing availability.
+- Credential status mutations.
+- Credential/channel ref restoration or deletion behavior.
+- Credentials UI actions that archive, restore, delete, or explain routing availability.
 
-This contract keeps three meanings separate: local quota scope, provider quota status, and derived routing availability.
+For channel ownership, OAuth migration, and quota semantics, read [Credential Routing Model](./credential-routing-model.md). This section only covers archive/delete product behavior.
 
 ### 2. Signatures
 
@@ -288,8 +296,6 @@ Backend service/API signatures:
 ```go
 func (svc *UpstreamCredentialService) ArchiveUpstreamCredential(ctx context.Context, id int) (*ent.UpstreamCredential, error)
 func (svc *UpstreamCredentialService) DeleteUpstreamCredential(ctx context.Context, id int) (bool, error)
-func normalizeCreateCredentialQuotaScopeInput(input CreateCredentialQuotaScopeInput, now time.Time) (CreateCredentialQuotaScopeInput, error)
-func normalizeUpdateCredentialQuotaScopeInput(scope *ent.CredentialQuotaScope, input UpdateCredentialQuotaScopeInput, now time.Time) (UpdateCredentialQuotaScopeInput, error)
 ```
 
 GraphQL product mutation:
@@ -297,30 +303,22 @@ GraphQL product mutation:
 ```graphql
 archiveUpstreamCredential(id: ID!): UpstreamCredential!
 deleteUpstreamCredential(id: ID!): Boolean!
+updateUpstreamCredentialStatus(id: ID!, status: UpstreamCredentialStatus!): UpstreamCredential!
 ```
 
 ### 3. Contracts
 
-- Local quota is `CredentialQuotaScope`: `status`, `unit`, `limit_amount`, `used_amount`, `reset_policy`, `reset_at`, `window_started_at`, `over_limit_action`, `pause_until`, `source`.
-- Provider quota is `ProviderQuotaStatus`: `provider_type`, `status`, `ready`, `next_reset_at`, `next_check_at`, `scope_key`, resource/credential/quota-scope identifiers.
-- UI must not collapse local quota status and provider quota status into one unlabeled badge. Show local quota, provider quota, and routing availability separately.
-- `reset_policy=daily` defaults missing `reset_at` to the next local midnight stored as UTC and defaults missing `window_started_at` to current UTC time.
-- `reset_policy=monthly` defaults missing `reset_at` to the first day of the next local month at midnight stored as UTC and defaults missing `window_started_at` to current UTC time.
-- `reset_policy=custom` requires `window_started_at` and `reset_at`, with `reset_at > window_started_at`.
 - Archive is a reversible product action: set `UpstreamCredential.status=archived`, preserve `ChannelCredentialRef` rows, reload channel routing state, and keep history/safe metadata readable. Runtime already excludes archived credentials because credential views require `ref.enabled && credential.status=enabled`.
 - Re-enabling an archived credential must restore routing availability. To recover rows archived by older code, the archived-to-enabled transition may restore refs for that credential.
 - Creating a credential with a secret that matches an archived credential should reactivate/update the archived credential instead of returning a still-archived row unchanged.
 - Delete is the irreversible product action for credential management: remove channel refs, soft-delete the credential, reload channel routing state, and allow the same secret to be added again.
 - Archive does not wipe `secret_payload` unless a future explicit wipe action is added.
+- Provider quota status is credential/key provider state. Do not use `CredentialQuotaScope` local quota to explain archive/delete route availability.
 
 ### 4. Validation & Error Matrix
 
 | Condition | Required Behavior |
 |-----------|-------------------|
-| Create daily/monthly quota without `reset_at` | Fill predictable next local reset time and save UTC. |
-| Update scope from `none`/`manual` to daily/monthly with empty effective `reset_at` | Fill predictable next local reset time. |
-| Custom quota missing `window_started_at` or `reset_at` | Return a specific validation error. |
-| Custom quota with `reset_at <= window_started_at` | Return a specific validation error. |
 | Archive credential with enabled channel refs | Preserve refs, return archived credential, and rely on credential status to remove it from runtime routing. |
 | Re-enable archived credential | Set status enabled and recover refs when needed so routing availability returns. |
 | Create credential with same secret as archived credential | Reactivate/update the archived credential and return it enabled by default. |
@@ -329,42 +327,36 @@ deleteUpstreamCredential(id: ID!): Boolean!
 
 ### 5. Good / Base / Bad Cases
 
-- Good: daily local quota created with no reset time returns a concrete next local reset.
-- Good: credential detail shows local quota used/limit/remaining separately from provider-observed status.
 - Good: archive action tells the operator routing stops, refs are preserved for restore, and history remains visible.
 - Good: delete action tells the operator refs are removed and the same secret can be added again.
-- Base: credential has no local quota and no provider observation; UI says no local quota and no provider observation, routing derives from status/refs.
+- Base: credential has no provider quota observation; routing still derives from channel status, ref status, credential status, model eligibility, and provider quota when known.
 - Bad: frontend displays `quotaScope.status || credential.quotaStatus` as one generic quota badge.
 - Bad: archive is only reachable by a generic status dropdown with no side-effect confirmation.
+- Bad: deleting a credential only sets `status=archived`, leaving refs in place and preventing same-secret recreation.
 
 ### 6. Tests Required
 
 When changing this contract, add or update tests for:
 
-- Daily and monthly reset defaulting.
-- Custom reset validation for missing and invalid windows.
-- GraphQL create/update mutations using frontend-like quota fields.
 - `archiveUpstreamCredential` preserving refs and returning an archived credential.
 - Runtime credential views excluding archived credentials even when refs remain enabled.
 - Archived same-secret create reactivating the credential.
 - `deleteUpstreamCredential` removing refs, soft-deleting credential, and allowing same-secret recreation.
-- Frontend type checks for credential quota/provider quota fields.
+- Frontend type checks for archive/delete/restore actions and provider quota display fields.
 
 ### 7. Wrong vs Correct
 
 #### Wrong
 
 ```text
-quota badge = quotaScope.status || credential.quotaStatus || "unknown"
 delete action = set status archived from generic status dialog
+restore action = create a new credential and lose old refs/history
 ```
 
 #### Correct
 
 ```text
-local quota section = CredentialQuotaScope fields
-provider quota section = ProviderQuotaStatus rows
-routing availability = derived from credential status + refs + local quota + provider quota
 archive action = explicit confirmation -> archive mutation -> refs preserved for restore
+restore action = set status enabled -> old refs can become routable again
 delete action = explicit confirmation -> delete mutation -> refs removed + credential soft-deleted
 ```

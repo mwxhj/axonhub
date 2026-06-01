@@ -303,17 +303,5 @@ export type CredentialFormValues = {
   name: string;
   apiKey: string;
   status: CredentialStatus;
-  quotaScopeMode: 'none' | 'new' | 'shared';
-  quotaScopeID: string;
-  quotaScopeName: string;
-  quotaUnit: CredentialQuotaUnit;
-  quotaLimitAmount: string;
-  quotaUsedAmount: string;
-  quotaResetPolicy: CredentialQuotaResetPolicy;
-  quotaResetAt: string;
-  quotaWindowStartedAt: string;
-  quotaWarningThresholdPercent: number;
-  quotaOverLimitAction: CredentialQuotaOverLimitAction;
-  quotaRemark: string;
   remark: string;
 };

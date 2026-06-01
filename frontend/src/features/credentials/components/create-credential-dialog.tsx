@@ -12,7 +12,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { useCredentialsContext } from '../context/credentials-context';
 import { useCreateUpstreamCredential } from '../data/credentials';
 import type { CredentialFormValues, CredentialStatus } from '../data/schema';
-import { CredentialQuotaFields } from './credential-quota-fields';
 import { CredentialSecretFields } from './credential-secret-fields';
 import { buildCreateCredentialInput, defaultCredentialFormValues } from './form-utils';
 
@@ -82,8 +81,6 @@ export function CreateCredentialDialog() {
                 </Select>
               </div>
             </div>
-
-            <CredentialQuotaFields register={register} setValue={setValue} watch={watch} errors={errors} />
 
             <div className='grid gap-2'>
               <Label htmlFor='credential-remark'>{t('credentials.fields.remark')}</Label>

@@ -262,7 +262,7 @@ func TestMergeAndExtractLimitsRoundTrip(t *testing.T) {
 	})
 }
 
-func TestProviderQuotaService_SaveQuotaStatusPersistsCredentialAndQuotaScopeObservation(t *testing.T) {
+func TestProviderQuotaService_SaveQuotaStatusPersistsCredentialObservationOnly(t *testing.T) {
 	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
 	defer client.Close()
 
@@ -308,7 +308,6 @@ func TestProviderQuotaService_SaveQuotaStatusPersistsCredentialAndQuotaScopeObse
 		credentialIDCache:         sync.Map{},
 		credentialQuotaCache:      sync.Map{},
 		resourceScopeCache:        sync.Map{},
-		quotaScopeCache:           sync.Map{},
 		checkInterval:             time.Minute,
 		checkers:                  map[string]provider_quota.QuotaChecker{},
 		SystemService:             nil,
@@ -345,10 +344,9 @@ func TestProviderQuotaService_SaveQuotaStatusPersistsCredentialAndQuotaScopeObse
 
 	updatedScope, err := client.CredentialQuotaScope.Get(ctx, scope.ID)
 	require.NoError(t, err)
-	require.Equal(t, credentialquotascope.StatusExhausted, updatedScope.Status)
-	require.Equal(t, credentialquotascope.SourceProviderAPI, updatedScope.Source)
-	require.NotNil(t, updatedScope.ResetAt)
-	require.True(t, updatedScope.ResetAt.Equal(resetAt))
+	require.Equal(t, credentialquotascope.StatusAvailable, updatedScope.Status)
+	require.Equal(t, credentialquotascope.SourceLocalBudget, updatedScope.Source)
+	require.Nil(t, updatedScope.ResetAt)
 
 	cached := svc.GetCredentialQuotaStatusByID(credential.ID)
 	require.NotNil(t, cached)
@@ -380,7 +378,6 @@ func TestProviderQuotaService_SaveQuotaStatusKeepsCredentialScopedAndChannelScop
 		credentialIDCache:         sync.Map{},
 		credentialQuotaCache:      sync.Map{},
 		resourceScopeCache:        sync.Map{},
-		quotaScopeCache:           sync.Map{},
 		checkInterval:             time.Minute,
 		checkers:                  map[string]provider_quota.QuotaChecker{},
 		warningCheckIntervalRatio: 1,

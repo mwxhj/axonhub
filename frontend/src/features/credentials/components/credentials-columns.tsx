@@ -12,20 +12,6 @@ function shortFingerprint(value: string) {
   return `${value.slice(0, 13)}...${value.slice(-8)}`;
 }
 
-function localQuotaLabel(credential: UpstreamCredential, t: TFunction) {
-  const quota = credential.quotaScope;
-  if (!quota) {
-    return t('credentials.quota.none');
-  }
-
-  const pieces = [quota.usedAmount, quota.limitAmount].filter(Boolean);
-  if (pieces.length === 2) {
-    return `${pieces[0]} / ${pieces[1]} ${quota.unit ? t(`credentials.quota.units.${quota.unit}`) : ''}`;
-  }
-
-  return quota.status ? t(`credentials.quota.status.${quota.status}`) : t('credentials.quota.status.unknown');
-}
-
 function providerQuotaLabel(credential: UpstreamCredential, t: TFunction) {
   const statuses = credential.providerQuotaStatuses ?? [];
   if (statuses.length === 0) {
@@ -57,19 +43,6 @@ export const createCredentialColumns = (t: TFunction): ColumnDef<UpstreamCredent
     accessorKey: 'keyHint',
     header: t('credentials.columns.keyHint'),
     cell: ({ row }) => <span className='text-muted-foreground font-mono text-xs'>{row.original.keyHint || '-'}</span>,
-  },
-  {
-    id: 'localQuota',
-    header: t('credentials.columns.localQuota'),
-    cell: ({ row }) => {
-      const quota = row.original.quotaScope;
-      return (
-        <div className='min-w-0'>
-          <div className='truncate text-sm'>{quota?.name || t('credentials.quota.none')}</div>
-          <div className='text-muted-foreground mt-1 truncate text-xs'>{localQuotaLabel(row.original, t)}</div>
-        </div>
-      );
-    },
   },
   {
     id: 'providerQuota',

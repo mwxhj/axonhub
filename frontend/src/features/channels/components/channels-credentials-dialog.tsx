@@ -47,7 +47,9 @@ function ChannelCredentialRow({ credential, refItem }: { credential: UpstreamCre
   const { t } = useTranslation();
   const updateRef = useUpdateChannelCredentialRef();
   const detach = useDetachCredentialFromChannel();
-  const quotaStatus = credential.quotaScope?.status || credential.quotaStatus || 'unknown';
+  const providerQuotaStatus =
+    credential.providerQuotaStatuses?.find((status) => !status.ready || status.status === 'exhausted') ??
+    credential.providerQuotaStatuses?.find((status) => status.status === 'warning');
 
   return (
     <div className='grid gap-3 border-b py-3 last:border-b-0 md:grid-cols-[1fr_120px_92px] md:items-center'>
@@ -55,12 +57,13 @@ function ChannelCredentialRow({ credential, refItem }: { credential: UpstreamCre
         <div className='flex min-w-0 items-center gap-2'>
           <span className='truncate font-medium'>{credential.name || credential.fingerprint}</span>
           <Badge variant={credential.status === 'enabled' ? 'default' : 'secondary'}>{t(`credentials.status.${credential.status}`)}</Badge>
-          <Badge variant='outline'>{t(`credentials.quota.status.${quotaStatus}`, { defaultValue: quotaStatus })}</Badge>
+          {providerQuotaStatus && (
+            <Badge variant='outline'>
+              {t(`credentials.providerQuota.status.${providerQuotaStatus.status}`, { defaultValue: providerQuotaStatus.status })}
+            </Badge>
+          )}
         </div>
-        <div className='text-muted-foreground mt-1 truncate text-xs'>
-          {credential.keyHint || '-'}
-          {credential.quotaScope?.name ? ` · ${credential.quotaScope.name}` : ''}
-        </div>
+        <div className='text-muted-foreground mt-1 truncate text-xs'>{credential.keyHint || '-'}</div>
       </div>
 
       <div className='flex items-center gap-2'>

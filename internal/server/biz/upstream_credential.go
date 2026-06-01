@@ -1323,20 +1323,6 @@ func defaultCredentialName(ch *ent.Channel, view ChannelCredentialView, idx int)
 }
 
 func legacyCredentialStatus(ch *ent.Channel, view ChannelCredentialView) upstreamcredential.Status {
-	if ch == nil || view.Secret.APIKey == "" {
-		return upstreamcredential.StatusEnabled
-	}
-
-	for _, disabled := range ch.DisabledAPIKeys {
-		if disabled.Key != view.Secret.APIKey {
-			continue
-		}
-
-		if isCredentialScopedAutoDisableStatus(disabled.ErrorCode) {
-			return upstreamcredential.StatusDisabled
-		}
-	}
-
 	return upstreamcredential.StatusEnabled
 }
 

@@ -69,6 +69,7 @@ interface Props {
 }
 
 const MAX_MODELS_DISPLAY = 2;
+const showChannelInlineCredentialUI = false;
 
 const duplicateNameRegex = /^(.*) \((\d+)\)$/;
 
@@ -91,12 +92,8 @@ const OPENAI_RESPONSES_WEBSOCKET: ApiFormatOption = 'openai/responses:websocket'
 const OPENAI_RESPONSES_WEBSOCKET_BASE_URL = 'wss://api.openai.com/v1#';
 const CODEX_RESPONSES_WEBSOCKET_BASE_URL = 'wss://chatgpt.com/backend-api/codex#';
 
-function hasChannelCredentialPayload(credentials?: ChannelCredentialFormPayload | null): boolean {
-  const hasApiKey = Boolean(credentials?.apiKey?.trim());
-  const hasApiKeys = credentials?.apiKeys?.some((key) => key.trim().length > 0) ?? false;
-  const hasGcpCredentials = Boolean(credentials?.gcp?.region?.trim() && credentials?.gcp?.projectID?.trim() && credentials?.gcp?.jsonData?.trim());
-
-  return hasApiKey || hasApiKeys || hasGcpCredentials;
+function emptyChannelCredentialPayload(): ChannelCredentialFormPayload {
+  return {};
 }
 
 function getResponsesTransportFromBaseURL(baseURL?: string): ResponsesTransport {
@@ -588,16 +585,7 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
             defaultTestModel: currentRow.defaultTestModel,
             tags: currentRow.tags || [],
             remark: currentRow.remark || '',
-            credentials: {
-              // OAuth 类型 (codex/claudecode/antigravity) 的凭据存储在 apiKey 字段，不放入 apiKeys
-              apiKey: currentRow.credentials?.apiKey || undefined,
-              apiKeys: currentRow.credentials?.apiKeys || [],
-              gcp: {
-                region: currentRow.credentials?.gcp?.region || '',
-                projectID: currentRow.credentials?.gcp?.projectID || '',
-                jsonData: currentRow.credentials?.gcp?.jsonData || '',
-              },
-            },
+            credentials: emptyChannelCredentialPayload(),
             settings: currentRow.settings ?? undefined,
           }
         : duplicateFromRow
@@ -613,29 +601,14 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
               tags: duplicateFromRow.tags || [],
               remark: duplicateFromRow.remark || '',
               settings: duplicateFromRow.settings ?? undefined,
-              credentials: {
-                apiKey: undefined,
-                apiKeys: [],
-                gcp: {
-                  region: '',
-                  projectID: '',
-                  jsonData: '',
-                },
-              },
+              credentials: emptyChannelCredentialPayload(),
             }
           : {
               type: derivedChannelType,
               baseURL: getDefaultBaseURL(derivedChannelType),
               name: '',
               policies: { stream: 'unlimited' },
-              credentials: {
-                apiKeys: [],
-                gcp: {
-                  region: '',
-                  projectID: '',
-                  jsonData: '',
-                },
-              },
+              credentials: emptyChannelCredentialPayload(),
               supportedModels: [],
               defaultTestModel: '',
               tags: [],
@@ -646,10 +619,10 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
 
   const apiKeys = form.watch('credentials.apiKeys');
   const apiKeysCount = useMemo(() => (apiKeys || []).filter((k) => k.trim().length > 0).length, [apiKeys]);
-  const shouldShowLegacyInlineAPIKeys = isEdit && apiKeysCount > 0;
+  const shouldShowLegacyInlineAPIKeys = false;
 
   const { data: disabledKeys = [] } = useChannelDisabledAPIKeys(currentRow?.id || '', {
-    enabled: isEdit && !!currentRow?.id && showApiKeysPanel,
+    enabled: false,
   });
 
   const disabledKeySet = useMemo(() => new Set(disabledKeys.map((dk) => dk.key)), [disabledKeys]);
@@ -1056,10 +1029,6 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
     }
 
     try {
-      if (values.credentials?.apiKeys) {
-        values.credentials.apiKeys = [...new Set(values.credentials.apiKeys.filter((k) => k.trim().length > 0))];
-      }
-
       const valuesForSubmit = isEdit
         ? values
         : {
@@ -1075,16 +1044,15 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
         ...valuesForSubmit,
         supportedModels,
         manualModels,
-        credentials: valuesForSubmit.credentials,
+        credentials: emptyChannelCredentialPayload(),
       };
 
-      if (!hasChannelCredentialPayload(dataWithModels.credentials) && isEdit) {
+      if (isEdit) {
         delete dataWithModels.credentials;
-      } else if (!hasChannelCredentialPayload(dataWithModels.credentials)) {
-        dataWithModels.credentials = {};
       }
 
       if (
+        showChannelInlineCredentialUI &&
         ((isCodexType && (authMode === 'official' || authMode === 'auth-json')) || (isClaudeCodeType && authMode === 'official')) &&
         !isDuplicate
       ) {
@@ -1231,57 +1199,18 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
     setSupportedModels([]);
     setManualModels([]);
   };
-  // Helper function to parse OAuth token from JSON string
-  const parseOauthToken = (oauthApiKey: string): string => {
-    if (!oauthApiKey) return '';
-    try {
-      const parsed = JSON.parse(oauthApiKey);
-      if (parsed.access_token) {
-        return parsed.access_token;
-      }
-      if (parsed.tokens?.access_token) {
-        return parsed.tokens.access_token;
-      }
-    } catch {
-      // Not JSON, use as-is
-    }
-    return oauthApiKey;
-  };
-
   const handleFetchModels = useCallback(async () => {
     const channelType = form.getValues('type');
     const baseURL = form.getValues('baseURL');
-    const apiKeys = form.getValues('credentials.apiKeys');
-    const oauthApiKey = form.getValues('credentials.apiKey');
 
     if (!channelType || !baseURL) {
       return;
     }
 
     try {
-      // For OAuth-based providers (like Copilot), prefer oauthApiKey first
-      let firstApiKey = '';
-      if (oauthApiKey) {
-        // If it's OAuth JSON, send full JSON so backend detects isOAuthJSON
-        if (oauthApiKey.trimStart().startsWith('{')) {
-          firstApiKey = oauthApiKey;
-        } else {
-          const parsed = parseOauthToken(oauthApiKey || '');
-          if (parsed) {
-            firstApiKey = parsed;
-          }
-        }
-      }
-
-      // Fall back to apiKeys array if no OAuth token
-      if (!firstApiKey && apiKeys?.length) {
-        firstApiKey = apiKeys.find((key) => key.trim().length > 0) || '';
-      }
-
       const result = await fetchModels.mutateAsync({
         channelType,
         baseURL,
-        apiKey: firstApiKey || undefined,
         channelID: isEdit ? currentRow?.id : undefined,
       });
 
@@ -1327,24 +1256,7 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
 
   const canFetchModels = () => {
     const baseURL = form.watch('baseURL');
-    const apiKeys = form.watch('credentials.apiKeys');
-    const hasApiKey = apiKeys?.some((key) => key.trim().length > 0);
-
-    if (isCodexType || isAntigravityType) {
-      return !!baseURL;
-    }
-
-    if (isCopilotType) {
-      const oauthApiKey = form.watch('credentials.apiKey');
-      const hasOAuthToken = !!parseOauthToken(oauthApiKey || '');
-      return !!baseURL && hasOAuthToken;
-    }
-
-    if (isEdit) {
-      return !!baseURL;
-    }
-
-    return !!baseURL && hasApiKey;
+    return !!baseURL;
   };
   // Memoize quick models to avoid re-evaluating on every render
   const currentType = form.watch('type');
@@ -1746,7 +1658,7 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
                         </FormItem>
                       )}
 
-                      {selectedProvider === 'antigravity' && (
+                      {showChannelInlineCredentialUI && selectedProvider === 'antigravity' && (
                         <FormItem className='grid grid-cols-1 items-start gap-x-6 gap-y-2 md:grid-cols-8'>
                           <FormLabel className='pt-2 font-medium md:col-span-2 md:text-right'>
                             {t('channels.dialogs.fields.apiFormat.label')}
@@ -1824,7 +1736,7 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
                         </FormItem>
                       )}
 
-                      {isCopilotType && (
+                      {showChannelInlineCredentialUI && isCopilotType && (
                         <div className='grid grid-cols-1 items-start gap-x-6 gap-y-2 md:grid-cols-8'>
                           <div className='col-span-2' />
                           <div className='space-y-4 md:col-span-6'>
@@ -1942,7 +1854,7 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
                         </FormItem>
                       )}
 
-                      {(isCodexType || isClaudeCodeType) && (
+                      {showChannelInlineCredentialUI && (isCodexType || isClaudeCodeType) && (
                         <div className='grid grid-cols-1 items-start gap-x-6 gap-y-2 md:grid-cols-8'>
                           <div className='col-span-2' />
                           <div className='space-y-4 md:col-span-6'>
@@ -2022,11 +1934,7 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
                                 data-form-type='other'
                                 aria-invalid={!!fieldState.error}
                                 data-testid='channel-base-url-input'
-                                disabled={
-                                  (isCodexType && (authMode === 'official' || authMode === 'auth-json')) ||
-                                  (isClaudeCodeType && authMode === 'official') ||
-                                  selectedProvider === 'antigravity'
-                                }
+                                disabled={false}
                                 {...field}
                               />
                               <FormMessage />

@@ -4,13 +4,10 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	"github.com/looplj/axonhub/internal/ent"
-	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/objects"
 	"github.com/looplj/axonhub/internal/server/biz"
@@ -507,7 +504,7 @@ func TestProviderQuotaSelector_FiltersChannelWhenAllCredentialViewsExhausted(t *
 	require.Equal(t, 1, selector.FilteredCount)
 }
 
-func TestProviderQuotaSelector_FiltersLocallyPausedCredentialScopeWithoutProviderData(t *testing.T) {
+func TestProviderQuotaSelector_DoesNotFilterLocalQuotaScopeWithoutProviderData(t *testing.T) {
 	base := &biz.Channel{Channel: &ent.Channel{
 		ID:      1,
 		Name:    "locally-paused",
@@ -530,9 +527,8 @@ func TestProviderQuotaSelector_FiltersLocallyPausedCredentialScopeWithoutProvide
 			Enabled:                   true,
 			Source:                    biz.ChannelCredentialSourceRef,
 			QuotaScopeID:              20,
-			QuotaScopeStatus:          credentialquotascope.StatusPaused.String(),
-			QuotaScopeOverLimitAction: credentialquotascope.OverLimitActionPause.String(),
-			QuotaScopePauseUntil:      lo.ToPtr(time.Now().Add(time.Hour)),
+			QuotaScopeStatus:          "paused",
+			QuotaScopeOverLimitAction: "pause",
 		},
 	})
 	selector := WithProviderQuotaSelector(
@@ -544,6 +540,6 @@ func TestProviderQuotaSelector_FiltersLocallyPausedCredentialScopeWithoutProvide
 	got, err := selector.Select(context.Background(), &llm.Request{Model: "gpt-4"})
 
 	require.NoError(t, err)
-	require.Empty(t, got)
-	require.Equal(t, 1, selector.FilteredCount)
+	require.Len(t, got, 1)
+	require.Equal(t, 0, selector.FilteredCount)
 }
