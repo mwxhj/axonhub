@@ -29,6 +29,14 @@ type contextContainer struct {
 	// used for the channel request. It must never contain the raw secret.
 	ChannelCredentialFingerprint *string
 
+	// ChannelCredentialSecretFingerprint stores the safe secret-only identity
+	// used for credential dedupe. It must never contain the raw secret.
+	ChannelCredentialSecretFingerprint *string
+
+	// ChannelCredentialResourceScopeKey stores the safe runtime resource scope
+	// for channel resource namespace plus secret fingerprint.
+	ChannelCredentialResourceScopeKey *string
+
 	// ChannelCredentialID stores the first-class upstream credential row ID
 	// selected for the channel request when the channel uses credential refs.
 	ChannelCredentialID *int
@@ -49,6 +57,17 @@ type contextContainer struct {
 	// status known at selection time.
 	ChannelCredentialQuotaStatus *string
 
+	// ChannelCredentialQuotaScopeID stores the first-class quota scope selected
+	// for the channel request when known.
+	ChannelCredentialQuotaScopeID *int
+
+	// ChannelCredentialQuotaScopeName stores a quota scope display snapshot.
+	ChannelCredentialQuotaScopeName *string
+
+	// ChannelCredentialQuotaScopeStatus stores the selected quota scope status
+	// at selection time.
+	ChannelCredentialQuotaScopeStatus *string
+
 	// CredentialSelectionSeed stores the sticky-session identity used by
 	// channel credential providers to keep related requests on the same
 	// upstream credential/cache pool.
@@ -63,6 +82,11 @@ type contextContainer struct {
 	// the outer router. Channel credential providers should prefer it when the
 	// current channel references the credential.
 	PreferredCredentialFingerprint *string
+
+	// AllowedCredentialIDs and AllowedCredentialFingerprints constrain the
+	// channel credential provider to the credential views kept by routing.
+	AllowedCredentialIDs          []int
+	AllowedCredentialFingerprints []string
 }
 
 // getContainer retrieves the existing container from context, or creates a new one and stores it in the context if it doesn't exist.

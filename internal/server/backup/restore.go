@@ -16,9 +16,12 @@ import (
 	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/channelmodelprice"
 	"github.com/looplj/axonhub/internal/ent/channelmodelpriceversion"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/model"
+	"github.com/looplj/axonhub/internal/ent/predicate"
 	"github.com/looplj/axonhub/internal/ent/project"
 	"github.com/looplj/axonhub/internal/ent/request"
+	"github.com/looplj/axonhub/internal/ent/requestexecution"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
 	"github.com/looplj/axonhub/internal/log"
@@ -41,7 +44,7 @@ func (svc *BackupService) Restore(ctx context.Context, data []byte, opts Restore
 		return err
 	}
 
-	if !lo.Contains([]string{BackupVersion, BackupVersionV2, BackupVersionV1}, backupData.Version) {
+	if !lo.Contains([]string{BackupVersion, BackupVersionV3, BackupVersionV2, BackupVersionV1}, backupData.Version) {
 		log.Warn(ctx, "backup version mismatch",
 			log.String("expected", BackupVersion),
 			log.String("got", backupData.Version))
@@ -89,8 +92,15 @@ func (svc *BackupService) restore(ctx context.Context, db *ent.Client, backupDat
 		return err
 	}
 
+	credentialIDMap := map[int]int{}
+	quotaScopeIDMap := map[int]int{}
 	if opts.IncludeChannels {
-		credentialIDMap, err := svc.restoreUpstreamCredentials(ctx, db, backupData.UpstreamCredentials, opts)
+		quotaScopeIDMap, err = svc.restoreCredentialQuotaScopes(ctx, db, backupData.CredentialQuotaScopes, opts)
+		if err != nil {
+			return err
+		}
+
+		credentialIDMap, err = svc.restoreUpstreamCredentials(ctx, db, backupData.UpstreamCredentials, quotaScopeIDMap, opts)
 		if err != nil {
 			return err
 		}
@@ -136,7 +146,7 @@ func (svc *BackupService) restore(ctx context.Context, db *ent.Client, backupDat
 	}
 
 	if opts.IncludeUsageStats {
-		if err := svc.restoreUsageStats(ctx, db, backupData.UsageRequests, backupData.UsageLogs); err != nil {
+		if err := svc.restoreUsageStats(ctx, db, backupData.UsageRequests, backupData.RequestExecutions, backupData.UsageLogs, credentialIDMap, quotaScopeIDMap); err != nil {
 			return err
 		}
 	}
@@ -672,7 +682,129 @@ func (svc *BackupService) restoreChannels(ctx context.Context, db *ent.Client, c
 	return nil
 }
 
-func (svc *BackupService) restoreUpstreamCredentials(ctx context.Context, db *ent.Client, credentials []*BackupUpstreamCredential, opts RestoreOptions) (map[int]int, error) {
+func (svc *BackupService) restoreCredentialQuotaScopes(ctx context.Context, db *ent.Client, scopes []*BackupCredentialQuotaScope, opts RestoreOptions) (map[int]int, error) {
+	idMap := map[int]int{}
+	for _, scopeData := range scopes {
+		if scopeData == nil {
+			continue
+		}
+		status := scopeData.Status
+		if credentialquotascope.StatusValidator(status) != nil {
+			status = credentialquotascope.StatusUnknown
+		}
+		unit := scopeData.Unit
+		if credentialquotascope.UnitValidator(unit) != nil {
+			unit = credentialquotascope.UnitUnknown
+		}
+		resetPolicy := scopeData.ResetPolicy
+		if credentialquotascope.ResetPolicyValidator(resetPolicy) != nil {
+			resetPolicy = credentialquotascope.ResetPolicyNone
+		}
+		overLimitAction := scopeData.OverLimitAction
+		if credentialquotascope.OverLimitActionValidator(overLimitAction) != nil {
+			overLimitAction = credentialquotascope.OverLimitActionWarn
+		}
+		source := scopeData.Source
+		if credentialquotascope.SourceValidator(source) != nil {
+			source = credentialquotascope.SourceLocalBudget
+		}
+
+		var existing *ent.CredentialQuotaScope
+		var err error
+		if strings.TrimSpace(scopeData.Name) != "" {
+			existing, err = db.CredentialQuotaScope.Query().
+				Where(credentialquotascope.Name(scopeData.Name)).
+				First(ctx)
+			if err != nil && !ent.IsNotFound(err) {
+				return idMap, err
+			}
+		}
+
+		if existing != nil {
+			idMap[scopeData.ID] = existing.ID
+
+			switch opts.ChannelConflictStrategy {
+			case ConflictStrategySkip:
+				continue
+			case ConflictStrategyError:
+				return idMap, fmt.Errorf("credential quota scope %s already exists", scopeData.Name)
+			case ConflictStrategyOverwrite:
+				update := db.CredentialQuotaScope.UpdateOneID(existing.ID).
+					SetName(scopeData.Name).
+					SetStatus(status).
+					SetUnit(unit).
+					SetLimitAmount(scopeData.LimitAmount).
+					SetUsedAmount(scopeData.UsedAmount).
+					SetResetPolicy(resetPolicy).
+					SetOverLimitAction(overLimitAction).
+					SetSource(source).
+					SetLastError(scopeData.LastError).
+					SetRemark(scopeData.Remark)
+				if scopeData.WarningThresholdPercent != nil {
+					update.SetWarningThresholdPercent(*scopeData.WarningThresholdPercent)
+				} else {
+					update.ClearWarningThresholdPercent()
+				}
+				if scopeData.ResetAt != nil {
+					update.SetResetAt(*scopeData.ResetAt)
+				} else {
+					update.ClearResetAt()
+				}
+				if scopeData.WindowStartedAt != nil {
+					update.SetWindowStartedAt(*scopeData.WindowStartedAt)
+				} else {
+					update.ClearWindowStartedAt()
+				}
+				if scopeData.PauseUntil != nil {
+					update.SetPauseUntil(*scopeData.PauseUntil)
+				} else {
+					update.ClearPauseUntil()
+				}
+				updated, err := update.Save(ctx)
+				if err != nil {
+					return idMap, fmt.Errorf("failed to restore credential quota scope %s: %w", scopeData.Name, err)
+				}
+				idMap[scopeData.ID] = updated.ID
+			}
+
+			continue
+		}
+
+		create := db.CredentialQuotaScope.Create().
+			SetName(scopeData.Name).
+			SetStatus(status).
+			SetUnit(unit).
+			SetLimitAmount(scopeData.LimitAmount).
+			SetUsedAmount(scopeData.UsedAmount).
+			SetResetPolicy(resetPolicy).
+			SetOverLimitAction(overLimitAction).
+			SetSource(source).
+			SetLastError(scopeData.LastError).
+			SetRemark(scopeData.Remark)
+		if scopeData.WarningThresholdPercent != nil {
+			create.SetWarningThresholdPercent(*scopeData.WarningThresholdPercent)
+		}
+		if scopeData.ResetAt != nil {
+			create.SetResetAt(*scopeData.ResetAt)
+		}
+		if scopeData.WindowStartedAt != nil {
+			create.SetWindowStartedAt(*scopeData.WindowStartedAt)
+		}
+		if scopeData.PauseUntil != nil {
+			create.SetPauseUntil(*scopeData.PauseUntil)
+		}
+
+		created, err := create.Save(ctx)
+		if err != nil {
+			return idMap, fmt.Errorf("failed to create credential quota scope %s: %w", scopeData.Name, err)
+		}
+		idMap[scopeData.ID] = created.ID
+	}
+
+	return idMap, nil
+}
+
+func (svc *BackupService) restoreUpstreamCredentials(ctx context.Context, db *ent.Client, credentials []*BackupUpstreamCredential, quotaScopeIDMap map[int]int, opts RestoreOptions) (map[int]int, error) {
 	idMap := map[int]int{}
 	for _, credData := range credentials {
 		if credData == nil || credData.Fingerprint == "" {
@@ -693,8 +825,14 @@ func (svc *BackupService) restoreUpstreamCredentials(ctx context.Context, db *en
 			quotaStatus = "unknown"
 		}
 
+		credentialPredicates := []predicate.UpstreamCredential{
+			upstreamcredential.Fingerprint(credData.Fingerprint),
+		}
+		if credData.SecretFingerprint != nil && strings.TrimSpace(*credData.SecretFingerprint) != "" {
+			credentialPredicates = append(credentialPredicates, upstreamcredential.SecretFingerprintEQ(*credData.SecretFingerprint))
+		}
 		existing, err := db.UpstreamCredential.Query().
-			Where(upstreamcredential.Fingerprint(credData.Fingerprint)).
+			Where(upstreamcredential.Or(credentialPredicates...)).
 			First(ctx)
 		if err != nil && !ent.IsNotFound(err) {
 			return idMap, err
@@ -722,6 +860,14 @@ func (svc *BackupService) restoreUpstreamCredentials(ctx context.Context, db *en
 					SetStatus(credData.Status).
 					SetWeight(credData.Weight).
 					SetRemark(credData.Remark)
+				if credData.SecretFingerprint != nil {
+					update.SetSecretFingerprint(*credData.SecretFingerprint)
+				}
+				if credData.QuotaScopeID != nil {
+					if newQuotaScopeID, ok := quotaScopeIDMap[*credData.QuotaScopeID]; ok {
+						update.SetQuotaScopeID(newQuotaScopeID)
+					}
+				}
 				updated, err := update.Save(ctx)
 				if err != nil {
 					return idMap, fmt.Errorf("failed to restore upstream credential %s: %w", credData.Fingerprint, err)
@@ -747,6 +893,14 @@ func (svc *BackupService) restoreUpstreamCredentials(ctx context.Context, db *en
 			SetStatus(credData.Status).
 			SetWeight(credData.Weight).
 			SetRemark(credData.Remark)
+		if credData.SecretFingerprint != nil {
+			create.SetSecretFingerprint(*credData.SecretFingerprint)
+		}
+		if credData.QuotaScopeID != nil {
+			if newQuotaScopeID, ok := quotaScopeIDMap[*credData.QuotaScopeID]; ok {
+				create.SetQuotaScopeID(newQuotaScopeID)
+			}
+		}
 
 		created, err := create.Save(ctx)
 		if err != nil {
@@ -1105,7 +1259,10 @@ func (svc *BackupService) restoreUsageStats(
 	ctx context.Context,
 	db *ent.Client,
 	requestsData []*BackupUsageRequest,
+	requestExecutions []*BackupRequestExecution,
 	usageLogs []*BackupUsageLog,
+	credentialIDMap map[int]int,
+	quotaScopeIDMap map[int]int,
 ) error {
 	resolver, err := newUsageRestoreResolver(ctx, db)
 	if err != nil {
@@ -1117,7 +1274,11 @@ func (svc *BackupService) restoreUsageStats(
 		return err
 	}
 
-	return svc.restoreUsageLogs(ctx, db, usageLogs, requestIDMap, resolver)
+	if err := svc.restoreRequestExecutions(ctx, db, requestExecutions, requestIDMap, resolver, credentialIDMap, quotaScopeIDMap); err != nil {
+		return err
+	}
+
+	return svc.restoreUsageLogs(ctx, db, usageLogs, requestIDMap, resolver, credentialIDMap, quotaScopeIDMap)
 }
 
 func (svc *BackupService) restoreUsageRequests(
@@ -1398,12 +1559,263 @@ func sameUsageRequest(existing *ent.Request, backup *BackupUsageRequest, project
 		existing.CreatedAt.Equal(backup.CreatedAt)
 }
 
+func (svc *BackupService) restoreRequestExecutions(
+	ctx context.Context,
+	db *ent.Client,
+	executions []*BackupRequestExecution,
+	requestIDMap map[int]int,
+	resolver *usageRestoreResolver,
+	credentialIDMap map[int]int,
+	quotaScopeIDMap map[int]int,
+) error {
+	if len(executions) == 0 {
+		return nil
+	}
+
+	existingExecutions, err := existingRequestExecutions(ctx, db, requestIDMap)
+	if err != nil {
+		return err
+	}
+
+	restoredExecutions := map[string]struct{}{}
+	for _, execData := range executions {
+		if execData == nil {
+			continue
+		}
+
+		requestID, ok := requestIDMap[execData.RequestID]
+		if !ok {
+			log.Warn(ctx, "request not found for restoring request execution, skipping",
+				log.Int("request_execution_id", execData.ID),
+				log.Int("request_id", execData.RequestID),
+			)
+			continue
+		}
+
+		projectID, ok := resolver.resolveProjectID(execData.ProjectID, execData.ProjectName)
+		if !ok {
+			log.Warn(ctx, "project not found for restoring request execution, skipping",
+				log.Int("request_execution_id", execData.ID),
+				log.String("project", execData.ProjectName),
+			)
+			continue
+		}
+
+		channelID, ok := resolver.resolveChannelID(execData.ChannelID, execData.ChannelName)
+		if !ok && hasBackupChannelRef(execData.ChannelID, execData.ChannelName) {
+			log.Warn(ctx, "channel not found for restoring request execution, restoring with null channel",
+				log.Int("request_execution_id", execData.ID),
+				log.Int("channel_id", execData.ChannelID),
+				log.String("channel", execData.ChannelName),
+			)
+		}
+
+		credentialID := 0
+		if execData.CredentialID > 0 {
+			credentialID = credentialIDMap[execData.CredentialID]
+		}
+		quotaScopeID := 0
+		if execData.QuotaScopeID > 0 {
+			quotaScopeID = quotaScopeIDMap[execData.QuotaScopeID]
+		}
+
+		fingerprint := requestExecutionBackupFingerprint(execData, requestID, projectID, channelID, credentialID, quotaScopeID)
+		if _, existing := existingExecutions[fingerprint]; existing {
+			continue
+		}
+		if _, duplicate := restoredExecutions[fingerprint]; duplicate {
+			log.Warn(ctx, "duplicate request execution in backup, skipping",
+				log.Int("request_execution_id", execData.ID),
+				log.Int("request_id", execData.RequestID),
+			)
+			continue
+		}
+
+		format := execData.Format
+		if format == "" {
+			format = requestexecution.DefaultFormat
+		}
+		status := execData.Status
+		if requestexecution.StatusValidator(status) != nil {
+			status = requestexecution.StatusFailed
+		}
+
+		create := db.RequestExecution.Create().
+			SetCreatedAt(execData.CreatedAt).
+			SetUpdatedAt(execData.UpdatedAt).
+			SetProjectID(projectID).
+			SetRequestID(requestID).
+			SetNillableChannelID(nilIfZero(channelID)).
+			SetNillableCredentialID(nilIfZero(credentialID)).
+			SetNillableExternalID(nilIfEmpty(execData.ExternalID)).
+			SetModelID(execData.ModelID).
+			SetCredentialFingerprint(execData.CredentialFingerprint).
+			SetSecretFingerprint(execData.SecretFingerprint).
+			SetResourceScopeKey(execData.ResourceScopeKey).
+			SetNillableQuotaScopeID(nilIfZero(quotaScopeID)).
+			SetQuotaScopeNameSnapshot(execData.QuotaScopeNameSnapshot).
+			SetQuotaScopeStatusSnapshot(execData.QuotaScopeStatusSnapshot).
+			SetCredentialNameSnapshot(execData.CredentialNameSnapshot).
+			SetCredentialKeyHint(execData.CredentialKeyHint).
+			SetCredentialSource(execData.CredentialSource).
+			SetCredentialQuotaStatusSnapshot(execData.CredentialQuotaStatusSnapshot).
+			SetFormat(format).
+			SetRequestBody(jsonOrEmpty(execData.RequestBody)).
+			SetNillableErrorMessage(nilIfEmpty(execData.ErrorMessage)).
+			SetNillableResponseStatusCode(execData.ResponseStatusCode).
+			SetStatus(status).
+			SetStream(execData.Stream).
+			SetNillableMetricsLatencyMs(execData.MetricsLatencyMs).
+			SetNillableMetricsFirstTokenLatencyMs(execData.MetricsFirstTokenLatencyMs).
+			SetNillableMetricsReasoningDurationMs(execData.MetricsReasoningDurationMs)
+
+		if len(execData.RequestHeaders) > 0 {
+			create.SetRequestHeaders(execData.RequestHeaders)
+		}
+		if len(execData.ResponseBody) > 0 {
+			create.SetResponseBody(execData.ResponseBody)
+		}
+		if len(execData.ResponseChunks) > 0 {
+			create.SetResponseChunks(execData.ResponseChunks)
+		}
+
+		if _, err := create.Save(ctx); err != nil {
+			return fmt.Errorf("failed to restore request execution %d: %w", execData.ID, err)
+		}
+
+		restoredExecutions[fingerprint] = struct{}{}
+	}
+
+	return nil
+}
+
+func existingRequestExecutions(ctx context.Context, db *ent.Client, requestIDMap map[int]int) (map[string]struct{}, error) {
+	requestIDs := make([]int, 0, len(requestIDMap))
+	for _, requestID := range requestIDMap {
+		requestIDs = append(requestIDs, requestID)
+	}
+
+	existing := map[string]struct{}{}
+	for start := 0; start < len(requestIDs); start += usageBackupBatchSize {
+		end := min(start+usageBackupBatchSize, len(requestIDs))
+		executions, err := db.RequestExecution.Query().
+			Where(requestexecution.RequestIDIn(requestIDs[start:end]...)).
+			WithRequest(func(q *ent.RequestQuery) {
+				q.WithProject().WithChannel()
+			}).
+			WithChannel().
+			All(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, exec := range executions {
+			existing[requestExecutionExistingFingerprint(exec)] = struct{}{}
+		}
+	}
+
+	return existing, nil
+}
+
+func requestExecutionBackupFingerprint(exec *BackupRequestExecution, requestID, projectID, channelID, credentialID, quotaScopeID int) string {
+	return requestExecutionFingerprint(
+		exec.CreatedAt,
+		exec.UpdatedAt,
+		requestID,
+		projectID,
+		channelID,
+		credentialID,
+		quotaScopeID,
+		exec.ModelID,
+		exec.Format,
+		string(exec.Status),
+		exec.ExternalID,
+		exec.CredentialFingerprint,
+		exec.SecretFingerprint,
+		exec.ResourceScopeKey,
+		exec.CredentialNameSnapshot,
+		exec.CredentialKeyHint,
+		exec.CredentialSource,
+	)
+}
+
+func requestExecutionExistingFingerprint(exec *ent.RequestExecution) string {
+	projectID := exec.ProjectID
+	if exec.Edges.Request != nil {
+		projectID = exec.Edges.Request.ProjectID
+	}
+
+	return requestExecutionFingerprint(
+		exec.CreatedAt,
+		exec.UpdatedAt,
+		exec.RequestID,
+		projectID,
+		exec.ChannelID,
+		exec.CredentialID,
+		exec.QuotaScopeID,
+		exec.ModelID,
+		exec.Format,
+		string(exec.Status),
+		exec.ExternalID,
+		exec.CredentialFingerprint,
+		exec.SecretFingerprint,
+		exec.ResourceScopeKey,
+		exec.CredentialNameSnapshot,
+		exec.CredentialKeyHint,
+		exec.CredentialSource,
+	)
+}
+
+func requestExecutionFingerprint(
+	createdAt time.Time,
+	updatedAt time.Time,
+	requestID int,
+	projectID int,
+	channelID int,
+	credentialID int,
+	quotaScopeID int,
+	modelID string,
+	format string,
+	status string,
+	externalID string,
+	credentialFingerprint string,
+	secretFingerprint string,
+	resourceScopeKey string,
+	credentialName string,
+	credentialKeyHint string,
+	credentialSource string,
+) string {
+	parts := []string{
+		createdAt.UTC().Format(time.RFC3339Nano),
+		updatedAt.UTC().Format(time.RFC3339Nano),
+		fmt.Sprintf("%d", requestID),
+		fmt.Sprintf("%d", projectID),
+		fmt.Sprintf("%d", channelID),
+		fmt.Sprintf("%d", credentialID),
+		fmt.Sprintf("%d", quotaScopeID),
+		modelID,
+		format,
+		status,
+		externalID,
+		credentialFingerprint,
+		secretFingerprint,
+		resourceScopeKey,
+		credentialName,
+		credentialKeyHint,
+		credentialSource,
+	}
+
+	return strings.Join(parts, "\x00")
+}
+
 func (svc *BackupService) restoreUsageLogs(
 	ctx context.Context,
 	db *ent.Client,
 	usageLogs []*BackupUsageLog,
 	requestIDMap map[int]int,
 	resolver *usageRestoreResolver,
+	credentialIDMap map[int]int,
+	quotaScopeIDMap map[int]int,
 ) error {
 	if len(usageLogs) == 0 {
 		return nil
@@ -1501,13 +1913,33 @@ func (svc *BackupService) restoreUsageLogs(
 			)
 		}
 
-		builders = append(builders, db.UsageLog.Create().
+		credentialID := 0
+		if usageData.CredentialID > 0 {
+			credentialID = credentialIDMap[usageData.CredentialID]
+		}
+		quotaScopeID := 0
+		if usageData.QuotaScopeID > 0 {
+			quotaScopeID = quotaScopeIDMap[usageData.QuotaScopeID]
+		}
+
+		builder := db.UsageLog.Create().
 			SetCreatedAt(usageData.CreatedAt).
 			SetUpdatedAt(usageData.UpdatedAt).
 			SetRequestID(requestID).
 			SetNillableAPIKeyID(nilIfZero(apiKeyID)).
 			SetProjectID(projectID).
 			SetNillableChannelID(nilIfZero(channelID)).
+			SetNillableCredentialID(nilIfZero(credentialID)).
+			SetNillableQuotaScopeID(nilIfZero(quotaScopeID)).
+			SetCredentialFingerprint(usageData.CredentialFingerprint).
+			SetSecretFingerprint(usageData.SecretFingerprint).
+			SetResourceScopeKey(usageData.ResourceScopeKey).
+			SetQuotaScopeNameSnapshot(usageData.QuotaScopeNameSnapshot).
+			SetQuotaScopeStatusSnapshot(usageData.QuotaScopeStatusSnapshot).
+			SetCredentialNameSnapshot(usageData.CredentialNameSnapshot).
+			SetCredentialKeyHint(usageData.CredentialKeyHint).
+			SetCredentialSource(usageData.CredentialSource).
+			SetCredentialQuotaStatusSnapshot(usageData.CredentialQuotaStatusSnapshot).
 			SetModelID(usageData.ModelID).
 			SetPromptTokens(usageData.PromptTokens).
 			SetCompletionTokens(usageData.CompletionTokens).
@@ -1525,7 +1957,8 @@ func (svc *BackupService) restoreUsageLogs(
 			SetFormat(usageData.Format).
 			SetNillableTotalCost(usageData.TotalCost).
 			SetCostItems(usageData.CostItems).
-			SetNillableCostPriceReferenceID(nilIfEmpty(usageData.CostPriceReferenceID)))
+			SetNillableCostPriceReferenceID(nilIfEmpty(usageData.CostPriceReferenceID))
+		builders = append(builders, builder)
 		restoredLogRequestIDs[requestID] = struct{}{}
 
 		if len(builders) >= usageBackupBatchSize {
@@ -1552,4 +1985,12 @@ func nilIfEmpty(v string) *string {
 	}
 
 	return &v
+}
+
+func jsonOrEmpty(v objects.JSONRawMessage) objects.JSONRawMessage {
+	if len(v) == 0 {
+		return objects.JSONRawMessage(`{}`)
+	}
+
+	return v
 }

@@ -456,23 +456,19 @@ func (_u *ChannelUpdate) AddCredentialRefs(v ...*ChannelCredentialRef) *ChannelU
 	return _u.AddCredentialRefIDs(ids...)
 }
 
-// SetProviderQuotaStatusID sets the "provider_quota_status" edge to the ProviderQuotaStatus entity by ID.
-func (_u *ChannelUpdate) SetProviderQuotaStatusID(id int) *ChannelUpdate {
-	_u.mutation.SetProviderQuotaStatusID(id)
+// AddProviderQuotaStatusIDs adds the "provider_quota_statuses" edge to the ProviderQuotaStatus entity by IDs.
+func (_u *ChannelUpdate) AddProviderQuotaStatusIDs(ids ...int) *ChannelUpdate {
+	_u.mutation.AddProviderQuotaStatusIDs(ids...)
 	return _u
 }
 
-// SetNillableProviderQuotaStatusID sets the "provider_quota_status" edge to the ProviderQuotaStatus entity by ID if the given value is not nil.
-func (_u *ChannelUpdate) SetNillableProviderQuotaStatusID(id *int) *ChannelUpdate {
-	if id != nil {
-		_u = _u.SetProviderQuotaStatusID(*id)
+// AddProviderQuotaStatuses adds the "provider_quota_statuses" edges to the ProviderQuotaStatus entity.
+func (_u *ChannelUpdate) AddProviderQuotaStatuses(v ...*ProviderQuotaStatus) *ChannelUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return _u
-}
-
-// SetProviderQuotaStatus sets the "provider_quota_status" edge to the ProviderQuotaStatus entity.
-func (_u *ChannelUpdate) SetProviderQuotaStatus(v *ProviderQuotaStatus) *ChannelUpdate {
-	return _u.SetProviderQuotaStatusID(v.ID)
+	return _u.AddProviderQuotaStatusIDs(ids...)
 }
 
 // Mutation returns the ChannelMutation object of the builder.
@@ -606,10 +602,25 @@ func (_u *ChannelUpdate) RemoveCredentialRefs(v ...*ChannelCredentialRef) *Chann
 	return _u.RemoveCredentialRefIDs(ids...)
 }
 
-// ClearProviderQuotaStatus clears the "provider_quota_status" edge to the ProviderQuotaStatus entity.
-func (_u *ChannelUpdate) ClearProviderQuotaStatus() *ChannelUpdate {
-	_u.mutation.ClearProviderQuotaStatus()
+// ClearProviderQuotaStatuses clears all "provider_quota_statuses" edges to the ProviderQuotaStatus entity.
+func (_u *ChannelUpdate) ClearProviderQuotaStatuses() *ChannelUpdate {
+	_u.mutation.ClearProviderQuotaStatuses()
 	return _u
+}
+
+// RemoveProviderQuotaStatusIDs removes the "provider_quota_statuses" edge to ProviderQuotaStatus entities by IDs.
+func (_u *ChannelUpdate) RemoveProviderQuotaStatusIDs(ids ...int) *ChannelUpdate {
+	_u.mutation.RemoveProviderQuotaStatusIDs(ids...)
+	return _u
+}
+
+// RemoveProviderQuotaStatuses removes "provider_quota_statuses" edges to ProviderQuotaStatus entities.
+func (_u *ChannelUpdate) RemoveProviderQuotaStatuses(v ...*ProviderQuotaStatus) *ChannelUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveProviderQuotaStatusIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -1078,12 +1089,12 @@ func (_u *ChannelUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.ProviderQuotaStatusCleared() {
+	if _u.mutation.ProviderQuotaStatusesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   channel.ProviderQuotaStatusTable,
-			Columns: []string{channel.ProviderQuotaStatusColumn},
+			Table:   channel.ProviderQuotaStatusesTable,
+			Columns: []string{channel.ProviderQuotaStatusesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerquotastatus.FieldID, field.TypeInt),
@@ -1091,12 +1102,28 @@ func (_u *ChannelUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.ProviderQuotaStatusIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.RemovedProviderQuotaStatusesIDs(); len(nodes) > 0 && !_u.mutation.ProviderQuotaStatusesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   channel.ProviderQuotaStatusTable,
-			Columns: []string{channel.ProviderQuotaStatusColumn},
+			Table:   channel.ProviderQuotaStatusesTable,
+			Columns: []string{channel.ProviderQuotaStatusesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerquotastatus.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProviderQuotaStatusesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   channel.ProviderQuotaStatusesTable,
+			Columns: []string{channel.ProviderQuotaStatusesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerquotastatus.FieldID, field.TypeInt),
@@ -1547,23 +1574,19 @@ func (_u *ChannelUpdateOne) AddCredentialRefs(v ...*ChannelCredentialRef) *Chann
 	return _u.AddCredentialRefIDs(ids...)
 }
 
-// SetProviderQuotaStatusID sets the "provider_quota_status" edge to the ProviderQuotaStatus entity by ID.
-func (_u *ChannelUpdateOne) SetProviderQuotaStatusID(id int) *ChannelUpdateOne {
-	_u.mutation.SetProviderQuotaStatusID(id)
+// AddProviderQuotaStatusIDs adds the "provider_quota_statuses" edge to the ProviderQuotaStatus entity by IDs.
+func (_u *ChannelUpdateOne) AddProviderQuotaStatusIDs(ids ...int) *ChannelUpdateOne {
+	_u.mutation.AddProviderQuotaStatusIDs(ids...)
 	return _u
 }
 
-// SetNillableProviderQuotaStatusID sets the "provider_quota_status" edge to the ProviderQuotaStatus entity by ID if the given value is not nil.
-func (_u *ChannelUpdateOne) SetNillableProviderQuotaStatusID(id *int) *ChannelUpdateOne {
-	if id != nil {
-		_u = _u.SetProviderQuotaStatusID(*id)
+// AddProviderQuotaStatuses adds the "provider_quota_statuses" edges to the ProviderQuotaStatus entity.
+func (_u *ChannelUpdateOne) AddProviderQuotaStatuses(v ...*ProviderQuotaStatus) *ChannelUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
 	}
-	return _u
-}
-
-// SetProviderQuotaStatus sets the "provider_quota_status" edge to the ProviderQuotaStatus entity.
-func (_u *ChannelUpdateOne) SetProviderQuotaStatus(v *ProviderQuotaStatus) *ChannelUpdateOne {
-	return _u.SetProviderQuotaStatusID(v.ID)
+	return _u.AddProviderQuotaStatusIDs(ids...)
 }
 
 // Mutation returns the ChannelMutation object of the builder.
@@ -1697,10 +1720,25 @@ func (_u *ChannelUpdateOne) RemoveCredentialRefs(v ...*ChannelCredentialRef) *Ch
 	return _u.RemoveCredentialRefIDs(ids...)
 }
 
-// ClearProviderQuotaStatus clears the "provider_quota_status" edge to the ProviderQuotaStatus entity.
-func (_u *ChannelUpdateOne) ClearProviderQuotaStatus() *ChannelUpdateOne {
-	_u.mutation.ClearProviderQuotaStatus()
+// ClearProviderQuotaStatuses clears all "provider_quota_statuses" edges to the ProviderQuotaStatus entity.
+func (_u *ChannelUpdateOne) ClearProviderQuotaStatuses() *ChannelUpdateOne {
+	_u.mutation.ClearProviderQuotaStatuses()
 	return _u
+}
+
+// RemoveProviderQuotaStatusIDs removes the "provider_quota_statuses" edge to ProviderQuotaStatus entities by IDs.
+func (_u *ChannelUpdateOne) RemoveProviderQuotaStatusIDs(ids ...int) *ChannelUpdateOne {
+	_u.mutation.RemoveProviderQuotaStatusIDs(ids...)
+	return _u
+}
+
+// RemoveProviderQuotaStatuses removes "provider_quota_statuses" edges to ProviderQuotaStatus entities.
+func (_u *ChannelUpdateOne) RemoveProviderQuotaStatuses(v ...*ProviderQuotaStatus) *ChannelUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveProviderQuotaStatusIDs(ids...)
 }
 
 // Where appends a list predicates to the ChannelUpdate builder.
@@ -2199,12 +2237,12 @@ func (_u *ChannelUpdateOne) sqlSave(ctx context.Context) (_node *Channel, err er
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if _u.mutation.ProviderQuotaStatusCleared() {
+	if _u.mutation.ProviderQuotaStatusesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   channel.ProviderQuotaStatusTable,
-			Columns: []string{channel.ProviderQuotaStatusColumn},
+			Table:   channel.ProviderQuotaStatusesTable,
+			Columns: []string{channel.ProviderQuotaStatusesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerquotastatus.FieldID, field.TypeInt),
@@ -2212,12 +2250,28 @@ func (_u *ChannelUpdateOne) sqlSave(ctx context.Context) (_node *Channel, err er
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := _u.mutation.ProviderQuotaStatusIDs(); len(nodes) > 0 {
+	if nodes := _u.mutation.RemovedProviderQuotaStatusesIDs(); len(nodes) > 0 && !_u.mutation.ProviderQuotaStatusesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   channel.ProviderQuotaStatusTable,
-			Columns: []string{channel.ProviderQuotaStatusColumn},
+			Table:   channel.ProviderQuotaStatusesTable,
+			Columns: []string{channel.ProviderQuotaStatusesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(providerquotastatus.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.ProviderQuotaStatusesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   channel.ProviderQuotaStatusesTable,
+			Columns: []string{channel.ProviderQuotaStatusesColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerquotastatus.FieldID, field.TypeInt),

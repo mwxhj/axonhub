@@ -22,6 +22,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/channelmodelpriceversion"
 	"github.com/looplj/axonhub/internal/ent/channeloverridetemplate"
 	"github.com/looplj/axonhub/internal/ent/channelprobe"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/datastorage"
 	"github.com/looplj/axonhub/internal/ent/model"
 	"github.com/looplj/axonhub/internal/ent/oidcidentity"
@@ -2637,6 +2638,518 @@ func (_m *ChannelProbe) ToEdge(order *ChannelProbeOrder) *ChannelProbeEdge {
 		order = DefaultChannelProbeOrder
 	}
 	return &ChannelProbeEdge{
+		Node:   _m,
+		Cursor: order.Field.toCursor(_m),
+	}
+}
+
+// CredentialQuotaScopeEdge is the edge representation of CredentialQuotaScope.
+type CredentialQuotaScopeEdge struct {
+	Node   *CredentialQuotaScope `json:"node"`
+	Cursor Cursor                `json:"cursor"`
+}
+
+// CredentialQuotaScopeConnection is the connection containing edges to CredentialQuotaScope.
+type CredentialQuotaScopeConnection struct {
+	Edges      []*CredentialQuotaScopeEdge `json:"edges"`
+	PageInfo   PageInfo                    `json:"pageInfo"`
+	TotalCount int                         `json:"totalCount"`
+}
+
+func (c *CredentialQuotaScopeConnection) build(nodes []*CredentialQuotaScope, pager *credentialquotascopePager, after *Cursor, first *int, before *Cursor, last *int) {
+	c.PageInfo.HasNextPage = before != nil
+	c.PageInfo.HasPreviousPage = after != nil
+	if first != nil && *first+1 == len(nodes) {
+		c.PageInfo.HasNextPage = true
+		nodes = nodes[:len(nodes)-1]
+	} else if last != nil && *last+1 == len(nodes) {
+		c.PageInfo.HasPreviousPage = true
+		nodes = nodes[:len(nodes)-1]
+	}
+	var nodeAt func(int) *CredentialQuotaScope
+	if last != nil {
+		n := len(nodes) - 1
+		nodeAt = func(i int) *CredentialQuotaScope {
+			return nodes[n-i]
+		}
+	} else {
+		nodeAt = func(i int) *CredentialQuotaScope {
+			return nodes[i]
+		}
+	}
+	c.Edges = make([]*CredentialQuotaScopeEdge, len(nodes))
+	for i := range nodes {
+		node := nodeAt(i)
+		c.Edges[i] = &CredentialQuotaScopeEdge{
+			Node:   node,
+			Cursor: pager.toCursor(node),
+		}
+	}
+	if l := len(c.Edges); l > 0 {
+		c.PageInfo.StartCursor = &c.Edges[0].Cursor
+		c.PageInfo.EndCursor = &c.Edges[l-1].Cursor
+	}
+	if c.TotalCount == 0 {
+		c.TotalCount = len(nodes)
+	}
+}
+
+// CredentialQuotaScopePaginateOption enables pagination customization.
+type CredentialQuotaScopePaginateOption func(*credentialquotascopePager) error
+
+// WithCredentialQuotaScopeOrder configures pagination ordering.
+func WithCredentialQuotaScopeOrder(order *CredentialQuotaScopeOrder) CredentialQuotaScopePaginateOption {
+	if order == nil {
+		order = DefaultCredentialQuotaScopeOrder
+	}
+	o := *order
+	return func(pager *credentialquotascopePager) error {
+		if err := o.Direction.Validate(); err != nil {
+			return err
+		}
+		if o.Field == nil {
+			o.Field = DefaultCredentialQuotaScopeOrder.Field
+		}
+		pager.order = &o
+		return nil
+	}
+}
+
+// WithCredentialQuotaScopeFilter configures pagination filter.
+func WithCredentialQuotaScopeFilter(filter func(*CredentialQuotaScopeQuery) (*CredentialQuotaScopeQuery, error)) CredentialQuotaScopePaginateOption {
+	return func(pager *credentialquotascopePager) error {
+		if filter == nil {
+			return errors.New("CredentialQuotaScopeQuery filter cannot be nil")
+		}
+		pager.filter = filter
+		return nil
+	}
+}
+
+type credentialquotascopePager struct {
+	reverse bool
+	order   *CredentialQuotaScopeOrder
+	filter  func(*CredentialQuotaScopeQuery) (*CredentialQuotaScopeQuery, error)
+}
+
+func newCredentialQuotaScopePager(opts []CredentialQuotaScopePaginateOption, reverse bool) (*credentialquotascopePager, error) {
+	pager := &credentialquotascopePager{reverse: reverse}
+	for _, opt := range opts {
+		if err := opt(pager); err != nil {
+			return nil, err
+		}
+	}
+	if pager.order == nil {
+		pager.order = DefaultCredentialQuotaScopeOrder
+	}
+	return pager, nil
+}
+
+func (p *credentialquotascopePager) applyFilter(query *CredentialQuotaScopeQuery) (*CredentialQuotaScopeQuery, error) {
+	if p.filter != nil {
+		return p.filter(query)
+	}
+	return query, nil
+}
+
+func (p *credentialquotascopePager) toCursor(_m *CredentialQuotaScope) Cursor {
+	return p.order.Field.toCursor(_m)
+}
+
+func (p *credentialquotascopePager) applyCursors(query *CredentialQuotaScopeQuery, after, before *Cursor) (*CredentialQuotaScopeQuery, error) {
+	direction := p.order.Direction
+	if p.reverse {
+		direction = direction.Reverse()
+	}
+	for _, predicate := range entgql.CursorsPredicate(after, before, DefaultCredentialQuotaScopeOrder.Field.column, p.order.Field.column, direction) {
+		query = query.Where(predicate)
+	}
+	return query, nil
+}
+
+func (p *credentialquotascopePager) applyOrder(query *CredentialQuotaScopeQuery) *CredentialQuotaScopeQuery {
+	direction := p.order.Direction
+	if p.reverse {
+		direction = direction.Reverse()
+	}
+	query = query.Order(p.order.Field.toTerm(direction.OrderTermOption()))
+	if p.order.Field != DefaultCredentialQuotaScopeOrder.Field {
+		query = query.Order(DefaultCredentialQuotaScopeOrder.Field.toTerm(direction.OrderTermOption()))
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(p.order.Field.column)
+	}
+	return query
+}
+
+func (p *credentialquotascopePager) orderExpr(query *CredentialQuotaScopeQuery) sql.Querier {
+	direction := p.order.Direction
+	if p.reverse {
+		direction = direction.Reverse()
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(p.order.Field.column)
+	}
+	return sql.ExprFunc(func(b *sql.Builder) {
+		b.Ident(p.order.Field.column).Pad().WriteString(string(direction))
+		if p.order.Field != DefaultCredentialQuotaScopeOrder.Field {
+			b.Comma().Ident(DefaultCredentialQuotaScopeOrder.Field.column).Pad().WriteString(string(direction))
+		}
+	})
+}
+
+// Paginate executes the query and returns a relay based cursor connection to CredentialQuotaScope.
+func (_m *CredentialQuotaScopeQuery) Paginate(
+	ctx context.Context, after *Cursor, first *int,
+	before *Cursor, last *int, opts ...CredentialQuotaScopePaginateOption,
+) (*CredentialQuotaScopeConnection, error) {
+	if err := validateFirstLast(first, last); err != nil {
+		return nil, err
+	}
+	pager, err := newCredentialQuotaScopePager(opts, last != nil)
+	if err != nil {
+		return nil, err
+	}
+	if _m, err = pager.applyFilter(_m); err != nil {
+		return nil, err
+	}
+	conn := &CredentialQuotaScopeConnection{Edges: []*CredentialQuotaScopeEdge{}}
+	ignoredEdges := !hasCollectedField(ctx, edgesField)
+	if hasCollectedField(ctx, totalCountField) || hasCollectedField(ctx, pageInfoField) {
+		hasPagination := after != nil || first != nil || before != nil || last != nil
+		if hasPagination || ignoredEdges {
+			c := _m.Clone()
+			c.ctx.Fields = nil
+			if conn.TotalCount, err = c.Count(ctx); err != nil {
+				return nil, err
+			}
+			conn.PageInfo.HasNextPage = first != nil && conn.TotalCount > 0
+			conn.PageInfo.HasPreviousPage = last != nil && conn.TotalCount > 0
+		}
+	}
+	if ignoredEdges || (first != nil && *first == 0) || (last != nil && *last == 0) {
+		return conn, nil
+	}
+	if _m, err = pager.applyCursors(_m, after, before); err != nil {
+		return nil, err
+	}
+	limit := paginateLimit(first, last)
+	if limit != 0 {
+		_m.Limit(limit)
+	}
+	if field := collectedField(ctx, edgesField, nodeField); field != nil {
+		if err := _m.collectField(ctx, limit == 1, graphql.GetOperationContext(ctx), *field, []string{edgesField, nodeField}); err != nil {
+			return nil, err
+		}
+	}
+	_m = pager.applyOrder(_m)
+	nodes, err := _m.All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	conn.build(nodes, pager, after, first, before, last)
+	return conn, nil
+}
+
+var (
+	// CredentialQuotaScopeOrderFieldCreatedAt orders CredentialQuotaScope by created_at.
+	CredentialQuotaScopeOrderFieldCreatedAt = &CredentialQuotaScopeOrderField{
+		Value: func(_m *CredentialQuotaScope) (ent.Value, error) {
+			return _m.CreatedAt, nil
+		},
+		column: credentialquotascope.FieldCreatedAt,
+		toTerm: credentialquotascope.ByCreatedAt,
+		toCursor: func(_m *CredentialQuotaScope) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.CreatedAt,
+			}
+		},
+	}
+	// CredentialQuotaScopeOrderFieldUpdatedAt orders CredentialQuotaScope by updated_at.
+	CredentialQuotaScopeOrderFieldUpdatedAt = &CredentialQuotaScopeOrderField{
+		Value: func(_m *CredentialQuotaScope) (ent.Value, error) {
+			return _m.UpdatedAt, nil
+		},
+		column: credentialquotascope.FieldUpdatedAt,
+		toTerm: credentialquotascope.ByUpdatedAt,
+		toCursor: func(_m *CredentialQuotaScope) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.UpdatedAt,
+			}
+		},
+	}
+	// CredentialQuotaScopeOrderFieldName orders CredentialQuotaScope by name.
+	CredentialQuotaScopeOrderFieldName = &CredentialQuotaScopeOrderField{
+		Value: func(_m *CredentialQuotaScope) (ent.Value, error) {
+			return _m.Name, nil
+		},
+		column: credentialquotascope.FieldName,
+		toTerm: credentialquotascope.ByName,
+		toCursor: func(_m *CredentialQuotaScope) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.Name,
+			}
+		},
+	}
+	// CredentialQuotaScopeOrderFieldStatus orders CredentialQuotaScope by status.
+	CredentialQuotaScopeOrderFieldStatus = &CredentialQuotaScopeOrderField{
+		Value: func(_m *CredentialQuotaScope) (ent.Value, error) {
+			return _m.Status, nil
+		},
+		column: credentialquotascope.FieldStatus,
+		toTerm: credentialquotascope.ByStatus,
+		toCursor: func(_m *CredentialQuotaScope) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.Status,
+			}
+		},
+	}
+	// CredentialQuotaScopeOrderFieldUnit orders CredentialQuotaScope by unit.
+	CredentialQuotaScopeOrderFieldUnit = &CredentialQuotaScopeOrderField{
+		Value: func(_m *CredentialQuotaScope) (ent.Value, error) {
+			return _m.Unit, nil
+		},
+		column: credentialquotascope.FieldUnit,
+		toTerm: credentialquotascope.ByUnit,
+		toCursor: func(_m *CredentialQuotaScope) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.Unit,
+			}
+		},
+	}
+	// CredentialQuotaScopeOrderFieldLimitAmount orders CredentialQuotaScope by limit_amount.
+	CredentialQuotaScopeOrderFieldLimitAmount = &CredentialQuotaScopeOrderField{
+		Value: func(_m *CredentialQuotaScope) (ent.Value, error) {
+			return _m.LimitAmount, nil
+		},
+		column: credentialquotascope.FieldLimitAmount,
+		toTerm: credentialquotascope.ByLimitAmount,
+		toCursor: func(_m *CredentialQuotaScope) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.LimitAmount,
+			}
+		},
+	}
+	// CredentialQuotaScopeOrderFieldUsedAmount orders CredentialQuotaScope by used_amount.
+	CredentialQuotaScopeOrderFieldUsedAmount = &CredentialQuotaScopeOrderField{
+		Value: func(_m *CredentialQuotaScope) (ent.Value, error) {
+			return _m.UsedAmount, nil
+		},
+		column: credentialquotascope.FieldUsedAmount,
+		toTerm: credentialquotascope.ByUsedAmount,
+		toCursor: func(_m *CredentialQuotaScope) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.UsedAmount,
+			}
+		},
+	}
+	// CredentialQuotaScopeOrderFieldResetPolicy orders CredentialQuotaScope by reset_policy.
+	CredentialQuotaScopeOrderFieldResetPolicy = &CredentialQuotaScopeOrderField{
+		Value: func(_m *CredentialQuotaScope) (ent.Value, error) {
+			return _m.ResetPolicy, nil
+		},
+		column: credentialquotascope.FieldResetPolicy,
+		toTerm: credentialquotascope.ByResetPolicy,
+		toCursor: func(_m *CredentialQuotaScope) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.ResetPolicy,
+			}
+		},
+	}
+	// CredentialQuotaScopeOrderFieldResetAt orders CredentialQuotaScope by reset_at.
+	CredentialQuotaScopeOrderFieldResetAt = &CredentialQuotaScopeOrderField{
+		Value: func(_m *CredentialQuotaScope) (ent.Value, error) {
+			return _m.ResetAt, nil
+		},
+		column: credentialquotascope.FieldResetAt,
+		toTerm: credentialquotascope.ByResetAt,
+		toCursor: func(_m *CredentialQuotaScope) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.ResetAt,
+			}
+		},
+	}
+	// CredentialQuotaScopeOrderFieldWindowStartedAt orders CredentialQuotaScope by window_started_at.
+	CredentialQuotaScopeOrderFieldWindowStartedAt = &CredentialQuotaScopeOrderField{
+		Value: func(_m *CredentialQuotaScope) (ent.Value, error) {
+			return _m.WindowStartedAt, nil
+		},
+		column: credentialquotascope.FieldWindowStartedAt,
+		toTerm: credentialquotascope.ByWindowStartedAt,
+		toCursor: func(_m *CredentialQuotaScope) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.WindowStartedAt,
+			}
+		},
+	}
+	// CredentialQuotaScopeOrderFieldOverLimitAction orders CredentialQuotaScope by over_limit_action.
+	CredentialQuotaScopeOrderFieldOverLimitAction = &CredentialQuotaScopeOrderField{
+		Value: func(_m *CredentialQuotaScope) (ent.Value, error) {
+			return _m.OverLimitAction, nil
+		},
+		column: credentialquotascope.FieldOverLimitAction,
+		toTerm: credentialquotascope.ByOverLimitAction,
+		toCursor: func(_m *CredentialQuotaScope) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.OverLimitAction,
+			}
+		},
+	}
+	// CredentialQuotaScopeOrderFieldPauseUntil orders CredentialQuotaScope by pause_until.
+	CredentialQuotaScopeOrderFieldPauseUntil = &CredentialQuotaScopeOrderField{
+		Value: func(_m *CredentialQuotaScope) (ent.Value, error) {
+			return _m.PauseUntil, nil
+		},
+		column: credentialquotascope.FieldPauseUntil,
+		toTerm: credentialquotascope.ByPauseUntil,
+		toCursor: func(_m *CredentialQuotaScope) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.PauseUntil,
+			}
+		},
+	}
+	// CredentialQuotaScopeOrderFieldSource orders CredentialQuotaScope by source.
+	CredentialQuotaScopeOrderFieldSource = &CredentialQuotaScopeOrderField{
+		Value: func(_m *CredentialQuotaScope) (ent.Value, error) {
+			return _m.Source, nil
+		},
+		column: credentialquotascope.FieldSource,
+		toTerm: credentialquotascope.BySource,
+		toCursor: func(_m *CredentialQuotaScope) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.Source,
+			}
+		},
+	}
+)
+
+// String implement fmt.Stringer interface.
+func (f CredentialQuotaScopeOrderField) String() string {
+	var str string
+	switch f.column {
+	case CredentialQuotaScopeOrderFieldCreatedAt.column:
+		str = "CREATED_AT"
+	case CredentialQuotaScopeOrderFieldUpdatedAt.column:
+		str = "UPDATED_AT"
+	case CredentialQuotaScopeOrderFieldName.column:
+		str = "NAME"
+	case CredentialQuotaScopeOrderFieldStatus.column:
+		str = "STATUS"
+	case CredentialQuotaScopeOrderFieldUnit.column:
+		str = "UNIT"
+	case CredentialQuotaScopeOrderFieldLimitAmount.column:
+		str = "LIMIT_AMOUNT"
+	case CredentialQuotaScopeOrderFieldUsedAmount.column:
+		str = "USED_AMOUNT"
+	case CredentialQuotaScopeOrderFieldResetPolicy.column:
+		str = "RESET_POLICY"
+	case CredentialQuotaScopeOrderFieldResetAt.column:
+		str = "RESET_AT"
+	case CredentialQuotaScopeOrderFieldWindowStartedAt.column:
+		str = "WINDOW_STARTED_AT"
+	case CredentialQuotaScopeOrderFieldOverLimitAction.column:
+		str = "OVER_LIMIT_ACTION"
+	case CredentialQuotaScopeOrderFieldPauseUntil.column:
+		str = "PAUSE_UNTIL"
+	case CredentialQuotaScopeOrderFieldSource.column:
+		str = "SOURCE"
+	}
+	return str
+}
+
+// MarshalGQL implements graphql.Marshaler interface.
+func (f CredentialQuotaScopeOrderField) MarshalGQL(w io.Writer) {
+	io.WriteString(w, strconv.Quote(f.String()))
+}
+
+// UnmarshalGQL implements graphql.Unmarshaler interface.
+func (f *CredentialQuotaScopeOrderField) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("CredentialQuotaScopeOrderField %T must be a string", v)
+	}
+	switch str {
+	case "CREATED_AT":
+		*f = *CredentialQuotaScopeOrderFieldCreatedAt
+	case "UPDATED_AT":
+		*f = *CredentialQuotaScopeOrderFieldUpdatedAt
+	case "NAME":
+		*f = *CredentialQuotaScopeOrderFieldName
+	case "STATUS":
+		*f = *CredentialQuotaScopeOrderFieldStatus
+	case "UNIT":
+		*f = *CredentialQuotaScopeOrderFieldUnit
+	case "LIMIT_AMOUNT":
+		*f = *CredentialQuotaScopeOrderFieldLimitAmount
+	case "USED_AMOUNT":
+		*f = *CredentialQuotaScopeOrderFieldUsedAmount
+	case "RESET_POLICY":
+		*f = *CredentialQuotaScopeOrderFieldResetPolicy
+	case "RESET_AT":
+		*f = *CredentialQuotaScopeOrderFieldResetAt
+	case "WINDOW_STARTED_AT":
+		*f = *CredentialQuotaScopeOrderFieldWindowStartedAt
+	case "OVER_LIMIT_ACTION":
+		*f = *CredentialQuotaScopeOrderFieldOverLimitAction
+	case "PAUSE_UNTIL":
+		*f = *CredentialQuotaScopeOrderFieldPauseUntil
+	case "SOURCE":
+		*f = *CredentialQuotaScopeOrderFieldSource
+	default:
+		return fmt.Errorf("%s is not a valid CredentialQuotaScopeOrderField", str)
+	}
+	return nil
+}
+
+// CredentialQuotaScopeOrderField defines the ordering field of CredentialQuotaScope.
+type CredentialQuotaScopeOrderField struct {
+	// Value extracts the ordering value from the given CredentialQuotaScope.
+	Value    func(*CredentialQuotaScope) (ent.Value, error)
+	column   string // field or computed.
+	toTerm   func(...sql.OrderTermOption) credentialquotascope.OrderOption
+	toCursor func(*CredentialQuotaScope) Cursor
+}
+
+// CredentialQuotaScopeOrder defines the ordering of CredentialQuotaScope.
+type CredentialQuotaScopeOrder struct {
+	Direction OrderDirection                  `json:"direction"`
+	Field     *CredentialQuotaScopeOrderField `json:"field"`
+}
+
+// DefaultCredentialQuotaScopeOrder is the default ordering of CredentialQuotaScope.
+var DefaultCredentialQuotaScopeOrder = &CredentialQuotaScopeOrder{
+	Direction: entgql.OrderDirectionAsc,
+	Field: &CredentialQuotaScopeOrderField{
+		Value: func(_m *CredentialQuotaScope) (ent.Value, error) {
+			return _m.ID, nil
+		},
+		column: credentialquotascope.FieldID,
+		toTerm: credentialquotascope.ByID,
+		toCursor: func(_m *CredentialQuotaScope) Cursor {
+			return Cursor{ID: _m.ID}
+		},
+	},
+}
+
+// ToEdge converts CredentialQuotaScope into CredentialQuotaScopeEdge.
+func (_m *CredentialQuotaScope) ToEdge(order *CredentialQuotaScopeOrder) *CredentialQuotaScopeEdge {
+	if order == nil {
+		order = DefaultCredentialQuotaScopeOrder
+	}
+	return &CredentialQuotaScopeEdge{
 		Node:   _m,
 		Cursor: order.Field.toCursor(_m),
 	}
@@ -7029,76 +7542,6 @@ var (
 			}
 		},
 	}
-	// UpstreamCredentialOrderFieldProviderType orders UpstreamCredential by provider_type.
-	UpstreamCredentialOrderFieldProviderType = &UpstreamCredentialOrderField{
-		Value: func(_m *UpstreamCredential) (ent.Value, error) {
-			return _m.ProviderType, nil
-		},
-		column: upstreamcredential.FieldProviderType,
-		toTerm: upstreamcredential.ByProviderType,
-		toCursor: func(_m *UpstreamCredential) Cursor {
-			return Cursor{
-				ID:    _m.ID,
-				Value: _m.ProviderType,
-			}
-		},
-	}
-	// UpstreamCredentialOrderFieldBaseURL orders UpstreamCredential by base_url.
-	UpstreamCredentialOrderFieldBaseURL = &UpstreamCredentialOrderField{
-		Value: func(_m *UpstreamCredential) (ent.Value, error) {
-			return _m.BaseURL, nil
-		},
-		column: upstreamcredential.FieldBaseURL,
-		toTerm: upstreamcredential.ByBaseURL,
-		toCursor: func(_m *UpstreamCredential) Cursor {
-			return Cursor{
-				ID:    _m.ID,
-				Value: _m.BaseURL,
-			}
-		},
-	}
-	// UpstreamCredentialOrderFieldAuthKind orders UpstreamCredential by auth_kind.
-	UpstreamCredentialOrderFieldAuthKind = &UpstreamCredentialOrderField{
-		Value: func(_m *UpstreamCredential) (ent.Value, error) {
-			return _m.AuthKind, nil
-		},
-		column: upstreamcredential.FieldAuthKind,
-		toTerm: upstreamcredential.ByAuthKind,
-		toCursor: func(_m *UpstreamCredential) Cursor {
-			return Cursor{
-				ID:    _m.ID,
-				Value: _m.AuthKind,
-			}
-		},
-	}
-	// UpstreamCredentialOrderFieldSecretKind orders UpstreamCredential by secret_kind.
-	UpstreamCredentialOrderFieldSecretKind = &UpstreamCredentialOrderField{
-		Value: func(_m *UpstreamCredential) (ent.Value, error) {
-			return _m.SecretKind, nil
-		},
-		column: upstreamcredential.FieldSecretKind,
-		toTerm: upstreamcredential.BySecretKind,
-		toCursor: func(_m *UpstreamCredential) Cursor {
-			return Cursor{
-				ID:    _m.ID,
-				Value: _m.SecretKind,
-			}
-		},
-	}
-	// UpstreamCredentialOrderFieldIssuerScope orders UpstreamCredential by issuer_scope.
-	UpstreamCredentialOrderFieldIssuerScope = &UpstreamCredentialOrderField{
-		Value: func(_m *UpstreamCredential) (ent.Value, error) {
-			return _m.IssuerScope, nil
-		},
-		column: upstreamcredential.FieldIssuerScope,
-		toTerm: upstreamcredential.ByIssuerScope,
-		toCursor: func(_m *UpstreamCredential) Cursor {
-			return Cursor{
-				ID:    _m.ID,
-				Value: _m.IssuerScope,
-			}
-		},
-	}
 	// UpstreamCredentialOrderFieldKeyHint orders UpstreamCredential by key_hint.
 	UpstreamCredentialOrderFieldKeyHint = &UpstreamCredentialOrderField{
 		Value: func(_m *UpstreamCredential) (ent.Value, error) {
@@ -7141,6 +7584,20 @@ var (
 			}
 		},
 	}
+	// UpstreamCredentialOrderFieldSecretFingerprint orders UpstreamCredential by secret_fingerprint.
+	UpstreamCredentialOrderFieldSecretFingerprint = &UpstreamCredentialOrderField{
+		Value: func(_m *UpstreamCredential) (ent.Value, error) {
+			return _m.SecretFingerprint, nil
+		},
+		column: upstreamcredential.FieldSecretFingerprint,
+		toTerm: upstreamcredential.BySecretFingerprint,
+		toCursor: func(_m *UpstreamCredential) Cursor {
+			return Cursor{
+				ID:    _m.ID,
+				Value: _m.SecretFingerprint,
+			}
+		},
+	}
 	// UpstreamCredentialOrderFieldStatus orders UpstreamCredential by status.
 	UpstreamCredentialOrderFieldStatus = &UpstreamCredentialOrderField{
 		Value: func(_m *UpstreamCredential) (ent.Value, error) {
@@ -7152,20 +7609,6 @@ var (
 			return Cursor{
 				ID:    _m.ID,
 				Value: _m.Status,
-			}
-		},
-	}
-	// UpstreamCredentialOrderFieldWeight orders UpstreamCredential by weight.
-	UpstreamCredentialOrderFieldWeight = &UpstreamCredentialOrderField{
-		Value: func(_m *UpstreamCredential) (ent.Value, error) {
-			return _m.Weight, nil
-		},
-		column: upstreamcredential.FieldWeight,
-		toTerm: upstreamcredential.ByWeight,
-		toCursor: func(_m *UpstreamCredential) Cursor {
-			return Cursor{
-				ID:    _m.ID,
-				Value: _m.Weight,
 			}
 		},
 	}
@@ -7195,26 +7638,16 @@ func (f UpstreamCredentialOrderField) String() string {
 		str = "UPDATED_AT"
 	case UpstreamCredentialOrderFieldName.column:
 		str = "NAME"
-	case UpstreamCredentialOrderFieldProviderType.column:
-		str = "PROVIDER_TYPE"
-	case UpstreamCredentialOrderFieldBaseURL.column:
-		str = "BASE_URL"
-	case UpstreamCredentialOrderFieldAuthKind.column:
-		str = "AUTH_KIND"
-	case UpstreamCredentialOrderFieldSecretKind.column:
-		str = "SECRET_KIND"
-	case UpstreamCredentialOrderFieldIssuerScope.column:
-		str = "ISSUER_SCOPE"
 	case UpstreamCredentialOrderFieldKeyHint.column:
 		str = "KEY_HINT"
 	case UpstreamCredentialOrderFieldQuotaScopeID.column:
 		str = "QUOTA_SCOPE_ID"
 	case UpstreamCredentialOrderFieldFingerprint.column:
 		str = "FINGERPRINT"
+	case UpstreamCredentialOrderFieldSecretFingerprint.column:
+		str = "SECRET_FINGERPRINT"
 	case UpstreamCredentialOrderFieldStatus.column:
 		str = "STATUS"
-	case UpstreamCredentialOrderFieldWeight.column:
-		str = "WEIGHT"
 	case UpstreamCredentialOrderFieldQuotaStatus.column:
 		str = "QUOTA_STATUS"
 	}
@@ -7239,26 +7672,16 @@ func (f *UpstreamCredentialOrderField) UnmarshalGQL(v interface{}) error {
 		*f = *UpstreamCredentialOrderFieldUpdatedAt
 	case "NAME":
 		*f = *UpstreamCredentialOrderFieldName
-	case "PROVIDER_TYPE":
-		*f = *UpstreamCredentialOrderFieldProviderType
-	case "BASE_URL":
-		*f = *UpstreamCredentialOrderFieldBaseURL
-	case "AUTH_KIND":
-		*f = *UpstreamCredentialOrderFieldAuthKind
-	case "SECRET_KIND":
-		*f = *UpstreamCredentialOrderFieldSecretKind
-	case "ISSUER_SCOPE":
-		*f = *UpstreamCredentialOrderFieldIssuerScope
 	case "KEY_HINT":
 		*f = *UpstreamCredentialOrderFieldKeyHint
 	case "QUOTA_SCOPE_ID":
 		*f = *UpstreamCredentialOrderFieldQuotaScopeID
 	case "FINGERPRINT":
 		*f = *UpstreamCredentialOrderFieldFingerprint
+	case "SECRET_FINGERPRINT":
+		*f = *UpstreamCredentialOrderFieldSecretFingerprint
 	case "STATUS":
 		*f = *UpstreamCredentialOrderFieldStatus
-	case "WEIGHT":
-		*f = *UpstreamCredentialOrderFieldWeight
 	case "QUOTA_STATUS":
 		*f = *UpstreamCredentialOrderFieldQuotaStatus
 	default:

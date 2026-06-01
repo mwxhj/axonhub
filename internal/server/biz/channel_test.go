@@ -10,7 +10,9 @@ import (
 	"github.com/looplj/axonhub/internal/authz"
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/enttest"
+	"github.com/looplj/axonhub/internal/ent/schema/schematype"
 	"github.com/looplj/axonhub/internal/objects"
 )
 
@@ -658,6 +660,14 @@ func TestChannelService_BulkImportChannels(t *testing.T) {
 			require.Equal(t, tt.wantFailed, result.Failed)
 			require.Len(t, result.Errors, tt.wantErrorsLen)
 			require.Len(t, result.Channels, tt.wantCreated)
+			for _, ch := range result.Channels {
+				require.Empty(t, ch.Credentials.GetAllAPIKeys())
+				refCount, err := client.ChannelCredentialRef.Query().
+					Where(channelcredentialref.ChannelID(ch.ID)).
+					Count(ctx)
+				require.NoError(t, err)
+				require.Equal(t, 1, refCount)
+			}
 		})
 	}
 }
@@ -1007,12 +1017,21 @@ func TestChannelService_BulkCreateChannels(t *testing.T) {
 					require.Equal(t, tt.channelType, ch.Type)
 					require.Equal(t, tt.supportedModels, ch.SupportedModels)
 					require.Equal(t, tt.defaultTestModel, ch.DefaultTestModel)
-					require.NotNil(t, ch.Credentials)
+					require.Empty(t, ch.Credentials.GetAllAPIKeys())
+					refCount, err := client.ChannelCredentialRef.Query().
+						Where(channelcredentialref.ChannelID(ch.ID)).
+						Count(ctx)
+					require.NoError(t, err)
+					require.Equal(t, 1, refCount)
 				}
 			}
 
 			// Clean up for next test
+			_, err = client.ChannelCredentialRef.Delete().Exec(ctx)
+			require.NoError(t, err)
 			_, err = client.Channel.Delete().Exec(ctx)
+			require.NoError(t, err)
+			_, err = client.UpstreamCredential.Delete().Exec(schematype.SkipSoftDelete(ctx))
 			require.NoError(t, err)
 		})
 	}

@@ -1,5 +1,4 @@
 import type {
-  CredentialAuthKind,
   CredentialFormValues,
   CredentialSecretInput,
   CredentialStatus,
@@ -10,36 +9,25 @@ import type {
 
 export const defaultCredentialFormValues: CredentialFormValues = {
   name: '',
-  providerType: 'openai',
-  baseURL: '',
-  authKind: 'api_key',
-  issuerScope: '',
   apiKey: '',
-  oauthAccessToken: '',
-  oauthRefreshToken: '',
-  oauthClientID: '',
-  oauthExpiresAt: '',
-  oauthTokenType: '',
-  oauthScopes: '',
-  azureAPIVersion: '',
-  gcpRegion: '',
-  gcpProjectID: '',
-  gcpJSONData: '',
   status: 'enabled',
-  weight: 100,
+  quotaScopeMode: 'new',
+  quotaScopeID: '',
+  quotaScopeName: '',
+  quotaUnit: 'usd',
+  quotaLimitAmount: '',
+  quotaUsedAmount: '',
+  quotaResetPolicy: 'none',
+  quotaResetAt: '',
+  quotaWarningThresholdPercent: 80,
+  quotaOverLimitAction: 'warn',
+  quotaRemark: '',
   remark: '',
 };
 
 function clean(value: string | undefined) {
   const trimmed = value?.trim() ?? '';
   return trimmed.length > 0 ? trimmed : undefined;
-}
-
-function parseScopes(value: string) {
-  return value
-    .split(',')
-    .map((scope) => scope.trim())
-    .filter(Boolean);
 }
 
 function toTime(value: string | undefined) {
@@ -57,66 +45,71 @@ function toTime(value: string | undefined) {
 }
 
 export function buildCredentialSecret(values: CredentialFormValues): CredentialSecretInput {
-  switch (values.authKind) {
-    case 'api_key':
-      return { apiKey: clean(values.apiKey) };
-    case 'oauth':
-      return {
-        oauth: {
-          accessToken: clean(values.oauthAccessToken),
-          refreshToken: clean(values.oauthRefreshToken),
-          clientID: clean(values.oauthClientID),
-          expiresAt: toTime(values.oauthExpiresAt),
-          tokenType: clean(values.oauthTokenType),
-          scopes: parseScopes(values.oauthScopes),
-        },
-      };
-    case 'azure':
-      return {
-        azure: {
-          apiVersion: clean(values.azureAPIVersion) ?? '',
-        },
-      };
-    case 'gcp':
-      return {
-        gcp: {
-          region: clean(values.gcpRegion) ?? '',
-          projectID: clean(values.gcpProjectID) ?? '',
-          jsonData: values.gcpJSONData,
-        },
-      };
-    default:
-      return { apiKey: clean(values.apiKey) };
+  return { apiKey: clean(values.apiKey) };
+}
+
+function buildQuotaInput(values: CredentialFormValues) {
+  const limitAmount = clean(values.quotaLimitAmount);
+  const usedAmount = clean(values.quotaUsedAmount);
+  const quotaName = clean(values.quotaScopeName);
+  const quotaRemark = clean(values.quotaRemark);
+  const resetAt = toTime(values.quotaResetAt);
+
+  if (!limitAmount && !usedAmount && !quotaName && !quotaRemark && values.quotaResetPolicy === 'none') {
+    return undefined;
   }
+
+  return {
+    name: quotaName,
+    unit: values.quotaUnit,
+    limitAmount,
+    usedAmount,
+    resetPolicy: values.quotaResetPolicy,
+    resetAt,
+    warningThresholdPercent: Number(values.quotaWarningThresholdPercent) || undefined,
+    overLimitAction: values.quotaOverLimitAction,
+    remark: quotaRemark,
+  };
 }
 
 export function buildCreateCredentialInput(values: CredentialFormValues): CreateUpstreamCredentialInput {
-  return {
+  const input: CreateUpstreamCredentialInput = {
     name: clean(values.name),
-    secretKind: values.authKind,
-    issuerScope: clean(values.issuerScope),
     secret: buildCredentialSecret(values),
     status: values.status,
-    weight: Number(values.weight) || 100,
     remark: clean(values.remark),
   };
+
+  if (values.quotaScopeMode === 'shared') {
+    input.quotaScopeID = clean(values.quotaScopeID);
+  } else if (values.quotaScopeMode === 'new') {
+    input.quota = buildQuotaInput(values);
+  }
+
+  return input;
 }
 
-export function buildUpdateCredentialInput(values: Pick<CredentialFormValues, 'name' | 'status' | 'weight' | 'remark'>): UpdateUpstreamCredentialInput {
-  return {
+export function buildUpdateCredentialInput(values: CredentialFormValues): UpdateUpstreamCredentialInput {
+  const input: UpdateUpstreamCredentialInput = {
     name: clean(values.name),
     status: values.status,
-    weight: Number(values.weight) || 100,
     remark: clean(values.remark),
   };
+
+  if (values.quotaScopeMode === 'shared') {
+    input.quotaScopeID = clean(values.quotaScopeID);
+  } else if (values.quotaScopeMode === 'new') {
+    input.quota = buildQuotaInput(values);
+  } else {
+    input.clearQuotaScope = true;
+  }
+
+  return input;
 }
 
-export function buildRotateCredentialInput(authKind: CredentialAuthKind, values: CredentialFormValues): RotateUpstreamCredentialSecretInput {
+export function buildRotateCredentialInput(values: CredentialFormValues): RotateUpstreamCredentialSecretInput {
   return {
-    secret: buildCredentialSecret({
-      ...values,
-      authKind,
-    }),
+    secret: buildCredentialSecret(values),
   };
 }
 
@@ -125,16 +118,5 @@ export function validateSecret(values: CredentialFormValues, status: CredentialS
     return false;
   }
 
-  switch (values.authKind) {
-    case 'api_key':
-      return Boolean(clean(values.apiKey));
-    case 'oauth':
-      return Boolean(clean(values.oauthAccessToken));
-    case 'azure':
-      return Boolean(clean(values.azureAPIVersion));
-    case 'gcp':
-      return Boolean(clean(values.gcpRegion) && clean(values.gcpProjectID) && clean(values.gcpJSONData));
-    default:
-      return Boolean(clean(values.apiKey));
-  }
+  return Boolean(clean(values.apiKey));
 }

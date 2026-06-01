@@ -19,6 +19,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/channelmodelpriceversion"
 	"github.com/looplj/axonhub/internal/ent/channeloverridetemplate"
 	"github.com/looplj/axonhub/internal/ent/channelprobe"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/datastorage"
 	"github.com/looplj/axonhub/internal/ent/model"
 	"github.com/looplj/axonhub/internal/ent/oidcidentity"
@@ -58,6 +59,7 @@ const (
 	TypeChannelModelPriceVersion = "ChannelModelPriceVersion"
 	TypeChannelOverrideTemplate  = "ChannelOverrideTemplate"
 	TypeChannelProbe             = "ChannelProbe"
+	TypeCredentialQuotaScope     = "CredentialQuotaScope"
 	TypeDataStorage              = "DataStorage"
 	TypeModel                    = "Model"
 	TypeOIDCIdentity             = "OIDCIdentity"
@@ -2007,61 +2009,62 @@ func (m *APIKeyProfileTemplateMutation) ResetEdge(name string) error {
 // ChannelMutation represents an operation that mutates the Channel nodes in the graph.
 type ChannelMutation struct {
 	config
-	op                           Op
-	typ                          string
-	id                           *int
-	created_at                   *time.Time
-	updated_at                   *time.Time
-	deleted_at                   *int
-	adddeleted_at                *int
-	_type                        *channel.Type
-	base_url                     *string
-	name                         *string
-	status                       *channel.Status
-	credentials                  *objects.ChannelCredentials
-	disabled_api_keys            *[]objects.DisabledAPIKey
-	appenddisabled_api_keys      []objects.DisabledAPIKey
-	supported_models             *[]string
-	appendsupported_models       []string
-	manual_models                *[]string
-	appendmanual_models          []string
-	auto_sync_supported_models   *bool
-	auto_sync_model_pattern      *string
-	tags                         *[]string
-	appendtags                   []string
-	default_test_model           *string
-	policies                     *objects.ChannelPolicies
-	settings                     **objects.ChannelSettings
-	ordering_weight              *int
-	addordering_weight           *int
-	error_message                *string
-	remark                       *string
-	endpoints                    *[]objects.ChannelEndpoint
-	appendendpoints              []objects.ChannelEndpoint
-	clearedFields                map[string]struct{}
-	requests                     map[int]struct{}
-	removedrequests              map[int]struct{}
-	clearedrequests              bool
-	executions                   map[int]struct{}
-	removedexecutions            map[int]struct{}
-	clearedexecutions            bool
-	usage_logs                   map[int]struct{}
-	removedusage_logs            map[int]struct{}
-	clearedusage_logs            bool
-	channel_probes               map[int]struct{}
-	removedchannel_probes        map[int]struct{}
-	clearedchannel_probes        bool
-	channel_model_prices         map[int]struct{}
-	removedchannel_model_prices  map[int]struct{}
-	clearedchannel_model_prices  bool
-	credential_refs              map[int]struct{}
-	removedcredential_refs       map[int]struct{}
-	clearedcredential_refs       bool
-	provider_quota_status        *int
-	clearedprovider_quota_status bool
-	done                         bool
-	oldValue                     func(context.Context) (*Channel, error)
-	predicates                   []predicate.Channel
+	op                             Op
+	typ                            string
+	id                             *int
+	created_at                     *time.Time
+	updated_at                     *time.Time
+	deleted_at                     *int
+	adddeleted_at                  *int
+	_type                          *channel.Type
+	base_url                       *string
+	name                           *string
+	status                         *channel.Status
+	credentials                    *objects.ChannelCredentials
+	disabled_api_keys              *[]objects.DisabledAPIKey
+	appenddisabled_api_keys        []objects.DisabledAPIKey
+	supported_models               *[]string
+	appendsupported_models         []string
+	manual_models                  *[]string
+	appendmanual_models            []string
+	auto_sync_supported_models     *bool
+	auto_sync_model_pattern        *string
+	tags                           *[]string
+	appendtags                     []string
+	default_test_model             *string
+	policies                       *objects.ChannelPolicies
+	settings                       **objects.ChannelSettings
+	ordering_weight                *int
+	addordering_weight             *int
+	error_message                  *string
+	remark                         *string
+	endpoints                      *[]objects.ChannelEndpoint
+	appendendpoints                []objects.ChannelEndpoint
+	clearedFields                  map[string]struct{}
+	requests                       map[int]struct{}
+	removedrequests                map[int]struct{}
+	clearedrequests                bool
+	executions                     map[int]struct{}
+	removedexecutions              map[int]struct{}
+	clearedexecutions              bool
+	usage_logs                     map[int]struct{}
+	removedusage_logs              map[int]struct{}
+	clearedusage_logs              bool
+	channel_probes                 map[int]struct{}
+	removedchannel_probes          map[int]struct{}
+	clearedchannel_probes          bool
+	channel_model_prices           map[int]struct{}
+	removedchannel_model_prices    map[int]struct{}
+	clearedchannel_model_prices    bool
+	credential_refs                map[int]struct{}
+	removedcredential_refs         map[int]struct{}
+	clearedcredential_refs         bool
+	provider_quota_statuses        map[int]struct{}
+	removedprovider_quota_statuses map[int]struct{}
+	clearedprovider_quota_statuses bool
+	done                           bool
+	oldValue                       func(context.Context) (*Channel, error)
+	predicates                     []predicate.Channel
 }
 
 var _ ent.Mutation = (*ChannelMutation)(nil)
@@ -3491,43 +3494,58 @@ func (m *ChannelMutation) ResetCredentialRefs() {
 	m.removedcredential_refs = nil
 }
 
-// SetProviderQuotaStatusID sets the "provider_quota_status" edge to the ProviderQuotaStatus entity by id.
-func (m *ChannelMutation) SetProviderQuotaStatusID(id int) {
-	m.provider_quota_status = &id
+// AddProviderQuotaStatusIDs adds the "provider_quota_statuses" edge to the ProviderQuotaStatus entity by ids.
+func (m *ChannelMutation) AddProviderQuotaStatusIDs(ids ...int) {
+	if m.provider_quota_statuses == nil {
+		m.provider_quota_statuses = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.provider_quota_statuses[ids[i]] = struct{}{}
+	}
 }
 
-// ClearProviderQuotaStatus clears the "provider_quota_status" edge to the ProviderQuotaStatus entity.
-func (m *ChannelMutation) ClearProviderQuotaStatus() {
-	m.clearedprovider_quota_status = true
+// ClearProviderQuotaStatuses clears the "provider_quota_statuses" edge to the ProviderQuotaStatus entity.
+func (m *ChannelMutation) ClearProviderQuotaStatuses() {
+	m.clearedprovider_quota_statuses = true
 }
 
-// ProviderQuotaStatusCleared reports if the "provider_quota_status" edge to the ProviderQuotaStatus entity was cleared.
-func (m *ChannelMutation) ProviderQuotaStatusCleared() bool {
-	return m.clearedprovider_quota_status
+// ProviderQuotaStatusesCleared reports if the "provider_quota_statuses" edge to the ProviderQuotaStatus entity was cleared.
+func (m *ChannelMutation) ProviderQuotaStatusesCleared() bool {
+	return m.clearedprovider_quota_statuses
 }
 
-// ProviderQuotaStatusID returns the "provider_quota_status" edge ID in the mutation.
-func (m *ChannelMutation) ProviderQuotaStatusID() (id int, exists bool) {
-	if m.provider_quota_status != nil {
-		return *m.provider_quota_status, true
+// RemoveProviderQuotaStatusIDs removes the "provider_quota_statuses" edge to the ProviderQuotaStatus entity by IDs.
+func (m *ChannelMutation) RemoveProviderQuotaStatusIDs(ids ...int) {
+	if m.removedprovider_quota_statuses == nil {
+		m.removedprovider_quota_statuses = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.provider_quota_statuses, ids[i])
+		m.removedprovider_quota_statuses[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedProviderQuotaStatuses returns the removed IDs of the "provider_quota_statuses" edge to the ProviderQuotaStatus entity.
+func (m *ChannelMutation) RemovedProviderQuotaStatusesIDs() (ids []int) {
+	for id := range m.removedprovider_quota_statuses {
+		ids = append(ids, id)
 	}
 	return
 }
 
-// ProviderQuotaStatusIDs returns the "provider_quota_status" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// ProviderQuotaStatusID instead. It exists only for internal usage by the builders.
-func (m *ChannelMutation) ProviderQuotaStatusIDs() (ids []int) {
-	if id := m.provider_quota_status; id != nil {
-		ids = append(ids, *id)
+// ProviderQuotaStatusesIDs returns the "provider_quota_statuses" edge IDs in the mutation.
+func (m *ChannelMutation) ProviderQuotaStatusesIDs() (ids []int) {
+	for id := range m.provider_quota_statuses {
+		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetProviderQuotaStatus resets all changes to the "provider_quota_status" edge.
-func (m *ChannelMutation) ResetProviderQuotaStatus() {
-	m.provider_quota_status = nil
-	m.clearedprovider_quota_status = false
+// ResetProviderQuotaStatuses resets all changes to the "provider_quota_statuses" edge.
+func (m *ChannelMutation) ResetProviderQuotaStatuses() {
+	m.provider_quota_statuses = nil
+	m.clearedprovider_quota_statuses = false
+	m.removedprovider_quota_statuses = nil
 }
 
 // Where appends a list predicates to the ChannelMutation builder.
@@ -4112,8 +4130,8 @@ func (m *ChannelMutation) AddedEdges() []string {
 	if m.credential_refs != nil {
 		edges = append(edges, channel.EdgeCredentialRefs)
 	}
-	if m.provider_quota_status != nil {
-		edges = append(edges, channel.EdgeProviderQuotaStatus)
+	if m.provider_quota_statuses != nil {
+		edges = append(edges, channel.EdgeProviderQuotaStatuses)
 	}
 	return edges
 }
@@ -4158,10 +4176,12 @@ func (m *ChannelMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
-	case channel.EdgeProviderQuotaStatus:
-		if id := m.provider_quota_status; id != nil {
-			return []ent.Value{*id}
+	case channel.EdgeProviderQuotaStatuses:
+		ids := make([]ent.Value, 0, len(m.provider_quota_statuses))
+		for id := range m.provider_quota_statuses {
+			ids = append(ids, id)
 		}
+		return ids
 	}
 	return nil
 }
@@ -4186,6 +4206,9 @@ func (m *ChannelMutation) RemovedEdges() []string {
 	}
 	if m.removedcredential_refs != nil {
 		edges = append(edges, channel.EdgeCredentialRefs)
+	}
+	if m.removedprovider_quota_statuses != nil {
+		edges = append(edges, channel.EdgeProviderQuotaStatuses)
 	}
 	return edges
 }
@@ -4230,6 +4253,12 @@ func (m *ChannelMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case channel.EdgeProviderQuotaStatuses:
+		ids := make([]ent.Value, 0, len(m.removedprovider_quota_statuses))
+		for id := range m.removedprovider_quota_statuses {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
@@ -4255,8 +4284,8 @@ func (m *ChannelMutation) ClearedEdges() []string {
 	if m.clearedcredential_refs {
 		edges = append(edges, channel.EdgeCredentialRefs)
 	}
-	if m.clearedprovider_quota_status {
-		edges = append(edges, channel.EdgeProviderQuotaStatus)
+	if m.clearedprovider_quota_statuses {
+		edges = append(edges, channel.EdgeProviderQuotaStatuses)
 	}
 	return edges
 }
@@ -4277,8 +4306,8 @@ func (m *ChannelMutation) EdgeCleared(name string) bool {
 		return m.clearedchannel_model_prices
 	case channel.EdgeCredentialRefs:
 		return m.clearedcredential_refs
-	case channel.EdgeProviderQuotaStatus:
-		return m.clearedprovider_quota_status
+	case channel.EdgeProviderQuotaStatuses:
+		return m.clearedprovider_quota_statuses
 	}
 	return false
 }
@@ -4287,9 +4316,6 @@ func (m *ChannelMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *ChannelMutation) ClearEdge(name string) error {
 	switch name {
-	case channel.EdgeProviderQuotaStatus:
-		m.ClearProviderQuotaStatus()
-		return nil
 	}
 	return fmt.Errorf("unknown Channel unique edge %s", name)
 }
@@ -4316,8 +4342,8 @@ func (m *ChannelMutation) ResetEdge(name string) error {
 	case channel.EdgeCredentialRefs:
 		m.ResetCredentialRefs()
 		return nil
-	case channel.EdgeProviderQuotaStatus:
-		m.ResetProviderQuotaStatus()
+	case channel.EdgeProviderQuotaStatuses:
+		m.ResetProviderQuotaStatuses()
 		return nil
 	}
 	return fmt.Errorf("unknown Channel edge %s", name)
@@ -8717,6 +8743,1782 @@ func (m *ChannelProbeMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown ChannelProbe edge %s", name)
+}
+
+// CredentialQuotaScopeMutation represents an operation that mutates the CredentialQuotaScope nodes in the graph.
+type CredentialQuotaScopeMutation struct {
+	config
+	op                             Op
+	typ                            string
+	id                             *int
+	created_at                     *time.Time
+	updated_at                     *time.Time
+	deleted_at                     *int
+	adddeleted_at                  *int
+	name                           *string
+	status                         *credentialquotascope.Status
+	unit                           *credentialquotascope.Unit
+	limit_amount                   *string
+	used_amount                    *string
+	warning_threshold_percent      *int
+	addwarning_threshold_percent   *int
+	reset_policy                   *credentialquotascope.ResetPolicy
+	reset_at                       *time.Time
+	window_started_at              *time.Time
+	over_limit_action              *credentialquotascope.OverLimitAction
+	pause_until                    *time.Time
+	source                         *credentialquotascope.Source
+	last_error                     *string
+	remark                         *string
+	clearedFields                  map[string]struct{}
+	credentials                    map[int]struct{}
+	removedcredentials             map[int]struct{}
+	clearedcredentials             bool
+	provider_quota_statuses        map[int]struct{}
+	removedprovider_quota_statuses map[int]struct{}
+	clearedprovider_quota_statuses bool
+	executions                     map[int]struct{}
+	removedexecutions              map[int]struct{}
+	clearedexecutions              bool
+	usage_logs                     map[int]struct{}
+	removedusage_logs              map[int]struct{}
+	clearedusage_logs              bool
+	done                           bool
+	oldValue                       func(context.Context) (*CredentialQuotaScope, error)
+	predicates                     []predicate.CredentialQuotaScope
+}
+
+var _ ent.Mutation = (*CredentialQuotaScopeMutation)(nil)
+
+// credentialquotascopeOption allows management of the mutation configuration using functional options.
+type credentialquotascopeOption func(*CredentialQuotaScopeMutation)
+
+// newCredentialQuotaScopeMutation creates new mutation for the CredentialQuotaScope entity.
+func newCredentialQuotaScopeMutation(c config, op Op, opts ...credentialquotascopeOption) *CredentialQuotaScopeMutation {
+	m := &CredentialQuotaScopeMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeCredentialQuotaScope,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withCredentialQuotaScopeID sets the ID field of the mutation.
+func withCredentialQuotaScopeID(id int) credentialquotascopeOption {
+	return func(m *CredentialQuotaScopeMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *CredentialQuotaScope
+		)
+		m.oldValue = func(ctx context.Context) (*CredentialQuotaScope, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().CredentialQuotaScope.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withCredentialQuotaScope sets the old CredentialQuotaScope of the mutation.
+func withCredentialQuotaScope(node *CredentialQuotaScope) credentialquotascopeOption {
+	return func(m *CredentialQuotaScopeMutation) {
+		m.oldValue = func(context.Context) (*CredentialQuotaScope, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m CredentialQuotaScopeMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m CredentialQuotaScopeMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *CredentialQuotaScopeMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *CredentialQuotaScopeMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().CredentialQuotaScope.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *CredentialQuotaScopeMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *CredentialQuotaScopeMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the CredentialQuotaScope entity.
+// If the CredentialQuotaScope object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CredentialQuotaScopeMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *CredentialQuotaScopeMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *CredentialQuotaScopeMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *CredentialQuotaScopeMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the CredentialQuotaScope entity.
+// If the CredentialQuotaScope object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CredentialQuotaScopeMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *CredentialQuotaScopeMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *CredentialQuotaScopeMutation) SetDeletedAt(i int) {
+	m.deleted_at = &i
+	m.adddeleted_at = nil
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *CredentialQuotaScopeMutation) DeletedAt() (r int, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the CredentialQuotaScope entity.
+// If the CredentialQuotaScope object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CredentialQuotaScopeMutation) OldDeletedAt(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// AddDeletedAt adds i to the "deleted_at" field.
+func (m *CredentialQuotaScopeMutation) AddDeletedAt(i int) {
+	if m.adddeleted_at != nil {
+		*m.adddeleted_at += i
+	} else {
+		m.adddeleted_at = &i
+	}
+}
+
+// AddedDeletedAt returns the value that was added to the "deleted_at" field in this mutation.
+func (m *CredentialQuotaScopeMutation) AddedDeletedAt() (r int, exists bool) {
+	v := m.adddeleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *CredentialQuotaScopeMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	m.adddeleted_at = nil
+}
+
+// SetName sets the "name" field.
+func (m *CredentialQuotaScopeMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *CredentialQuotaScopeMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the CredentialQuotaScope entity.
+// If the CredentialQuotaScope object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CredentialQuotaScopeMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ClearName clears the value of the "name" field.
+func (m *CredentialQuotaScopeMutation) ClearName() {
+	m.name = nil
+	m.clearedFields[credentialquotascope.FieldName] = struct{}{}
+}
+
+// NameCleared returns if the "name" field was cleared in this mutation.
+func (m *CredentialQuotaScopeMutation) NameCleared() bool {
+	_, ok := m.clearedFields[credentialquotascope.FieldName]
+	return ok
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *CredentialQuotaScopeMutation) ResetName() {
+	m.name = nil
+	delete(m.clearedFields, credentialquotascope.FieldName)
+}
+
+// SetStatus sets the "status" field.
+func (m *CredentialQuotaScopeMutation) SetStatus(c credentialquotascope.Status) {
+	m.status = &c
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *CredentialQuotaScopeMutation) Status() (r credentialquotascope.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the CredentialQuotaScope entity.
+// If the CredentialQuotaScope object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CredentialQuotaScopeMutation) OldStatus(ctx context.Context) (v credentialquotascope.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *CredentialQuotaScopeMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetUnit sets the "unit" field.
+func (m *CredentialQuotaScopeMutation) SetUnit(c credentialquotascope.Unit) {
+	m.unit = &c
+}
+
+// Unit returns the value of the "unit" field in the mutation.
+func (m *CredentialQuotaScopeMutation) Unit() (r credentialquotascope.Unit, exists bool) {
+	v := m.unit
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUnit returns the old "unit" field's value of the CredentialQuotaScope entity.
+// If the CredentialQuotaScope object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CredentialQuotaScopeMutation) OldUnit(ctx context.Context) (v credentialquotascope.Unit, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUnit is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUnit requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUnit: %w", err)
+	}
+	return oldValue.Unit, nil
+}
+
+// ResetUnit resets all changes to the "unit" field.
+func (m *CredentialQuotaScopeMutation) ResetUnit() {
+	m.unit = nil
+}
+
+// SetLimitAmount sets the "limit_amount" field.
+func (m *CredentialQuotaScopeMutation) SetLimitAmount(s string) {
+	m.limit_amount = &s
+}
+
+// LimitAmount returns the value of the "limit_amount" field in the mutation.
+func (m *CredentialQuotaScopeMutation) LimitAmount() (r string, exists bool) {
+	v := m.limit_amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLimitAmount returns the old "limit_amount" field's value of the CredentialQuotaScope entity.
+// If the CredentialQuotaScope object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CredentialQuotaScopeMutation) OldLimitAmount(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLimitAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLimitAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLimitAmount: %w", err)
+	}
+	return oldValue.LimitAmount, nil
+}
+
+// ClearLimitAmount clears the value of the "limit_amount" field.
+func (m *CredentialQuotaScopeMutation) ClearLimitAmount() {
+	m.limit_amount = nil
+	m.clearedFields[credentialquotascope.FieldLimitAmount] = struct{}{}
+}
+
+// LimitAmountCleared returns if the "limit_amount" field was cleared in this mutation.
+func (m *CredentialQuotaScopeMutation) LimitAmountCleared() bool {
+	_, ok := m.clearedFields[credentialquotascope.FieldLimitAmount]
+	return ok
+}
+
+// ResetLimitAmount resets all changes to the "limit_amount" field.
+func (m *CredentialQuotaScopeMutation) ResetLimitAmount() {
+	m.limit_amount = nil
+	delete(m.clearedFields, credentialquotascope.FieldLimitAmount)
+}
+
+// SetUsedAmount sets the "used_amount" field.
+func (m *CredentialQuotaScopeMutation) SetUsedAmount(s string) {
+	m.used_amount = &s
+}
+
+// UsedAmount returns the value of the "used_amount" field in the mutation.
+func (m *CredentialQuotaScopeMutation) UsedAmount() (r string, exists bool) {
+	v := m.used_amount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUsedAmount returns the old "used_amount" field's value of the CredentialQuotaScope entity.
+// If the CredentialQuotaScope object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CredentialQuotaScopeMutation) OldUsedAmount(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUsedAmount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUsedAmount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUsedAmount: %w", err)
+	}
+	return oldValue.UsedAmount, nil
+}
+
+// ClearUsedAmount clears the value of the "used_amount" field.
+func (m *CredentialQuotaScopeMutation) ClearUsedAmount() {
+	m.used_amount = nil
+	m.clearedFields[credentialquotascope.FieldUsedAmount] = struct{}{}
+}
+
+// UsedAmountCleared returns if the "used_amount" field was cleared in this mutation.
+func (m *CredentialQuotaScopeMutation) UsedAmountCleared() bool {
+	_, ok := m.clearedFields[credentialquotascope.FieldUsedAmount]
+	return ok
+}
+
+// ResetUsedAmount resets all changes to the "used_amount" field.
+func (m *CredentialQuotaScopeMutation) ResetUsedAmount() {
+	m.used_amount = nil
+	delete(m.clearedFields, credentialquotascope.FieldUsedAmount)
+}
+
+// SetWarningThresholdPercent sets the "warning_threshold_percent" field.
+func (m *CredentialQuotaScopeMutation) SetWarningThresholdPercent(i int) {
+	m.warning_threshold_percent = &i
+	m.addwarning_threshold_percent = nil
+}
+
+// WarningThresholdPercent returns the value of the "warning_threshold_percent" field in the mutation.
+func (m *CredentialQuotaScopeMutation) WarningThresholdPercent() (r int, exists bool) {
+	v := m.warning_threshold_percent
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWarningThresholdPercent returns the old "warning_threshold_percent" field's value of the CredentialQuotaScope entity.
+// If the CredentialQuotaScope object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CredentialQuotaScopeMutation) OldWarningThresholdPercent(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWarningThresholdPercent is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWarningThresholdPercent requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWarningThresholdPercent: %w", err)
+	}
+	return oldValue.WarningThresholdPercent, nil
+}
+
+// AddWarningThresholdPercent adds i to the "warning_threshold_percent" field.
+func (m *CredentialQuotaScopeMutation) AddWarningThresholdPercent(i int) {
+	if m.addwarning_threshold_percent != nil {
+		*m.addwarning_threshold_percent += i
+	} else {
+		m.addwarning_threshold_percent = &i
+	}
+}
+
+// AddedWarningThresholdPercent returns the value that was added to the "warning_threshold_percent" field in this mutation.
+func (m *CredentialQuotaScopeMutation) AddedWarningThresholdPercent() (r int, exists bool) {
+	v := m.addwarning_threshold_percent
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearWarningThresholdPercent clears the value of the "warning_threshold_percent" field.
+func (m *CredentialQuotaScopeMutation) ClearWarningThresholdPercent() {
+	m.warning_threshold_percent = nil
+	m.addwarning_threshold_percent = nil
+	m.clearedFields[credentialquotascope.FieldWarningThresholdPercent] = struct{}{}
+}
+
+// WarningThresholdPercentCleared returns if the "warning_threshold_percent" field was cleared in this mutation.
+func (m *CredentialQuotaScopeMutation) WarningThresholdPercentCleared() bool {
+	_, ok := m.clearedFields[credentialquotascope.FieldWarningThresholdPercent]
+	return ok
+}
+
+// ResetWarningThresholdPercent resets all changes to the "warning_threshold_percent" field.
+func (m *CredentialQuotaScopeMutation) ResetWarningThresholdPercent() {
+	m.warning_threshold_percent = nil
+	m.addwarning_threshold_percent = nil
+	delete(m.clearedFields, credentialquotascope.FieldWarningThresholdPercent)
+}
+
+// SetResetPolicy sets the "reset_policy" field.
+func (m *CredentialQuotaScopeMutation) SetResetPolicy(cp credentialquotascope.ResetPolicy) {
+	m.reset_policy = &cp
+}
+
+// ResetPolicy returns the value of the "reset_policy" field in the mutation.
+func (m *CredentialQuotaScopeMutation) ResetPolicy() (r credentialquotascope.ResetPolicy, exists bool) {
+	v := m.reset_policy
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResetPolicy returns the old "reset_policy" field's value of the CredentialQuotaScope entity.
+// If the CredentialQuotaScope object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CredentialQuotaScopeMutation) OldResetPolicy(ctx context.Context) (v credentialquotascope.ResetPolicy, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResetPolicy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResetPolicy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResetPolicy: %w", err)
+	}
+	return oldValue.ResetPolicy, nil
+}
+
+// ResetResetPolicy resets all changes to the "reset_policy" field.
+func (m *CredentialQuotaScopeMutation) ResetResetPolicy() {
+	m.reset_policy = nil
+}
+
+// SetResetAt sets the "reset_at" field.
+func (m *CredentialQuotaScopeMutation) SetResetAt(t time.Time) {
+	m.reset_at = &t
+}
+
+// ResetAt returns the value of the "reset_at" field in the mutation.
+func (m *CredentialQuotaScopeMutation) ResetAt() (r time.Time, exists bool) {
+	v := m.reset_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResetAt returns the old "reset_at" field's value of the CredentialQuotaScope entity.
+// If the CredentialQuotaScope object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CredentialQuotaScopeMutation) OldResetAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResetAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResetAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResetAt: %w", err)
+	}
+	return oldValue.ResetAt, nil
+}
+
+// ClearResetAt clears the value of the "reset_at" field.
+func (m *CredentialQuotaScopeMutation) ClearResetAt() {
+	m.reset_at = nil
+	m.clearedFields[credentialquotascope.FieldResetAt] = struct{}{}
+}
+
+// ResetAtCleared returns if the "reset_at" field was cleared in this mutation.
+func (m *CredentialQuotaScopeMutation) ResetAtCleared() bool {
+	_, ok := m.clearedFields[credentialquotascope.FieldResetAt]
+	return ok
+}
+
+// ResetResetAt resets all changes to the "reset_at" field.
+func (m *CredentialQuotaScopeMutation) ResetResetAt() {
+	m.reset_at = nil
+	delete(m.clearedFields, credentialquotascope.FieldResetAt)
+}
+
+// SetWindowStartedAt sets the "window_started_at" field.
+func (m *CredentialQuotaScopeMutation) SetWindowStartedAt(t time.Time) {
+	m.window_started_at = &t
+}
+
+// WindowStartedAt returns the value of the "window_started_at" field in the mutation.
+func (m *CredentialQuotaScopeMutation) WindowStartedAt() (r time.Time, exists bool) {
+	v := m.window_started_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWindowStartedAt returns the old "window_started_at" field's value of the CredentialQuotaScope entity.
+// If the CredentialQuotaScope object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CredentialQuotaScopeMutation) OldWindowStartedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWindowStartedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWindowStartedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWindowStartedAt: %w", err)
+	}
+	return oldValue.WindowStartedAt, nil
+}
+
+// ClearWindowStartedAt clears the value of the "window_started_at" field.
+func (m *CredentialQuotaScopeMutation) ClearWindowStartedAt() {
+	m.window_started_at = nil
+	m.clearedFields[credentialquotascope.FieldWindowStartedAt] = struct{}{}
+}
+
+// WindowStartedAtCleared returns if the "window_started_at" field was cleared in this mutation.
+func (m *CredentialQuotaScopeMutation) WindowStartedAtCleared() bool {
+	_, ok := m.clearedFields[credentialquotascope.FieldWindowStartedAt]
+	return ok
+}
+
+// ResetWindowStartedAt resets all changes to the "window_started_at" field.
+func (m *CredentialQuotaScopeMutation) ResetWindowStartedAt() {
+	m.window_started_at = nil
+	delete(m.clearedFields, credentialquotascope.FieldWindowStartedAt)
+}
+
+// SetOverLimitAction sets the "over_limit_action" field.
+func (m *CredentialQuotaScopeMutation) SetOverLimitAction(cla credentialquotascope.OverLimitAction) {
+	m.over_limit_action = &cla
+}
+
+// OverLimitAction returns the value of the "over_limit_action" field in the mutation.
+func (m *CredentialQuotaScopeMutation) OverLimitAction() (r credentialquotascope.OverLimitAction, exists bool) {
+	v := m.over_limit_action
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOverLimitAction returns the old "over_limit_action" field's value of the CredentialQuotaScope entity.
+// If the CredentialQuotaScope object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CredentialQuotaScopeMutation) OldOverLimitAction(ctx context.Context) (v credentialquotascope.OverLimitAction, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOverLimitAction is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOverLimitAction requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOverLimitAction: %w", err)
+	}
+	return oldValue.OverLimitAction, nil
+}
+
+// ResetOverLimitAction resets all changes to the "over_limit_action" field.
+func (m *CredentialQuotaScopeMutation) ResetOverLimitAction() {
+	m.over_limit_action = nil
+}
+
+// SetPauseUntil sets the "pause_until" field.
+func (m *CredentialQuotaScopeMutation) SetPauseUntil(t time.Time) {
+	m.pause_until = &t
+}
+
+// PauseUntil returns the value of the "pause_until" field in the mutation.
+func (m *CredentialQuotaScopeMutation) PauseUntil() (r time.Time, exists bool) {
+	v := m.pause_until
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPauseUntil returns the old "pause_until" field's value of the CredentialQuotaScope entity.
+// If the CredentialQuotaScope object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CredentialQuotaScopeMutation) OldPauseUntil(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPauseUntil is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPauseUntil requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPauseUntil: %w", err)
+	}
+	return oldValue.PauseUntil, nil
+}
+
+// ClearPauseUntil clears the value of the "pause_until" field.
+func (m *CredentialQuotaScopeMutation) ClearPauseUntil() {
+	m.pause_until = nil
+	m.clearedFields[credentialquotascope.FieldPauseUntil] = struct{}{}
+}
+
+// PauseUntilCleared returns if the "pause_until" field was cleared in this mutation.
+func (m *CredentialQuotaScopeMutation) PauseUntilCleared() bool {
+	_, ok := m.clearedFields[credentialquotascope.FieldPauseUntil]
+	return ok
+}
+
+// ResetPauseUntil resets all changes to the "pause_until" field.
+func (m *CredentialQuotaScopeMutation) ResetPauseUntil() {
+	m.pause_until = nil
+	delete(m.clearedFields, credentialquotascope.FieldPauseUntil)
+}
+
+// SetSource sets the "source" field.
+func (m *CredentialQuotaScopeMutation) SetSource(c credentialquotascope.Source) {
+	m.source = &c
+}
+
+// Source returns the value of the "source" field in the mutation.
+func (m *CredentialQuotaScopeMutation) Source() (r credentialquotascope.Source, exists bool) {
+	v := m.source
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSource returns the old "source" field's value of the CredentialQuotaScope entity.
+// If the CredentialQuotaScope object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CredentialQuotaScopeMutation) OldSource(ctx context.Context) (v credentialquotascope.Source, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSource is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSource requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSource: %w", err)
+	}
+	return oldValue.Source, nil
+}
+
+// ResetSource resets all changes to the "source" field.
+func (m *CredentialQuotaScopeMutation) ResetSource() {
+	m.source = nil
+}
+
+// SetLastError sets the "last_error" field.
+func (m *CredentialQuotaScopeMutation) SetLastError(s string) {
+	m.last_error = &s
+}
+
+// LastError returns the value of the "last_error" field in the mutation.
+func (m *CredentialQuotaScopeMutation) LastError() (r string, exists bool) {
+	v := m.last_error
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLastError returns the old "last_error" field's value of the CredentialQuotaScope entity.
+// If the CredentialQuotaScope object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CredentialQuotaScopeMutation) OldLastError(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLastError is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLastError requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLastError: %w", err)
+	}
+	return oldValue.LastError, nil
+}
+
+// ClearLastError clears the value of the "last_error" field.
+func (m *CredentialQuotaScopeMutation) ClearLastError() {
+	m.last_error = nil
+	m.clearedFields[credentialquotascope.FieldLastError] = struct{}{}
+}
+
+// LastErrorCleared returns if the "last_error" field was cleared in this mutation.
+func (m *CredentialQuotaScopeMutation) LastErrorCleared() bool {
+	_, ok := m.clearedFields[credentialquotascope.FieldLastError]
+	return ok
+}
+
+// ResetLastError resets all changes to the "last_error" field.
+func (m *CredentialQuotaScopeMutation) ResetLastError() {
+	m.last_error = nil
+	delete(m.clearedFields, credentialquotascope.FieldLastError)
+}
+
+// SetRemark sets the "remark" field.
+func (m *CredentialQuotaScopeMutation) SetRemark(s string) {
+	m.remark = &s
+}
+
+// Remark returns the value of the "remark" field in the mutation.
+func (m *CredentialQuotaScopeMutation) Remark() (r string, exists bool) {
+	v := m.remark
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRemark returns the old "remark" field's value of the CredentialQuotaScope entity.
+// If the CredentialQuotaScope object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CredentialQuotaScopeMutation) OldRemark(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRemark is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRemark requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRemark: %w", err)
+	}
+	return oldValue.Remark, nil
+}
+
+// ClearRemark clears the value of the "remark" field.
+func (m *CredentialQuotaScopeMutation) ClearRemark() {
+	m.remark = nil
+	m.clearedFields[credentialquotascope.FieldRemark] = struct{}{}
+}
+
+// RemarkCleared returns if the "remark" field was cleared in this mutation.
+func (m *CredentialQuotaScopeMutation) RemarkCleared() bool {
+	_, ok := m.clearedFields[credentialquotascope.FieldRemark]
+	return ok
+}
+
+// ResetRemark resets all changes to the "remark" field.
+func (m *CredentialQuotaScopeMutation) ResetRemark() {
+	m.remark = nil
+	delete(m.clearedFields, credentialquotascope.FieldRemark)
+}
+
+// AddCredentialIDs adds the "credentials" edge to the UpstreamCredential entity by ids.
+func (m *CredentialQuotaScopeMutation) AddCredentialIDs(ids ...int) {
+	if m.credentials == nil {
+		m.credentials = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.credentials[ids[i]] = struct{}{}
+	}
+}
+
+// ClearCredentials clears the "credentials" edge to the UpstreamCredential entity.
+func (m *CredentialQuotaScopeMutation) ClearCredentials() {
+	m.clearedcredentials = true
+}
+
+// CredentialsCleared reports if the "credentials" edge to the UpstreamCredential entity was cleared.
+func (m *CredentialQuotaScopeMutation) CredentialsCleared() bool {
+	return m.clearedcredentials
+}
+
+// RemoveCredentialIDs removes the "credentials" edge to the UpstreamCredential entity by IDs.
+func (m *CredentialQuotaScopeMutation) RemoveCredentialIDs(ids ...int) {
+	if m.removedcredentials == nil {
+		m.removedcredentials = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.credentials, ids[i])
+		m.removedcredentials[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCredentials returns the removed IDs of the "credentials" edge to the UpstreamCredential entity.
+func (m *CredentialQuotaScopeMutation) RemovedCredentialsIDs() (ids []int) {
+	for id := range m.removedcredentials {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CredentialsIDs returns the "credentials" edge IDs in the mutation.
+func (m *CredentialQuotaScopeMutation) CredentialsIDs() (ids []int) {
+	for id := range m.credentials {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetCredentials resets all changes to the "credentials" edge.
+func (m *CredentialQuotaScopeMutation) ResetCredentials() {
+	m.credentials = nil
+	m.clearedcredentials = false
+	m.removedcredentials = nil
+}
+
+// AddProviderQuotaStatusIDs adds the "provider_quota_statuses" edge to the ProviderQuotaStatus entity by ids.
+func (m *CredentialQuotaScopeMutation) AddProviderQuotaStatusIDs(ids ...int) {
+	if m.provider_quota_statuses == nil {
+		m.provider_quota_statuses = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.provider_quota_statuses[ids[i]] = struct{}{}
+	}
+}
+
+// ClearProviderQuotaStatuses clears the "provider_quota_statuses" edge to the ProviderQuotaStatus entity.
+func (m *CredentialQuotaScopeMutation) ClearProviderQuotaStatuses() {
+	m.clearedprovider_quota_statuses = true
+}
+
+// ProviderQuotaStatusesCleared reports if the "provider_quota_statuses" edge to the ProviderQuotaStatus entity was cleared.
+func (m *CredentialQuotaScopeMutation) ProviderQuotaStatusesCleared() bool {
+	return m.clearedprovider_quota_statuses
+}
+
+// RemoveProviderQuotaStatusIDs removes the "provider_quota_statuses" edge to the ProviderQuotaStatus entity by IDs.
+func (m *CredentialQuotaScopeMutation) RemoveProviderQuotaStatusIDs(ids ...int) {
+	if m.removedprovider_quota_statuses == nil {
+		m.removedprovider_quota_statuses = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.provider_quota_statuses, ids[i])
+		m.removedprovider_quota_statuses[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedProviderQuotaStatuses returns the removed IDs of the "provider_quota_statuses" edge to the ProviderQuotaStatus entity.
+func (m *CredentialQuotaScopeMutation) RemovedProviderQuotaStatusesIDs() (ids []int) {
+	for id := range m.removedprovider_quota_statuses {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ProviderQuotaStatusesIDs returns the "provider_quota_statuses" edge IDs in the mutation.
+func (m *CredentialQuotaScopeMutation) ProviderQuotaStatusesIDs() (ids []int) {
+	for id := range m.provider_quota_statuses {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetProviderQuotaStatuses resets all changes to the "provider_quota_statuses" edge.
+func (m *CredentialQuotaScopeMutation) ResetProviderQuotaStatuses() {
+	m.provider_quota_statuses = nil
+	m.clearedprovider_quota_statuses = false
+	m.removedprovider_quota_statuses = nil
+}
+
+// AddExecutionIDs adds the "executions" edge to the RequestExecution entity by ids.
+func (m *CredentialQuotaScopeMutation) AddExecutionIDs(ids ...int) {
+	if m.executions == nil {
+		m.executions = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.executions[ids[i]] = struct{}{}
+	}
+}
+
+// ClearExecutions clears the "executions" edge to the RequestExecution entity.
+func (m *CredentialQuotaScopeMutation) ClearExecutions() {
+	m.clearedexecutions = true
+}
+
+// ExecutionsCleared reports if the "executions" edge to the RequestExecution entity was cleared.
+func (m *CredentialQuotaScopeMutation) ExecutionsCleared() bool {
+	return m.clearedexecutions
+}
+
+// RemoveExecutionIDs removes the "executions" edge to the RequestExecution entity by IDs.
+func (m *CredentialQuotaScopeMutation) RemoveExecutionIDs(ids ...int) {
+	if m.removedexecutions == nil {
+		m.removedexecutions = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.executions, ids[i])
+		m.removedexecutions[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedExecutions returns the removed IDs of the "executions" edge to the RequestExecution entity.
+func (m *CredentialQuotaScopeMutation) RemovedExecutionsIDs() (ids []int) {
+	for id := range m.removedexecutions {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ExecutionsIDs returns the "executions" edge IDs in the mutation.
+func (m *CredentialQuotaScopeMutation) ExecutionsIDs() (ids []int) {
+	for id := range m.executions {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetExecutions resets all changes to the "executions" edge.
+func (m *CredentialQuotaScopeMutation) ResetExecutions() {
+	m.executions = nil
+	m.clearedexecutions = false
+	m.removedexecutions = nil
+}
+
+// AddUsageLogIDs adds the "usage_logs" edge to the UsageLog entity by ids.
+func (m *CredentialQuotaScopeMutation) AddUsageLogIDs(ids ...int) {
+	if m.usage_logs == nil {
+		m.usage_logs = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.usage_logs[ids[i]] = struct{}{}
+	}
+}
+
+// ClearUsageLogs clears the "usage_logs" edge to the UsageLog entity.
+func (m *CredentialQuotaScopeMutation) ClearUsageLogs() {
+	m.clearedusage_logs = true
+}
+
+// UsageLogsCleared reports if the "usage_logs" edge to the UsageLog entity was cleared.
+func (m *CredentialQuotaScopeMutation) UsageLogsCleared() bool {
+	return m.clearedusage_logs
+}
+
+// RemoveUsageLogIDs removes the "usage_logs" edge to the UsageLog entity by IDs.
+func (m *CredentialQuotaScopeMutation) RemoveUsageLogIDs(ids ...int) {
+	if m.removedusage_logs == nil {
+		m.removedusage_logs = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.usage_logs, ids[i])
+		m.removedusage_logs[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedUsageLogs returns the removed IDs of the "usage_logs" edge to the UsageLog entity.
+func (m *CredentialQuotaScopeMutation) RemovedUsageLogsIDs() (ids []int) {
+	for id := range m.removedusage_logs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// UsageLogsIDs returns the "usage_logs" edge IDs in the mutation.
+func (m *CredentialQuotaScopeMutation) UsageLogsIDs() (ids []int) {
+	for id := range m.usage_logs {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetUsageLogs resets all changes to the "usage_logs" edge.
+func (m *CredentialQuotaScopeMutation) ResetUsageLogs() {
+	m.usage_logs = nil
+	m.clearedusage_logs = false
+	m.removedusage_logs = nil
+}
+
+// Where appends a list predicates to the CredentialQuotaScopeMutation builder.
+func (m *CredentialQuotaScopeMutation) Where(ps ...predicate.CredentialQuotaScope) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the CredentialQuotaScopeMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *CredentialQuotaScopeMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.CredentialQuotaScope, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *CredentialQuotaScopeMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *CredentialQuotaScopeMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (CredentialQuotaScope).
+func (m *CredentialQuotaScopeMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *CredentialQuotaScopeMutation) Fields() []string {
+	fields := make([]string, 0, 17)
+	if m.created_at != nil {
+		fields = append(fields, credentialquotascope.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, credentialquotascope.FieldUpdatedAt)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, credentialquotascope.FieldDeletedAt)
+	}
+	if m.name != nil {
+		fields = append(fields, credentialquotascope.FieldName)
+	}
+	if m.status != nil {
+		fields = append(fields, credentialquotascope.FieldStatus)
+	}
+	if m.unit != nil {
+		fields = append(fields, credentialquotascope.FieldUnit)
+	}
+	if m.limit_amount != nil {
+		fields = append(fields, credentialquotascope.FieldLimitAmount)
+	}
+	if m.used_amount != nil {
+		fields = append(fields, credentialquotascope.FieldUsedAmount)
+	}
+	if m.warning_threshold_percent != nil {
+		fields = append(fields, credentialquotascope.FieldWarningThresholdPercent)
+	}
+	if m.reset_policy != nil {
+		fields = append(fields, credentialquotascope.FieldResetPolicy)
+	}
+	if m.reset_at != nil {
+		fields = append(fields, credentialquotascope.FieldResetAt)
+	}
+	if m.window_started_at != nil {
+		fields = append(fields, credentialquotascope.FieldWindowStartedAt)
+	}
+	if m.over_limit_action != nil {
+		fields = append(fields, credentialquotascope.FieldOverLimitAction)
+	}
+	if m.pause_until != nil {
+		fields = append(fields, credentialquotascope.FieldPauseUntil)
+	}
+	if m.source != nil {
+		fields = append(fields, credentialquotascope.FieldSource)
+	}
+	if m.last_error != nil {
+		fields = append(fields, credentialquotascope.FieldLastError)
+	}
+	if m.remark != nil {
+		fields = append(fields, credentialquotascope.FieldRemark)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *CredentialQuotaScopeMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case credentialquotascope.FieldCreatedAt:
+		return m.CreatedAt()
+	case credentialquotascope.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case credentialquotascope.FieldDeletedAt:
+		return m.DeletedAt()
+	case credentialquotascope.FieldName:
+		return m.Name()
+	case credentialquotascope.FieldStatus:
+		return m.Status()
+	case credentialquotascope.FieldUnit:
+		return m.Unit()
+	case credentialquotascope.FieldLimitAmount:
+		return m.LimitAmount()
+	case credentialquotascope.FieldUsedAmount:
+		return m.UsedAmount()
+	case credentialquotascope.FieldWarningThresholdPercent:
+		return m.WarningThresholdPercent()
+	case credentialquotascope.FieldResetPolicy:
+		return m.ResetPolicy()
+	case credentialquotascope.FieldResetAt:
+		return m.ResetAt()
+	case credentialquotascope.FieldWindowStartedAt:
+		return m.WindowStartedAt()
+	case credentialquotascope.FieldOverLimitAction:
+		return m.OverLimitAction()
+	case credentialquotascope.FieldPauseUntil:
+		return m.PauseUntil()
+	case credentialquotascope.FieldSource:
+		return m.Source()
+	case credentialquotascope.FieldLastError:
+		return m.LastError()
+	case credentialquotascope.FieldRemark:
+		return m.Remark()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *CredentialQuotaScopeMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case credentialquotascope.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case credentialquotascope.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case credentialquotascope.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
+	case credentialquotascope.FieldName:
+		return m.OldName(ctx)
+	case credentialquotascope.FieldStatus:
+		return m.OldStatus(ctx)
+	case credentialquotascope.FieldUnit:
+		return m.OldUnit(ctx)
+	case credentialquotascope.FieldLimitAmount:
+		return m.OldLimitAmount(ctx)
+	case credentialquotascope.FieldUsedAmount:
+		return m.OldUsedAmount(ctx)
+	case credentialquotascope.FieldWarningThresholdPercent:
+		return m.OldWarningThresholdPercent(ctx)
+	case credentialquotascope.FieldResetPolicy:
+		return m.OldResetPolicy(ctx)
+	case credentialquotascope.FieldResetAt:
+		return m.OldResetAt(ctx)
+	case credentialquotascope.FieldWindowStartedAt:
+		return m.OldWindowStartedAt(ctx)
+	case credentialquotascope.FieldOverLimitAction:
+		return m.OldOverLimitAction(ctx)
+	case credentialquotascope.FieldPauseUntil:
+		return m.OldPauseUntil(ctx)
+	case credentialquotascope.FieldSource:
+		return m.OldSource(ctx)
+	case credentialquotascope.FieldLastError:
+		return m.OldLastError(ctx)
+	case credentialquotascope.FieldRemark:
+		return m.OldRemark(ctx)
+	}
+	return nil, fmt.Errorf("unknown CredentialQuotaScope field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *CredentialQuotaScopeMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case credentialquotascope.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case credentialquotascope.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case credentialquotascope.FieldDeletedAt:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
+		return nil
+	case credentialquotascope.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case credentialquotascope.FieldStatus:
+		v, ok := value.(credentialquotascope.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case credentialquotascope.FieldUnit:
+		v, ok := value.(credentialquotascope.Unit)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUnit(v)
+		return nil
+	case credentialquotascope.FieldLimitAmount:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLimitAmount(v)
+		return nil
+	case credentialquotascope.FieldUsedAmount:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUsedAmount(v)
+		return nil
+	case credentialquotascope.FieldWarningThresholdPercent:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWarningThresholdPercent(v)
+		return nil
+	case credentialquotascope.FieldResetPolicy:
+		v, ok := value.(credentialquotascope.ResetPolicy)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResetPolicy(v)
+		return nil
+	case credentialquotascope.FieldResetAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResetAt(v)
+		return nil
+	case credentialquotascope.FieldWindowStartedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWindowStartedAt(v)
+		return nil
+	case credentialquotascope.FieldOverLimitAction:
+		v, ok := value.(credentialquotascope.OverLimitAction)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOverLimitAction(v)
+		return nil
+	case credentialquotascope.FieldPauseUntil:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPauseUntil(v)
+		return nil
+	case credentialquotascope.FieldSource:
+		v, ok := value.(credentialquotascope.Source)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSource(v)
+		return nil
+	case credentialquotascope.FieldLastError:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLastError(v)
+		return nil
+	case credentialquotascope.FieldRemark:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRemark(v)
+		return nil
+	}
+	return fmt.Errorf("unknown CredentialQuotaScope field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *CredentialQuotaScopeMutation) AddedFields() []string {
+	var fields []string
+	if m.adddeleted_at != nil {
+		fields = append(fields, credentialquotascope.FieldDeletedAt)
+	}
+	if m.addwarning_threshold_percent != nil {
+		fields = append(fields, credentialquotascope.FieldWarningThresholdPercent)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *CredentialQuotaScopeMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case credentialquotascope.FieldDeletedAt:
+		return m.AddedDeletedAt()
+	case credentialquotascope.FieldWarningThresholdPercent:
+		return m.AddedWarningThresholdPercent()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *CredentialQuotaScopeMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case credentialquotascope.FieldDeletedAt:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddDeletedAt(v)
+		return nil
+	case credentialquotascope.FieldWarningThresholdPercent:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddWarningThresholdPercent(v)
+		return nil
+	}
+	return fmt.Errorf("unknown CredentialQuotaScope numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *CredentialQuotaScopeMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(credentialquotascope.FieldName) {
+		fields = append(fields, credentialquotascope.FieldName)
+	}
+	if m.FieldCleared(credentialquotascope.FieldLimitAmount) {
+		fields = append(fields, credentialquotascope.FieldLimitAmount)
+	}
+	if m.FieldCleared(credentialquotascope.FieldUsedAmount) {
+		fields = append(fields, credentialquotascope.FieldUsedAmount)
+	}
+	if m.FieldCleared(credentialquotascope.FieldWarningThresholdPercent) {
+		fields = append(fields, credentialquotascope.FieldWarningThresholdPercent)
+	}
+	if m.FieldCleared(credentialquotascope.FieldResetAt) {
+		fields = append(fields, credentialquotascope.FieldResetAt)
+	}
+	if m.FieldCleared(credentialquotascope.FieldWindowStartedAt) {
+		fields = append(fields, credentialquotascope.FieldWindowStartedAt)
+	}
+	if m.FieldCleared(credentialquotascope.FieldPauseUntil) {
+		fields = append(fields, credentialquotascope.FieldPauseUntil)
+	}
+	if m.FieldCleared(credentialquotascope.FieldLastError) {
+		fields = append(fields, credentialquotascope.FieldLastError)
+	}
+	if m.FieldCleared(credentialquotascope.FieldRemark) {
+		fields = append(fields, credentialquotascope.FieldRemark)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *CredentialQuotaScopeMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *CredentialQuotaScopeMutation) ClearField(name string) error {
+	switch name {
+	case credentialquotascope.FieldName:
+		m.ClearName()
+		return nil
+	case credentialquotascope.FieldLimitAmount:
+		m.ClearLimitAmount()
+		return nil
+	case credentialquotascope.FieldUsedAmount:
+		m.ClearUsedAmount()
+		return nil
+	case credentialquotascope.FieldWarningThresholdPercent:
+		m.ClearWarningThresholdPercent()
+		return nil
+	case credentialquotascope.FieldResetAt:
+		m.ClearResetAt()
+		return nil
+	case credentialquotascope.FieldWindowStartedAt:
+		m.ClearWindowStartedAt()
+		return nil
+	case credentialquotascope.FieldPauseUntil:
+		m.ClearPauseUntil()
+		return nil
+	case credentialquotascope.FieldLastError:
+		m.ClearLastError()
+		return nil
+	case credentialquotascope.FieldRemark:
+		m.ClearRemark()
+		return nil
+	}
+	return fmt.Errorf("unknown CredentialQuotaScope nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *CredentialQuotaScopeMutation) ResetField(name string) error {
+	switch name {
+	case credentialquotascope.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case credentialquotascope.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case credentialquotascope.FieldDeletedAt:
+		m.ResetDeletedAt()
+		return nil
+	case credentialquotascope.FieldName:
+		m.ResetName()
+		return nil
+	case credentialquotascope.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case credentialquotascope.FieldUnit:
+		m.ResetUnit()
+		return nil
+	case credentialquotascope.FieldLimitAmount:
+		m.ResetLimitAmount()
+		return nil
+	case credentialquotascope.FieldUsedAmount:
+		m.ResetUsedAmount()
+		return nil
+	case credentialquotascope.FieldWarningThresholdPercent:
+		m.ResetWarningThresholdPercent()
+		return nil
+	case credentialquotascope.FieldResetPolicy:
+		m.ResetResetPolicy()
+		return nil
+	case credentialquotascope.FieldResetAt:
+		m.ResetResetAt()
+		return nil
+	case credentialquotascope.FieldWindowStartedAt:
+		m.ResetWindowStartedAt()
+		return nil
+	case credentialquotascope.FieldOverLimitAction:
+		m.ResetOverLimitAction()
+		return nil
+	case credentialquotascope.FieldPauseUntil:
+		m.ResetPauseUntil()
+		return nil
+	case credentialquotascope.FieldSource:
+		m.ResetSource()
+		return nil
+	case credentialquotascope.FieldLastError:
+		m.ResetLastError()
+		return nil
+	case credentialquotascope.FieldRemark:
+		m.ResetRemark()
+		return nil
+	}
+	return fmt.Errorf("unknown CredentialQuotaScope field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *CredentialQuotaScopeMutation) AddedEdges() []string {
+	edges := make([]string, 0, 4)
+	if m.credentials != nil {
+		edges = append(edges, credentialquotascope.EdgeCredentials)
+	}
+	if m.provider_quota_statuses != nil {
+		edges = append(edges, credentialquotascope.EdgeProviderQuotaStatuses)
+	}
+	if m.executions != nil {
+		edges = append(edges, credentialquotascope.EdgeExecutions)
+	}
+	if m.usage_logs != nil {
+		edges = append(edges, credentialquotascope.EdgeUsageLogs)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *CredentialQuotaScopeMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case credentialquotascope.EdgeCredentials:
+		ids := make([]ent.Value, 0, len(m.credentials))
+		for id := range m.credentials {
+			ids = append(ids, id)
+		}
+		return ids
+	case credentialquotascope.EdgeProviderQuotaStatuses:
+		ids := make([]ent.Value, 0, len(m.provider_quota_statuses))
+		for id := range m.provider_quota_statuses {
+			ids = append(ids, id)
+		}
+		return ids
+	case credentialquotascope.EdgeExecutions:
+		ids := make([]ent.Value, 0, len(m.executions))
+		for id := range m.executions {
+			ids = append(ids, id)
+		}
+		return ids
+	case credentialquotascope.EdgeUsageLogs:
+		ids := make([]ent.Value, 0, len(m.usage_logs))
+		for id := range m.usage_logs {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *CredentialQuotaScopeMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 4)
+	if m.removedcredentials != nil {
+		edges = append(edges, credentialquotascope.EdgeCredentials)
+	}
+	if m.removedprovider_quota_statuses != nil {
+		edges = append(edges, credentialquotascope.EdgeProviderQuotaStatuses)
+	}
+	if m.removedexecutions != nil {
+		edges = append(edges, credentialquotascope.EdgeExecutions)
+	}
+	if m.removedusage_logs != nil {
+		edges = append(edges, credentialquotascope.EdgeUsageLogs)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *CredentialQuotaScopeMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case credentialquotascope.EdgeCredentials:
+		ids := make([]ent.Value, 0, len(m.removedcredentials))
+		for id := range m.removedcredentials {
+			ids = append(ids, id)
+		}
+		return ids
+	case credentialquotascope.EdgeProviderQuotaStatuses:
+		ids := make([]ent.Value, 0, len(m.removedprovider_quota_statuses))
+		for id := range m.removedprovider_quota_statuses {
+			ids = append(ids, id)
+		}
+		return ids
+	case credentialquotascope.EdgeExecutions:
+		ids := make([]ent.Value, 0, len(m.removedexecutions))
+		for id := range m.removedexecutions {
+			ids = append(ids, id)
+		}
+		return ids
+	case credentialquotascope.EdgeUsageLogs:
+		ids := make([]ent.Value, 0, len(m.removedusage_logs))
+		for id := range m.removedusage_logs {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *CredentialQuotaScopeMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 4)
+	if m.clearedcredentials {
+		edges = append(edges, credentialquotascope.EdgeCredentials)
+	}
+	if m.clearedprovider_quota_statuses {
+		edges = append(edges, credentialquotascope.EdgeProviderQuotaStatuses)
+	}
+	if m.clearedexecutions {
+		edges = append(edges, credentialquotascope.EdgeExecutions)
+	}
+	if m.clearedusage_logs {
+		edges = append(edges, credentialquotascope.EdgeUsageLogs)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *CredentialQuotaScopeMutation) EdgeCleared(name string) bool {
+	switch name {
+	case credentialquotascope.EdgeCredentials:
+		return m.clearedcredentials
+	case credentialquotascope.EdgeProviderQuotaStatuses:
+		return m.clearedprovider_quota_statuses
+	case credentialquotascope.EdgeExecutions:
+		return m.clearedexecutions
+	case credentialquotascope.EdgeUsageLogs:
+		return m.clearedusage_logs
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *CredentialQuotaScopeMutation) ClearEdge(name string) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown CredentialQuotaScope unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *CredentialQuotaScopeMutation) ResetEdge(name string) error {
+	switch name {
+	case credentialquotascope.EdgeCredentials:
+		m.ResetCredentials()
+		return nil
+	case credentialquotascope.EdgeProviderQuotaStatuses:
+		m.ResetProviderQuotaStatuses()
+		return nil
+	case credentialquotascope.EdgeExecutions:
+		m.ResetExecutions()
+		return nil
+	case credentialquotascope.EdgeUsageLogs:
+		m.ResetUsageLogs()
+		return nil
+	}
+	return fmt.Errorf("unknown CredentialQuotaScope edge %s", name)
 }
 
 // DataStorageMutation represents an operation that mutates the DataStorage nodes in the graph.
@@ -14988,7 +16790,10 @@ type ProviderQuotaStatusMutation struct {
 	updated_at             *time.Time
 	deleted_at             *int
 	adddeleted_at          *int
+	scope_key              *string
 	credential_fingerprint *string
+	secret_fingerprint     *string
+	resource_scope_key     *string
 	provider_type          *providerquotastatus.ProviderType
 	status                 *providerquotastatus.Status
 	quota_data             *map[string]interface{}
@@ -15000,6 +16805,8 @@ type ProviderQuotaStatusMutation struct {
 	clearedchannel         bool
 	credential             *int
 	clearedcredential      bool
+	quota_scope            *int
+	clearedquota_scope     bool
 	done                   bool
 	oldValue               func(context.Context) (*ProviderQuotaStatus, error)
 	predicates             []predicate.ProviderQuotaStatus
@@ -15262,9 +17069,58 @@ func (m *ProviderQuotaStatusMutation) OldChannelID(ctx context.Context) (v int, 
 	return oldValue.ChannelID, nil
 }
 
+// ClearChannelID clears the value of the "channel_id" field.
+func (m *ProviderQuotaStatusMutation) ClearChannelID() {
+	m.channel = nil
+	m.clearedFields[providerquotastatus.FieldChannelID] = struct{}{}
+}
+
+// ChannelIDCleared returns if the "channel_id" field was cleared in this mutation.
+func (m *ProviderQuotaStatusMutation) ChannelIDCleared() bool {
+	_, ok := m.clearedFields[providerquotastatus.FieldChannelID]
+	return ok
+}
+
 // ResetChannelID resets all changes to the "channel_id" field.
 func (m *ProviderQuotaStatusMutation) ResetChannelID() {
 	m.channel = nil
+	delete(m.clearedFields, providerquotastatus.FieldChannelID)
+}
+
+// SetScopeKey sets the "scope_key" field.
+func (m *ProviderQuotaStatusMutation) SetScopeKey(s string) {
+	m.scope_key = &s
+}
+
+// ScopeKey returns the value of the "scope_key" field in the mutation.
+func (m *ProviderQuotaStatusMutation) ScopeKey() (r string, exists bool) {
+	v := m.scope_key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldScopeKey returns the old "scope_key" field's value of the ProviderQuotaStatus entity.
+// If the ProviderQuotaStatus object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderQuotaStatusMutation) OldScopeKey(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldScopeKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldScopeKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldScopeKey: %w", err)
+	}
+	return oldValue.ScopeKey, nil
+}
+
+// ResetScopeKey resets all changes to the "scope_key" field.
+func (m *ProviderQuotaStatusMutation) ResetScopeKey() {
+	m.scope_key = nil
 }
 
 // SetCredentialID sets the "credential_id" field.
@@ -15363,6 +17219,153 @@ func (m *ProviderQuotaStatusMutation) CredentialFingerprintCleared() bool {
 func (m *ProviderQuotaStatusMutation) ResetCredentialFingerprint() {
 	m.credential_fingerprint = nil
 	delete(m.clearedFields, providerquotastatus.FieldCredentialFingerprint)
+}
+
+// SetSecretFingerprint sets the "secret_fingerprint" field.
+func (m *ProviderQuotaStatusMutation) SetSecretFingerprint(s string) {
+	m.secret_fingerprint = &s
+}
+
+// SecretFingerprint returns the value of the "secret_fingerprint" field in the mutation.
+func (m *ProviderQuotaStatusMutation) SecretFingerprint() (r string, exists bool) {
+	v := m.secret_fingerprint
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSecretFingerprint returns the old "secret_fingerprint" field's value of the ProviderQuotaStatus entity.
+// If the ProviderQuotaStatus object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderQuotaStatusMutation) OldSecretFingerprint(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSecretFingerprint is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSecretFingerprint requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSecretFingerprint: %w", err)
+	}
+	return oldValue.SecretFingerprint, nil
+}
+
+// ClearSecretFingerprint clears the value of the "secret_fingerprint" field.
+func (m *ProviderQuotaStatusMutation) ClearSecretFingerprint() {
+	m.secret_fingerprint = nil
+	m.clearedFields[providerquotastatus.FieldSecretFingerprint] = struct{}{}
+}
+
+// SecretFingerprintCleared returns if the "secret_fingerprint" field was cleared in this mutation.
+func (m *ProviderQuotaStatusMutation) SecretFingerprintCleared() bool {
+	_, ok := m.clearedFields[providerquotastatus.FieldSecretFingerprint]
+	return ok
+}
+
+// ResetSecretFingerprint resets all changes to the "secret_fingerprint" field.
+func (m *ProviderQuotaStatusMutation) ResetSecretFingerprint() {
+	m.secret_fingerprint = nil
+	delete(m.clearedFields, providerquotastatus.FieldSecretFingerprint)
+}
+
+// SetResourceScopeKey sets the "resource_scope_key" field.
+func (m *ProviderQuotaStatusMutation) SetResourceScopeKey(s string) {
+	m.resource_scope_key = &s
+}
+
+// ResourceScopeKey returns the value of the "resource_scope_key" field in the mutation.
+func (m *ProviderQuotaStatusMutation) ResourceScopeKey() (r string, exists bool) {
+	v := m.resource_scope_key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResourceScopeKey returns the old "resource_scope_key" field's value of the ProviderQuotaStatus entity.
+// If the ProviderQuotaStatus object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderQuotaStatusMutation) OldResourceScopeKey(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResourceScopeKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResourceScopeKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResourceScopeKey: %w", err)
+	}
+	return oldValue.ResourceScopeKey, nil
+}
+
+// ClearResourceScopeKey clears the value of the "resource_scope_key" field.
+func (m *ProviderQuotaStatusMutation) ClearResourceScopeKey() {
+	m.resource_scope_key = nil
+	m.clearedFields[providerquotastatus.FieldResourceScopeKey] = struct{}{}
+}
+
+// ResourceScopeKeyCleared returns if the "resource_scope_key" field was cleared in this mutation.
+func (m *ProviderQuotaStatusMutation) ResourceScopeKeyCleared() bool {
+	_, ok := m.clearedFields[providerquotastatus.FieldResourceScopeKey]
+	return ok
+}
+
+// ResetResourceScopeKey resets all changes to the "resource_scope_key" field.
+func (m *ProviderQuotaStatusMutation) ResetResourceScopeKey() {
+	m.resource_scope_key = nil
+	delete(m.clearedFields, providerquotastatus.FieldResourceScopeKey)
+}
+
+// SetQuotaScopeID sets the "quota_scope_id" field.
+func (m *ProviderQuotaStatusMutation) SetQuotaScopeID(i int) {
+	m.quota_scope = &i
+}
+
+// QuotaScopeID returns the value of the "quota_scope_id" field in the mutation.
+func (m *ProviderQuotaStatusMutation) QuotaScopeID() (r int, exists bool) {
+	v := m.quota_scope
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuotaScopeID returns the old "quota_scope_id" field's value of the ProviderQuotaStatus entity.
+// If the ProviderQuotaStatus object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProviderQuotaStatusMutation) OldQuotaScopeID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuotaScopeID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuotaScopeID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuotaScopeID: %w", err)
+	}
+	return oldValue.QuotaScopeID, nil
+}
+
+// ClearQuotaScopeID clears the value of the "quota_scope_id" field.
+func (m *ProviderQuotaStatusMutation) ClearQuotaScopeID() {
+	m.quota_scope = nil
+	m.clearedFields[providerquotastatus.FieldQuotaScopeID] = struct{}{}
+}
+
+// QuotaScopeIDCleared returns if the "quota_scope_id" field was cleared in this mutation.
+func (m *ProviderQuotaStatusMutation) QuotaScopeIDCleared() bool {
+	_, ok := m.clearedFields[providerquotastatus.FieldQuotaScopeID]
+	return ok
+}
+
+// ResetQuotaScopeID resets all changes to the "quota_scope_id" field.
+func (m *ProviderQuotaStatusMutation) ResetQuotaScopeID() {
+	m.quota_scope = nil
+	delete(m.clearedFields, providerquotastatus.FieldQuotaScopeID)
 }
 
 // SetProviderType sets the "provider_type" field.
@@ -15602,7 +17605,7 @@ func (m *ProviderQuotaStatusMutation) ClearChannel() {
 
 // ChannelCleared reports if the "channel" edge to the Channel entity was cleared.
 func (m *ProviderQuotaStatusMutation) ChannelCleared() bool {
-	return m.clearedchannel
+	return m.ChannelIDCleared() || m.clearedchannel
 }
 
 // ChannelIDs returns the "channel" edge IDs in the mutation.
@@ -15648,6 +17651,33 @@ func (m *ProviderQuotaStatusMutation) ResetCredential() {
 	m.clearedcredential = false
 }
 
+// ClearQuotaScope clears the "quota_scope" edge to the CredentialQuotaScope entity.
+func (m *ProviderQuotaStatusMutation) ClearQuotaScope() {
+	m.clearedquota_scope = true
+	m.clearedFields[providerquotastatus.FieldQuotaScopeID] = struct{}{}
+}
+
+// QuotaScopeCleared reports if the "quota_scope" edge to the CredentialQuotaScope entity was cleared.
+func (m *ProviderQuotaStatusMutation) QuotaScopeCleared() bool {
+	return m.QuotaScopeIDCleared() || m.clearedquota_scope
+}
+
+// QuotaScopeIDs returns the "quota_scope" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// QuotaScopeID instead. It exists only for internal usage by the builders.
+func (m *ProviderQuotaStatusMutation) QuotaScopeIDs() (ids []int) {
+	if id := m.quota_scope; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetQuotaScope resets all changes to the "quota_scope" edge.
+func (m *ProviderQuotaStatusMutation) ResetQuotaScope() {
+	m.quota_scope = nil
+	m.clearedquota_scope = false
+}
+
 // Where appends a list predicates to the ProviderQuotaStatusMutation builder.
 func (m *ProviderQuotaStatusMutation) Where(ps ...predicate.ProviderQuotaStatus) {
 	m.predicates = append(m.predicates, ps...)
@@ -15682,7 +17712,7 @@ func (m *ProviderQuotaStatusMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProviderQuotaStatusMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 16)
 	if m.created_at != nil {
 		fields = append(fields, providerquotastatus.FieldCreatedAt)
 	}
@@ -15695,11 +17725,23 @@ func (m *ProviderQuotaStatusMutation) Fields() []string {
 	if m.channel != nil {
 		fields = append(fields, providerquotastatus.FieldChannelID)
 	}
+	if m.scope_key != nil {
+		fields = append(fields, providerquotastatus.FieldScopeKey)
+	}
 	if m.credential != nil {
 		fields = append(fields, providerquotastatus.FieldCredentialID)
 	}
 	if m.credential_fingerprint != nil {
 		fields = append(fields, providerquotastatus.FieldCredentialFingerprint)
+	}
+	if m.secret_fingerprint != nil {
+		fields = append(fields, providerquotastatus.FieldSecretFingerprint)
+	}
+	if m.resource_scope_key != nil {
+		fields = append(fields, providerquotastatus.FieldResourceScopeKey)
+	}
+	if m.quota_scope != nil {
+		fields = append(fields, providerquotastatus.FieldQuotaScopeID)
 	}
 	if m.provider_type != nil {
 		fields = append(fields, providerquotastatus.FieldProviderType)
@@ -15735,10 +17777,18 @@ func (m *ProviderQuotaStatusMutation) Field(name string) (ent.Value, bool) {
 		return m.DeletedAt()
 	case providerquotastatus.FieldChannelID:
 		return m.ChannelID()
+	case providerquotastatus.FieldScopeKey:
+		return m.ScopeKey()
 	case providerquotastatus.FieldCredentialID:
 		return m.CredentialID()
 	case providerquotastatus.FieldCredentialFingerprint:
 		return m.CredentialFingerprint()
+	case providerquotastatus.FieldSecretFingerprint:
+		return m.SecretFingerprint()
+	case providerquotastatus.FieldResourceScopeKey:
+		return m.ResourceScopeKey()
+	case providerquotastatus.FieldQuotaScopeID:
+		return m.QuotaScopeID()
 	case providerquotastatus.FieldProviderType:
 		return m.ProviderType()
 	case providerquotastatus.FieldStatus:
@@ -15768,10 +17818,18 @@ func (m *ProviderQuotaStatusMutation) OldField(ctx context.Context, name string)
 		return m.OldDeletedAt(ctx)
 	case providerquotastatus.FieldChannelID:
 		return m.OldChannelID(ctx)
+	case providerquotastatus.FieldScopeKey:
+		return m.OldScopeKey(ctx)
 	case providerquotastatus.FieldCredentialID:
 		return m.OldCredentialID(ctx)
 	case providerquotastatus.FieldCredentialFingerprint:
 		return m.OldCredentialFingerprint(ctx)
+	case providerquotastatus.FieldSecretFingerprint:
+		return m.OldSecretFingerprint(ctx)
+	case providerquotastatus.FieldResourceScopeKey:
+		return m.OldResourceScopeKey(ctx)
+	case providerquotastatus.FieldQuotaScopeID:
+		return m.OldQuotaScopeID(ctx)
 	case providerquotastatus.FieldProviderType:
 		return m.OldProviderType(ctx)
 	case providerquotastatus.FieldStatus:
@@ -15821,6 +17879,13 @@ func (m *ProviderQuotaStatusMutation) SetField(name string, value ent.Value) err
 		}
 		m.SetChannelID(v)
 		return nil
+	case providerquotastatus.FieldScopeKey:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetScopeKey(v)
+		return nil
 	case providerquotastatus.FieldCredentialID:
 		v, ok := value.(int)
 		if !ok {
@@ -15834,6 +17899,27 @@ func (m *ProviderQuotaStatusMutation) SetField(name string, value ent.Value) err
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCredentialFingerprint(v)
+		return nil
+	case providerquotastatus.FieldSecretFingerprint:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSecretFingerprint(v)
+		return nil
+	case providerquotastatus.FieldResourceScopeKey:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResourceScopeKey(v)
+		return nil
+	case providerquotastatus.FieldQuotaScopeID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuotaScopeID(v)
 		return nil
 	case providerquotastatus.FieldProviderType:
 		v, ok := value.(providerquotastatus.ProviderType)
@@ -15922,11 +18008,23 @@ func (m *ProviderQuotaStatusMutation) AddField(name string, value ent.Value) err
 // mutation.
 func (m *ProviderQuotaStatusMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(providerquotastatus.FieldChannelID) {
+		fields = append(fields, providerquotastatus.FieldChannelID)
+	}
 	if m.FieldCleared(providerquotastatus.FieldCredentialID) {
 		fields = append(fields, providerquotastatus.FieldCredentialID)
 	}
 	if m.FieldCleared(providerquotastatus.FieldCredentialFingerprint) {
 		fields = append(fields, providerquotastatus.FieldCredentialFingerprint)
+	}
+	if m.FieldCleared(providerquotastatus.FieldSecretFingerprint) {
+		fields = append(fields, providerquotastatus.FieldSecretFingerprint)
+	}
+	if m.FieldCleared(providerquotastatus.FieldResourceScopeKey) {
+		fields = append(fields, providerquotastatus.FieldResourceScopeKey)
+	}
+	if m.FieldCleared(providerquotastatus.FieldQuotaScopeID) {
+		fields = append(fields, providerquotastatus.FieldQuotaScopeID)
 	}
 	if m.FieldCleared(providerquotastatus.FieldNextResetAt) {
 		fields = append(fields, providerquotastatus.FieldNextResetAt)
@@ -15945,11 +18043,23 @@ func (m *ProviderQuotaStatusMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ProviderQuotaStatusMutation) ClearField(name string) error {
 	switch name {
+	case providerquotastatus.FieldChannelID:
+		m.ClearChannelID()
+		return nil
 	case providerquotastatus.FieldCredentialID:
 		m.ClearCredentialID()
 		return nil
 	case providerquotastatus.FieldCredentialFingerprint:
 		m.ClearCredentialFingerprint()
+		return nil
+	case providerquotastatus.FieldSecretFingerprint:
+		m.ClearSecretFingerprint()
+		return nil
+	case providerquotastatus.FieldResourceScopeKey:
+		m.ClearResourceScopeKey()
+		return nil
+	case providerquotastatus.FieldQuotaScopeID:
+		m.ClearQuotaScopeID()
 		return nil
 	case providerquotastatus.FieldNextResetAt:
 		m.ClearNextResetAt()
@@ -15974,11 +18084,23 @@ func (m *ProviderQuotaStatusMutation) ResetField(name string) error {
 	case providerquotastatus.FieldChannelID:
 		m.ResetChannelID()
 		return nil
+	case providerquotastatus.FieldScopeKey:
+		m.ResetScopeKey()
+		return nil
 	case providerquotastatus.FieldCredentialID:
 		m.ResetCredentialID()
 		return nil
 	case providerquotastatus.FieldCredentialFingerprint:
 		m.ResetCredentialFingerprint()
+		return nil
+	case providerquotastatus.FieldSecretFingerprint:
+		m.ResetSecretFingerprint()
+		return nil
+	case providerquotastatus.FieldResourceScopeKey:
+		m.ResetResourceScopeKey()
+		return nil
+	case providerquotastatus.FieldQuotaScopeID:
+		m.ResetQuotaScopeID()
 		return nil
 	case providerquotastatus.FieldProviderType:
 		m.ResetProviderType()
@@ -16004,12 +18126,15 @@ func (m *ProviderQuotaStatusMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProviderQuotaStatusMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.channel != nil {
 		edges = append(edges, providerquotastatus.EdgeChannel)
 	}
 	if m.credential != nil {
 		edges = append(edges, providerquotastatus.EdgeCredential)
+	}
+	if m.quota_scope != nil {
+		edges = append(edges, providerquotastatus.EdgeQuotaScope)
 	}
 	return edges
 }
@@ -16026,13 +18151,17 @@ func (m *ProviderQuotaStatusMutation) AddedIDs(name string) []ent.Value {
 		if id := m.credential; id != nil {
 			return []ent.Value{*id}
 		}
+	case providerquotastatus.EdgeQuotaScope:
+		if id := m.quota_scope; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProviderQuotaStatusMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	return edges
 }
 
@@ -16044,12 +18173,15 @@ func (m *ProviderQuotaStatusMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProviderQuotaStatusMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.clearedchannel {
 		edges = append(edges, providerquotastatus.EdgeChannel)
 	}
 	if m.clearedcredential {
 		edges = append(edges, providerquotastatus.EdgeCredential)
+	}
+	if m.clearedquota_scope {
+		edges = append(edges, providerquotastatus.EdgeQuotaScope)
 	}
 	return edges
 }
@@ -16062,6 +18194,8 @@ func (m *ProviderQuotaStatusMutation) EdgeCleared(name string) bool {
 		return m.clearedchannel
 	case providerquotastatus.EdgeCredential:
 		return m.clearedcredential
+	case providerquotastatus.EdgeQuotaScope:
+		return m.clearedquota_scope
 	}
 	return false
 }
@@ -16076,6 +18210,9 @@ func (m *ProviderQuotaStatusMutation) ClearEdge(name string) error {
 	case providerquotastatus.EdgeCredential:
 		m.ClearCredential()
 		return nil
+	case providerquotastatus.EdgeQuotaScope:
+		m.ClearQuotaScope()
+		return nil
 	}
 	return fmt.Errorf("unknown ProviderQuotaStatus unique edge %s", name)
 }
@@ -16089,6 +18226,9 @@ func (m *ProviderQuotaStatusMutation) ResetEdge(name string) error {
 		return nil
 	case providerquotastatus.EdgeCredential:
 		m.ResetCredential()
+		return nil
+	case providerquotastatus.EdgeQuotaScope:
+		m.ResetQuotaScope()
 		return nil
 	}
 	return fmt.Errorf("unknown ProviderQuotaStatus edge %s", name)
@@ -18683,6 +20823,10 @@ type RequestExecutionMutation struct {
 	external_id                       *string
 	model_id                          *string
 	credential_fingerprint            *string
+	secret_fingerprint                *string
+	resource_scope_key                *string
+	quota_scope_name_snapshot         *string
+	quota_scope_status_snapshot       *string
 	credential_name_snapshot          *string
 	credential_key_hint               *string
 	credential_source                 *string
@@ -18714,6 +20858,8 @@ type RequestExecutionMutation struct {
 	clearedchannel                    bool
 	credential                        *int
 	clearedcredential                 bool
+	quota_scope                       *int
+	clearedquota_scope                bool
 	data_storage                      *int
 	cleareddata_storage               bool
 	done                              bool
@@ -19262,6 +21408,251 @@ func (m *RequestExecutionMutation) CredentialFingerprintCleared() bool {
 func (m *RequestExecutionMutation) ResetCredentialFingerprint() {
 	m.credential_fingerprint = nil
 	delete(m.clearedFields, requestexecution.FieldCredentialFingerprint)
+}
+
+// SetSecretFingerprint sets the "secret_fingerprint" field.
+func (m *RequestExecutionMutation) SetSecretFingerprint(s string) {
+	m.secret_fingerprint = &s
+}
+
+// SecretFingerprint returns the value of the "secret_fingerprint" field in the mutation.
+func (m *RequestExecutionMutation) SecretFingerprint() (r string, exists bool) {
+	v := m.secret_fingerprint
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSecretFingerprint returns the old "secret_fingerprint" field's value of the RequestExecution entity.
+// If the RequestExecution object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestExecutionMutation) OldSecretFingerprint(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSecretFingerprint is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSecretFingerprint requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSecretFingerprint: %w", err)
+	}
+	return oldValue.SecretFingerprint, nil
+}
+
+// ClearSecretFingerprint clears the value of the "secret_fingerprint" field.
+func (m *RequestExecutionMutation) ClearSecretFingerprint() {
+	m.secret_fingerprint = nil
+	m.clearedFields[requestexecution.FieldSecretFingerprint] = struct{}{}
+}
+
+// SecretFingerprintCleared returns if the "secret_fingerprint" field was cleared in this mutation.
+func (m *RequestExecutionMutation) SecretFingerprintCleared() bool {
+	_, ok := m.clearedFields[requestexecution.FieldSecretFingerprint]
+	return ok
+}
+
+// ResetSecretFingerprint resets all changes to the "secret_fingerprint" field.
+func (m *RequestExecutionMutation) ResetSecretFingerprint() {
+	m.secret_fingerprint = nil
+	delete(m.clearedFields, requestexecution.FieldSecretFingerprint)
+}
+
+// SetResourceScopeKey sets the "resource_scope_key" field.
+func (m *RequestExecutionMutation) SetResourceScopeKey(s string) {
+	m.resource_scope_key = &s
+}
+
+// ResourceScopeKey returns the value of the "resource_scope_key" field in the mutation.
+func (m *RequestExecutionMutation) ResourceScopeKey() (r string, exists bool) {
+	v := m.resource_scope_key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResourceScopeKey returns the old "resource_scope_key" field's value of the RequestExecution entity.
+// If the RequestExecution object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestExecutionMutation) OldResourceScopeKey(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResourceScopeKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResourceScopeKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResourceScopeKey: %w", err)
+	}
+	return oldValue.ResourceScopeKey, nil
+}
+
+// ClearResourceScopeKey clears the value of the "resource_scope_key" field.
+func (m *RequestExecutionMutation) ClearResourceScopeKey() {
+	m.resource_scope_key = nil
+	m.clearedFields[requestexecution.FieldResourceScopeKey] = struct{}{}
+}
+
+// ResourceScopeKeyCleared returns if the "resource_scope_key" field was cleared in this mutation.
+func (m *RequestExecutionMutation) ResourceScopeKeyCleared() bool {
+	_, ok := m.clearedFields[requestexecution.FieldResourceScopeKey]
+	return ok
+}
+
+// ResetResourceScopeKey resets all changes to the "resource_scope_key" field.
+func (m *RequestExecutionMutation) ResetResourceScopeKey() {
+	m.resource_scope_key = nil
+	delete(m.clearedFields, requestexecution.FieldResourceScopeKey)
+}
+
+// SetQuotaScopeID sets the "quota_scope_id" field.
+func (m *RequestExecutionMutation) SetQuotaScopeID(i int) {
+	m.quota_scope = &i
+}
+
+// QuotaScopeID returns the value of the "quota_scope_id" field in the mutation.
+func (m *RequestExecutionMutation) QuotaScopeID() (r int, exists bool) {
+	v := m.quota_scope
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuotaScopeID returns the old "quota_scope_id" field's value of the RequestExecution entity.
+// If the RequestExecution object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestExecutionMutation) OldQuotaScopeID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuotaScopeID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuotaScopeID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuotaScopeID: %w", err)
+	}
+	return oldValue.QuotaScopeID, nil
+}
+
+// ClearQuotaScopeID clears the value of the "quota_scope_id" field.
+func (m *RequestExecutionMutation) ClearQuotaScopeID() {
+	m.quota_scope = nil
+	m.clearedFields[requestexecution.FieldQuotaScopeID] = struct{}{}
+}
+
+// QuotaScopeIDCleared returns if the "quota_scope_id" field was cleared in this mutation.
+func (m *RequestExecutionMutation) QuotaScopeIDCleared() bool {
+	_, ok := m.clearedFields[requestexecution.FieldQuotaScopeID]
+	return ok
+}
+
+// ResetQuotaScopeID resets all changes to the "quota_scope_id" field.
+func (m *RequestExecutionMutation) ResetQuotaScopeID() {
+	m.quota_scope = nil
+	delete(m.clearedFields, requestexecution.FieldQuotaScopeID)
+}
+
+// SetQuotaScopeNameSnapshot sets the "quota_scope_name_snapshot" field.
+func (m *RequestExecutionMutation) SetQuotaScopeNameSnapshot(s string) {
+	m.quota_scope_name_snapshot = &s
+}
+
+// QuotaScopeNameSnapshot returns the value of the "quota_scope_name_snapshot" field in the mutation.
+func (m *RequestExecutionMutation) QuotaScopeNameSnapshot() (r string, exists bool) {
+	v := m.quota_scope_name_snapshot
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuotaScopeNameSnapshot returns the old "quota_scope_name_snapshot" field's value of the RequestExecution entity.
+// If the RequestExecution object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestExecutionMutation) OldQuotaScopeNameSnapshot(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuotaScopeNameSnapshot is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuotaScopeNameSnapshot requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuotaScopeNameSnapshot: %w", err)
+	}
+	return oldValue.QuotaScopeNameSnapshot, nil
+}
+
+// ClearQuotaScopeNameSnapshot clears the value of the "quota_scope_name_snapshot" field.
+func (m *RequestExecutionMutation) ClearQuotaScopeNameSnapshot() {
+	m.quota_scope_name_snapshot = nil
+	m.clearedFields[requestexecution.FieldQuotaScopeNameSnapshot] = struct{}{}
+}
+
+// QuotaScopeNameSnapshotCleared returns if the "quota_scope_name_snapshot" field was cleared in this mutation.
+func (m *RequestExecutionMutation) QuotaScopeNameSnapshotCleared() bool {
+	_, ok := m.clearedFields[requestexecution.FieldQuotaScopeNameSnapshot]
+	return ok
+}
+
+// ResetQuotaScopeNameSnapshot resets all changes to the "quota_scope_name_snapshot" field.
+func (m *RequestExecutionMutation) ResetQuotaScopeNameSnapshot() {
+	m.quota_scope_name_snapshot = nil
+	delete(m.clearedFields, requestexecution.FieldQuotaScopeNameSnapshot)
+}
+
+// SetQuotaScopeStatusSnapshot sets the "quota_scope_status_snapshot" field.
+func (m *RequestExecutionMutation) SetQuotaScopeStatusSnapshot(s string) {
+	m.quota_scope_status_snapshot = &s
+}
+
+// QuotaScopeStatusSnapshot returns the value of the "quota_scope_status_snapshot" field in the mutation.
+func (m *RequestExecutionMutation) QuotaScopeStatusSnapshot() (r string, exists bool) {
+	v := m.quota_scope_status_snapshot
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuotaScopeStatusSnapshot returns the old "quota_scope_status_snapshot" field's value of the RequestExecution entity.
+// If the RequestExecution object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestExecutionMutation) OldQuotaScopeStatusSnapshot(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuotaScopeStatusSnapshot is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuotaScopeStatusSnapshot requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuotaScopeStatusSnapshot: %w", err)
+	}
+	return oldValue.QuotaScopeStatusSnapshot, nil
+}
+
+// ClearQuotaScopeStatusSnapshot clears the value of the "quota_scope_status_snapshot" field.
+func (m *RequestExecutionMutation) ClearQuotaScopeStatusSnapshot() {
+	m.quota_scope_status_snapshot = nil
+	m.clearedFields[requestexecution.FieldQuotaScopeStatusSnapshot] = struct{}{}
+}
+
+// QuotaScopeStatusSnapshotCleared returns if the "quota_scope_status_snapshot" field was cleared in this mutation.
+func (m *RequestExecutionMutation) QuotaScopeStatusSnapshotCleared() bool {
+	_, ok := m.clearedFields[requestexecution.FieldQuotaScopeStatusSnapshot]
+	return ok
+}
+
+// ResetQuotaScopeStatusSnapshot resets all changes to the "quota_scope_status_snapshot" field.
+func (m *RequestExecutionMutation) ResetQuotaScopeStatusSnapshot() {
+	m.quota_scope_status_snapshot = nil
+	delete(m.clearedFields, requestexecution.FieldQuotaScopeStatusSnapshot)
 }
 
 // SetCredentialNameSnapshot sets the "credential_name_snapshot" field.
@@ -20224,6 +22615,33 @@ func (m *RequestExecutionMutation) ResetCredential() {
 	m.clearedcredential = false
 }
 
+// ClearQuotaScope clears the "quota_scope" edge to the CredentialQuotaScope entity.
+func (m *RequestExecutionMutation) ClearQuotaScope() {
+	m.clearedquota_scope = true
+	m.clearedFields[requestexecution.FieldQuotaScopeID] = struct{}{}
+}
+
+// QuotaScopeCleared reports if the "quota_scope" edge to the CredentialQuotaScope entity was cleared.
+func (m *RequestExecutionMutation) QuotaScopeCleared() bool {
+	return m.QuotaScopeIDCleared() || m.clearedquota_scope
+}
+
+// QuotaScopeIDs returns the "quota_scope" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// QuotaScopeID instead. It exists only for internal usage by the builders.
+func (m *RequestExecutionMutation) QuotaScopeIDs() (ids []int) {
+	if id := m.quota_scope; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetQuotaScope resets all changes to the "quota_scope" edge.
+func (m *RequestExecutionMutation) ResetQuotaScope() {
+	m.quota_scope = nil
+	m.clearedquota_scope = false
+}
+
 // ClearDataStorage clears the "data_storage" edge to the DataStorage entity.
 func (m *RequestExecutionMutation) ClearDataStorage() {
 	m.cleareddata_storage = true
@@ -20285,7 +22703,7 @@ func (m *RequestExecutionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RequestExecutionMutation) Fields() []string {
-	fields := make([]string, 0, 26)
+	fields := make([]string, 0, 31)
 	if m.created_at != nil {
 		fields = append(fields, requestexecution.FieldCreatedAt)
 	}
@@ -20315,6 +22733,21 @@ func (m *RequestExecutionMutation) Fields() []string {
 	}
 	if m.credential_fingerprint != nil {
 		fields = append(fields, requestexecution.FieldCredentialFingerprint)
+	}
+	if m.secret_fingerprint != nil {
+		fields = append(fields, requestexecution.FieldSecretFingerprint)
+	}
+	if m.resource_scope_key != nil {
+		fields = append(fields, requestexecution.FieldResourceScopeKey)
+	}
+	if m.quota_scope != nil {
+		fields = append(fields, requestexecution.FieldQuotaScopeID)
+	}
+	if m.quota_scope_name_snapshot != nil {
+		fields = append(fields, requestexecution.FieldQuotaScopeNameSnapshot)
+	}
+	if m.quota_scope_status_snapshot != nil {
+		fields = append(fields, requestexecution.FieldQuotaScopeStatusSnapshot)
 	}
 	if m.credential_name_snapshot != nil {
 		fields = append(fields, requestexecution.FieldCredentialNameSnapshot)
@@ -20392,6 +22825,16 @@ func (m *RequestExecutionMutation) Field(name string) (ent.Value, bool) {
 		return m.ModelID()
 	case requestexecution.FieldCredentialFingerprint:
 		return m.CredentialFingerprint()
+	case requestexecution.FieldSecretFingerprint:
+		return m.SecretFingerprint()
+	case requestexecution.FieldResourceScopeKey:
+		return m.ResourceScopeKey()
+	case requestexecution.FieldQuotaScopeID:
+		return m.QuotaScopeID()
+	case requestexecution.FieldQuotaScopeNameSnapshot:
+		return m.QuotaScopeNameSnapshot()
+	case requestexecution.FieldQuotaScopeStatusSnapshot:
+		return m.QuotaScopeStatusSnapshot()
 	case requestexecution.FieldCredentialNameSnapshot:
 		return m.CredentialNameSnapshot()
 	case requestexecution.FieldCredentialKeyHint:
@@ -20453,6 +22896,16 @@ func (m *RequestExecutionMutation) OldField(ctx context.Context, name string) (e
 		return m.OldModelID(ctx)
 	case requestexecution.FieldCredentialFingerprint:
 		return m.OldCredentialFingerprint(ctx)
+	case requestexecution.FieldSecretFingerprint:
+		return m.OldSecretFingerprint(ctx)
+	case requestexecution.FieldResourceScopeKey:
+		return m.OldResourceScopeKey(ctx)
+	case requestexecution.FieldQuotaScopeID:
+		return m.OldQuotaScopeID(ctx)
+	case requestexecution.FieldQuotaScopeNameSnapshot:
+		return m.OldQuotaScopeNameSnapshot(ctx)
+	case requestexecution.FieldQuotaScopeStatusSnapshot:
+		return m.OldQuotaScopeStatusSnapshot(ctx)
 	case requestexecution.FieldCredentialNameSnapshot:
 		return m.OldCredentialNameSnapshot(ctx)
 	case requestexecution.FieldCredentialKeyHint:
@@ -20563,6 +23016,41 @@ func (m *RequestExecutionMutation) SetField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCredentialFingerprint(v)
+		return nil
+	case requestexecution.FieldSecretFingerprint:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSecretFingerprint(v)
+		return nil
+	case requestexecution.FieldResourceScopeKey:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResourceScopeKey(v)
+		return nil
+	case requestexecution.FieldQuotaScopeID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuotaScopeID(v)
+		return nil
+	case requestexecution.FieldQuotaScopeNameSnapshot:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuotaScopeNameSnapshot(v)
+		return nil
+	case requestexecution.FieldQuotaScopeStatusSnapshot:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuotaScopeStatusSnapshot(v)
 		return nil
 	case requestexecution.FieldCredentialNameSnapshot:
 		v, ok := value.(string)
@@ -20784,6 +23272,21 @@ func (m *RequestExecutionMutation) ClearedFields() []string {
 	if m.FieldCleared(requestexecution.FieldCredentialFingerprint) {
 		fields = append(fields, requestexecution.FieldCredentialFingerprint)
 	}
+	if m.FieldCleared(requestexecution.FieldSecretFingerprint) {
+		fields = append(fields, requestexecution.FieldSecretFingerprint)
+	}
+	if m.FieldCleared(requestexecution.FieldResourceScopeKey) {
+		fields = append(fields, requestexecution.FieldResourceScopeKey)
+	}
+	if m.FieldCleared(requestexecution.FieldQuotaScopeID) {
+		fields = append(fields, requestexecution.FieldQuotaScopeID)
+	}
+	if m.FieldCleared(requestexecution.FieldQuotaScopeNameSnapshot) {
+		fields = append(fields, requestexecution.FieldQuotaScopeNameSnapshot)
+	}
+	if m.FieldCleared(requestexecution.FieldQuotaScopeStatusSnapshot) {
+		fields = append(fields, requestexecution.FieldQuotaScopeStatusSnapshot)
+	}
 	if m.FieldCleared(requestexecution.FieldCredentialNameSnapshot) {
 		fields = append(fields, requestexecution.FieldCredentialNameSnapshot)
 	}
@@ -20848,6 +23351,21 @@ func (m *RequestExecutionMutation) ClearField(name string) error {
 		return nil
 	case requestexecution.FieldCredentialFingerprint:
 		m.ClearCredentialFingerprint()
+		return nil
+	case requestexecution.FieldSecretFingerprint:
+		m.ClearSecretFingerprint()
+		return nil
+	case requestexecution.FieldResourceScopeKey:
+		m.ClearResourceScopeKey()
+		return nil
+	case requestexecution.FieldQuotaScopeID:
+		m.ClearQuotaScopeID()
+		return nil
+	case requestexecution.FieldQuotaScopeNameSnapshot:
+		m.ClearQuotaScopeNameSnapshot()
+		return nil
+	case requestexecution.FieldQuotaScopeStatusSnapshot:
+		m.ClearQuotaScopeStatusSnapshot()
 		return nil
 	case requestexecution.FieldCredentialNameSnapshot:
 		m.ClearCredentialNameSnapshot()
@@ -20923,6 +23441,21 @@ func (m *RequestExecutionMutation) ResetField(name string) error {
 	case requestexecution.FieldCredentialFingerprint:
 		m.ResetCredentialFingerprint()
 		return nil
+	case requestexecution.FieldSecretFingerprint:
+		m.ResetSecretFingerprint()
+		return nil
+	case requestexecution.FieldResourceScopeKey:
+		m.ResetResourceScopeKey()
+		return nil
+	case requestexecution.FieldQuotaScopeID:
+		m.ResetQuotaScopeID()
+		return nil
+	case requestexecution.FieldQuotaScopeNameSnapshot:
+		m.ResetQuotaScopeNameSnapshot()
+		return nil
+	case requestexecution.FieldQuotaScopeStatusSnapshot:
+		m.ResetQuotaScopeStatusSnapshot()
+		return nil
 	case requestexecution.FieldCredentialNameSnapshot:
 		m.ResetCredentialNameSnapshot()
 		return nil
@@ -20977,7 +23510,7 @@ func (m *RequestExecutionMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *RequestExecutionMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.request != nil {
 		edges = append(edges, requestexecution.EdgeRequest)
 	}
@@ -20986,6 +23519,9 @@ func (m *RequestExecutionMutation) AddedEdges() []string {
 	}
 	if m.credential != nil {
 		edges = append(edges, requestexecution.EdgeCredential)
+	}
+	if m.quota_scope != nil {
+		edges = append(edges, requestexecution.EdgeQuotaScope)
 	}
 	if m.data_storage != nil {
 		edges = append(edges, requestexecution.EdgeDataStorage)
@@ -21009,6 +23545,10 @@ func (m *RequestExecutionMutation) AddedIDs(name string) []ent.Value {
 		if id := m.credential; id != nil {
 			return []ent.Value{*id}
 		}
+	case requestexecution.EdgeQuotaScope:
+		if id := m.quota_scope; id != nil {
+			return []ent.Value{*id}
+		}
 	case requestexecution.EdgeDataStorage:
 		if id := m.data_storage; id != nil {
 			return []ent.Value{*id}
@@ -21019,7 +23559,7 @@ func (m *RequestExecutionMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *RequestExecutionMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	return edges
 }
 
@@ -21031,7 +23571,7 @@ func (m *RequestExecutionMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *RequestExecutionMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.clearedrequest {
 		edges = append(edges, requestexecution.EdgeRequest)
 	}
@@ -21040,6 +23580,9 @@ func (m *RequestExecutionMutation) ClearedEdges() []string {
 	}
 	if m.clearedcredential {
 		edges = append(edges, requestexecution.EdgeCredential)
+	}
+	if m.clearedquota_scope {
+		edges = append(edges, requestexecution.EdgeQuotaScope)
 	}
 	if m.cleareddata_storage {
 		edges = append(edges, requestexecution.EdgeDataStorage)
@@ -21057,6 +23600,8 @@ func (m *RequestExecutionMutation) EdgeCleared(name string) bool {
 		return m.clearedchannel
 	case requestexecution.EdgeCredential:
 		return m.clearedcredential
+	case requestexecution.EdgeQuotaScope:
+		return m.clearedquota_scope
 	case requestexecution.EdgeDataStorage:
 		return m.cleareddata_storage
 	}
@@ -21075,6 +23620,9 @@ func (m *RequestExecutionMutation) ClearEdge(name string) error {
 		return nil
 	case requestexecution.EdgeCredential:
 		m.ClearCredential()
+		return nil
+	case requestexecution.EdgeQuotaScope:
+		m.ClearQuotaScope()
 		return nil
 	case requestexecution.EdgeDataStorage:
 		m.ClearDataStorage()
@@ -21095,6 +23643,9 @@ func (m *RequestExecutionMutation) ResetEdge(name string) error {
 		return nil
 	case requestexecution.EdgeCredential:
 		m.ResetCredential()
+		return nil
+	case requestexecution.EdgeQuotaScope:
+		m.ResetQuotaScope()
 		return nil
 	case requestexecution.EdgeDataStorage:
 		m.ResetDataStorage()
@@ -24046,10 +26597,9 @@ type UpstreamCredentialMutation struct {
 	secret_kind                    *upstreamcredential.SecretKind
 	issuer_scope                   *string
 	key_hint                       *string
-	quota_scope_id                 *int
-	addquota_scope_id              *int
 	secret_payload                 *objects.UpstreamCredentialSecret
 	fingerprint                    *string
+	secret_fingerprint             *string
 	status                         *upstreamcredential.Status
 	weight                         *int
 	addweight                      *int
@@ -24069,6 +26619,8 @@ type UpstreamCredentialMutation struct {
 	provider_quota_statuses        map[int]struct{}
 	removedprovider_quota_statuses map[int]struct{}
 	clearedprovider_quota_statuses bool
+	quota_scope                    *int
+	clearedquota_scope             bool
 	done                           bool
 	oldValue                       func(context.Context) (*UpstreamCredential, error)
 	predicates                     []predicate.UpstreamCredential
@@ -24606,13 +27158,12 @@ func (m *UpstreamCredentialMutation) ResetKeyHint() {
 
 // SetQuotaScopeID sets the "quota_scope_id" field.
 func (m *UpstreamCredentialMutation) SetQuotaScopeID(i int) {
-	m.quota_scope_id = &i
-	m.addquota_scope_id = nil
+	m.quota_scope = &i
 }
 
 // QuotaScopeID returns the value of the "quota_scope_id" field in the mutation.
 func (m *UpstreamCredentialMutation) QuotaScopeID() (r int, exists bool) {
-	v := m.quota_scope_id
+	v := m.quota_scope
 	if v == nil {
 		return
 	}
@@ -24636,28 +27187,9 @@ func (m *UpstreamCredentialMutation) OldQuotaScopeID(ctx context.Context) (v *in
 	return oldValue.QuotaScopeID, nil
 }
 
-// AddQuotaScopeID adds i to the "quota_scope_id" field.
-func (m *UpstreamCredentialMutation) AddQuotaScopeID(i int) {
-	if m.addquota_scope_id != nil {
-		*m.addquota_scope_id += i
-	} else {
-		m.addquota_scope_id = &i
-	}
-}
-
-// AddedQuotaScopeID returns the value that was added to the "quota_scope_id" field in this mutation.
-func (m *UpstreamCredentialMutation) AddedQuotaScopeID() (r int, exists bool) {
-	v := m.addquota_scope_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
 // ClearQuotaScopeID clears the value of the "quota_scope_id" field.
 func (m *UpstreamCredentialMutation) ClearQuotaScopeID() {
-	m.quota_scope_id = nil
-	m.addquota_scope_id = nil
+	m.quota_scope = nil
 	m.clearedFields[upstreamcredential.FieldQuotaScopeID] = struct{}{}
 }
 
@@ -24669,8 +27201,7 @@ func (m *UpstreamCredentialMutation) QuotaScopeIDCleared() bool {
 
 // ResetQuotaScopeID resets all changes to the "quota_scope_id" field.
 func (m *UpstreamCredentialMutation) ResetQuotaScopeID() {
-	m.quota_scope_id = nil
-	m.addquota_scope_id = nil
+	m.quota_scope = nil
 	delete(m.clearedFields, upstreamcredential.FieldQuotaScopeID)
 }
 
@@ -24744,6 +27275,55 @@ func (m *UpstreamCredentialMutation) OldFingerprint(ctx context.Context) (v stri
 // ResetFingerprint resets all changes to the "fingerprint" field.
 func (m *UpstreamCredentialMutation) ResetFingerprint() {
 	m.fingerprint = nil
+}
+
+// SetSecretFingerprint sets the "secret_fingerprint" field.
+func (m *UpstreamCredentialMutation) SetSecretFingerprint(s string) {
+	m.secret_fingerprint = &s
+}
+
+// SecretFingerprint returns the value of the "secret_fingerprint" field in the mutation.
+func (m *UpstreamCredentialMutation) SecretFingerprint() (r string, exists bool) {
+	v := m.secret_fingerprint
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSecretFingerprint returns the old "secret_fingerprint" field's value of the UpstreamCredential entity.
+// If the UpstreamCredential object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UpstreamCredentialMutation) OldSecretFingerprint(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSecretFingerprint is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSecretFingerprint requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSecretFingerprint: %w", err)
+	}
+	return oldValue.SecretFingerprint, nil
+}
+
+// ClearSecretFingerprint clears the value of the "secret_fingerprint" field.
+func (m *UpstreamCredentialMutation) ClearSecretFingerprint() {
+	m.secret_fingerprint = nil
+	m.clearedFields[upstreamcredential.FieldSecretFingerprint] = struct{}{}
+}
+
+// SecretFingerprintCleared returns if the "secret_fingerprint" field was cleared in this mutation.
+func (m *UpstreamCredentialMutation) SecretFingerprintCleared() bool {
+	_, ok := m.clearedFields[upstreamcredential.FieldSecretFingerprint]
+	return ok
+}
+
+// ResetSecretFingerprint resets all changes to the "secret_fingerprint" field.
+func (m *UpstreamCredentialMutation) ResetSecretFingerprint() {
+	m.secret_fingerprint = nil
+	delete(m.clearedFields, upstreamcredential.FieldSecretFingerprint)
 }
 
 // SetStatus sets the "status" field.
@@ -25201,6 +27781,33 @@ func (m *UpstreamCredentialMutation) ResetProviderQuotaStatuses() {
 	m.removedprovider_quota_statuses = nil
 }
 
+// ClearQuotaScope clears the "quota_scope" edge to the CredentialQuotaScope entity.
+func (m *UpstreamCredentialMutation) ClearQuotaScope() {
+	m.clearedquota_scope = true
+	m.clearedFields[upstreamcredential.FieldQuotaScopeID] = struct{}{}
+}
+
+// QuotaScopeCleared reports if the "quota_scope" edge to the CredentialQuotaScope entity was cleared.
+func (m *UpstreamCredentialMutation) QuotaScopeCleared() bool {
+	return m.QuotaScopeIDCleared() || m.clearedquota_scope
+}
+
+// QuotaScopeIDs returns the "quota_scope" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// QuotaScopeID instead. It exists only for internal usage by the builders.
+func (m *UpstreamCredentialMutation) QuotaScopeIDs() (ids []int) {
+	if id := m.quota_scope; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetQuotaScope resets all changes to the "quota_scope" edge.
+func (m *UpstreamCredentialMutation) ResetQuotaScope() {
+	m.quota_scope = nil
+	m.clearedquota_scope = false
+}
+
 // Where appends a list predicates to the UpstreamCredentialMutation builder.
 func (m *UpstreamCredentialMutation) Where(ps ...predicate.UpstreamCredential) {
 	m.predicates = append(m.predicates, ps...)
@@ -25235,7 +27842,7 @@ func (m *UpstreamCredentialMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UpstreamCredentialMutation) Fields() []string {
-	fields := make([]string, 0, 18)
+	fields := make([]string, 0, 19)
 	if m.created_at != nil {
 		fields = append(fields, upstreamcredential.FieldCreatedAt)
 	}
@@ -25266,7 +27873,7 @@ func (m *UpstreamCredentialMutation) Fields() []string {
 	if m.key_hint != nil {
 		fields = append(fields, upstreamcredential.FieldKeyHint)
 	}
-	if m.quota_scope_id != nil {
+	if m.quota_scope != nil {
 		fields = append(fields, upstreamcredential.FieldQuotaScopeID)
 	}
 	if m.secret_payload != nil {
@@ -25274,6 +27881,9 @@ func (m *UpstreamCredentialMutation) Fields() []string {
 	}
 	if m.fingerprint != nil {
 		fields = append(fields, upstreamcredential.FieldFingerprint)
+	}
+	if m.secret_fingerprint != nil {
+		fields = append(fields, upstreamcredential.FieldSecretFingerprint)
 	}
 	if m.status != nil {
 		fields = append(fields, upstreamcredential.FieldStatus)
@@ -25324,6 +27934,8 @@ func (m *UpstreamCredentialMutation) Field(name string) (ent.Value, bool) {
 		return m.SecretPayload()
 	case upstreamcredential.FieldFingerprint:
 		return m.Fingerprint()
+	case upstreamcredential.FieldSecretFingerprint:
+		return m.SecretFingerprint()
 	case upstreamcredential.FieldStatus:
 		return m.Status()
 	case upstreamcredential.FieldWeight:
@@ -25369,6 +27981,8 @@ func (m *UpstreamCredentialMutation) OldField(ctx context.Context, name string) 
 		return m.OldSecretPayload(ctx)
 	case upstreamcredential.FieldFingerprint:
 		return m.OldFingerprint(ctx)
+	case upstreamcredential.FieldSecretFingerprint:
+		return m.OldSecretFingerprint(ctx)
 	case upstreamcredential.FieldStatus:
 		return m.OldStatus(ctx)
 	case upstreamcredential.FieldWeight:
@@ -25479,6 +28093,13 @@ func (m *UpstreamCredentialMutation) SetField(name string, value ent.Value) erro
 		}
 		m.SetFingerprint(v)
 		return nil
+	case upstreamcredential.FieldSecretFingerprint:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSecretFingerprint(v)
+		return nil
 	case upstreamcredential.FieldStatus:
 		v, ok := value.(upstreamcredential.Status)
 		if !ok {
@@ -25525,9 +28146,6 @@ func (m *UpstreamCredentialMutation) AddedFields() []string {
 	if m.adddeleted_at != nil {
 		fields = append(fields, upstreamcredential.FieldDeletedAt)
 	}
-	if m.addquota_scope_id != nil {
-		fields = append(fields, upstreamcredential.FieldQuotaScopeID)
-	}
 	if m.addweight != nil {
 		fields = append(fields, upstreamcredential.FieldWeight)
 	}
@@ -25541,8 +28159,6 @@ func (m *UpstreamCredentialMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
 	case upstreamcredential.FieldDeletedAt:
 		return m.AddedDeletedAt()
-	case upstreamcredential.FieldQuotaScopeID:
-		return m.AddedQuotaScopeID()
 	case upstreamcredential.FieldWeight:
 		return m.AddedWeight()
 	}
@@ -25560,13 +28176,6 @@ func (m *UpstreamCredentialMutation) AddField(name string, value ent.Value) erro
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddDeletedAt(v)
-		return nil
-	case upstreamcredential.FieldQuotaScopeID:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddQuotaScopeID(v)
 		return nil
 	case upstreamcredential.FieldWeight:
 		v, ok := value.(int)
@@ -25597,6 +28206,9 @@ func (m *UpstreamCredentialMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(upstreamcredential.FieldQuotaScopeID) {
 		fields = append(fields, upstreamcredential.FieldQuotaScopeID)
+	}
+	if m.FieldCleared(upstreamcredential.FieldSecretFingerprint) {
+		fields = append(fields, upstreamcredential.FieldSecretFingerprint)
 	}
 	if m.FieldCleared(upstreamcredential.FieldQuotaStatus) {
 		fields = append(fields, upstreamcredential.FieldQuotaStatus)
@@ -25635,6 +28247,9 @@ func (m *UpstreamCredentialMutation) ClearField(name string) error {
 		return nil
 	case upstreamcredential.FieldQuotaScopeID:
 		m.ClearQuotaScopeID()
+		return nil
+	case upstreamcredential.FieldSecretFingerprint:
+		m.ClearSecretFingerprint()
 		return nil
 	case upstreamcredential.FieldQuotaStatus:
 		m.ClearQuotaStatus()
@@ -25692,6 +28307,9 @@ func (m *UpstreamCredentialMutation) ResetField(name string) error {
 	case upstreamcredential.FieldFingerprint:
 		m.ResetFingerprint()
 		return nil
+	case upstreamcredential.FieldSecretFingerprint:
+		m.ResetSecretFingerprint()
+		return nil
 	case upstreamcredential.FieldStatus:
 		m.ResetStatus()
 		return nil
@@ -25713,7 +28331,7 @@ func (m *UpstreamCredentialMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UpstreamCredentialMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.channel_refs != nil {
 		edges = append(edges, upstreamcredential.EdgeChannelRefs)
 	}
@@ -25725,6 +28343,9 @@ func (m *UpstreamCredentialMutation) AddedEdges() []string {
 	}
 	if m.provider_quota_statuses != nil {
 		edges = append(edges, upstreamcredential.EdgeProviderQuotaStatuses)
+	}
+	if m.quota_scope != nil {
+		edges = append(edges, upstreamcredential.EdgeQuotaScope)
 	}
 	return edges
 }
@@ -25757,13 +28378,17 @@ func (m *UpstreamCredentialMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case upstreamcredential.EdgeQuotaScope:
+		if id := m.quota_scope; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UpstreamCredentialMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.removedchannel_refs != nil {
 		edges = append(edges, upstreamcredential.EdgeChannelRefs)
 	}
@@ -25813,7 +28438,7 @@ func (m *UpstreamCredentialMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UpstreamCredentialMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.clearedchannel_refs {
 		edges = append(edges, upstreamcredential.EdgeChannelRefs)
 	}
@@ -25825,6 +28450,9 @@ func (m *UpstreamCredentialMutation) ClearedEdges() []string {
 	}
 	if m.clearedprovider_quota_statuses {
 		edges = append(edges, upstreamcredential.EdgeProviderQuotaStatuses)
+	}
+	if m.clearedquota_scope {
+		edges = append(edges, upstreamcredential.EdgeQuotaScope)
 	}
 	return edges
 }
@@ -25841,6 +28469,8 @@ func (m *UpstreamCredentialMutation) EdgeCleared(name string) bool {
 		return m.clearedusage_logs
 	case upstreamcredential.EdgeProviderQuotaStatuses:
 		return m.clearedprovider_quota_statuses
+	case upstreamcredential.EdgeQuotaScope:
+		return m.clearedquota_scope
 	}
 	return false
 }
@@ -25849,6 +28479,9 @@ func (m *UpstreamCredentialMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *UpstreamCredentialMutation) ClearEdge(name string) error {
 	switch name {
+	case upstreamcredential.EdgeQuotaScope:
+		m.ClearQuotaScope()
+		return nil
 	}
 	return fmt.Errorf("unknown UpstreamCredential unique edge %s", name)
 }
@@ -25869,6 +28502,9 @@ func (m *UpstreamCredentialMutation) ResetEdge(name string) error {
 	case upstreamcredential.EdgeProviderQuotaStatuses:
 		m.ResetProviderQuotaStatuses()
 		return nil
+	case upstreamcredential.EdgeQuotaScope:
+		m.ResetQuotaScope()
+		return nil
 	}
 	return fmt.Errorf("unknown UpstreamCredential edge %s", name)
 }
@@ -25885,9 +28521,14 @@ type UsageLogMutation struct {
 	addapi_key_id                            *int
 	model_id                                 *string
 	credential_fingerprint                   *string
+	secret_fingerprint                       *string
+	resource_scope_key                       *string
+	quota_scope_name_snapshot                *string
+	quota_scope_status_snapshot              *string
 	credential_name_snapshot                 *string
 	credential_key_hint                      *string
 	credential_source                        *string
+	credential_quota_status_snapshot         *string
 	prompt_tokens                            *int64
 	addprompt_tokens                         *int64
 	completion_tokens                        *int64
@@ -25928,6 +28569,8 @@ type UsageLogMutation struct {
 	clearedchannel                           bool
 	credential                               *int
 	clearedcredential                        bool
+	quota_scope                              *int
+	clearedquota_scope                       bool
 	done                                     bool
 	oldValue                                 func(context.Context) (*UsageLog, error)
 	predicates                               []predicate.UsageLog
@@ -26428,6 +29071,251 @@ func (m *UsageLogMutation) ResetCredentialFingerprint() {
 	delete(m.clearedFields, usagelog.FieldCredentialFingerprint)
 }
 
+// SetSecretFingerprint sets the "secret_fingerprint" field.
+func (m *UsageLogMutation) SetSecretFingerprint(s string) {
+	m.secret_fingerprint = &s
+}
+
+// SecretFingerprint returns the value of the "secret_fingerprint" field in the mutation.
+func (m *UsageLogMutation) SecretFingerprint() (r string, exists bool) {
+	v := m.secret_fingerprint
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSecretFingerprint returns the old "secret_fingerprint" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldSecretFingerprint(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSecretFingerprint is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSecretFingerprint requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSecretFingerprint: %w", err)
+	}
+	return oldValue.SecretFingerprint, nil
+}
+
+// ClearSecretFingerprint clears the value of the "secret_fingerprint" field.
+func (m *UsageLogMutation) ClearSecretFingerprint() {
+	m.secret_fingerprint = nil
+	m.clearedFields[usagelog.FieldSecretFingerprint] = struct{}{}
+}
+
+// SecretFingerprintCleared returns if the "secret_fingerprint" field was cleared in this mutation.
+func (m *UsageLogMutation) SecretFingerprintCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldSecretFingerprint]
+	return ok
+}
+
+// ResetSecretFingerprint resets all changes to the "secret_fingerprint" field.
+func (m *UsageLogMutation) ResetSecretFingerprint() {
+	m.secret_fingerprint = nil
+	delete(m.clearedFields, usagelog.FieldSecretFingerprint)
+}
+
+// SetResourceScopeKey sets the "resource_scope_key" field.
+func (m *UsageLogMutation) SetResourceScopeKey(s string) {
+	m.resource_scope_key = &s
+}
+
+// ResourceScopeKey returns the value of the "resource_scope_key" field in the mutation.
+func (m *UsageLogMutation) ResourceScopeKey() (r string, exists bool) {
+	v := m.resource_scope_key
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResourceScopeKey returns the old "resource_scope_key" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldResourceScopeKey(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResourceScopeKey is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResourceScopeKey requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResourceScopeKey: %w", err)
+	}
+	return oldValue.ResourceScopeKey, nil
+}
+
+// ClearResourceScopeKey clears the value of the "resource_scope_key" field.
+func (m *UsageLogMutation) ClearResourceScopeKey() {
+	m.resource_scope_key = nil
+	m.clearedFields[usagelog.FieldResourceScopeKey] = struct{}{}
+}
+
+// ResourceScopeKeyCleared returns if the "resource_scope_key" field was cleared in this mutation.
+func (m *UsageLogMutation) ResourceScopeKeyCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldResourceScopeKey]
+	return ok
+}
+
+// ResetResourceScopeKey resets all changes to the "resource_scope_key" field.
+func (m *UsageLogMutation) ResetResourceScopeKey() {
+	m.resource_scope_key = nil
+	delete(m.clearedFields, usagelog.FieldResourceScopeKey)
+}
+
+// SetQuotaScopeID sets the "quota_scope_id" field.
+func (m *UsageLogMutation) SetQuotaScopeID(i int) {
+	m.quota_scope = &i
+}
+
+// QuotaScopeID returns the value of the "quota_scope_id" field in the mutation.
+func (m *UsageLogMutation) QuotaScopeID() (r int, exists bool) {
+	v := m.quota_scope
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuotaScopeID returns the old "quota_scope_id" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldQuotaScopeID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuotaScopeID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuotaScopeID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuotaScopeID: %w", err)
+	}
+	return oldValue.QuotaScopeID, nil
+}
+
+// ClearQuotaScopeID clears the value of the "quota_scope_id" field.
+func (m *UsageLogMutation) ClearQuotaScopeID() {
+	m.quota_scope = nil
+	m.clearedFields[usagelog.FieldQuotaScopeID] = struct{}{}
+}
+
+// QuotaScopeIDCleared returns if the "quota_scope_id" field was cleared in this mutation.
+func (m *UsageLogMutation) QuotaScopeIDCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldQuotaScopeID]
+	return ok
+}
+
+// ResetQuotaScopeID resets all changes to the "quota_scope_id" field.
+func (m *UsageLogMutation) ResetQuotaScopeID() {
+	m.quota_scope = nil
+	delete(m.clearedFields, usagelog.FieldQuotaScopeID)
+}
+
+// SetQuotaScopeNameSnapshot sets the "quota_scope_name_snapshot" field.
+func (m *UsageLogMutation) SetQuotaScopeNameSnapshot(s string) {
+	m.quota_scope_name_snapshot = &s
+}
+
+// QuotaScopeNameSnapshot returns the value of the "quota_scope_name_snapshot" field in the mutation.
+func (m *UsageLogMutation) QuotaScopeNameSnapshot() (r string, exists bool) {
+	v := m.quota_scope_name_snapshot
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuotaScopeNameSnapshot returns the old "quota_scope_name_snapshot" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldQuotaScopeNameSnapshot(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuotaScopeNameSnapshot is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuotaScopeNameSnapshot requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuotaScopeNameSnapshot: %w", err)
+	}
+	return oldValue.QuotaScopeNameSnapshot, nil
+}
+
+// ClearQuotaScopeNameSnapshot clears the value of the "quota_scope_name_snapshot" field.
+func (m *UsageLogMutation) ClearQuotaScopeNameSnapshot() {
+	m.quota_scope_name_snapshot = nil
+	m.clearedFields[usagelog.FieldQuotaScopeNameSnapshot] = struct{}{}
+}
+
+// QuotaScopeNameSnapshotCleared returns if the "quota_scope_name_snapshot" field was cleared in this mutation.
+func (m *UsageLogMutation) QuotaScopeNameSnapshotCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldQuotaScopeNameSnapshot]
+	return ok
+}
+
+// ResetQuotaScopeNameSnapshot resets all changes to the "quota_scope_name_snapshot" field.
+func (m *UsageLogMutation) ResetQuotaScopeNameSnapshot() {
+	m.quota_scope_name_snapshot = nil
+	delete(m.clearedFields, usagelog.FieldQuotaScopeNameSnapshot)
+}
+
+// SetQuotaScopeStatusSnapshot sets the "quota_scope_status_snapshot" field.
+func (m *UsageLogMutation) SetQuotaScopeStatusSnapshot(s string) {
+	m.quota_scope_status_snapshot = &s
+}
+
+// QuotaScopeStatusSnapshot returns the value of the "quota_scope_status_snapshot" field in the mutation.
+func (m *UsageLogMutation) QuotaScopeStatusSnapshot() (r string, exists bool) {
+	v := m.quota_scope_status_snapshot
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuotaScopeStatusSnapshot returns the old "quota_scope_status_snapshot" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldQuotaScopeStatusSnapshot(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuotaScopeStatusSnapshot is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuotaScopeStatusSnapshot requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuotaScopeStatusSnapshot: %w", err)
+	}
+	return oldValue.QuotaScopeStatusSnapshot, nil
+}
+
+// ClearQuotaScopeStatusSnapshot clears the value of the "quota_scope_status_snapshot" field.
+func (m *UsageLogMutation) ClearQuotaScopeStatusSnapshot() {
+	m.quota_scope_status_snapshot = nil
+	m.clearedFields[usagelog.FieldQuotaScopeStatusSnapshot] = struct{}{}
+}
+
+// QuotaScopeStatusSnapshotCleared returns if the "quota_scope_status_snapshot" field was cleared in this mutation.
+func (m *UsageLogMutation) QuotaScopeStatusSnapshotCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldQuotaScopeStatusSnapshot]
+	return ok
+}
+
+// ResetQuotaScopeStatusSnapshot resets all changes to the "quota_scope_status_snapshot" field.
+func (m *UsageLogMutation) ResetQuotaScopeStatusSnapshot() {
+	m.quota_scope_status_snapshot = nil
+	delete(m.clearedFields, usagelog.FieldQuotaScopeStatusSnapshot)
+}
+
 // SetCredentialNameSnapshot sets the "credential_name_snapshot" field.
 func (m *UsageLogMutation) SetCredentialNameSnapshot(s string) {
 	m.credential_name_snapshot = &s
@@ -26573,6 +29461,55 @@ func (m *UsageLogMutation) CredentialSourceCleared() bool {
 func (m *UsageLogMutation) ResetCredentialSource() {
 	m.credential_source = nil
 	delete(m.clearedFields, usagelog.FieldCredentialSource)
+}
+
+// SetCredentialQuotaStatusSnapshot sets the "credential_quota_status_snapshot" field.
+func (m *UsageLogMutation) SetCredentialQuotaStatusSnapshot(s string) {
+	m.credential_quota_status_snapshot = &s
+}
+
+// CredentialQuotaStatusSnapshot returns the value of the "credential_quota_status_snapshot" field in the mutation.
+func (m *UsageLogMutation) CredentialQuotaStatusSnapshot() (r string, exists bool) {
+	v := m.credential_quota_status_snapshot
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCredentialQuotaStatusSnapshot returns the old "credential_quota_status_snapshot" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldCredentialQuotaStatusSnapshot(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCredentialQuotaStatusSnapshot is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCredentialQuotaStatusSnapshot requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCredentialQuotaStatusSnapshot: %w", err)
+	}
+	return oldValue.CredentialQuotaStatusSnapshot, nil
+}
+
+// ClearCredentialQuotaStatusSnapshot clears the value of the "credential_quota_status_snapshot" field.
+func (m *UsageLogMutation) ClearCredentialQuotaStatusSnapshot() {
+	m.credential_quota_status_snapshot = nil
+	m.clearedFields[usagelog.FieldCredentialQuotaStatusSnapshot] = struct{}{}
+}
+
+// CredentialQuotaStatusSnapshotCleared returns if the "credential_quota_status_snapshot" field was cleared in this mutation.
+func (m *UsageLogMutation) CredentialQuotaStatusSnapshotCleared() bool {
+	_, ok := m.clearedFields[usagelog.FieldCredentialQuotaStatusSnapshot]
+	return ok
+}
+
+// ResetCredentialQuotaStatusSnapshot resets all changes to the "credential_quota_status_snapshot" field.
+func (m *UsageLogMutation) ResetCredentialQuotaStatusSnapshot() {
+	m.credential_quota_status_snapshot = nil
+	delete(m.clearedFields, usagelog.FieldCredentialQuotaStatusSnapshot)
 }
 
 // SetPromptTokens sets the "prompt_tokens" field.
@@ -27737,6 +30674,33 @@ func (m *UsageLogMutation) ResetCredential() {
 	m.clearedcredential = false
 }
 
+// ClearQuotaScope clears the "quota_scope" edge to the CredentialQuotaScope entity.
+func (m *UsageLogMutation) ClearQuotaScope() {
+	m.clearedquota_scope = true
+	m.clearedFields[usagelog.FieldQuotaScopeID] = struct{}{}
+}
+
+// QuotaScopeCleared reports if the "quota_scope" edge to the CredentialQuotaScope entity was cleared.
+func (m *UsageLogMutation) QuotaScopeCleared() bool {
+	return m.QuotaScopeIDCleared() || m.clearedquota_scope
+}
+
+// QuotaScopeIDs returns the "quota_scope" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// QuotaScopeID instead. It exists only for internal usage by the builders.
+func (m *UsageLogMutation) QuotaScopeIDs() (ids []int) {
+	if id := m.quota_scope; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetQuotaScope resets all changes to the "quota_scope" edge.
+func (m *UsageLogMutation) ResetQuotaScope() {
+	m.quota_scope = nil
+	m.clearedquota_scope = false
+}
+
 // Where appends a list predicates to the UsageLogMutation builder.
 func (m *UsageLogMutation) Where(ps ...predicate.UsageLog) {
 	m.predicates = append(m.predicates, ps...)
@@ -27771,7 +30735,7 @@ func (m *UsageLogMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UsageLogMutation) Fields() []string {
-	fields := make([]string, 0, 29)
+	fields := make([]string, 0, 35)
 	if m.created_at != nil {
 		fields = append(fields, usagelog.FieldCreatedAt)
 	}
@@ -27799,6 +30763,21 @@ func (m *UsageLogMutation) Fields() []string {
 	if m.credential_fingerprint != nil {
 		fields = append(fields, usagelog.FieldCredentialFingerprint)
 	}
+	if m.secret_fingerprint != nil {
+		fields = append(fields, usagelog.FieldSecretFingerprint)
+	}
+	if m.resource_scope_key != nil {
+		fields = append(fields, usagelog.FieldResourceScopeKey)
+	}
+	if m.quota_scope != nil {
+		fields = append(fields, usagelog.FieldQuotaScopeID)
+	}
+	if m.quota_scope_name_snapshot != nil {
+		fields = append(fields, usagelog.FieldQuotaScopeNameSnapshot)
+	}
+	if m.quota_scope_status_snapshot != nil {
+		fields = append(fields, usagelog.FieldQuotaScopeStatusSnapshot)
+	}
 	if m.credential_name_snapshot != nil {
 		fields = append(fields, usagelog.FieldCredentialNameSnapshot)
 	}
@@ -27807,6 +30786,9 @@ func (m *UsageLogMutation) Fields() []string {
 	}
 	if m.credential_source != nil {
 		fields = append(fields, usagelog.FieldCredentialSource)
+	}
+	if m.credential_quota_status_snapshot != nil {
+		fields = append(fields, usagelog.FieldCredentialQuotaStatusSnapshot)
 	}
 	if m.prompt_tokens != nil {
 		fields = append(fields, usagelog.FieldPromptTokens)
@@ -27885,12 +30867,24 @@ func (m *UsageLogMutation) Field(name string) (ent.Value, bool) {
 		return m.ModelID()
 	case usagelog.FieldCredentialFingerprint:
 		return m.CredentialFingerprint()
+	case usagelog.FieldSecretFingerprint:
+		return m.SecretFingerprint()
+	case usagelog.FieldResourceScopeKey:
+		return m.ResourceScopeKey()
+	case usagelog.FieldQuotaScopeID:
+		return m.QuotaScopeID()
+	case usagelog.FieldQuotaScopeNameSnapshot:
+		return m.QuotaScopeNameSnapshot()
+	case usagelog.FieldQuotaScopeStatusSnapshot:
+		return m.QuotaScopeStatusSnapshot()
 	case usagelog.FieldCredentialNameSnapshot:
 		return m.CredentialNameSnapshot()
 	case usagelog.FieldCredentialKeyHint:
 		return m.CredentialKeyHint()
 	case usagelog.FieldCredentialSource:
 		return m.CredentialSource()
+	case usagelog.FieldCredentialQuotaStatusSnapshot:
+		return m.CredentialQuotaStatusSnapshot()
 	case usagelog.FieldPromptTokens:
 		return m.PromptTokens()
 	case usagelog.FieldCompletionTokens:
@@ -27952,12 +30946,24 @@ func (m *UsageLogMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldModelID(ctx)
 	case usagelog.FieldCredentialFingerprint:
 		return m.OldCredentialFingerprint(ctx)
+	case usagelog.FieldSecretFingerprint:
+		return m.OldSecretFingerprint(ctx)
+	case usagelog.FieldResourceScopeKey:
+		return m.OldResourceScopeKey(ctx)
+	case usagelog.FieldQuotaScopeID:
+		return m.OldQuotaScopeID(ctx)
+	case usagelog.FieldQuotaScopeNameSnapshot:
+		return m.OldQuotaScopeNameSnapshot(ctx)
+	case usagelog.FieldQuotaScopeStatusSnapshot:
+		return m.OldQuotaScopeStatusSnapshot(ctx)
 	case usagelog.FieldCredentialNameSnapshot:
 		return m.OldCredentialNameSnapshot(ctx)
 	case usagelog.FieldCredentialKeyHint:
 		return m.OldCredentialKeyHint(ctx)
 	case usagelog.FieldCredentialSource:
 		return m.OldCredentialSource(ctx)
+	case usagelog.FieldCredentialQuotaStatusSnapshot:
+		return m.OldCredentialQuotaStatusSnapshot(ctx)
 	case usagelog.FieldPromptTokens:
 		return m.OldPromptTokens(ctx)
 	case usagelog.FieldCompletionTokens:
@@ -28064,6 +31070,41 @@ func (m *UsageLogMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCredentialFingerprint(v)
 		return nil
+	case usagelog.FieldSecretFingerprint:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSecretFingerprint(v)
+		return nil
+	case usagelog.FieldResourceScopeKey:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResourceScopeKey(v)
+		return nil
+	case usagelog.FieldQuotaScopeID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuotaScopeID(v)
+		return nil
+	case usagelog.FieldQuotaScopeNameSnapshot:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuotaScopeNameSnapshot(v)
+		return nil
+	case usagelog.FieldQuotaScopeStatusSnapshot:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuotaScopeStatusSnapshot(v)
+		return nil
 	case usagelog.FieldCredentialNameSnapshot:
 		v, ok := value.(string)
 		if !ok {
@@ -28084,6 +31125,13 @@ func (m *UsageLogMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCredentialSource(v)
+		return nil
+	case usagelog.FieldCredentialQuotaStatusSnapshot:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCredentialQuotaStatusSnapshot(v)
 		return nil
 	case usagelog.FieldPromptTokens:
 		v, ok := value.(int64)
@@ -28417,6 +31465,21 @@ func (m *UsageLogMutation) ClearedFields() []string {
 	if m.FieldCleared(usagelog.FieldCredentialFingerprint) {
 		fields = append(fields, usagelog.FieldCredentialFingerprint)
 	}
+	if m.FieldCleared(usagelog.FieldSecretFingerprint) {
+		fields = append(fields, usagelog.FieldSecretFingerprint)
+	}
+	if m.FieldCleared(usagelog.FieldResourceScopeKey) {
+		fields = append(fields, usagelog.FieldResourceScopeKey)
+	}
+	if m.FieldCleared(usagelog.FieldQuotaScopeID) {
+		fields = append(fields, usagelog.FieldQuotaScopeID)
+	}
+	if m.FieldCleared(usagelog.FieldQuotaScopeNameSnapshot) {
+		fields = append(fields, usagelog.FieldQuotaScopeNameSnapshot)
+	}
+	if m.FieldCleared(usagelog.FieldQuotaScopeStatusSnapshot) {
+		fields = append(fields, usagelog.FieldQuotaScopeStatusSnapshot)
+	}
 	if m.FieldCleared(usagelog.FieldCredentialNameSnapshot) {
 		fields = append(fields, usagelog.FieldCredentialNameSnapshot)
 	}
@@ -28425,6 +31488,9 @@ func (m *UsageLogMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(usagelog.FieldCredentialSource) {
 		fields = append(fields, usagelog.FieldCredentialSource)
+	}
+	if m.FieldCleared(usagelog.FieldCredentialQuotaStatusSnapshot) {
+		fields = append(fields, usagelog.FieldCredentialQuotaStatusSnapshot)
 	}
 	if m.FieldCleared(usagelog.FieldPromptAudioTokens) {
 		fields = append(fields, usagelog.FieldPromptAudioTokens)
@@ -28488,6 +31554,21 @@ func (m *UsageLogMutation) ClearField(name string) error {
 	case usagelog.FieldCredentialFingerprint:
 		m.ClearCredentialFingerprint()
 		return nil
+	case usagelog.FieldSecretFingerprint:
+		m.ClearSecretFingerprint()
+		return nil
+	case usagelog.FieldResourceScopeKey:
+		m.ClearResourceScopeKey()
+		return nil
+	case usagelog.FieldQuotaScopeID:
+		m.ClearQuotaScopeID()
+		return nil
+	case usagelog.FieldQuotaScopeNameSnapshot:
+		m.ClearQuotaScopeNameSnapshot()
+		return nil
+	case usagelog.FieldQuotaScopeStatusSnapshot:
+		m.ClearQuotaScopeStatusSnapshot()
+		return nil
 	case usagelog.FieldCredentialNameSnapshot:
 		m.ClearCredentialNameSnapshot()
 		return nil
@@ -28496,6 +31577,9 @@ func (m *UsageLogMutation) ClearField(name string) error {
 		return nil
 	case usagelog.FieldCredentialSource:
 		m.ClearCredentialSource()
+		return nil
+	case usagelog.FieldCredentialQuotaStatusSnapshot:
+		m.ClearCredentialQuotaStatusSnapshot()
 		return nil
 	case usagelog.FieldPromptAudioTokens:
 		m.ClearPromptAudioTokens()
@@ -28568,6 +31652,21 @@ func (m *UsageLogMutation) ResetField(name string) error {
 	case usagelog.FieldCredentialFingerprint:
 		m.ResetCredentialFingerprint()
 		return nil
+	case usagelog.FieldSecretFingerprint:
+		m.ResetSecretFingerprint()
+		return nil
+	case usagelog.FieldResourceScopeKey:
+		m.ResetResourceScopeKey()
+		return nil
+	case usagelog.FieldQuotaScopeID:
+		m.ResetQuotaScopeID()
+		return nil
+	case usagelog.FieldQuotaScopeNameSnapshot:
+		m.ResetQuotaScopeNameSnapshot()
+		return nil
+	case usagelog.FieldQuotaScopeStatusSnapshot:
+		m.ResetQuotaScopeStatusSnapshot()
+		return nil
 	case usagelog.FieldCredentialNameSnapshot:
 		m.ResetCredentialNameSnapshot()
 		return nil
@@ -28576,6 +31675,9 @@ func (m *UsageLogMutation) ResetField(name string) error {
 		return nil
 	case usagelog.FieldCredentialSource:
 		m.ResetCredentialSource()
+		return nil
+	case usagelog.FieldCredentialQuotaStatusSnapshot:
+		m.ResetCredentialQuotaStatusSnapshot()
 		return nil
 	case usagelog.FieldPromptTokens:
 		m.ResetPromptTokens()
@@ -28634,7 +31736,7 @@ func (m *UsageLogMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UsageLogMutation) AddedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.request != nil {
 		edges = append(edges, usagelog.EdgeRequest)
 	}
@@ -28646,6 +31748,9 @@ func (m *UsageLogMutation) AddedEdges() []string {
 	}
 	if m.credential != nil {
 		edges = append(edges, usagelog.EdgeCredential)
+	}
+	if m.quota_scope != nil {
+		edges = append(edges, usagelog.EdgeQuotaScope)
 	}
 	return edges
 }
@@ -28670,13 +31775,17 @@ func (m *UsageLogMutation) AddedIDs(name string) []ent.Value {
 		if id := m.credential; id != nil {
 			return []ent.Value{*id}
 		}
+	case usagelog.EdgeQuotaScope:
+		if id := m.quota_scope; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UsageLogMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	return edges
 }
 
@@ -28688,7 +31797,7 @@ func (m *UsageLogMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UsageLogMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 4)
+	edges := make([]string, 0, 5)
 	if m.clearedrequest {
 		edges = append(edges, usagelog.EdgeRequest)
 	}
@@ -28700,6 +31809,9 @@ func (m *UsageLogMutation) ClearedEdges() []string {
 	}
 	if m.clearedcredential {
 		edges = append(edges, usagelog.EdgeCredential)
+	}
+	if m.clearedquota_scope {
+		edges = append(edges, usagelog.EdgeQuotaScope)
 	}
 	return edges
 }
@@ -28716,6 +31828,8 @@ func (m *UsageLogMutation) EdgeCleared(name string) bool {
 		return m.clearedchannel
 	case usagelog.EdgeCredential:
 		return m.clearedcredential
+	case usagelog.EdgeQuotaScope:
+		return m.clearedquota_scope
 	}
 	return false
 }
@@ -28736,6 +31850,9 @@ func (m *UsageLogMutation) ClearEdge(name string) error {
 	case usagelog.EdgeCredential:
 		m.ClearCredential()
 		return nil
+	case usagelog.EdgeQuotaScope:
+		m.ClearQuotaScope()
+		return nil
 	}
 	return fmt.Errorf("unknown UsageLog unique edge %s", name)
 }
@@ -28755,6 +31872,9 @@ func (m *UsageLogMutation) ResetEdge(name string) error {
 		return nil
 	case usagelog.EdgeCredential:
 		m.ResetCredential()
+		return nil
+	case usagelog.EdgeQuotaScope:
+		m.ResetQuotaScope()
 		return nil
 	}
 	return fmt.Errorf("unknown UsageLog edge %s", name)

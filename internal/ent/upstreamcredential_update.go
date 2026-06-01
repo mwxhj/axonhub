@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/predicate"
 	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
@@ -157,7 +158,6 @@ func (_u *UpstreamCredentialUpdate) ClearKeyHint() *UpstreamCredentialUpdate {
 
 // SetQuotaScopeID sets the "quota_scope_id" field.
 func (_u *UpstreamCredentialUpdate) SetQuotaScopeID(v int) *UpstreamCredentialUpdate {
-	_u.mutation.ResetQuotaScopeID()
 	_u.mutation.SetQuotaScopeID(v)
 	return _u
 }
@@ -167,12 +167,6 @@ func (_u *UpstreamCredentialUpdate) SetNillableQuotaScopeID(v *int) *UpstreamCre
 	if v != nil {
 		_u.SetQuotaScopeID(*v)
 	}
-	return _u
-}
-
-// AddQuotaScopeID adds value to the "quota_scope_id" field.
-func (_u *UpstreamCredentialUpdate) AddQuotaScopeID(v int) *UpstreamCredentialUpdate {
-	_u.mutation.AddQuotaScopeID(v)
 	return _u
 }
 
@@ -207,6 +201,26 @@ func (_u *UpstreamCredentialUpdate) SetNillableFingerprint(v *string) *UpstreamC
 	if v != nil {
 		_u.SetFingerprint(*v)
 	}
+	return _u
+}
+
+// SetSecretFingerprint sets the "secret_fingerprint" field.
+func (_u *UpstreamCredentialUpdate) SetSecretFingerprint(v string) *UpstreamCredentialUpdate {
+	_u.mutation.SetSecretFingerprint(v)
+	return _u
+}
+
+// SetNillableSecretFingerprint sets the "secret_fingerprint" field if the given value is not nil.
+func (_u *UpstreamCredentialUpdate) SetNillableSecretFingerprint(v *string) *UpstreamCredentialUpdate {
+	if v != nil {
+		_u.SetSecretFingerprint(*v)
+	}
+	return _u
+}
+
+// ClearSecretFingerprint clears the value of the "secret_fingerprint" field.
+func (_u *UpstreamCredentialUpdate) ClearSecretFingerprint() *UpstreamCredentialUpdate {
+	_u.mutation.ClearSecretFingerprint()
 	return _u
 }
 
@@ -365,6 +379,11 @@ func (_u *UpstreamCredentialUpdate) AddProviderQuotaStatuses(v ...*ProviderQuota
 	return _u.AddProviderQuotaStatusIDs(ids...)
 }
 
+// SetQuotaScope sets the "quota_scope" edge to the CredentialQuotaScope entity.
+func (_u *UpstreamCredentialUpdate) SetQuotaScope(v *CredentialQuotaScope) *UpstreamCredentialUpdate {
+	return _u.SetQuotaScopeID(v.ID)
+}
+
 // Mutation returns the UpstreamCredentialMutation object of the builder.
 func (_u *UpstreamCredentialUpdate) Mutation() *UpstreamCredentialMutation {
 	return _u.mutation
@@ -454,6 +473,12 @@ func (_u *UpstreamCredentialUpdate) RemoveProviderQuotaStatuses(v ...*ProviderQu
 	return _u.RemoveProviderQuotaStatusIDs(ids...)
 }
 
+// ClearQuotaScope clears the "quota_scope" edge to the CredentialQuotaScope entity.
+func (_u *UpstreamCredentialUpdate) ClearQuotaScope() *UpstreamCredentialUpdate {
+	_u.mutation.ClearQuotaScope()
+	return _u
+}
+
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *UpstreamCredentialUpdate) Save(ctx context.Context) (int, error) {
 	if err := _u.defaults(); err != nil {
@@ -506,6 +531,11 @@ func (_u *UpstreamCredentialUpdate) check() error {
 	if v, ok := _u.mutation.Fingerprint(); ok {
 		if err := upstreamcredential.FingerprintValidator(v); err != nil {
 			return &ValidationError{Name: "fingerprint", err: fmt.Errorf(`ent: validator failed for field "UpstreamCredential.fingerprint": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.SecretFingerprint(); ok {
+		if err := upstreamcredential.SecretFingerprintValidator(v); err != nil {
+			return &ValidationError{Name: "secret_fingerprint", err: fmt.Errorf(`ent: validator failed for field "UpstreamCredential.secret_fingerprint": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Status(); ok {
@@ -570,20 +600,17 @@ func (_u *UpstreamCredentialUpdate) sqlSave(ctx context.Context) (_node int, err
 	if _u.mutation.KeyHintCleared() {
 		_spec.ClearField(upstreamcredential.FieldKeyHint, field.TypeString)
 	}
-	if value, ok := _u.mutation.QuotaScopeID(); ok {
-		_spec.SetField(upstreamcredential.FieldQuotaScopeID, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedQuotaScopeID(); ok {
-		_spec.AddField(upstreamcredential.FieldQuotaScopeID, field.TypeInt, value)
-	}
-	if _u.mutation.QuotaScopeIDCleared() {
-		_spec.ClearField(upstreamcredential.FieldQuotaScopeID, field.TypeInt)
-	}
 	if value, ok := _u.mutation.SecretPayload(); ok {
 		_spec.SetField(upstreamcredential.FieldSecretPayload, field.TypeJSON, value)
 	}
 	if value, ok := _u.mutation.Fingerprint(); ok {
 		_spec.SetField(upstreamcredential.FieldFingerprint, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.SecretFingerprint(); ok {
+		_spec.SetField(upstreamcredential.FieldSecretFingerprint, field.TypeString, value)
+	}
+	if _u.mutation.SecretFingerprintCleared() {
+		_spec.ClearField(upstreamcredential.FieldSecretFingerprint, field.TypeString)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(upstreamcredential.FieldStatus, field.TypeEnum, value)
@@ -792,6 +819,35 @@ func (_u *UpstreamCredentialUpdate) sqlSave(ctx context.Context) (_node int, err
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.QuotaScopeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   upstreamcredential.QuotaScopeTable,
+			Columns: []string{upstreamcredential.QuotaScopeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credentialquotascope.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.QuotaScopeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   upstreamcredential.QuotaScopeTable,
+			Columns: []string{upstreamcredential.QuotaScopeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credentialquotascope.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -937,7 +993,6 @@ func (_u *UpstreamCredentialUpdateOne) ClearKeyHint() *UpstreamCredentialUpdateO
 
 // SetQuotaScopeID sets the "quota_scope_id" field.
 func (_u *UpstreamCredentialUpdateOne) SetQuotaScopeID(v int) *UpstreamCredentialUpdateOne {
-	_u.mutation.ResetQuotaScopeID()
 	_u.mutation.SetQuotaScopeID(v)
 	return _u
 }
@@ -947,12 +1002,6 @@ func (_u *UpstreamCredentialUpdateOne) SetNillableQuotaScopeID(v *int) *Upstream
 	if v != nil {
 		_u.SetQuotaScopeID(*v)
 	}
-	return _u
-}
-
-// AddQuotaScopeID adds value to the "quota_scope_id" field.
-func (_u *UpstreamCredentialUpdateOne) AddQuotaScopeID(v int) *UpstreamCredentialUpdateOne {
-	_u.mutation.AddQuotaScopeID(v)
 	return _u
 }
 
@@ -987,6 +1036,26 @@ func (_u *UpstreamCredentialUpdateOne) SetNillableFingerprint(v *string) *Upstre
 	if v != nil {
 		_u.SetFingerprint(*v)
 	}
+	return _u
+}
+
+// SetSecretFingerprint sets the "secret_fingerprint" field.
+func (_u *UpstreamCredentialUpdateOne) SetSecretFingerprint(v string) *UpstreamCredentialUpdateOne {
+	_u.mutation.SetSecretFingerprint(v)
+	return _u
+}
+
+// SetNillableSecretFingerprint sets the "secret_fingerprint" field if the given value is not nil.
+func (_u *UpstreamCredentialUpdateOne) SetNillableSecretFingerprint(v *string) *UpstreamCredentialUpdateOne {
+	if v != nil {
+		_u.SetSecretFingerprint(*v)
+	}
+	return _u
+}
+
+// ClearSecretFingerprint clears the value of the "secret_fingerprint" field.
+func (_u *UpstreamCredentialUpdateOne) ClearSecretFingerprint() *UpstreamCredentialUpdateOne {
+	_u.mutation.ClearSecretFingerprint()
 	return _u
 }
 
@@ -1145,6 +1214,11 @@ func (_u *UpstreamCredentialUpdateOne) AddProviderQuotaStatuses(v ...*ProviderQu
 	return _u.AddProviderQuotaStatusIDs(ids...)
 }
 
+// SetQuotaScope sets the "quota_scope" edge to the CredentialQuotaScope entity.
+func (_u *UpstreamCredentialUpdateOne) SetQuotaScope(v *CredentialQuotaScope) *UpstreamCredentialUpdateOne {
+	return _u.SetQuotaScopeID(v.ID)
+}
+
 // Mutation returns the UpstreamCredentialMutation object of the builder.
 func (_u *UpstreamCredentialUpdateOne) Mutation() *UpstreamCredentialMutation {
 	return _u.mutation
@@ -1234,6 +1308,12 @@ func (_u *UpstreamCredentialUpdateOne) RemoveProviderQuotaStatuses(v ...*Provide
 	return _u.RemoveProviderQuotaStatusIDs(ids...)
 }
 
+// ClearQuotaScope clears the "quota_scope" edge to the CredentialQuotaScope entity.
+func (_u *UpstreamCredentialUpdateOne) ClearQuotaScope() *UpstreamCredentialUpdateOne {
+	_u.mutation.ClearQuotaScope()
+	return _u
+}
+
 // Where appends a list predicates to the UpstreamCredentialUpdate builder.
 func (_u *UpstreamCredentialUpdateOne) Where(ps ...predicate.UpstreamCredential) *UpstreamCredentialUpdateOne {
 	_u.mutation.Where(ps...)
@@ -1299,6 +1379,11 @@ func (_u *UpstreamCredentialUpdateOne) check() error {
 	if v, ok := _u.mutation.Fingerprint(); ok {
 		if err := upstreamcredential.FingerprintValidator(v); err != nil {
 			return &ValidationError{Name: "fingerprint", err: fmt.Errorf(`ent: validator failed for field "UpstreamCredential.fingerprint": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.SecretFingerprint(); ok {
+		if err := upstreamcredential.SecretFingerprintValidator(v); err != nil {
+			return &ValidationError{Name: "secret_fingerprint", err: fmt.Errorf(`ent: validator failed for field "UpstreamCredential.secret_fingerprint": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Status(); ok {
@@ -1380,20 +1465,17 @@ func (_u *UpstreamCredentialUpdateOne) sqlSave(ctx context.Context) (_node *Upst
 	if _u.mutation.KeyHintCleared() {
 		_spec.ClearField(upstreamcredential.FieldKeyHint, field.TypeString)
 	}
-	if value, ok := _u.mutation.QuotaScopeID(); ok {
-		_spec.SetField(upstreamcredential.FieldQuotaScopeID, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedQuotaScopeID(); ok {
-		_spec.AddField(upstreamcredential.FieldQuotaScopeID, field.TypeInt, value)
-	}
-	if _u.mutation.QuotaScopeIDCleared() {
-		_spec.ClearField(upstreamcredential.FieldQuotaScopeID, field.TypeInt)
-	}
 	if value, ok := _u.mutation.SecretPayload(); ok {
 		_spec.SetField(upstreamcredential.FieldSecretPayload, field.TypeJSON, value)
 	}
 	if value, ok := _u.mutation.Fingerprint(); ok {
 		_spec.SetField(upstreamcredential.FieldFingerprint, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.SecretFingerprint(); ok {
+		_spec.SetField(upstreamcredential.FieldSecretFingerprint, field.TypeString, value)
+	}
+	if _u.mutation.SecretFingerprintCleared() {
+		_spec.ClearField(upstreamcredential.FieldSecretFingerprint, field.TypeString)
 	}
 	if value, ok := _u.mutation.Status(); ok {
 		_spec.SetField(upstreamcredential.FieldStatus, field.TypeEnum, value)
@@ -1595,6 +1677,35 @@ func (_u *UpstreamCredentialUpdateOne) sqlSave(ctx context.Context) (_node *Upst
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(providerquotastatus.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.QuotaScopeCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   upstreamcredential.QuotaScopeTable,
+			Columns: []string{upstreamcredential.QuotaScopeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credentialquotascope.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.QuotaScopeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   upstreamcredential.QuotaScopeTable,
+			Columns: []string{upstreamcredential.QuotaScopeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credentialquotascope.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

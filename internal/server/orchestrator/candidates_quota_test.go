@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	"github.com/looplj/axonhub/internal/ent"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/objects"
 	"github.com/looplj/axonhub/internal/server/biz"
@@ -383,4 +386,164 @@ func TestAreAllChannelsExhausted_UsesCredentialDerivedQuotaStatus(t *testing.T) 
 	}
 
 	require.False(t, areAllChannelsExhausted(candidates, provider, &llm.Request{Model: "gpt-4"}))
+}
+
+func TestProviderQuotaSelector_UsesResourceScopeBeforeCredentialIdentity(t *testing.T) {
+	secret := objects.UpstreamCredentialSecretFromAPIKey("shared-key")
+	secretFingerprint := biz.CredentialSecretFingerprintForSecret("api_key", secret)
+	chA := &ent.Channel{
+		ID:          1,
+		Name:        "resource-a",
+		Type:        "ollama",
+		BaseURL:     "https://gateway-a.example.com/v1",
+		Credentials: objects.ChannelCredentials{APIKeys: []string{"shared-key"}},
+	}
+	chB := &ent.Channel{
+		ID:          2,
+		Name:        "resource-b",
+		Type:        "ollama",
+		BaseURL:     "https://gateway-b.example.com/v1",
+		Credentials: objects.ChannelCredentials{APIKeys: []string{"shared-key"}},
+	}
+	resourceA := biz.ChannelCredentialResourceScopeKey(chA, secretFingerprint)
+	resourceB := biz.ChannelCredentialResourceScopeKey(chB, secretFingerprint)
+	fingerprint := biz.ChannelCredentialFingerprintForAPIKey("ollama", "https://gateway-a.example.com/v1", "shared-key")
+
+	provider := &mockQuotaStatusProvider{
+		credentialStatuses: map[string]*biz.QuotaChannelStatus{
+			fingerprint: {Status: providerquotastatus.StatusExhausted, Ready: false},
+		},
+		resourceStatuses: map[string]*biz.QuotaChannelStatus{
+			resourceA: {Status: providerquotastatus.StatusExhausted, Ready: false, ResourceScopeKey: resourceA},
+			resourceB: {Status: providerquotastatus.StatusAvailable, Ready: true, ResourceScopeKey: resourceB},
+		},
+	}
+	settings := &mockQuotaEnforcementSettingsProvider{
+		settings: &biz.QuotaEnforcementSettings{Enabled: true, Mode: biz.QuotaEnforcementModeExhaustedOnly},
+	}
+	inner := &mockSelector{
+		candidates: []*ChannelModelsCandidate{
+			{Channel: &biz.Channel{Channel: chA}},
+			{Channel: &biz.Channel{Channel: chB}},
+		},
+	}
+
+	selector := WithProviderQuotaSelector(inner, provider, settings)
+	got, err := selector.Select(context.Background(), &llm.Request{Model: "gpt-4"})
+
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	require.Equal(t, 2, got[0].Channel.ID)
+}
+
+func TestProviderQuotaSelector_NarrowsCredentialViewsBeforeAPIKeySelection(t *testing.T) {
+	exhaustedKey := "exhausted-key"
+	availableKey := "available-key"
+	channel := &biz.Channel{Channel: &ent.Channel{
+		ID:      1,
+		Name:    "multi-key",
+		Type:    "openai",
+		BaseURL: "https://api.openai.com/v1",
+		Credentials: objects.ChannelCredentials{
+			APIKeys: []string{exhaustedKey, availableKey},
+		},
+	}}
+	exhaustedFingerprint := channel.CredentialFingerprintForAPIKey(exhaustedKey)
+	availableFingerprint := channel.CredentialFingerprintForAPIKey(availableKey)
+
+	provider := &mockQuotaStatusProvider{
+		credentialStatuses: map[string]*biz.QuotaChannelStatus{
+			exhaustedFingerprint: {Status: providerquotastatus.StatusExhausted, Ready: false},
+			availableFingerprint: {Status: providerquotastatus.StatusAvailable, Ready: true},
+		},
+	}
+	settings := &mockQuotaEnforcementSettingsProvider{
+		settings: &biz.QuotaEnforcementSettings{Enabled: true, Mode: biz.QuotaEnforcementModeExhaustedOnly},
+	}
+	inner := &mockSelector{
+		candidates: []*ChannelModelsCandidate{{Channel: channel}},
+	}
+
+	selector := WithProviderQuotaSelector(inner, provider, settings)
+	got, err := selector.Select(context.Background(), &llm.Request{Model: "gpt-4"})
+
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	require.Len(t, got[0].Channel.CredentialViews(), 1)
+	require.Equal(t, availableFingerprint, got[0].Channel.CredentialViews()[0].Fingerprint)
+	require.Equal(t, availableKey, biz.NewTraceStickyKeyProvider(got[0].Channel).Get(context.Background()))
+}
+
+func TestProviderQuotaSelector_FiltersChannelWhenAllCredentialViewsExhausted(t *testing.T) {
+	channel := &biz.Channel{Channel: &ent.Channel{
+		ID:      1,
+		Name:    "all-exhausted",
+		Type:    "openai",
+		BaseURL: "https://api.openai.com/v1",
+		Credentials: objects.ChannelCredentials{
+			APIKeys: []string{"key-1", "key-2"},
+		},
+	}}
+
+	provider := &mockQuotaStatusProvider{credentialStatuses: map[string]*biz.QuotaChannelStatus{}}
+	for _, view := range channel.CredentialViews() {
+		provider.credentialStatuses[view.Fingerprint] = &biz.QuotaChannelStatus{
+			Status: providerquotastatus.StatusExhausted,
+			Ready:  false,
+		}
+	}
+	settings := &mockQuotaEnforcementSettingsProvider{
+		settings: &biz.QuotaEnforcementSettings{Enabled: true, Mode: biz.QuotaEnforcementModeExhaustedOnly},
+	}
+	inner := &mockSelector{
+		candidates: []*ChannelModelsCandidate{{Channel: channel}},
+	}
+
+	selector := WithProviderQuotaSelector(inner, provider, settings)
+	got, err := selector.Select(context.Background(), &llm.Request{Model: "gpt-4"})
+
+	require.NoError(t, err)
+	require.Empty(t, got)
+	require.Equal(t, 1, selector.FilteredCount)
+}
+
+func TestProviderQuotaSelector_FiltersLocallyPausedCredentialScopeWithoutProviderData(t *testing.T) {
+	base := &biz.Channel{Channel: &ent.Channel{
+		ID:      1,
+		Name:    "locally-paused",
+		Type:    "openai",
+		BaseURL: "https://api.openai.com/v1",
+		Credentials: objects.ChannelCredentials{
+			APIKeys: []string{"paused-key"},
+		},
+	}}
+	channel := base.WithCredentialViewsForSelection([]biz.ChannelCredentialView{
+		{
+			CredentialID:              10,
+			Fingerprint:               "cred:v1:paused",
+			SecretFingerprint:         "secret:v1:paused",
+			ResourceScopeKey:          "openai:secret:v1:paused",
+			AuthKind:                  "api_key",
+			SecretKind:                "api_key",
+			KeyHint:                   "paused-key",
+			Secret:                    objects.UpstreamCredentialSecretFromAPIKey("paused-key"),
+			Enabled:                   true,
+			Source:                    biz.ChannelCredentialSourceRef,
+			QuotaScopeID:              20,
+			QuotaScopeStatus:          credentialquotascope.StatusPaused.String(),
+			QuotaScopeOverLimitAction: credentialquotascope.OverLimitActionPause.String(),
+			QuotaScopePauseUntil:      lo.ToPtr(time.Now().Add(time.Hour)),
+		},
+	})
+	selector := WithProviderQuotaSelector(
+		&mockSelector{candidates: []*ChannelModelsCandidate{{Channel: channel}}},
+		nil,
+		&mockQuotaEnforcementSettingsProvider{},
+	)
+
+	got, err := selector.Select(context.Background(), &llm.Request{Model: "gpt-4"})
+
+	require.NoError(t, err)
+	require.Empty(t, got)
+	require.Equal(t, 1, selector.FilteredCount)
 }

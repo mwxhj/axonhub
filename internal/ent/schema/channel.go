@@ -182,10 +182,8 @@ func (Channel) Edges() []ent.Edge {
 				entgql.Skip(entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
 				entgql.RelayConnection(),
 			),
-		edge.To("provider_quota_status", ProviderQuotaStatus.Type).
-			Unique().
+		edge.To("provider_quota_statuses", ProviderQuotaStatus.Type).
 			Annotations(
-				entgql.Directives(forceResolver()),
 				entgql.Skip(entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
 			),
 	}

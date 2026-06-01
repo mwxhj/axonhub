@@ -35,10 +35,7 @@ export function RotateCredentialDialog() {
 
   useEffect(() => {
     if (isOpen && currentCredential) {
-      reset({
-        ...defaultCredentialFormValues,
-        authKind: currentCredential.secretKind,
-      });
+      reset(defaultCredentialFormValues);
     }
   }, [currentCredential, isOpen, reset]);
 
@@ -54,7 +51,7 @@ export function RotateCredentialDialog() {
 
     await rotateMutation.mutateAsync({
       id: currentCredential.id,
-      input: buildRotateCredentialInput(currentCredential.secretKind, values),
+      input: buildRotateCredentialInput(values),
     });
     close();
   };
@@ -68,9 +65,7 @@ export function RotateCredentialDialog() {
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit, () => {})} noValidate>
           <div className='grid max-h-[72vh] gap-4 overflow-y-auto py-4 pr-1'>
-            {currentCredential && (
-              <CredentialSecretFields authKind={currentCredential.secretKind} register={register} errors={errors} />
-            )}
+            {currentCredential && <CredentialSecretFields register={register} errors={errors} />}
           </div>
           <DialogFooter>
             <Button type='button' variant='outline' onClick={close}>

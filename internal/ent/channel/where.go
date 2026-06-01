@@ -948,21 +948,21 @@ func HasCredentialRefsWith(preds ...predicate.ChannelCredentialRef) predicate.Ch
 	})
 }
 
-// HasProviderQuotaStatus applies the HasEdge predicate on the "provider_quota_status" edge.
-func HasProviderQuotaStatus() predicate.Channel {
+// HasProviderQuotaStatuses applies the HasEdge predicate on the "provider_quota_statuses" edge.
+func HasProviderQuotaStatuses() predicate.Channel {
 	return predicate.Channel(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, ProviderQuotaStatusTable, ProviderQuotaStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, ProviderQuotaStatusesTable, ProviderQuotaStatusesColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasProviderQuotaStatusWith applies the HasEdge predicate on the "provider_quota_status" edge with a given conditions (other predicates).
-func HasProviderQuotaStatusWith(preds ...predicate.ProviderQuotaStatus) predicate.Channel {
+// HasProviderQuotaStatusesWith applies the HasEdge predicate on the "provider_quota_statuses" edge with a given conditions (other predicates).
+func HasProviderQuotaStatusesWith(preds ...predicate.ProviderQuotaStatus) predicate.Channel {
 	return predicate.Channel(func(s *sql.Selector) {
-		step := newProviderQuotaStatusStep()
+		step := newProviderQuotaStatusesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

@@ -73,8 +73,8 @@ const (
 	EdgeChannelModelPrices = "channel_model_prices"
 	// EdgeCredentialRefs holds the string denoting the credential_refs edge name in mutations.
 	EdgeCredentialRefs = "credential_refs"
-	// EdgeProviderQuotaStatus holds the string denoting the provider_quota_status edge name in mutations.
-	EdgeProviderQuotaStatus = "provider_quota_status"
+	// EdgeProviderQuotaStatuses holds the string denoting the provider_quota_statuses edge name in mutations.
+	EdgeProviderQuotaStatuses = "provider_quota_statuses"
 	// Table holds the table name of the channel in the database.
 	Table = "channels"
 	// RequestsTable is the table that holds the requests relation/edge.
@@ -119,13 +119,13 @@ const (
 	CredentialRefsInverseTable = "channel_credential_refs"
 	// CredentialRefsColumn is the table column denoting the credential_refs relation/edge.
 	CredentialRefsColumn = "channel_id"
-	// ProviderQuotaStatusTable is the table that holds the provider_quota_status relation/edge.
-	ProviderQuotaStatusTable = "provider_quota_status"
-	// ProviderQuotaStatusInverseTable is the table name for the ProviderQuotaStatus entity.
+	// ProviderQuotaStatusesTable is the table that holds the provider_quota_statuses relation/edge.
+	ProviderQuotaStatusesTable = "provider_quota_status"
+	// ProviderQuotaStatusesInverseTable is the table name for the ProviderQuotaStatus entity.
 	// It exists in this package in order to avoid circular dependency with the "providerquotastatus" package.
-	ProviderQuotaStatusInverseTable = "provider_quota_status"
-	// ProviderQuotaStatusColumn is the table column denoting the provider_quota_status relation/edge.
-	ProviderQuotaStatusColumn = "channel_id"
+	ProviderQuotaStatusesInverseTable = "provider_quota_status"
+	// ProviderQuotaStatusesColumn is the table column denoting the provider_quota_statuses relation/edge.
+	ProviderQuotaStatusesColumn = "channel_id"
 )
 
 // Columns holds all SQL columns for channel fields.
@@ -461,10 +461,17 @@ func ByCredentialRefs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
-// ByProviderQuotaStatusField orders the results by provider_quota_status field.
-func ByProviderQuotaStatusField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByProviderQuotaStatusesCount orders the results by provider_quota_statuses count.
+func ByProviderQuotaStatusesCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newProviderQuotaStatusStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborsCount(s, newProviderQuotaStatusesStep(), opts...)
+	}
+}
+
+// ByProviderQuotaStatuses orders the results by provider_quota_statuses terms.
+func ByProviderQuotaStatuses(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProviderQuotaStatusesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newRequestsStep() *sqlgraph.Step {
@@ -509,11 +516,11 @@ func newCredentialRefsStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.O2M, false, CredentialRefsTable, CredentialRefsColumn),
 	)
 }
-func newProviderQuotaStatusStep() *sqlgraph.Step {
+func newProviderQuotaStatusesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ProviderQuotaStatusInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2O, false, ProviderQuotaStatusTable, ProviderQuotaStatusColumn),
+		sqlgraph.To(ProviderQuotaStatusesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProviderQuotaStatusesTable, ProviderQuotaStatusesColumn),
 	)
 }
 

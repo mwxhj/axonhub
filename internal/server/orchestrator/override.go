@@ -167,9 +167,9 @@ func applyOverrideRequestBody(outbound *PersistentOutboundTransformer) pipeline.
 			log.Debug(ctx, "applied body override operations",
 				log.String("channel", channel.Name),
 				log.Int("channel_id", channel.ID),
-				log.Any("operations", ops),
-				log.String("old_body", string(request.Body)),
-				log.String("new_body", string(body)),
+				log.Any("operations", sanitizeOverrideOperations(ops)),
+				log.String("old_body", string(sanitizeResponseBody(request.Body, 4096))),
+				log.String("new_body", string(sanitizeResponseBody(body, 4096))),
 			)
 		}
 
@@ -177,6 +177,41 @@ func applyOverrideRequestBody(outbound *PersistentOutboundTransformer) pipeline.
 
 		return request, nil
 	})
+}
+
+func sanitizeOverrideOperations(ops []objects.OverrideOperation) []objects.OverrideOperation {
+	if len(ops) == 0 {
+		return ops
+	}
+
+	sanitized := make([]objects.OverrideOperation, 0, len(ops))
+	for _, op := range ops {
+		item := op
+		if isSensitiveOverridePath(item.Path) || isSensitiveOverridePath(item.From) || isSensitiveOverridePath(item.To) {
+			item.Value = "[REDACTED]"
+			item.Condition = ""
+		} else {
+			item.Value = string(sanitizeResponseBody([]byte(item.Value), 512))
+			item.Condition = string(sanitizeResponseBody([]byte(item.Condition), 512))
+		}
+		sanitized = append(sanitized, item)
+	}
+
+	return sanitized
+}
+
+func isSensitiveOverridePath(path string) bool {
+	lowerPath := strings.ToLower(path)
+	return strings.Contains(lowerPath, "api_key") ||
+		strings.Contains(lowerPath, "apikey") ||
+		strings.Contains(lowerPath, "api-key") ||
+		strings.Contains(lowerPath, "access_token") ||
+		strings.Contains(lowerPath, "refresh_token") ||
+		strings.Contains(lowerPath, "id_token") ||
+		strings.Contains(lowerPath, "client_secret") ||
+		strings.Contains(lowerPath, "authorization") ||
+		strings.Contains(lowerPath, "password") ||
+		strings.Contains(lowerPath, "secret")
 }
 
 func applyBodyOperation(

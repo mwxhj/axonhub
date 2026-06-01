@@ -12,6 +12,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/apikey"
 	"github.com/looplj/axonhub/internal/ent/request"
+	"github.com/looplj/axonhub/internal/ent/requestexecution"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
 )
 
@@ -40,6 +41,7 @@ func (svc *BackupService) doBackup(ctx context.Context, opts BackupOptions) ([]b
 	var (
 		projectDataList              []*BackupProject
 		channelDataList              []*BackupChannel
+		credentialQuotaScopeDataList []*BackupCredentialQuotaScope
 		upstreamCredentialDataList   []*BackupUpstreamCredential
 		channelCredentialRefDataList []*BackupChannelCredentialRef
 		channelModelPriceDataList    []*BackupChannelModelPrice
@@ -67,6 +69,16 @@ func (svc *BackupService) doBackup(ctx context.Context, opts BackupOptions) ([]b
 				Channel:     *ch,
 				Credentials: ch.Credentials,
 			}
+		})
+
+		quotaScopes, err := svc.db.CredentialQuotaScope.Query().All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		credentialQuotaScopeDataList = lo.Map(quotaScopes, func(scope *ent.CredentialQuotaScope, _ int) *BackupCredentialQuotaScope {
+			copy := *scope
+			copy.Edges = ent.CredentialQuotaScopeEdges{}
+			return &BackupCredentialQuotaScope{CredentialQuotaScope: copy}
 		})
 
 		upstreamCredentials, err := svc.db.UpstreamCredential.Query().All(ctx)
@@ -163,13 +175,19 @@ func (svc *BackupService) doBackup(ctx context.Context, opts BackupOptions) ([]b
 	}
 
 	var (
-		usageRequestDataList []*BackupUsageRequest
-		usageLogDataList     []*BackupUsageLog
+		usageRequestDataList     []*BackupUsageRequest
+		requestExecutionDataList []*BackupRequestExecution
+		usageLogDataList         []*BackupUsageLog
 	)
 
 	if opts.IncludeUsageStats {
 		var err error
 		usageRequestDataList, err = svc.backupUsageRequests(ctx, opts.IncludeAPIKeys)
+		if err != nil {
+			return nil, err
+		}
+
+		requestExecutionDataList, err = svc.backupRequestExecutions(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -185,12 +203,14 @@ func (svc *BackupService) doBackup(ctx context.Context, opts BackupOptions) ([]b
 		Timestamp:             time.Now(),
 		Projects:              projectDataList,
 		Channels:              channelDataList,
+		CredentialQuotaScopes: credentialQuotaScopeDataList,
 		UpstreamCredentials:   upstreamCredentialDataList,
 		ChannelCredentialRefs: channelCredentialRefDataList,
 		Models:                modelDataList,
 		ChannelModelPrices:    channelModelPriceDataList,
 		APIKeys:               apiKeyDataList,
 		UsageRequests:         usageRequestDataList,
+		RequestExecutions:     requestExecutionDataList,
 		UsageLogs:             usageLogDataList,
 	}
 
@@ -250,6 +270,57 @@ func backupUsageRequest(req *ent.Request, includeAPIKeyValues bool) *BackupUsage
 		data.APIKeyKey = req.Edges.APIKey.Key
 	}
 	data.Request.Edges = ent.RequestEdges{}
+
+	return data
+}
+
+func (svc *BackupService) backupRequestExecutions(ctx context.Context) ([]*BackupRequestExecution, error) {
+	var requestExecutionDataList []*BackupRequestExecution
+	lastID := 0
+
+	for {
+		query := svc.db.RequestExecution.Query().
+			Where(requestexecution.IDGT(lastID)).
+			Order(ent.Asc(requestexecution.FieldID)).
+			Limit(usageBackupBatchSize).
+			WithRequest(func(q *ent.RequestQuery) {
+				q.WithProject().WithChannel()
+			}).
+			WithChannel()
+
+		executions, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(executions) == 0 {
+			break
+		}
+
+		for _, exec := range executions {
+			requestExecutionDataList = append(requestExecutionDataList, backupRequestExecution(exec))
+			lastID = exec.ID
+		}
+
+		if len(executions) < usageBackupBatchSize {
+			break
+		}
+	}
+
+	return requestExecutionDataList, nil
+}
+
+func backupRequestExecution(exec *ent.RequestExecution) *BackupRequestExecution {
+	data := &BackupRequestExecution{RequestExecution: *exec}
+	if exec.Edges.Request != nil && exec.Edges.Request.Edges.Project != nil {
+		data.ProjectName = exec.Edges.Request.Edges.Project.Name
+	}
+	if exec.Edges.Channel != nil {
+		data.ChannelName = exec.Edges.Channel.Name
+	} else if exec.Edges.Request != nil && exec.Edges.Request.Edges.Channel != nil {
+		data.ChannelName = exec.Edges.Request.Edges.Channel.Name
+	}
+	data.RequestExecution.Edges = ent.RequestExecutionEdges{}
 
 	return data
 }

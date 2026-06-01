@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/objects"
 )
@@ -43,8 +44,10 @@ type UpstreamCredential struct {
 	QuotaScopeID *int `json:"quota_scope_id,omitempty"`
 	// SecretPayload holds the value of the "secret_payload" field.
 	SecretPayload objects.UpstreamCredentialSecret `json:"-"`
-	// Safe upstream credential identity; never contains raw secret material
+	// Legacy safe upstream credential identity; never contains raw secret material
 	Fingerprint string `json:"fingerprint,omitempty"`
+	// Safe secret-only identity for deduping the same raw secret across channels/resources
+	SecretFingerprint *string `json:"secret_fingerprint,omitempty"`
 	// Status holds the value of the "status" field.
 	Status upstreamcredential.Status `json:"status,omitempty"`
 	// Default credential selection weight inside eligible channel refs
@@ -71,11 +74,13 @@ type UpstreamCredentialEdges struct {
 	UsageLogs []*UsageLog `json:"usage_logs,omitempty"`
 	// ProviderQuotaStatuses holds the value of the provider_quota_statuses edge.
 	ProviderQuotaStatuses []*ProviderQuotaStatus `json:"provider_quota_statuses,omitempty"`
+	// QuotaScope holds the value of the quota_scope edge.
+	QuotaScope *CredentialQuotaScope `json:"quota_scope,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 	// totalCount holds the count of the edges above.
-	totalCount [4]map[string]int
+	totalCount [5]map[string]int
 
 	namedChannelRefs           map[string][]*ChannelCredentialRef
 	namedExecutions            map[string][]*RequestExecution
@@ -119,6 +124,17 @@ func (e UpstreamCredentialEdges) ProviderQuotaStatusesOrErr() ([]*ProviderQuotaS
 	return nil, &NotLoadedError{edge: "provider_quota_statuses"}
 }
 
+// QuotaScopeOrErr returns the QuotaScope value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UpstreamCredentialEdges) QuotaScopeOrErr() (*CredentialQuotaScope, error) {
+	if e.QuotaScope != nil {
+		return e.QuotaScope, nil
+	} else if e.loadedTypes[4] {
+		return nil, &NotFoundError{label: credentialquotascope.Label}
+	}
+	return nil, &NotLoadedError{edge: "quota_scope"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*UpstreamCredential) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -128,7 +144,7 @@ func (*UpstreamCredential) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case upstreamcredential.FieldID, upstreamcredential.FieldDeletedAt, upstreamcredential.FieldQuotaScopeID, upstreamcredential.FieldWeight:
 			values[i] = new(sql.NullInt64)
-		case upstreamcredential.FieldName, upstreamcredential.FieldProviderType, upstreamcredential.FieldBaseURL, upstreamcredential.FieldAuthKind, upstreamcredential.FieldSecretKind, upstreamcredential.FieldIssuerScope, upstreamcredential.FieldKeyHint, upstreamcredential.FieldFingerprint, upstreamcredential.FieldStatus, upstreamcredential.FieldQuotaStatus, upstreamcredential.FieldLastError, upstreamcredential.FieldRemark:
+		case upstreamcredential.FieldName, upstreamcredential.FieldProviderType, upstreamcredential.FieldBaseURL, upstreamcredential.FieldAuthKind, upstreamcredential.FieldSecretKind, upstreamcredential.FieldIssuerScope, upstreamcredential.FieldKeyHint, upstreamcredential.FieldFingerprint, upstreamcredential.FieldSecretFingerprint, upstreamcredential.FieldStatus, upstreamcredential.FieldQuotaStatus, upstreamcredential.FieldLastError, upstreamcredential.FieldRemark:
 			values[i] = new(sql.NullString)
 		case upstreamcredential.FieldCreatedAt, upstreamcredential.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -234,6 +250,13 @@ func (_m *UpstreamCredential) assignValues(columns []string, values []any) error
 			} else if value.Valid {
 				_m.Fingerprint = value.String
 			}
+		case upstreamcredential.FieldSecretFingerprint:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field secret_fingerprint", values[i])
+			} else if value.Valid {
+				_m.SecretFingerprint = new(string)
+				*_m.SecretFingerprint = value.String
+			}
 		case upstreamcredential.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
@@ -295,6 +318,11 @@ func (_m *UpstreamCredential) QueryUsageLogs() *UsageLogQuery {
 // QueryProviderQuotaStatuses queries the "provider_quota_statuses" edge of the UpstreamCredential entity.
 func (_m *UpstreamCredential) QueryProviderQuotaStatuses() *ProviderQuotaStatusQuery {
 	return NewUpstreamCredentialClient(_m.config).QueryProviderQuotaStatuses(_m)
+}
+
+// QueryQuotaScope queries the "quota_scope" edge of the UpstreamCredential entity.
+func (_m *UpstreamCredential) QueryQuotaScope() *CredentialQuotaScopeQuery {
+	return NewUpstreamCredentialClient(_m.config).QueryQuotaScope(_m)
 }
 
 // Update returns a builder for updating this UpstreamCredential.
@@ -359,6 +387,11 @@ func (_m *UpstreamCredential) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("fingerprint=")
 	builder.WriteString(_m.Fingerprint)
+	builder.WriteString(", ")
+	if v := _m.SecretFingerprint; v != nil {
+		builder.WriteString("secret_fingerprint=")
+		builder.WriteString(*v)
+	}
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Status))

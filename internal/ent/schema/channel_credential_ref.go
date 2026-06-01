@@ -44,7 +44,10 @@ func (ChannelCredentialRef) Fields() []ent.Field {
 		field.Int("weight_override").
 			Optional().
 			Nillable().
-			Comment("Optional per-channel selection weight. When absent, uses credential.weight."),
+			Comment("Internal optional per-channel selection weight. When absent, uses credential.weight.").
+			Annotations(
+				entgql.Skip(entgql.SkipType, entgql.SkipWhereInput),
+			),
 	}
 }
 

@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"go.uber.org/fx"
 
 	"github.com/looplj/axonhub/internal/authz"
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
+	"github.com/looplj/axonhub/internal/ent/predicate"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/objects"
@@ -45,14 +48,19 @@ type CreateUpstreamCredentialInput struct {
 	Secret       objects.UpstreamCredentialSecret
 	Status       *upstreamcredential.Status
 	Weight       *int
+	QuotaScopeID *objects.GUID
+	Quota        *CreateCredentialQuotaScopeInput
 	Remark       *string
 }
 
 type UpdateUpstreamCredentialInput struct {
-	Name   *string
-	Status *upstreamcredential.Status
-	Weight *int
-	Remark *string
+	Name            *string
+	Status          *upstreamcredential.Status
+	Weight          *int
+	QuotaScopeID    *objects.GUID
+	ClearQuotaScope bool
+	Quota           *UpdateCredentialQuotaScopeInput
+	Remark          *string
 }
 
 type RotateUpstreamCredentialSecretInput struct {
@@ -72,6 +80,44 @@ type UpdateChannelCredentialRefInput struct {
 	ClearWeightOverride bool
 }
 
+type CreateCredentialQuotaScopeInput struct {
+	Name                    *string
+	Status                  *credentialquotascope.Status
+	Unit                    *credentialquotascope.Unit
+	LimitAmount             *string
+	UsedAmount              *string
+	WarningThresholdPercent *int
+	ResetPolicy             *credentialquotascope.ResetPolicy
+	ResetAt                 *time.Time
+	WindowStartedAt         *time.Time
+	OverLimitAction         *credentialquotascope.OverLimitAction
+	PauseUntil              *time.Time
+	Source                  *credentialquotascope.Source
+	LastError               *string
+	Remark                  *string
+}
+
+type UpdateCredentialQuotaScopeInput struct {
+	Name                    *string
+	Status                  *credentialquotascope.Status
+	Unit                    *credentialquotascope.Unit
+	LimitAmount             *string
+	UsedAmount              *string
+	WarningThresholdPercent *int
+	ClearWarningThreshold   bool
+	ResetPolicy             *credentialquotascope.ResetPolicy
+	ResetAt                 *time.Time
+	ClearResetAt            bool
+	WindowStartedAt         *time.Time
+	ClearWindowStartedAt    bool
+	OverLimitAction         *credentialquotascope.OverLimitAction
+	PauseUntil              *time.Time
+	ClearPauseUntil         bool
+	Source                  *credentialquotascope.Source
+	LastError               *string
+	Remark                  *string
+}
+
 type MigrateLegacyCredentialsPayload struct {
 	MigratedChannels   int
 	CreatedCredentials int
@@ -79,50 +125,90 @@ type MigrateLegacyCredentialsPayload struct {
 	SkippedChannels    int
 }
 
+type BackfillCredentialSecretFingerprintsPayload struct {
+	ScannedCredentials  int
+	UpdatedCredentials  int
+	MergedCredentials   int
+	SkippedCredentials  int
+	MigratedRefs        int
+	DisabledSourceRefs  int
+	ArchivedCredentials int
+}
+
+type credentialRefMigrationPayload struct {
+	MigratedRefs       int
+	DisabledSourceRefs int
+}
+
 func (svc *UpstreamCredentialService) CreateUpstreamCredential(ctx context.Context, input CreateUpstreamCredentialInput) (*ent.UpstreamCredential, error) {
 	secretKind := resolveCredentialSecretKind(input.SecretKind, input.AuthKind, input.Secret)
 	issuerScope := resolveCredentialIssuerScope(input.IssuerScope, input.ProviderType, input.BaseURL, input.Secret)
 	fingerprint := CredentialFingerprintForSecret(issuerScope, secretKind.String(), input.Secret)
+	secretFingerprint := CredentialSecretFingerprintForSecret(secretKind.String(), input.Secret)
 	if fingerprint == "" {
 		return nil, fmt.Errorf("credential secret is empty or unsupported")
 	}
 
 	existing, err := svc.entFromContext(ctx).UpstreamCredential.Query().
-		Where(upstreamcredential.Fingerprint(fingerprint)).
+		Where(upstreamcredential.Or(
+			upstreamcredential.SecretFingerprintEQ(secretFingerprint),
+			upstreamcredential.Fingerprint(fingerprint),
+		)).
 		First(ctx)
 	if err != nil && !ent.IsNotFound(err) {
 		return nil, fmt.Errorf("failed to check credential fingerprint: %w", err)
 	}
 	if existing != nil {
-		return nil, fmt.Errorf("upstream credential already exists with fingerprint %s", fingerprint)
+		return existing, nil
 	}
 
-	create := svc.entFromContext(ctx).UpstreamCredential.Create().
-		SetProviderType(strings.TrimSpace(stringValuePtr(input.ProviderType))).
-		SetBaseURL(normalizeCredentialBaseURL(stringValuePtr(input.BaseURL))).
-		SetAuthKind(authKindFromSecretKind(secretKind)).
-		SetSecretKind(secretKind).
-		SetIssuerScope(issuerScope).
-		SetKeyHint(CredentialKeyHintForSecret(secretKind.String(), input.Secret)).
-		SetSecretPayload(input.Secret).
-		SetFingerprint(fingerprint)
+	var credential *ent.UpstreamCredential
+	if err := svc.RunInTransaction(ctx, func(ctx context.Context) error {
+		create := svc.entFromContext(ctx).UpstreamCredential.Create().
+			SetProviderType(strings.TrimSpace(stringValuePtr(input.ProviderType))).
+			SetBaseURL(normalizeCredentialBaseURL(stringValuePtr(input.BaseURL))).
+			SetAuthKind(authKindFromSecretKind(secretKind)).
+			SetSecretKind(secretKind).
+			SetIssuerScope(issuerScope).
+			SetKeyHint(CredentialKeyHintForSecret(secretKind.String(), input.Secret)).
+			SetSecretPayload(input.Secret).
+			SetFingerprint(fingerprint).
+			SetSecretFingerprint(secretFingerprint)
 
-	if input.Name != nil {
-		create.SetName(strings.TrimSpace(*input.Name))
-	}
-	if input.Status != nil {
-		create.SetStatus(*input.Status)
-	}
-	if input.Weight != nil {
-		create.SetWeight(normalizeCredentialWeight(*input.Weight))
-	}
-	if input.Remark != nil {
-		create.SetRemark(strings.TrimSpace(*input.Remark))
-	}
+		if input.Name != nil {
+			create.SetName(strings.TrimSpace(*input.Name))
+		}
+		if input.Status != nil {
+			create.SetStatus(*input.Status)
+		}
+		if input.Weight != nil {
+			create.SetWeight(normalizeCredentialWeight(*input.Weight))
+		}
+		if input.QuotaScopeID != nil {
+			create.SetQuotaScopeID(input.QuotaScopeID.ID)
+		}
+		if input.Quota != nil {
+			scopeCreate := svc.entFromContext(ctx).CredentialQuotaScope.Create()
+			applyCreateCredentialQuotaScopeInput(scopeCreate, *input.Quota)
+			scope, err := scopeCreate.Save(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to create credential quota scope: %w", err)
+			}
+			create.SetQuotaScopeID(scope.ID)
+		}
+		if input.Remark != nil {
+			create.SetRemark(strings.TrimSpace(*input.Remark))
+		}
 
-	credential, err := create.Save(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create upstream credential: %w", err)
+		var err error
+		credential, err = create.Save(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to create upstream credential: %w", err)
+		}
+
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	svc.reloadChannels()
@@ -131,24 +217,58 @@ func (svc *UpstreamCredentialService) CreateUpstreamCredential(ctx context.Conte
 }
 
 func (svc *UpstreamCredentialService) UpdateUpstreamCredential(ctx context.Context, id int, input UpdateUpstreamCredentialInput) (*ent.UpstreamCredential, error) {
-	update := svc.entFromContext(ctx).UpstreamCredential.UpdateOneID(id)
+	var credential *ent.UpstreamCredential
+	if err := svc.RunInTransaction(ctx, func(ctx context.Context) error {
+		client := svc.entFromContext(ctx)
+		current, err := client.UpstreamCredential.Get(ctx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get upstream credential: %w", err)
+		}
 
-	if input.Name != nil {
-		update.SetName(strings.TrimSpace(*input.Name))
-	}
-	if input.Status != nil {
-		update.SetStatus(*input.Status)
-	}
-	if input.Weight != nil {
-		update.SetWeight(normalizeCredentialWeight(*input.Weight))
-	}
-	if input.Remark != nil {
-		update.SetRemark(strings.TrimSpace(*input.Remark))
-	}
+		update := client.UpstreamCredential.UpdateOneID(id)
 
-	credential, err := update.Save(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update upstream credential: %w", err)
+		if input.Name != nil {
+			update.SetName(strings.TrimSpace(*input.Name))
+		}
+		if input.Status != nil {
+			update.SetStatus(*input.Status)
+		}
+		if input.Weight != nil {
+			update.SetWeight(normalizeCredentialWeight(*input.Weight))
+		}
+		if input.ClearQuotaScope {
+			update.ClearQuotaScopeID()
+		} else if input.QuotaScopeID != nil {
+			update.SetQuotaScopeID(input.QuotaScopeID.ID)
+		} else if input.Quota != nil {
+			if current.QuotaScopeID != nil && *current.QuotaScopeID > 0 {
+				scopeUpdate := client.CredentialQuotaScope.UpdateOneID(*current.QuotaScopeID)
+				applyUpdateCredentialQuotaScopeInput(scopeUpdate, *input.Quota)
+				if _, err := scopeUpdate.Save(ctx); err != nil {
+					return fmt.Errorf("failed to update credential quota scope: %w", err)
+				}
+			} else {
+				scopeCreate := client.CredentialQuotaScope.Create()
+				applyUpdateCredentialQuotaScopeCreateInput(scopeCreate, *input.Quota)
+				scope, err := scopeCreate.Save(ctx)
+				if err != nil {
+					return fmt.Errorf("failed to create credential quota scope: %w", err)
+				}
+				update.SetQuotaScopeID(scope.ID)
+			}
+		}
+		if input.Remark != nil {
+			update.SetRemark(strings.TrimSpace(*input.Remark))
+		}
+
+		credential, err = update.Save(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to update upstream credential: %w", err)
+		}
+
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	svc.reloadChannels()
@@ -157,48 +277,330 @@ func (svc *UpstreamCredentialService) UpdateUpstreamCredential(ctx context.Conte
 }
 
 func (svc *UpstreamCredentialService) RotateUpstreamCredentialSecret(ctx context.Context, id int, input RotateUpstreamCredentialSecretInput) (*ent.UpstreamCredential, error) {
-	existing, err := svc.entFromContext(ctx).UpstreamCredential.Get(ctx, id)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get upstream credential: %w", err)
-	}
+	var credential *ent.UpstreamCredential
+	if err := svc.RunInTransaction(ctx, func(ctx context.Context) error {
+		client := svc.entFromContext(ctx)
+		existing, err := client.UpstreamCredential.Query().
+			Where(upstreamcredential.ID(id)).
+			WithChannelRefs().
+			Only(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get upstream credential: %w", err)
+		}
 
-	secretKind := existing.SecretKind
-	issuerScope := existing.IssuerScope
-	if strings.TrimSpace(issuerScope) == "" {
-		issuerScope = CredentialIssuerScope(existing.ProviderType, existing.BaseURL)
-	}
-	fingerprint := CredentialFingerprintForSecret(issuerScope, secretKind.String(), input.Secret)
-	if fingerprint == "" {
-		return nil, fmt.Errorf("credential secret is empty or unsupported")
-	}
+		secretKind := existing.SecretKind
+		issuerScope := existing.IssuerScope
+		if strings.TrimSpace(issuerScope) == "" {
+			issuerScope = CredentialIssuerScope(existing.ProviderType, existing.BaseURL)
+		}
+		fingerprint := CredentialFingerprintForSecret(issuerScope, secretKind.String(), input.Secret)
+		secretFingerprint := CredentialSecretFingerprintForSecret(secretKind.String(), input.Secret)
+		if fingerprint == "" {
+			return fmt.Errorf("credential secret is empty or unsupported")
+		}
 
-	conflict, err := svc.entFromContext(ctx).UpstreamCredential.Query().
-		Where(
-			upstreamcredential.Fingerprint(fingerprint),
-			upstreamcredential.IDNEQ(id),
-		).
-		First(ctx)
-	if err != nil && !ent.IsNotFound(err) {
-		return nil, fmt.Errorf("failed to check credential fingerprint: %w", err)
-	}
-	if conflict != nil {
-		return nil, fmt.Errorf("another upstream credential already uses this secret fingerprint")
-	}
+		if credentialMatchesSecret(existing, fingerprint, secretFingerprint) {
+			credential, err = client.UpstreamCredential.UpdateOneID(id).
+				SetSecretPayload(input.Secret).
+				SetFingerprint(fingerprint).
+				SetSecretFingerprint(secretFingerprint).
+				SetSecretKind(secretKind).
+				SetIssuerScope(issuerScope).
+				SetKeyHint(CredentialKeyHintForSecret(secretKind.String(), input.Secret)).
+				Save(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to rotate upstream credential secret: %w", err)
+			}
+			return nil
+		}
 
-	credential, err := svc.entFromContext(ctx).UpstreamCredential.UpdateOneID(id).
-		SetSecretPayload(input.Secret).
-		SetFingerprint(fingerprint).
-		SetSecretKind(secretKind).
-		SetIssuerScope(issuerScope).
-		SetKeyHint(CredentialKeyHintForSecret(secretKind.String(), input.Secret)).
-		Save(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to rotate upstream credential secret: %w", err)
+		target, err := client.UpstreamCredential.Query().
+			Where(
+				upstreamcredential.Or(
+					upstreamcredential.SecretFingerprintEQ(secretFingerprint),
+					upstreamcredential.Fingerprint(fingerprint),
+				),
+				upstreamcredential.IDNEQ(id),
+			).
+			First(ctx)
+		if err != nil && !ent.IsNotFound(err) {
+			return fmt.Errorf("failed to check credential fingerprint: %w", err)
+		}
+		if ent.IsNotFound(err) {
+			create := client.UpstreamCredential.Create().
+				SetName(existing.Name).
+				SetProviderType(existing.ProviderType).
+				SetBaseURL(existing.BaseURL).
+				SetAuthKind(existing.AuthKind).
+				SetSecretKind(secretKind).
+				SetIssuerScope(issuerScope).
+				SetKeyHint(CredentialKeyHintForSecret(secretKind.String(), input.Secret)).
+				SetSecretPayload(input.Secret).
+				SetFingerprint(fingerprint).
+				SetSecretFingerprint(secretFingerprint).
+				SetStatus(existing.Status).
+				SetWeight(normalizeCredentialWeight(existing.Weight)).
+				SetQuotaStatus(existing.QuotaStatus).
+				SetLastError(existing.LastError).
+				SetRemark(existing.Remark)
+			if existing.QuotaScopeID != nil {
+				create.SetQuotaScopeID(*existing.QuotaScopeID)
+			}
+
+			target, err = create.Save(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to create replacement upstream credential: %w", err)
+			}
+		}
+
+		if _, err := svc.migrateCredentialRefsToTarget(ctx, existing, target); err != nil {
+			return err
+		}
+
+		if existing.Status != upstreamcredential.StatusArchived {
+			if _, err := client.UpstreamCredential.UpdateOneID(existing.ID).
+				SetStatus(upstreamcredential.StatusArchived).
+				Save(ctx); err != nil {
+				return fmt.Errorf("failed to archive replaced upstream credential: %w", err)
+			}
+		}
+
+		credential, err = client.UpstreamCredential.Query().
+			Where(upstreamcredential.ID(target.ID)).
+			WithChannelRefs().
+			WithQuotaScope().
+			Only(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to load replacement upstream credential: %w", err)
+		}
+
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	svc.reloadChannels()
 
 	return credential, nil
+}
+
+func credentialMatchesSecret(credential *ent.UpstreamCredential, fingerprint string, secretFingerprint string) bool {
+	if credential == nil {
+		return false
+	}
+	if strings.TrimSpace(secretFingerprint) != "" && credential.SecretFingerprint != nil && *credential.SecretFingerprint == secretFingerprint {
+		return true
+	}
+
+	return strings.TrimSpace(fingerprint) != "" && credential.Fingerprint == fingerprint
+}
+
+func (svc *UpstreamCredentialService) migrateCredentialRefsToTarget(ctx context.Context, source *ent.UpstreamCredential, target *ent.UpstreamCredential) (*credentialRefMigrationPayload, error) {
+	payload := &credentialRefMigrationPayload{}
+	if source == nil || target == nil || source.ID == target.ID {
+		return payload, nil
+	}
+
+	client := svc.entFromContext(ctx)
+	for _, ref := range source.Edges.ChannelRefs {
+		if ref == nil {
+			continue
+		}
+
+		existingTargetRef, err := client.ChannelCredentialRef.Query().
+			Where(
+				channelcredentialref.ChannelID(ref.ChannelID),
+				channelcredentialref.CredentialID(target.ID),
+			).
+			First(ctx)
+		if err != nil && !ent.IsNotFound(err) {
+			return payload, fmt.Errorf("failed to check replacement channel credential ref: %w", err)
+		}
+
+		if existingTargetRef != nil {
+			update := client.ChannelCredentialRef.UpdateOneID(existingTargetRef.ID).
+				SetEnabled(existingTargetRef.Enabled || ref.Enabled)
+			if ref.WeightOverride != nil && existingTargetRef.WeightOverride == nil {
+				update.SetWeightOverride(*ref.WeightOverride)
+			}
+			if _, err := update.Save(ctx); err != nil {
+				return payload, fmt.Errorf("failed to update replacement channel credential ref: %w", err)
+			}
+			payload.MigratedRefs++
+		} else {
+			create := client.ChannelCredentialRef.Create().
+				SetChannelID(ref.ChannelID).
+				SetCredentialID(target.ID).
+				SetEnabled(ref.Enabled)
+			if ref.WeightOverride != nil {
+				create.SetWeightOverride(*ref.WeightOverride)
+			}
+			if _, err := create.Save(ctx); err != nil {
+				return payload, fmt.Errorf("failed to create replacement channel credential ref: %w", err)
+			}
+			payload.MigratedRefs++
+		}
+
+		if ref.Enabled {
+			if _, err := client.ChannelCredentialRef.UpdateOneID(ref.ID).
+				SetEnabled(false).
+				Save(ctx); err != nil {
+				return payload, fmt.Errorf("failed to disable replaced channel credential ref: %w", err)
+			}
+			payload.DisabledSourceRefs++
+		}
+	}
+
+	return payload, nil
+}
+
+func (svc *UpstreamCredentialService) CreateCredentialQuotaScope(ctx context.Context, input CreateCredentialQuotaScopeInput) (*ent.CredentialQuotaScope, error) {
+	create := svc.entFromContext(ctx).CredentialQuotaScope.Create()
+	applyCreateCredentialQuotaScopeInput(create, input)
+
+	scope, err := create.Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create credential quota scope: %w", err)
+	}
+
+	svc.reloadChannels()
+
+	return scope, nil
+}
+
+func (svc *UpstreamCredentialService) UpdateCredentialQuotaScope(ctx context.Context, id int, input UpdateCredentialQuotaScopeInput) (*ent.CredentialQuotaScope, error) {
+	update := svc.entFromContext(ctx).CredentialQuotaScope.UpdateOneID(id)
+	applyUpdateCredentialQuotaScopeInput(update, input)
+
+	scope, err := update.Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update credential quota scope: %w", err)
+	}
+
+	svc.reloadChannels()
+
+	return scope, nil
+}
+
+func applyCreateCredentialQuotaScopeInput(create *ent.CredentialQuotaScopeCreate, input CreateCredentialQuotaScopeInput) {
+	if input.Name != nil {
+		create.SetName(strings.TrimSpace(*input.Name))
+	}
+	if input.Status != nil {
+		create.SetStatus(*input.Status)
+	} else {
+		create.SetStatus(credentialquotascope.StatusAvailable)
+	}
+	if input.Unit != nil {
+		create.SetUnit(*input.Unit)
+	}
+	if input.LimitAmount != nil {
+		create.SetLimitAmount(strings.TrimSpace(*input.LimitAmount))
+	}
+	if input.UsedAmount != nil {
+		create.SetUsedAmount(strings.TrimSpace(*input.UsedAmount))
+	}
+	if input.WarningThresholdPercent != nil {
+		create.SetWarningThresholdPercent(*input.WarningThresholdPercent)
+	}
+	if input.ResetPolicy != nil {
+		create.SetResetPolicy(*input.ResetPolicy)
+	}
+	if input.ResetAt != nil {
+		create.SetResetAt(*input.ResetAt)
+	}
+	if input.WindowStartedAt != nil {
+		create.SetWindowStartedAt(*input.WindowStartedAt)
+	}
+	if input.OverLimitAction != nil {
+		create.SetOverLimitAction(*input.OverLimitAction)
+	}
+	if input.PauseUntil != nil {
+		create.SetPauseUntil(*input.PauseUntil)
+	}
+	if input.Source != nil {
+		create.SetSource(*input.Source)
+	} else {
+		create.SetSource(credentialquotascope.SourceLocalBudget)
+	}
+	if input.LastError != nil {
+		create.SetLastError(strings.TrimSpace(*input.LastError))
+	}
+	if input.Remark != nil {
+		create.SetRemark(strings.TrimSpace(*input.Remark))
+	}
+}
+
+func applyUpdateCredentialQuotaScopeCreateInput(create *ent.CredentialQuotaScopeCreate, input UpdateCredentialQuotaScopeInput) {
+	applyCreateCredentialQuotaScopeInput(create, CreateCredentialQuotaScopeInput{
+		Name:                    input.Name,
+		Status:                  input.Status,
+		Unit:                    input.Unit,
+		LimitAmount:             input.LimitAmount,
+		UsedAmount:              input.UsedAmount,
+		WarningThresholdPercent: input.WarningThresholdPercent,
+		ResetPolicy:             input.ResetPolicy,
+		ResetAt:                 input.ResetAt,
+		WindowStartedAt:         input.WindowStartedAt,
+		OverLimitAction:         input.OverLimitAction,
+		PauseUntil:              input.PauseUntil,
+		Source:                  input.Source,
+		LastError:               input.LastError,
+		Remark:                  input.Remark,
+	})
+}
+
+func applyUpdateCredentialQuotaScopeInput(update *ent.CredentialQuotaScopeUpdateOne, input UpdateCredentialQuotaScopeInput) {
+	if input.Name != nil {
+		update.SetName(strings.TrimSpace(*input.Name))
+	}
+	if input.Status != nil {
+		update.SetStatus(*input.Status)
+	}
+	if input.Unit != nil {
+		update.SetUnit(*input.Unit)
+	}
+	if input.LimitAmount != nil {
+		update.SetLimitAmount(strings.TrimSpace(*input.LimitAmount))
+	}
+	if input.UsedAmount != nil {
+		update.SetUsedAmount(strings.TrimSpace(*input.UsedAmount))
+	}
+	if input.ClearWarningThreshold {
+		update.ClearWarningThresholdPercent()
+	} else if input.WarningThresholdPercent != nil {
+		update.SetWarningThresholdPercent(*input.WarningThresholdPercent)
+	}
+	if input.ResetPolicy != nil {
+		update.SetResetPolicy(*input.ResetPolicy)
+	}
+	if input.ClearResetAt {
+		update.ClearResetAt()
+	} else if input.ResetAt != nil {
+		update.SetResetAt(*input.ResetAt)
+	}
+	if input.ClearWindowStartedAt {
+		update.ClearWindowStartedAt()
+	} else if input.WindowStartedAt != nil {
+		update.SetWindowStartedAt(*input.WindowStartedAt)
+	}
+	if input.OverLimitAction != nil {
+		update.SetOverLimitAction(*input.OverLimitAction)
+	}
+	if input.ClearPauseUntil {
+		update.ClearPauseUntil()
+	} else if input.PauseUntil != nil {
+		update.SetPauseUntil(*input.PauseUntil)
+	}
+	if input.Source != nil {
+		update.SetSource(*input.Source)
+	}
+	if input.LastError != nil {
+		update.SetLastError(strings.TrimSpace(*input.LastError))
+	}
+	if input.Remark != nil {
+		update.SetRemark(strings.TrimSpace(*input.Remark))
+	}
 }
 
 func (svc *UpstreamCredentialService) AttachCredentialToChannel(ctx context.Context, input AttachCredentialToChannelInput) (*ent.ChannelCredentialRef, error) {
@@ -350,6 +752,22 @@ func (svc *UpstreamCredentialService) RunStartupMigration(ctx context.Context) {
 	ctx = ent.NewContext(ctx, svc.db)
 	ctx = authz.WithSystemBypass(ctx, "upstream-credential-startup-migration")
 
+	backfillPayload, err := svc.BackfillCredentialSecretFingerprints(ctx)
+	if err != nil {
+		log.Warn(ctx, "failed to backfill upstream credential secret fingerprints",
+			log.Cause(err),
+		)
+	} else if backfillPayload != nil && (backfillPayload.UpdatedCredentials > 0 || backfillPayload.MergedCredentials > 0 || backfillPayload.MigratedRefs > 0 || backfillPayload.ArchivedCredentials > 0) {
+		log.Info(ctx, "backfilled upstream credential secret fingerprints",
+			log.Int("scanned_credentials", backfillPayload.ScannedCredentials),
+			log.Int("updated_credentials", backfillPayload.UpdatedCredentials),
+			log.Int("merged_credentials", backfillPayload.MergedCredentials),
+			log.Int("migrated_refs", backfillPayload.MigratedRefs),
+			log.Int("disabled_source_refs", backfillPayload.DisabledSourceRefs),
+			log.Int("archived_credentials", backfillPayload.ArchivedCredentials),
+		)
+	}
+
 	payload, err := svc.MigrateLegacyChannelCredentials(ctx)
 	if err != nil {
 		log.Warn(ctx, "failed to migrate legacy channel credentials",
@@ -368,9 +786,113 @@ func (svc *UpstreamCredentialService) RunStartupMigration(ctx context.Context) {
 	)
 }
 
+func (svc *UpstreamCredentialService) BackfillCredentialSecretFingerprints(ctx context.Context) (*BackfillCredentialSecretFingerprintsPayload, error) {
+	credentials, err := svc.entFromContext(ctx).UpstreamCredential.Query().
+		WithChannelRefs().
+		Order(ent.Asc(upstreamcredential.FieldID)).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query upstream credentials: %w", err)
+	}
+
+	payload := &BackfillCredentialSecretFingerprintsPayload{ScannedCredentials: len(credentials)}
+	targetsBySecretFingerprint := make(map[string]*ent.UpstreamCredential, len(credentials))
+	archivedBySecretFingerprint := make(map[string]*ent.UpstreamCredential)
+
+	for _, credential := range credentials {
+		if credential == nil {
+			continue
+		}
+
+		secretFingerprint := strings.TrimSpace(stringValuePtr(credential.SecretFingerprint))
+		if secretFingerprint == "" {
+			continue
+		}
+
+		if credential.Status == upstreamcredential.StatusArchived {
+			if _, ok := archivedBySecretFingerprint[secretFingerprint]; !ok {
+				archivedBySecretFingerprint[secretFingerprint] = credential
+			}
+			continue
+		}
+
+		if _, ok := targetsBySecretFingerprint[secretFingerprint]; !ok {
+			targetsBySecretFingerprint[secretFingerprint] = credential
+		}
+	}
+
+	for _, credential := range credentials {
+		if credential == nil {
+			payload.SkippedCredentials++
+			continue
+		}
+		if strings.TrimSpace(stringValuePtr(credential.SecretFingerprint)) != "" {
+			continue
+		}
+		if credential.Status == upstreamcredential.StatusArchived {
+			payload.SkippedCredentials++
+			continue
+		}
+
+		secretFingerprint := CredentialSecretFingerprintForSecret(credential.SecretKind.String(), credential.SecretPayload)
+		if strings.TrimSpace(secretFingerprint) == "" {
+			payload.SkippedCredentials++
+			continue
+		}
+
+		if target := targetsBySecretFingerprint[secretFingerprint]; target != nil && target.ID != credential.ID {
+			refPayload, err := svc.migrateCredentialRefsToTarget(ctx, credential, target)
+			if err != nil {
+				return payload, err
+			}
+			payload.MigratedRefs += refPayload.MigratedRefs
+			payload.DisabledSourceRefs += refPayload.DisabledSourceRefs
+			payload.MergedCredentials++
+			if credential.Status != upstreamcredential.StatusArchived {
+				if _, err := svc.entFromContext(ctx).UpstreamCredential.UpdateOneID(credential.ID).
+					SetStatus(upstreamcredential.StatusArchived).
+					Save(ctx); err != nil {
+					return payload, fmt.Errorf("failed to archive duplicate upstream credential: %w", err)
+				}
+				payload.ArchivedCredentials++
+			}
+			continue
+		}
+		if archived := archivedBySecretFingerprint[secretFingerprint]; archived != nil {
+			if _, err := svc.entFromContext(ctx).UpstreamCredential.UpdateOneID(archived.ID).
+				ClearSecretFingerprint().
+				Save(ctx); err != nil {
+				return payload, fmt.Errorf("failed to release archived upstream credential secret fingerprint: %w", err)
+			}
+			delete(archivedBySecretFingerprint, secretFingerprint)
+		}
+		updatedCredential, err := svc.entFromContext(ctx).UpstreamCredential.UpdateOneID(credential.ID).
+			SetSecretFingerprint(secretFingerprint).
+			Save(ctx)
+		if err != nil {
+			return payload, fmt.Errorf("failed to backfill upstream credential secret fingerprint: %w", err)
+		}
+		targetsBySecretFingerprint[secretFingerprint] = updatedCredential
+		payload.UpdatedCredentials++
+	}
+
+	if payload.UpdatedCredentials > 0 || payload.MergedCredentials > 0 || payload.MigratedRefs > 0 || payload.ArchivedCredentials > 0 {
+		svc.reloadChannels()
+	}
+
+	return payload, nil
+}
+
 func (svc *UpstreamCredentialService) findOrCreateCredentialForChannel(ctx context.Context, ch *ent.Channel, view ChannelCredentialView, idx int) (*ent.UpstreamCredential, bool, error) {
+	identityPredicates := []predicate.UpstreamCredential{
+		upstreamcredential.Fingerprint(view.Fingerprint),
+	}
+	if strings.TrimSpace(view.SecretFingerprint) != "" {
+		identityPredicates = append(identityPredicates, upstreamcredential.SecretFingerprintEQ(view.SecretFingerprint))
+	}
+
 	existing, err := svc.entFromContext(ctx).UpstreamCredential.Query().
-		Where(upstreamcredential.Fingerprint(view.Fingerprint)).
+		Where(upstreamcredential.Or(identityPredicates...)).
 		First(ctx)
 	if err != nil && !ent.IsNotFound(err) {
 		return nil, false, fmt.Errorf("failed to query upstream credential: %w", err)
@@ -396,6 +918,9 @@ func (svc *UpstreamCredentialService) findOrCreateCredentialForChannel(ctx conte
 		SetFingerprint(view.Fingerprint).
 		SetWeight(normalizeCredentialWeight(view.Weight)).
 		SetStatus(legacyCredentialStatus(ch, view))
+	if strings.TrimSpace(view.SecretFingerprint) != "" {
+		create.SetSecretFingerprint(view.SecretFingerprint)
+	}
 
 	credential, err := create.Save(ctx)
 	if err != nil {

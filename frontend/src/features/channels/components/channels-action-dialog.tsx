@@ -74,6 +74,15 @@ const duplicateNameRegex = /^(.*) \((\d+)\)$/;
 
 type ApiFormatOption = ApiFormat | 'openai/responses:websocket';
 type ResponsesTransport = 'http' | 'websocket';
+type ChannelCredentialFormPayload = {
+  apiKey?: string | null;
+  apiKeys?: string[] | null;
+  gcp?: {
+    region?: string | null;
+    projectID?: string | null;
+    jsonData?: string | null;
+  } | null;
+};
 
 const OPENAI_RESPONSES_WEBSOCKET: ApiFormatOption = 'openai/responses:websocket';
 // A single trailing # suppresses automatic version suffix appending while still
@@ -81,6 +90,14 @@ const OPENAI_RESPONSES_WEBSOCKET: ApiFormatOption = 'openai/responses:websocket'
 // defaults with ## unless the upstream URL should be used fully raw.
 const OPENAI_RESPONSES_WEBSOCKET_BASE_URL = 'wss://api.openai.com/v1#';
 const CODEX_RESPONSES_WEBSOCKET_BASE_URL = 'wss://chatgpt.com/backend-api/codex#';
+
+function hasChannelCredentialPayload(credentials?: ChannelCredentialFormPayload | null): boolean {
+  const hasApiKey = Boolean(credentials?.apiKey?.trim());
+  const hasApiKeys = credentials?.apiKeys?.some((key) => key.trim().length > 0) ?? false;
+  const hasGcpCredentials = Boolean(credentials?.gcp?.region?.trim() && credentials?.gcp?.projectID?.trim() && credentials?.gcp?.jsonData?.trim());
+
+  return hasApiKey || hasApiKeys || hasGcpCredentials;
+}
 
 function getResponsesTransportFromBaseURL(baseURL?: string): ResponsesTransport {
   return baseURL?.trim().toLowerCase().startsWith('ws') ? 'websocket' : 'http';
@@ -223,7 +240,7 @@ function getNextDuplicateName(name: string, existingNames: Set<string>) {
 // Providers that are always OAuth (no third-party API key mode)
 const alwaysOAuthProviderKeys = ['antigravity', 'github_copilot'];
 
-function isOfficialCodexChannel(channel: { credentials?: { apiKey?: string } }): boolean {
+function isOfficialCodexChannel(channel: { credentials?: { apiKey?: string | null } | null }): boolean {
   try {
     const apiKey = channel.credentials?.apiKey || '';
     const json = JSON.parse(apiKey);
@@ -233,24 +250,14 @@ function isOfficialCodexChannel(channel: { credentials?: { apiKey?: string } }):
   }
 }
 
-function isCodexAuthJSONChannel(channel: { credentials?: { apiKey?: string } }): boolean {
-  try {
-    const apiKey = channel.credentials?.apiKey || '';
-    const json = JSON.parse(apiKey);
-    return !!(json.tokens?.access_token && json.tokens?.refresh_token);
-  } catch {
-    return false;
-  }
-}
-
-function isOfficialClaudeCodeChannel(channel: { credentials?: { apiKey?: string }; baseURL: string }): boolean {
+function isOfficialClaudeCodeChannel(channel: { credentials?: { apiKey?: string | null } | null; baseURL: string }): boolean {
   const apiKey = channel.credentials?.apiKey || '';
   const defaultURL = getDefaultBaseURL('claudecode');
   return apiKey.includes('sk-ant-oat') || apiKey.includes('sk-ant-api03') || channel.baseURL === defaultURL;
 }
 
-function extractCodexAuthJSONText(apiKey: string | undefined): string | undefined {
-  if (!apiKey) return apiKey;
+function extractCodexAuthJSONText(apiKey: string | null | undefined): string | undefined {
+  if (!apiKey) return undefined;
 
   try {
     const parsed = JSON.parse(apiKey);
@@ -299,16 +306,13 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
   const [selectedKeysToRemove, setSelectedKeysToRemove] = useState<Set<string>>(new Set());
   const [confirmRemoveSelectedOpen, setConfirmRemoveSelectedOpen] = useState(false);
   const [confirmRemoveKey, setConfirmRemoveKey] = useState<string | null>(null);
-  const [showGcpJsonData, setShowGcpJsonData] = useState(false);
   const [authMode, setAuthMode] = useState<'official' | 'auth-json' | 'third-party'>('official');
   const [codexAuthJSONText, setCodexAuthJSONText] = useState('');
   const [patternError, setPatternError] = useState<string | null>(null);
-  const dialogContentRef = useRef<HTMLDivElement>(null);
 
   // Debounced search values for better performance
   const debouncedFetchedModelsSearch = useDebounce(fetchedModelsSearch, 300);
   const debouncedSupportedModelsSearch = useDebounce(supportedModelsSearch, 300);
-  const debouncedApiKeysSearch = useDebounce(apiKeysSearch, 300);
 
   // Refs for virtual scrolling
   const fetchedModelsParentRef = useRef<HTMLDivElement>(null);
@@ -546,7 +550,7 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
       if (format === OPENAI_RESPONSES_WEBSOCKET) {
         return t('channels.dialogs.fields.apiFormat.formats.openai/responses_websocket');
       }
-      return getApiFormatLabel(format);
+      return getApiFormatLabel(format as ApiFormat);
     },
     [getApiFormatLabel, t]
   );
@@ -610,13 +614,12 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
               remark: duplicateFromRow.remark || '',
               settings: duplicateFromRow.settings ?? undefined,
               credentials: {
-                // OAuth 类型 (codex/claudecode/antigravity) 的凭据存储在 apiKey 字段，不放入 apiKeys
-                apiKey: duplicateFromRow.credentials?.apiKey || undefined,
-                apiKeys: duplicateFromRow.credentials?.apiKeys || [],
+                apiKey: undefined,
+                apiKeys: [],
                 gcp: {
-                  region: duplicateFromRow.credentials?.gcp?.region || '',
-                  projectID: duplicateFromRow.credentials?.gcp?.projectID || '',
-                  jsonData: duplicateFromRow.credentials?.gcp?.jsonData || '',
+                  region: '',
+                  projectID: '',
+                  jsonData: '',
                 },
               },
             }
@@ -643,6 +646,7 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
 
   const apiKeys = form.watch('credentials.apiKeys');
   const apiKeysCount = useMemo(() => (apiKeys || []).filter((k) => k.trim().length > 0).length, [apiKeys]);
+  const shouldShowLegacyInlineAPIKeys = isEdit && apiKeysCount > 0;
 
   const { data: disabledKeys = [] } = useChannelDisabledAPIKeys(currentRow?.id || '', {
     enabled: isEdit && !!currentRow?.id && showApiKeysPanel,
@@ -803,7 +807,7 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
       if (isOAuthChannel) return;
       if (selectedProvider === 'codex' || selectedProvider === 'antigravity') return;
 
-      const format = formatOption === OPENAI_RESPONSES_WEBSOCKET ? OPENAI_RESPONSES : formatOption;
+      const format = (formatOption === OPENAI_RESPONSES_WEBSOCKET ? OPENAI_RESPONSES : formatOption) as ApiFormat;
       const nextResponsesTransport = formatOption === OPENAI_RESPONSES_WEBSOCKET ? 'websocket' : 'http';
 
       setSelectedApiFormat(format);
@@ -1063,12 +1067,22 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
             type: derivedChannelType,
           };
 
-      const dataWithModels = {
+      const dataWithModels: Omit<z.infer<typeof formSchema>, 'credentials'> & {
+        supportedModels: string[];
+        manualModels: string[];
+        credentials?: ChannelCredentialFormPayload;
+      } = {
         ...valuesForSubmit,
         supportedModels,
         manualModels,
         credentials: valuesForSubmit.credentials,
       };
+
+      if (!hasChannelCredentialPayload(dataWithModels.credentials) && isEdit) {
+        delete dataWithModels.credentials;
+      } else if (!hasChannelCredentialPayload(dataWithModels.credentials)) {
+        dataWithModels.credentials = {};
+      }
 
       if (
         ((isCodexType && (authMode === 'official' || authMode === 'auth-json')) || (isClaudeCodeType && authMode === 'official')) &&
@@ -1101,22 +1115,6 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
           settings: nextSettings,
           ...(isOAuthChannel ? { type: undefined } : {}),
         } as z.infer<typeof updateChannelInputSchema>;
-
-        const apiKey = values.credentials?.apiKey || '';
-        const hasApiKey = apiKey.trim().length > 0;
-        const apiKeys = values.credentials?.apiKeys || [];
-        const hasApiKeys = apiKeys.length > 0 && apiKeys.some((k) => k.trim() !== '');
-        const hasGcpCredentials =
-          values.credentials?.gcp?.region &&
-          values.credentials.gcp.region.trim() !== '' &&
-          values.credentials?.gcp?.projectID &&
-          values.credentials.gcp.projectID.trim() !== '' &&
-          values.credentials?.gcp?.jsonData &&
-          values.credentials.gcp.jsonData.trim() !== '';
-
-        if (!hasApiKey && !hasApiKeys && !hasGcpCredentials) {
-          delete updateInput.credentials;
-        }
 
         await updateChannel.mutateAsync({
           id: currentRow.id,
@@ -2037,7 +2035,8 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
                         )}
                       />
 
-                      {(!(isCodexType || isClaudeCodeType || isCopilotType) || authMode === 'third-party') &&
+                      {shouldShowLegacyInlineAPIKeys &&
+                        (!(isCodexType || isClaudeCodeType || isCopilotType) || authMode === 'third-party') &&
                         selectedProvider !== 'antigravity' &&
                         selectedType !== 'anthropic_gcp' && (
                           <FormField

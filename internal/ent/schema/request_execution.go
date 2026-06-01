@@ -35,6 +35,12 @@ func (RequestExecution) Indexes() []ent.Index {
 			StorageKey("request_executions_by_credential_id_created_at"),
 		index.Fields("credential_fingerprint", "created_at").
 			StorageKey("request_executions_by_credential_fingerprint_created_at"),
+		index.Fields("secret_fingerprint", "created_at").
+			StorageKey("request_executions_by_secret_fingerprint_created_at"),
+		index.Fields("resource_scope_key", "created_at").
+			StorageKey("request_executions_by_resource_scope_key_created_at"),
+		index.Fields("quota_scope_id", "created_at").
+			StorageKey("request_executions_by_quota_scope_id_created_at"),
 	}
 }
 
@@ -60,7 +66,29 @@ func (RequestExecution) Fields() []ent.Field {
 			Optional().
 			Immutable().
 			MaxLen(128).
-			Comment("Safe upstream credential identity used for this execution; never stores the raw secret"),
+			Comment("Legacy safe upstream credential identity used for this execution; never stores the raw secret"),
+		field.String("secret_fingerprint").
+			Optional().
+			Immutable().
+			MaxLen(128).
+			Comment("Safe secret-only identity used for this execution; never stores the raw secret"),
+		field.String("resource_scope_key").
+			Optional().
+			Immutable().
+			MaxLen(512).
+			Comment("Safe runtime resource scope for channel resource namespace plus secret fingerprint"),
+		field.Int("quota_scope_id").
+			Optional().
+			Immutable().
+			Comment("Credential quota scope used for this execution when known"),
+		field.String("quota_scope_name_snapshot").
+			Optional().
+			Immutable().
+			Comment("Quota scope display name captured at execution time"),
+		field.String("quota_scope_status_snapshot").
+			Optional().
+			Immutable().
+			Comment("Quota scope status captured at execution time"),
 		field.String("credential_name_snapshot").
 			Optional().
 			Immutable().
@@ -132,6 +160,14 @@ func (RequestExecution) Edges() []ent.Edge {
 			Unique(),
 		edge.From("credential", UpstreamCredential.Type).
 			Field("credential_id").
+			Ref("executions").
+			Annotations(
+				entgql.Directives(forceResolver()),
+			).
+			Immutable().
+			Unique(),
+		edge.From("quota_scope", CredentialQuotaScope.Type).
+			Field("quota_scope_id").
 			Ref("executions").
 			Annotations(
 				entgql.Directives(forceResolver()),

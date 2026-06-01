@@ -342,6 +342,18 @@ func (_u *RequestExecutionUpdate) sqlSave(ctx context.Context) (_node int, err e
 	if _u.mutation.CredentialFingerprintCleared() {
 		_spec.ClearField(requestexecution.FieldCredentialFingerprint, field.TypeString)
 	}
+	if _u.mutation.SecretFingerprintCleared() {
+		_spec.ClearField(requestexecution.FieldSecretFingerprint, field.TypeString)
+	}
+	if _u.mutation.ResourceScopeKeyCleared() {
+		_spec.ClearField(requestexecution.FieldResourceScopeKey, field.TypeString)
+	}
+	if _u.mutation.QuotaScopeNameSnapshotCleared() {
+		_spec.ClearField(requestexecution.FieldQuotaScopeNameSnapshot, field.TypeString)
+	}
+	if _u.mutation.QuotaScopeStatusSnapshotCleared() {
+		_spec.ClearField(requestexecution.FieldQuotaScopeStatusSnapshot, field.TypeString)
+	}
 	if _u.mutation.CredentialNameSnapshotCleared() {
 		_spec.ClearField(requestexecution.FieldCredentialNameSnapshot, field.TypeString)
 	}
@@ -794,6 +806,18 @@ func (_u *RequestExecutionUpdateOne) sqlSave(ctx context.Context) (_node *Reques
 	}
 	if _u.mutation.CredentialFingerprintCleared() {
 		_spec.ClearField(requestexecution.FieldCredentialFingerprint, field.TypeString)
+	}
+	if _u.mutation.SecretFingerprintCleared() {
+		_spec.ClearField(requestexecution.FieldSecretFingerprint, field.TypeString)
+	}
+	if _u.mutation.ResourceScopeKeyCleared() {
+		_spec.ClearField(requestexecution.FieldResourceScopeKey, field.TypeString)
+	}
+	if _u.mutation.QuotaScopeNameSnapshotCleared() {
+		_spec.ClearField(requestexecution.FieldQuotaScopeNameSnapshot, field.TypeString)
+	}
+	if _u.mutation.QuotaScopeStatusSnapshotCleared() {
+		_spec.ClearField(requestexecution.FieldQuotaScopeStatusSnapshot, field.TypeString)
 	}
 	if _u.mutation.CredentialNameSnapshotCleared() {
 		_spec.ClearField(requestexecution.FieldCredentialNameSnapshot, field.TypeString)

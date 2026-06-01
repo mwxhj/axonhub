@@ -44,6 +44,8 @@ const (
 	FieldSecretPayload = "secret_payload"
 	// FieldFingerprint holds the string denoting the fingerprint field in the database.
 	FieldFingerprint = "fingerprint"
+	// FieldSecretFingerprint holds the string denoting the secret_fingerprint field in the database.
+	FieldSecretFingerprint = "secret_fingerprint"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
 	// FieldWeight holds the string denoting the weight field in the database.
@@ -62,6 +64,8 @@ const (
 	EdgeUsageLogs = "usage_logs"
 	// EdgeProviderQuotaStatuses holds the string denoting the provider_quota_statuses edge name in mutations.
 	EdgeProviderQuotaStatuses = "provider_quota_statuses"
+	// EdgeQuotaScope holds the string denoting the quota_scope edge name in mutations.
+	EdgeQuotaScope = "quota_scope"
 	// Table holds the table name of the upstreamcredential in the database.
 	Table = "upstream_credentials"
 	// ChannelRefsTable is the table that holds the channel_refs relation/edge.
@@ -92,6 +96,13 @@ const (
 	ProviderQuotaStatusesInverseTable = "provider_quota_status"
 	// ProviderQuotaStatusesColumn is the table column denoting the provider_quota_statuses relation/edge.
 	ProviderQuotaStatusesColumn = "credential_id"
+	// QuotaScopeTable is the table that holds the quota_scope relation/edge.
+	QuotaScopeTable = "upstream_credentials"
+	// QuotaScopeInverseTable is the table name for the CredentialQuotaScope entity.
+	// It exists in this package in order to avoid circular dependency with the "credentialquotascope" package.
+	QuotaScopeInverseTable = "credential_quota_scopes"
+	// QuotaScopeColumn is the table column denoting the quota_scope relation/edge.
+	QuotaScopeColumn = "quota_scope_id"
 )
 
 // Columns holds all SQL columns for upstreamcredential fields.
@@ -110,6 +121,7 @@ var Columns = []string{
 	FieldQuotaScopeID,
 	FieldSecretPayload,
 	FieldFingerprint,
+	FieldSecretFingerprint,
 	FieldStatus,
 	FieldWeight,
 	FieldQuotaStatus,
@@ -156,6 +168,8 @@ var (
 	DefaultKeyHint string
 	// FingerprintValidator is a validator for the "fingerprint" field. It is called by the builders before save.
 	FingerprintValidator func(string) error
+	// SecretFingerprintValidator is a validator for the "secret_fingerprint" field. It is called by the builders before save.
+	SecretFingerprintValidator func(string) error
 	// DefaultWeight holds the default value on creation for the "weight" field.
 	DefaultWeight int
 	// DefaultQuotaStatus holds the default value on creation for the "quota_status" field.
@@ -319,6 +333,11 @@ func ByFingerprint(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFingerprint, opts...).ToFunc()
 }
 
+// BySecretFingerprint orders the results by the secret_fingerprint field.
+func BySecretFingerprint(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSecretFingerprint, opts...).ToFunc()
+}
+
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
@@ -399,6 +418,13 @@ func ByProviderQuotaStatuses(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOp
 		sqlgraph.OrderByNeighborTerms(s, newProviderQuotaStatusesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByQuotaScopeField orders the results by quota_scope field.
+func ByQuotaScopeField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newQuotaScopeStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newChannelRefsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -425,6 +451,13 @@ func newProviderQuotaStatusesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ProviderQuotaStatusesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, ProviderQuotaStatusesTable, ProviderQuotaStatusesColumn),
+	)
+}
+func newQuotaScopeStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(QuotaScopeInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, QuotaScopeTable, QuotaScopeColumn),
 	)
 }
 

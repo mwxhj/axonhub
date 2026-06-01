@@ -1366,9 +1366,14 @@ type CreateUsageLogInput struct {
 	APIKeyID                           *int
 	ModelID                            string
 	CredentialFingerprint              *string
+	SecretFingerprint                  *string
+	ResourceScopeKey                   *string
+	QuotaScopeNameSnapshot             *string
+	QuotaScopeStatusSnapshot           *string
 	CredentialNameSnapshot             *string
 	CredentialKeyHint                  *string
 	CredentialSource                   *string
+	CredentialQuotaStatusSnapshot      *string
 	PromptTokens                       *int64
 	CompletionTokens                   *int64
 	TotalTokens                        *int64
@@ -1390,6 +1395,7 @@ type CreateUsageLogInput struct {
 	ProjectID                          int
 	ChannelID                          *int
 	CredentialID                       *int
+	QuotaScopeID                       *int
 }
 
 // Mutate applies the CreateUsageLogInput on the UsageLogMutation builder.
@@ -1401,6 +1407,18 @@ func (i *CreateUsageLogInput) Mutate(m *UsageLogMutation) {
 	if v := i.CredentialFingerprint; v != nil {
 		m.SetCredentialFingerprint(*v)
 	}
+	if v := i.SecretFingerprint; v != nil {
+		m.SetSecretFingerprint(*v)
+	}
+	if v := i.ResourceScopeKey; v != nil {
+		m.SetResourceScopeKey(*v)
+	}
+	if v := i.QuotaScopeNameSnapshot; v != nil {
+		m.SetQuotaScopeNameSnapshot(*v)
+	}
+	if v := i.QuotaScopeStatusSnapshot; v != nil {
+		m.SetQuotaScopeStatusSnapshot(*v)
+	}
 	if v := i.CredentialNameSnapshot; v != nil {
 		m.SetCredentialNameSnapshot(*v)
 	}
@@ -1409,6 +1427,9 @@ func (i *CreateUsageLogInput) Mutate(m *UsageLogMutation) {
 	}
 	if v := i.CredentialSource; v != nil {
 		m.SetCredentialSource(*v)
+	}
+	if v := i.CredentialQuotaStatusSnapshot; v != nil {
+		m.SetCredentialQuotaStatusSnapshot(*v)
 	}
 	if v := i.PromptTokens; v != nil {
 		m.SetPromptTokens(*v)
@@ -1468,6 +1489,9 @@ func (i *CreateUsageLogInput) Mutate(m *UsageLogMutation) {
 	}
 	if v := i.CredentialID; v != nil {
 		m.SetCredentialID(*v)
+	}
+	if v := i.QuotaScopeID; v != nil {
+		m.SetQuotaScopeID(*v)
 	}
 }
 

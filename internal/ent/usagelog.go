@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/project"
 	"github.com/looplj/axonhub/internal/ent/request"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
@@ -39,14 +40,26 @@ type UsageLog struct {
 	CredentialID int `json:"credential_id,omitempty"`
 	// Model identifier used for the request
 	ModelID string `json:"model_id,omitempty"`
-	// Safe upstream credential identity used for this request; never stores the raw secret
+	// Legacy safe upstream credential identity used for this request; never stores the raw secret
 	CredentialFingerprint string `json:"credential_fingerprint,omitempty"`
+	// Safe secret-only identity used for this request; never stores the raw secret
+	SecretFingerprint string `json:"secret_fingerprint,omitempty"`
+	// Safe runtime resource scope for channel resource namespace plus secret fingerprint
+	ResourceScopeKey string `json:"resource_scope_key,omitempty"`
+	// Credential quota scope used for this request when known
+	QuotaScopeID int `json:"quota_scope_id,omitempty"`
+	// Quota scope display name captured when usage was logged
+	QuotaScopeNameSnapshot string `json:"quota_scope_name_snapshot,omitempty"`
+	// Quota scope status captured when usage was logged
+	QuotaScopeStatusSnapshot string `json:"quota_scope_status_snapshot,omitempty"`
 	// Credential display name captured when usage was logged
 	CredentialNameSnapshot string `json:"credential_name_snapshot,omitempty"`
 	// Safe credential key hint captured when usage was logged
 	CredentialKeyHint string `json:"credential_key_hint,omitempty"`
 	// Credential source used for this request: ref, legacy, or unknown
 	CredentialSource string `json:"credential_source,omitempty"`
+	// Credential quota/budget status captured when usage was logged
+	CredentialQuotaStatusSnapshot string `json:"credential_quota_status_snapshot,omitempty"`
 	// Number of tokens in the prompt
 	PromptTokens int64 `json:"prompt_tokens,omitempty"`
 	// Number of tokens in the completion
@@ -97,11 +110,13 @@ type UsageLogEdges struct {
 	Channel *Channel `json:"channel,omitempty"`
 	// Credential holds the value of the credential edge.
 	Credential *UpstreamCredential `json:"credential,omitempty"`
+	// QuotaScope holds the value of the quota_scope edge.
+	QuotaScope *CredentialQuotaScope `json:"quota_scope,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 	// totalCount holds the count of the edges above.
-	totalCount [4]map[string]int
+	totalCount [5]map[string]int
 }
 
 // RequestOrErr returns the Request value or an error if the edge
@@ -148,6 +163,17 @@ func (e UsageLogEdges) CredentialOrErr() (*UpstreamCredential, error) {
 	return nil, &NotLoadedError{edge: "credential"}
 }
 
+// QuotaScopeOrErr returns the QuotaScope value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UsageLogEdges) QuotaScopeOrErr() (*CredentialQuotaScope, error) {
+	if e.QuotaScope != nil {
+		return e.QuotaScope, nil
+	} else if e.loadedTypes[4] {
+		return nil, &NotFoundError{label: credentialquotascope.Label}
+	}
+	return nil, &NotLoadedError{edge: "quota_scope"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*UsageLog) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -157,9 +183,9 @@ func (*UsageLog) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case usagelog.FieldTotalCost:
 			values[i] = new(sql.NullFloat64)
-		case usagelog.FieldID, usagelog.FieldRequestID, usagelog.FieldAPIKeyID, usagelog.FieldProjectID, usagelog.FieldChannelID, usagelog.FieldCredentialID, usagelog.FieldPromptTokens, usagelog.FieldCompletionTokens, usagelog.FieldTotalTokens, usagelog.FieldPromptAudioTokens, usagelog.FieldPromptCachedTokens, usagelog.FieldPromptWriteCachedTokens, usagelog.FieldPromptWriteCachedTokens5m, usagelog.FieldPromptWriteCachedTokens1h, usagelog.FieldCompletionAudioTokens, usagelog.FieldCompletionReasoningTokens, usagelog.FieldCompletionAcceptedPredictionTokens, usagelog.FieldCompletionRejectedPredictionTokens:
+		case usagelog.FieldID, usagelog.FieldRequestID, usagelog.FieldAPIKeyID, usagelog.FieldProjectID, usagelog.FieldChannelID, usagelog.FieldCredentialID, usagelog.FieldQuotaScopeID, usagelog.FieldPromptTokens, usagelog.FieldCompletionTokens, usagelog.FieldTotalTokens, usagelog.FieldPromptAudioTokens, usagelog.FieldPromptCachedTokens, usagelog.FieldPromptWriteCachedTokens, usagelog.FieldPromptWriteCachedTokens5m, usagelog.FieldPromptWriteCachedTokens1h, usagelog.FieldCompletionAudioTokens, usagelog.FieldCompletionReasoningTokens, usagelog.FieldCompletionAcceptedPredictionTokens, usagelog.FieldCompletionRejectedPredictionTokens:
 			values[i] = new(sql.NullInt64)
-		case usagelog.FieldModelID, usagelog.FieldCredentialFingerprint, usagelog.FieldCredentialNameSnapshot, usagelog.FieldCredentialKeyHint, usagelog.FieldCredentialSource, usagelog.FieldSource, usagelog.FieldFormat, usagelog.FieldCostPriceReferenceID:
+		case usagelog.FieldModelID, usagelog.FieldCredentialFingerprint, usagelog.FieldSecretFingerprint, usagelog.FieldResourceScopeKey, usagelog.FieldQuotaScopeNameSnapshot, usagelog.FieldQuotaScopeStatusSnapshot, usagelog.FieldCredentialNameSnapshot, usagelog.FieldCredentialKeyHint, usagelog.FieldCredentialSource, usagelog.FieldCredentialQuotaStatusSnapshot, usagelog.FieldSource, usagelog.FieldFormat, usagelog.FieldCostPriceReferenceID:
 			values[i] = new(sql.NullString)
 		case usagelog.FieldCreatedAt, usagelog.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -238,6 +264,36 @@ func (_m *UsageLog) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.CredentialFingerprint = value.String
 			}
+		case usagelog.FieldSecretFingerprint:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field secret_fingerprint", values[i])
+			} else if value.Valid {
+				_m.SecretFingerprint = value.String
+			}
+		case usagelog.FieldResourceScopeKey:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field resource_scope_key", values[i])
+			} else if value.Valid {
+				_m.ResourceScopeKey = value.String
+			}
+		case usagelog.FieldQuotaScopeID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field quota_scope_id", values[i])
+			} else if value.Valid {
+				_m.QuotaScopeID = int(value.Int64)
+			}
+		case usagelog.FieldQuotaScopeNameSnapshot:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field quota_scope_name_snapshot", values[i])
+			} else if value.Valid {
+				_m.QuotaScopeNameSnapshot = value.String
+			}
+		case usagelog.FieldQuotaScopeStatusSnapshot:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field quota_scope_status_snapshot", values[i])
+			} else if value.Valid {
+				_m.QuotaScopeStatusSnapshot = value.String
+			}
 		case usagelog.FieldCredentialNameSnapshot:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field credential_name_snapshot", values[i])
@@ -255,6 +311,12 @@ func (_m *UsageLog) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field credential_source", values[i])
 			} else if value.Valid {
 				_m.CredentialSource = value.String
+			}
+		case usagelog.FieldCredentialQuotaStatusSnapshot:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field credential_quota_status_snapshot", values[i])
+			} else if value.Valid {
+				_m.CredentialQuotaStatusSnapshot = value.String
 			}
 		case usagelog.FieldPromptTokens:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -394,6 +456,11 @@ func (_m *UsageLog) QueryCredential() *UpstreamCredentialQuery {
 	return NewUsageLogClient(_m.config).QueryCredential(_m)
 }
 
+// QueryQuotaScope queries the "quota_scope" edge of the UsageLog entity.
+func (_m *UsageLog) QueryQuotaScope() *CredentialQuotaScopeQuery {
+	return NewUsageLogClient(_m.config).QueryQuotaScope(_m)
+}
+
 // Update returns a builder for updating this UsageLog.
 // Note that you need to call UsageLog.Unwrap() before calling this method if this UsageLog
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -444,6 +511,21 @@ func (_m *UsageLog) String() string {
 	builder.WriteString("credential_fingerprint=")
 	builder.WriteString(_m.CredentialFingerprint)
 	builder.WriteString(", ")
+	builder.WriteString("secret_fingerprint=")
+	builder.WriteString(_m.SecretFingerprint)
+	builder.WriteString(", ")
+	builder.WriteString("resource_scope_key=")
+	builder.WriteString(_m.ResourceScopeKey)
+	builder.WriteString(", ")
+	builder.WriteString("quota_scope_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.QuotaScopeID))
+	builder.WriteString(", ")
+	builder.WriteString("quota_scope_name_snapshot=")
+	builder.WriteString(_m.QuotaScopeNameSnapshot)
+	builder.WriteString(", ")
+	builder.WriteString("quota_scope_status_snapshot=")
+	builder.WriteString(_m.QuotaScopeStatusSnapshot)
+	builder.WriteString(", ")
 	builder.WriteString("credential_name_snapshot=")
 	builder.WriteString(_m.CredentialNameSnapshot)
 	builder.WriteString(", ")
@@ -452,6 +534,9 @@ func (_m *UsageLog) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("credential_source=")
 	builder.WriteString(_m.CredentialSource)
+	builder.WriteString(", ")
+	builder.WriteString("credential_quota_status_snapshot=")
+	builder.WriteString(_m.CredentialQuotaStatusSnapshot)
 	builder.WriteString(", ")
 	builder.WriteString("prompt_tokens=")
 	builder.WriteString(fmt.Sprintf("%v", _m.PromptTokens))

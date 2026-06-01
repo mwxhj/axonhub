@@ -23,19 +23,18 @@ function CredentialsContent() {
     pageSizeStorageKey: 'credentials-table-page-size',
   });
   const [nameFilter, setNameFilter] = useState('');
-  const [issuerFilter, setIssuerFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<CredentialStatus | 'active'>('active');
 
   const debouncedNameFilter = useDebounce(nameFilter, 300);
-  const debouncedIssuerFilter = useDebounce(issuerFilter, 300);
 
   const whereClause = useMemo(() => {
     const where: Record<string, unknown> = {};
     if (debouncedNameFilter) {
-      where.or = [{ nameContainsFold: debouncedNameFilter }, { fingerprintContainsFold: debouncedNameFilter }];
-    }
-    if (debouncedIssuerFilter) {
-      where.issuerScopeContainsFold = debouncedIssuerFilter;
+      where.or = [
+        { nameContainsFold: debouncedNameFilter },
+        { fingerprintContainsFold: debouncedNameFilter },
+        { keyHintContainsFold: debouncedNameFilter },
+      ];
     }
     if (statusFilter === 'active') {
       where.statusIn = ['enabled', 'disabled'];
@@ -43,7 +42,7 @@ function CredentialsContent() {
       where.status = statusFilter;
     }
     return where;
-  }, [debouncedNameFilter, debouncedIssuerFilter, statusFilter]);
+  }, [debouncedNameFilter, statusFilter]);
 
   const { data, isLoading } = useUpstreamCredentials({
     ...paginationArgs,
@@ -78,17 +77,12 @@ function CredentialsContent() {
         pageSize={pageSize}
         totalCount={data?.totalCount}
         nameFilter={nameFilter}
-        issuerFilter={issuerFilter}
         statusFilter={statusFilter}
         onNextPage={handleNextPage}
         onPreviousPage={handlePreviousPage}
         onPageSizeChange={setPageSize}
         onNameFilterChange={(filter) => {
           setNameFilter(filter);
-          resetCursor();
-        }}
-        onIssuerFilterChange={(filter) => {
-          setIssuerFilter(filter);
           resetCursor();
         }}
         onStatusFilterChange={(filter) => {

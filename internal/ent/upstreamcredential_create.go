@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
@@ -193,6 +194,20 @@ func (_c *UpstreamCredentialCreate) SetFingerprint(v string) *UpstreamCredential
 	return _c
 }
 
+// SetSecretFingerprint sets the "secret_fingerprint" field.
+func (_c *UpstreamCredentialCreate) SetSecretFingerprint(v string) *UpstreamCredentialCreate {
+	_c.mutation.SetSecretFingerprint(v)
+	return _c
+}
+
+// SetNillableSecretFingerprint sets the "secret_fingerprint" field if the given value is not nil.
+func (_c *UpstreamCredentialCreate) SetNillableSecretFingerprint(v *string) *UpstreamCredentialCreate {
+	if v != nil {
+		_c.SetSecretFingerprint(*v)
+	}
+	return _c
+}
+
 // SetStatus sets the "status" field.
 func (_c *UpstreamCredentialCreate) SetStatus(v upstreamcredential.Status) *UpstreamCredentialCreate {
 	_c.mutation.SetStatus(v)
@@ -321,6 +336,11 @@ func (_c *UpstreamCredentialCreate) AddProviderQuotaStatuses(v ...*ProviderQuota
 		ids[i] = v[i].ID
 	}
 	return _c.AddProviderQuotaStatusIDs(ids...)
+}
+
+// SetQuotaScope sets the "quota_scope" edge to the CredentialQuotaScope entity.
+func (_c *UpstreamCredentialCreate) SetQuotaScope(v *CredentialQuotaScope) *UpstreamCredentialCreate {
+	return _c.SetQuotaScopeID(v.ID)
 }
 
 // Mutation returns the UpstreamCredentialMutation object of the builder.
@@ -464,6 +484,11 @@ func (_c *UpstreamCredentialCreate) check() error {
 			return &ValidationError{Name: "fingerprint", err: fmt.Errorf(`ent: validator failed for field "UpstreamCredential.fingerprint": %w`, err)}
 		}
 	}
+	if v, ok := _c.mutation.SecretFingerprint(); ok {
+		if err := upstreamcredential.SecretFingerprintValidator(v); err != nil {
+			return &ValidationError{Name: "secret_fingerprint", err: fmt.Errorf(`ent: validator failed for field "UpstreamCredential.secret_fingerprint": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "UpstreamCredential.status"`)}
 	}
@@ -542,10 +567,6 @@ func (_c *UpstreamCredentialCreate) createSpec() (*UpstreamCredential, *sqlgraph
 		_spec.SetField(upstreamcredential.FieldKeyHint, field.TypeString, value)
 		_node.KeyHint = value
 	}
-	if value, ok := _c.mutation.QuotaScopeID(); ok {
-		_spec.SetField(upstreamcredential.FieldQuotaScopeID, field.TypeInt, value)
-		_node.QuotaScopeID = &value
-	}
 	if value, ok := _c.mutation.SecretPayload(); ok {
 		_spec.SetField(upstreamcredential.FieldSecretPayload, field.TypeJSON, value)
 		_node.SecretPayload = value
@@ -553,6 +574,10 @@ func (_c *UpstreamCredentialCreate) createSpec() (*UpstreamCredential, *sqlgraph
 	if value, ok := _c.mutation.Fingerprint(); ok {
 		_spec.SetField(upstreamcredential.FieldFingerprint, field.TypeString, value)
 		_node.Fingerprint = value
+	}
+	if value, ok := _c.mutation.SecretFingerprint(); ok {
+		_spec.SetField(upstreamcredential.FieldSecretFingerprint, field.TypeString, value)
+		_node.SecretFingerprint = &value
 	}
 	if value, ok := _c.mutation.Status(); ok {
 		_spec.SetField(upstreamcredential.FieldStatus, field.TypeEnum, value)
@@ -636,6 +661,23 @@ func (_c *UpstreamCredentialCreate) createSpec() (*UpstreamCredential, *sqlgraph
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.QuotaScopeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   upstreamcredential.QuotaScopeTable,
+			Columns: []string{upstreamcredential.QuotaScopeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credentialquotascope.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.QuotaScopeID = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
@@ -816,12 +858,6 @@ func (u *UpstreamCredentialUpsert) UpdateQuotaScopeID() *UpstreamCredentialUpser
 	return u
 }
 
-// AddQuotaScopeID adds v to the "quota_scope_id" field.
-func (u *UpstreamCredentialUpsert) AddQuotaScopeID(v int) *UpstreamCredentialUpsert {
-	u.Add(upstreamcredential.FieldQuotaScopeID, v)
-	return u
-}
-
 // ClearQuotaScopeID clears the value of the "quota_scope_id" field.
 func (u *UpstreamCredentialUpsert) ClearQuotaScopeID() *UpstreamCredentialUpsert {
 	u.SetNull(upstreamcredential.FieldQuotaScopeID)
@@ -849,6 +885,24 @@ func (u *UpstreamCredentialUpsert) SetFingerprint(v string) *UpstreamCredentialU
 // UpdateFingerprint sets the "fingerprint" field to the value that was provided on create.
 func (u *UpstreamCredentialUpsert) UpdateFingerprint() *UpstreamCredentialUpsert {
 	u.SetExcluded(upstreamcredential.FieldFingerprint)
+	return u
+}
+
+// SetSecretFingerprint sets the "secret_fingerprint" field.
+func (u *UpstreamCredentialUpsert) SetSecretFingerprint(v string) *UpstreamCredentialUpsert {
+	u.Set(upstreamcredential.FieldSecretFingerprint, v)
+	return u
+}
+
+// UpdateSecretFingerprint sets the "secret_fingerprint" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsert) UpdateSecretFingerprint() *UpstreamCredentialUpsert {
+	u.SetExcluded(upstreamcredential.FieldSecretFingerprint)
+	return u
+}
+
+// ClearSecretFingerprint clears the value of the "secret_fingerprint" field.
+func (u *UpstreamCredentialUpsert) ClearSecretFingerprint() *UpstreamCredentialUpsert {
+	u.SetNull(upstreamcredential.FieldSecretFingerprint)
 	return u
 }
 
@@ -1127,13 +1181,6 @@ func (u *UpstreamCredentialUpsertOne) SetQuotaScopeID(v int) *UpstreamCredential
 	})
 }
 
-// AddQuotaScopeID adds v to the "quota_scope_id" field.
-func (u *UpstreamCredentialUpsertOne) AddQuotaScopeID(v int) *UpstreamCredentialUpsertOne {
-	return u.Update(func(s *UpstreamCredentialUpsert) {
-		s.AddQuotaScopeID(v)
-	})
-}
-
 // UpdateQuotaScopeID sets the "quota_scope_id" field to the value that was provided on create.
 func (u *UpstreamCredentialUpsertOne) UpdateQuotaScopeID() *UpstreamCredentialUpsertOne {
 	return u.Update(func(s *UpstreamCredentialUpsert) {
@@ -1173,6 +1220,27 @@ func (u *UpstreamCredentialUpsertOne) SetFingerprint(v string) *UpstreamCredenti
 func (u *UpstreamCredentialUpsertOne) UpdateFingerprint() *UpstreamCredentialUpsertOne {
 	return u.Update(func(s *UpstreamCredentialUpsert) {
 		s.UpdateFingerprint()
+	})
+}
+
+// SetSecretFingerprint sets the "secret_fingerprint" field.
+func (u *UpstreamCredentialUpsertOne) SetSecretFingerprint(v string) *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.SetSecretFingerprint(v)
+	})
+}
+
+// UpdateSecretFingerprint sets the "secret_fingerprint" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsertOne) UpdateSecretFingerprint() *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.UpdateSecretFingerprint()
+	})
+}
+
+// ClearSecretFingerprint clears the value of the "secret_fingerprint" field.
+func (u *UpstreamCredentialUpsertOne) ClearSecretFingerprint() *UpstreamCredentialUpsertOne {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.ClearSecretFingerprint()
 	})
 }
 
@@ -1631,13 +1699,6 @@ func (u *UpstreamCredentialUpsertBulk) SetQuotaScopeID(v int) *UpstreamCredentia
 	})
 }
 
-// AddQuotaScopeID adds v to the "quota_scope_id" field.
-func (u *UpstreamCredentialUpsertBulk) AddQuotaScopeID(v int) *UpstreamCredentialUpsertBulk {
-	return u.Update(func(s *UpstreamCredentialUpsert) {
-		s.AddQuotaScopeID(v)
-	})
-}
-
 // UpdateQuotaScopeID sets the "quota_scope_id" field to the value that was provided on create.
 func (u *UpstreamCredentialUpsertBulk) UpdateQuotaScopeID() *UpstreamCredentialUpsertBulk {
 	return u.Update(func(s *UpstreamCredentialUpsert) {
@@ -1677,6 +1738,27 @@ func (u *UpstreamCredentialUpsertBulk) SetFingerprint(v string) *UpstreamCredent
 func (u *UpstreamCredentialUpsertBulk) UpdateFingerprint() *UpstreamCredentialUpsertBulk {
 	return u.Update(func(s *UpstreamCredentialUpsert) {
 		s.UpdateFingerprint()
+	})
+}
+
+// SetSecretFingerprint sets the "secret_fingerprint" field.
+func (u *UpstreamCredentialUpsertBulk) SetSecretFingerprint(v string) *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.SetSecretFingerprint(v)
+	})
+}
+
+// UpdateSecretFingerprint sets the "secret_fingerprint" field to the value that was provided on create.
+func (u *UpstreamCredentialUpsertBulk) UpdateSecretFingerprint() *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.UpdateSecretFingerprint()
+	})
+}
+
+// ClearSecretFingerprint clears the value of the "secret_fingerprint" field.
+func (u *UpstreamCredentialUpsertBulk) ClearSecretFingerprint() *UpstreamCredentialUpsertBulk {
+	return u.Update(func(s *UpstreamCredentialUpsert) {
+		s.ClearSecretFingerprint()
 	})
 }
 

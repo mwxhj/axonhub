@@ -41,7 +41,12 @@ func NewTraceStickyKeyProvider(channel *Channel) *TraceStickyKeyProvider {
 
 func (p *TraceStickyKeyProvider) Get(ctx context.Context) string {
 	enabled := p.enabledAPIKeyCredentialViews()
+	var constrained bool
+	enabled, constrained = filterAllowedCredentialViews(ctx, enabled)
 	if len(enabled) == 0 {
+		if constrained || p.hasCredentialViewSource() {
+			return ""
+		}
 		allKeys := p.channel.Credentials.GetAllAPIKeys()
 		if len(allKeys) == 0 {
 			return ""
@@ -107,6 +112,52 @@ func (p *TraceStickyKeyProvider) enabledAPIKeyCredentialViews() []ChannelCredent
 	}
 
 	return enabledAPIKeyCredentialViews(p.channel.enabledCredentialViews())
+}
+
+func (p *TraceStickyKeyProvider) hasCredentialViewSource() bool {
+	return p != nil && p.channel != nil && len(p.channel.cachedCredentialViews) > 0
+}
+
+func filterAllowedCredentialViews(ctx context.Context, views []ChannelCredentialView) ([]ChannelCredentialView, bool) {
+	allowedIDs, allowedFingerprints, ok := contexts.GetAllowedCredentials(ctx)
+	if !ok || len(views) == 0 {
+		return views, false
+	}
+
+	idSet := make(map[int]struct{}, len(allowedIDs))
+	for _, id := range allowedIDs {
+		if id > 0 {
+			idSet[id] = struct{}{}
+		}
+	}
+
+	fingerprintSet := make(map[string]struct{}, len(allowedFingerprints))
+	for _, fingerprint := range allowedFingerprints {
+		if fingerprint != "" {
+			fingerprintSet[fingerprint] = struct{}{}
+		}
+	}
+
+	if len(idSet) == 0 && len(fingerprintSet) == 0 {
+		return views, false
+	}
+
+	filtered := make([]ChannelCredentialView, 0, len(views))
+	for _, view := range views {
+		if view.CredentialID > 0 {
+			if _, ok := idSet[view.CredentialID]; ok {
+				filtered = append(filtered, view)
+				continue
+			}
+		}
+		if view.Fingerprint != "" {
+			if _, ok := fingerprintSet[view.Fingerprint]; ok {
+				filtered = append(filtered, view)
+			}
+		}
+	}
+
+	return filtered, true
 }
 
 func (p *TraceStickyKeyProvider) selectSeededCredential(ctx context.Context, enabled []ChannelCredentialView) *ChannelCredentialView {
@@ -188,11 +239,16 @@ func (p *TraceStickyKeyProvider) selectPreferredCredential(enabled []ChannelCred
 
 func (p *TraceStickyKeyProvider) storeSelectedCredential(ctx context.Context, selected ChannelCredentialView) {
 	contexts.WithChannelCredential(ctx, selected.CredentialID, selected.Secret.APIKey, selected.Fingerprint)
+	contexts.WithChannelCredentialIdentity(ctx, selected.SecretFingerprint, selected.ResourceScopeKey)
 	contexts.WithChannelCredentialMetadata(ctx, selected.Name, selected.KeyHint, selected.Source, selected.QuotaStatus)
+	contexts.WithChannelCredentialQuotaScope(ctx, selected.QuotaScopeID, selected.QuotaScopeName, selected.QuotaScopeStatus)
 }
 
 func (p *TraceStickyKeyProvider) storeSelectedLegacyKey(ctx context.Context, selectedKey string) {
+	secret := objects.UpstreamCredentialSecretFromAPIKey(selectedKey)
+	secretFingerprint := CredentialSecretFingerprintForSecret(channelCredentialAuthKindAPIKey, secret)
 	contexts.WithChannelCredential(ctx, 0, selectedKey, p.channel.CredentialFingerprintForAPIKey(selectedKey))
+	contexts.WithChannelCredentialIdentity(ctx, secretFingerprint, ChannelCredentialResourceScopeKey(p.channel.Channel, secretFingerprint))
 	contexts.WithChannelCredentialMetadata(
 		ctx,
 		"",
@@ -229,15 +285,10 @@ func hashAPIKey(s string) uint64 {
 }
 
 func credentialWeightedScore(seed string, view ChannelCredentialView) float64 {
-	weight := view.Weight
-	if weight <= 0 {
-		weight = 1
-	}
-
 	key := view.Fingerprint
 	if key == "" {
 		key = view.Secret.APIKey
 	}
 
-	return float64(hashAPIKey(seed+"|"+key)) * float64(weight)
+	return float64(hashAPIKey(seed + "|" + key))
 }

@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/klauspost/compress/zstd"
@@ -248,7 +249,19 @@ var sensitiveHeaders = map[string]bool{
 }
 
 func IsSensitiveHeader(key string) bool {
-	return sensitiveHeaders[http.CanonicalHeaderKey(key)]
+	canonicalKey := http.CanonicalHeaderKey(key)
+	if sensitiveHeaders[canonicalKey] {
+		return true
+	}
+
+	lowerKey := strings.ToLower(canonicalKey)
+	return strings.Contains(lowerKey, "api-key") ||
+		strings.Contains(lowerKey, "api_key") ||
+		strings.Contains(lowerKey, "apikey") ||
+		strings.Contains(lowerKey, "subscription-key") ||
+		strings.Contains(lowerKey, "subscription_key") ||
+		strings.Contains(lowerKey, "secret") ||
+		strings.Contains(lowerKey, "token")
 }
 
 var mergeWithAppendHeaders = map[string]bool{}
@@ -309,6 +322,23 @@ func MaskSensitiveHeaders(headers http.Header) http.Header {
 	}
 
 	return result
+}
+
+var (
+	bodyBearerTokenRegex = regexp.MustCompile(`(?i)(bearer[\s:=]+)[a-zA-Z0-9_\-\.]+`)
+	bodySecretKVRegex    = regexp.MustCompile(`(?i)(["']?(?:api[_-]?key|access[_-]?token|refresh[_-]?token|id[_-]?token|client[_-]?secret|authorization|password|secret)["']?\s*[:=]\s*)(["']?)([^"',\s}{\]]{4,})(["']?)`)
+)
+
+// RedactSensitiveBody redacts common secret-shaped fields from persisted or logged bodies.
+func RedactSensitiveBody(body []byte) []byte {
+	if len(body) == 0 {
+		return body
+	}
+
+	redacted := bodyBearerTokenRegex.ReplaceAllString(string(body), "${1}[REDACTED]")
+	redacted = bodySecretKVRegex.ReplaceAllString(redacted, "${1}${2}[REDACTED]${4}")
+
+	return []byte(redacted)
 }
 
 // FinalizeAuthHeaders writes the auth config into headers and clears the in-memory auth field.

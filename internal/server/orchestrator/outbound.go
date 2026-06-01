@@ -375,10 +375,15 @@ func (p *PersistentOutboundTransformer) TransformRequest(ctx context.Context, ll
 	p.state.StickyResponseMessage = nil
 	p.state.CurrentCredentialID = 0
 	p.state.CurrentCredentialFingerprint = ""
+	p.state.CurrentSecretFingerprint = ""
+	p.state.CurrentResourceScopeKey = ""
 	p.state.CurrentCredentialName = ""
 	p.state.CurrentCredentialKeyHint = ""
 	p.state.CurrentCredentialSource = ""
 	p.state.CurrentCredentialQuotaStatus = ""
+	p.state.CurrentQuotaScopeID = 0
+	p.state.CurrentQuotaScopeName = ""
+	p.state.CurrentQuotaScopeStatus = ""
 	p.state.CurrentCredentialAPIKey = ""
 
 	p.wrapped = selectOutboundForCandidate(candidate)
@@ -415,13 +420,26 @@ func (p *PersistentOutboundTransformer) TransformRequest(ctx context.Context, ll
 	// Ensure the mutable request context container exists before API key
 	// providers store the selected credential metadata in it.
 	ctx = contexts.WithCredentialSelectionSeed(ctx, "")
+	ctx = contexts.WithPreferredCredential(ctx, 0, "")
+	ctx = contexts.WithAllowedCredentials(ctx, nil, nil)
+	contexts.WithChannelCredential(ctx, 0, "", "")
+	contexts.WithChannelCredentialIdentity(ctx, "", "")
+	contexts.WithChannelCredentialMetadata(ctx, "", "", "", "")
+	contexts.WithChannelCredentialQuotaScope(ctx, 0, "", "")
 	if p.state.StickyKeyOK && p.state.StickyKey != "" {
 		ctx = contexts.WithCredentialSelectionSeed(ctx, p.state.StickyKey)
 	}
+	ctx = contextWithAllowedCandidateCredentials(ctx, candidate)
 	if p.state.PreferredCredentialID > 0 {
 		ctx = contexts.WithPreferredCredential(ctx, p.state.PreferredCredentialID, p.state.PreferredCredentialFingerprint)
 	} else if p.state.PreferredCredentialFingerprint != "" {
 		ctx = contexts.WithPreferredCredentialFingerprint(ctx, p.state.PreferredCredentialFingerprint)
+	} else if preferred := singleCandidateCredentialView(candidate); preferred != nil {
+		if preferred.CredentialID > 0 {
+			ctx = contexts.WithPreferredCredential(ctx, preferred.CredentialID, preferred.Fingerprint)
+		} else if preferred.Fingerprint != "" {
+			ctx = contexts.WithPreferredCredentialFingerprint(ctx, preferred.Fingerprint)
+		}
 	}
 
 	rawRequest, err := p.wrapped.TransformRequest(ctx, llmRequest)
@@ -438,6 +456,12 @@ func (p *PersistentOutboundTransformer) TransformRequest(ctx context.Context, ll
 	if fingerprint, ok := contexts.GetChannelCredentialFingerprint(ctx); ok {
 		p.state.CurrentCredentialFingerprint = fingerprint
 	}
+	if secretFingerprint, ok := contexts.GetChannelCredentialSecretFingerprint(ctx); ok {
+		p.state.CurrentSecretFingerprint = secretFingerprint
+	}
+	if resourceScopeKey, ok := contexts.GetChannelCredentialResourceScopeKey(ctx); ok {
+		p.state.CurrentResourceScopeKey = resourceScopeKey
+	}
 	if name, ok := contexts.GetChannelCredentialName(ctx); ok {
 		p.state.CurrentCredentialName = name
 	}
@@ -450,7 +474,22 @@ func (p *PersistentOutboundTransformer) TransformRequest(ctx context.Context, ll
 	if quotaStatus, ok := contexts.GetChannelCredentialQuotaStatus(ctx); ok {
 		p.state.CurrentCredentialQuotaStatus = quotaStatus
 	}
-	if p.state.CurrentCredentialFingerprint == "" || p.state.CurrentCredentialID == 0 {
+	if quotaScopeID, ok := contexts.GetChannelCredentialQuotaScopeID(ctx); ok {
+		p.state.CurrentQuotaScopeID = quotaScopeID
+	}
+	if quotaScopeName, ok := contexts.GetChannelCredentialQuotaScopeName(ctx); ok {
+		p.state.CurrentQuotaScopeName = quotaScopeName
+	}
+	if quotaScopeStatus, ok := contexts.GetChannelCredentialQuotaScopeStatus(ctx); ok {
+		p.state.CurrentQuotaScopeStatus = quotaScopeStatus
+	}
+	if p.state.CurrentCredentialFingerprint == "" ||
+		p.state.CurrentCredentialID == 0 ||
+		p.state.CurrentSecretFingerprint == "" ||
+		p.state.CurrentResourceScopeKey == "" ||
+		p.state.CurrentQuotaScopeID == 0 ||
+		p.state.CurrentQuotaScopeName == "" ||
+		p.state.CurrentQuotaScopeStatus == "" {
 		var only *biz.ChannelCredentialView
 		for _, view := range candidate.Channel.CredentialViews() {
 			if !view.Enabled {
@@ -470,6 +509,12 @@ func (p *PersistentOutboundTransformer) TransformRequest(ctx context.Context, ll
 			if p.state.CurrentCredentialFingerprint == "" {
 				p.state.CurrentCredentialFingerprint = only.Fingerprint
 			}
+			if p.state.CurrentSecretFingerprint == "" {
+				p.state.CurrentSecretFingerprint = only.SecretFingerprint
+			}
+			if p.state.CurrentResourceScopeKey == "" {
+				p.state.CurrentResourceScopeKey = only.ResourceScopeKey
+			}
 			if p.state.CurrentCredentialName == "" {
 				p.state.CurrentCredentialName = only.Name
 			}
@@ -482,10 +527,69 @@ func (p *PersistentOutboundTransformer) TransformRequest(ctx context.Context, ll
 			if p.state.CurrentCredentialQuotaStatus == "" {
 				p.state.CurrentCredentialQuotaStatus = only.QuotaStatus
 			}
+			if p.state.CurrentQuotaScopeID == 0 {
+				p.state.CurrentQuotaScopeID = only.QuotaScopeID
+			}
+			if p.state.CurrentQuotaScopeName == "" {
+				p.state.CurrentQuotaScopeName = only.QuotaScopeName
+			}
+			if p.state.CurrentQuotaScopeStatus == "" {
+				p.state.CurrentQuotaScopeStatus = only.QuotaScopeStatus
+			}
 		}
 	}
 
 	return rawRequest, nil
+}
+
+func contextWithAllowedCandidateCredentials(ctx context.Context, candidate *ChannelModelsCandidate) context.Context {
+	if candidate == nil || candidate.Channel == nil {
+		return ctx
+	}
+
+	views := candidate.Channel.CredentialViews()
+	if len(views) == 0 {
+		return ctx
+	}
+
+	credentialIDs := make([]int, 0, len(views))
+	fingerprints := make([]string, 0, len(views))
+	for _, view := range views {
+		if !view.Enabled {
+			continue
+		}
+		if view.CredentialID > 0 {
+			credentialIDs = append(credentialIDs, view.CredentialID)
+		}
+		if view.Fingerprint != "" {
+			fingerprints = append(fingerprints, view.Fingerprint)
+		}
+	}
+	if len(credentialIDs) == 0 && len(fingerprints) == 0 {
+		return ctx
+	}
+
+	return contexts.WithAllowedCredentials(ctx, credentialIDs, fingerprints)
+}
+
+func singleCandidateCredentialView(candidate *ChannelModelsCandidate) *biz.ChannelCredentialView {
+	if candidate == nil || candidate.Channel == nil {
+		return nil
+	}
+
+	var only *biz.ChannelCredentialView
+	for _, view := range candidate.Channel.CredentialViews() {
+		if !view.Enabled {
+			continue
+		}
+		if only != nil {
+			return nil
+		}
+		v := view
+		only = &v
+	}
+
+	return only
 }
 
 func filterResponseCustomToolMessagesForNonResponsesOutbound(

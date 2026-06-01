@@ -1,6 +1,7 @@
 'use client';
 
 import { CreateCredentialDialog } from './create-credential-dialog';
+import { CredentialDetailDialog } from './credential-detail-dialog';
 import { EditCredentialDialog } from './edit-credential-dialog';
 import { RotateCredentialDialog } from './rotate-credential-dialog';
 import { CredentialStatusDialog } from './credential-status-dialog';
@@ -10,6 +11,7 @@ export function CredentialDialogs() {
   return (
     <>
       <CreateCredentialDialog />
+      <CredentialDetailDialog />
       <EditCredentialDialog />
       <RotateCredentialDialog />
       <CredentialStatusDialog />

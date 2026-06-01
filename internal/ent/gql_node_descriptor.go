@@ -14,6 +14,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/channelmodelpriceversion"
 	"github.com/looplj/axonhub/internal/ent/channeloverridetemplate"
 	"github.com/looplj/axonhub/internal/ent/channelprobe"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/datastorage"
 	"github.com/looplj/axonhub/internal/ent/oidcidentity"
 	"github.com/looplj/axonhub/internal/ent/project"
@@ -476,9 +477,9 @@ func (_m *Channel) Node(ctx context.Context) (node *Node, err error) {
 	}
 	node.Edges[6] = &Edge{
 		Type: "ProviderQuotaStatus",
-		Name: "provider_quota_status",
+		Name: "provider_quota_statuses",
 	}
-	err = _m.QueryProviderQuotaStatus().
+	err = _m.QueryProviderQuotaStatuses().
 		Select(providerquotastatus.FieldID).
 		Scan(ctx, &node.Edges[6].IDs)
 	if err != nil {
@@ -492,7 +493,7 @@ func (_m *ChannelCredentialRef) Node(ctx context.Context) (node *Node, err error
 	node = &Node{
 		ID:     _m.ID,
 		Type:   "ChannelCredentialRef",
-		Fields: make([]*Field, 6),
+		Fields: make([]*Field, 5),
 		Edges:  make([]*Edge, 2),
 	}
 	var buf []byte
@@ -534,14 +535,6 @@ func (_m *ChannelCredentialRef) Node(ctx context.Context) (node *Node, err error
 	node.Fields[4] = &Field{
 		Type:  "bool",
 		Name:  "enabled",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(_m.WeightOverride); err != nil {
-		return nil, err
-	}
-	node.Fields[5] = &Field{
-		Type:  "int",
-		Name:  "weight_override",
 		Value: string(buf),
 	}
 	node.Edges[0] = &Edge{
@@ -907,6 +900,186 @@ func (_m *ChannelProbe) Node(ctx context.Context) (node *Node, err error) {
 	err = _m.QueryChannel().
 		Select(channel.FieldID).
 		Scan(ctx, &node.Edges[0].IDs)
+	if err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
+// Node implements Noder interface
+func (_m *CredentialQuotaScope) Node(ctx context.Context) (node *Node, err error) {
+	node = &Node{
+		ID:     _m.ID,
+		Type:   "CredentialQuotaScope",
+		Fields: make([]*Field, 16),
+		Edges:  make([]*Edge, 4),
+	}
+	var buf []byte
+	if buf, err = json.Marshal(_m.CreatedAt); err != nil {
+		return nil, err
+	}
+	node.Fields[0] = &Field{
+		Type:  "time.Time",
+		Name:  "created_at",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.UpdatedAt); err != nil {
+		return nil, err
+	}
+	node.Fields[1] = &Field{
+		Type:  "time.Time",
+		Name:  "updated_at",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.Name); err != nil {
+		return nil, err
+	}
+	node.Fields[2] = &Field{
+		Type:  "string",
+		Name:  "name",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.Status); err != nil {
+		return nil, err
+	}
+	node.Fields[3] = &Field{
+		Type:  "credentialquotascope.Status",
+		Name:  "status",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.Unit); err != nil {
+		return nil, err
+	}
+	node.Fields[4] = &Field{
+		Type:  "credentialquotascope.Unit",
+		Name:  "unit",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.LimitAmount); err != nil {
+		return nil, err
+	}
+	node.Fields[5] = &Field{
+		Type:  "string",
+		Name:  "limit_amount",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.UsedAmount); err != nil {
+		return nil, err
+	}
+	node.Fields[6] = &Field{
+		Type:  "string",
+		Name:  "used_amount",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.WarningThresholdPercent); err != nil {
+		return nil, err
+	}
+	node.Fields[7] = &Field{
+		Type:  "int",
+		Name:  "warning_threshold_percent",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.ResetPolicy); err != nil {
+		return nil, err
+	}
+	node.Fields[8] = &Field{
+		Type:  "credentialquotascope.ResetPolicy",
+		Name:  "reset_policy",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.ResetAt); err != nil {
+		return nil, err
+	}
+	node.Fields[9] = &Field{
+		Type:  "time.Time",
+		Name:  "reset_at",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.WindowStartedAt); err != nil {
+		return nil, err
+	}
+	node.Fields[10] = &Field{
+		Type:  "time.Time",
+		Name:  "window_started_at",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.OverLimitAction); err != nil {
+		return nil, err
+	}
+	node.Fields[11] = &Field{
+		Type:  "credentialquotascope.OverLimitAction",
+		Name:  "over_limit_action",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.PauseUntil); err != nil {
+		return nil, err
+	}
+	node.Fields[12] = &Field{
+		Type:  "time.Time",
+		Name:  "pause_until",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.Source); err != nil {
+		return nil, err
+	}
+	node.Fields[13] = &Field{
+		Type:  "credentialquotascope.Source",
+		Name:  "source",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.LastError); err != nil {
+		return nil, err
+	}
+	node.Fields[14] = &Field{
+		Type:  "string",
+		Name:  "last_error",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.Remark); err != nil {
+		return nil, err
+	}
+	node.Fields[15] = &Field{
+		Type:  "string",
+		Name:  "remark",
+		Value: string(buf),
+	}
+	node.Edges[0] = &Edge{
+		Type: "UpstreamCredential",
+		Name: "credentials",
+	}
+	err = _m.QueryCredentials().
+		Select(upstreamcredential.FieldID).
+		Scan(ctx, &node.Edges[0].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[1] = &Edge{
+		Type: "ProviderQuotaStatus",
+		Name: "provider_quota_statuses",
+	}
+	err = _m.QueryProviderQuotaStatuses().
+		Select(providerquotastatus.FieldID).
+		Scan(ctx, &node.Edges[1].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[2] = &Edge{
+		Type: "RequestExecution",
+		Name: "executions",
+	}
+	err = _m.QueryExecutions().
+		Select(requestexecution.FieldID).
+		Scan(ctx, &node.Edges[2].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[3] = &Edge{
+		Type: "UsageLog",
+		Name: "usage_logs",
+	}
+	err = _m.QueryUsageLogs().
+		Select(usagelog.FieldID).
+		Scan(ctx, &node.Edges[3].IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -1538,8 +1711,8 @@ func (_m *ProviderQuotaStatus) Node(ctx context.Context) (node *Node, err error)
 	node = &Node{
 		ID:     _m.ID,
 		Type:   "ProviderQuotaStatus",
-		Fields: make([]*Field, 11),
-		Edges:  make([]*Edge, 2),
+		Fields: make([]*Field, 15),
+		Edges:  make([]*Edge, 3),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(_m.CreatedAt); err != nil {
@@ -1566,10 +1739,18 @@ func (_m *ProviderQuotaStatus) Node(ctx context.Context) (node *Node, err error)
 		Name:  "channel_id",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(_m.CredentialID); err != nil {
+	if buf, err = json.Marshal(_m.ScopeKey); err != nil {
 		return nil, err
 	}
 	node.Fields[3] = &Field{
+		Type:  "string",
+		Name:  "scope_key",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.CredentialID); err != nil {
+		return nil, err
+	}
+	node.Fields[4] = &Field{
 		Type:  "int",
 		Name:  "credential_id",
 		Value: string(buf),
@@ -1577,15 +1758,39 @@ func (_m *ProviderQuotaStatus) Node(ctx context.Context) (node *Node, err error)
 	if buf, err = json.Marshal(_m.CredentialFingerprint); err != nil {
 		return nil, err
 	}
-	node.Fields[4] = &Field{
+	node.Fields[5] = &Field{
 		Type:  "string",
 		Name:  "credential_fingerprint",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.SecretFingerprint); err != nil {
+		return nil, err
+	}
+	node.Fields[6] = &Field{
+		Type:  "string",
+		Name:  "secret_fingerprint",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.ResourceScopeKey); err != nil {
+		return nil, err
+	}
+	node.Fields[7] = &Field{
+		Type:  "string",
+		Name:  "resource_scope_key",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.QuotaScopeID); err != nil {
+		return nil, err
+	}
+	node.Fields[8] = &Field{
+		Type:  "int",
+		Name:  "quota_scope_id",
 		Value: string(buf),
 	}
 	if buf, err = json.Marshal(_m.ProviderType); err != nil {
 		return nil, err
 	}
-	node.Fields[5] = &Field{
+	node.Fields[9] = &Field{
 		Type:  "providerquotastatus.ProviderType",
 		Name:  "provider_type",
 		Value: string(buf),
@@ -1593,7 +1798,7 @@ func (_m *ProviderQuotaStatus) Node(ctx context.Context) (node *Node, err error)
 	if buf, err = json.Marshal(_m.Status); err != nil {
 		return nil, err
 	}
-	node.Fields[6] = &Field{
+	node.Fields[10] = &Field{
 		Type:  "providerquotastatus.Status",
 		Name:  "status",
 		Value: string(buf),
@@ -1601,7 +1806,7 @@ func (_m *ProviderQuotaStatus) Node(ctx context.Context) (node *Node, err error)
 	if buf, err = json.Marshal(_m.QuotaData); err != nil {
 		return nil, err
 	}
-	node.Fields[7] = &Field{
+	node.Fields[11] = &Field{
 		Type:  "map[string]interface {}",
 		Name:  "quota_data",
 		Value: string(buf),
@@ -1609,7 +1814,7 @@ func (_m *ProviderQuotaStatus) Node(ctx context.Context) (node *Node, err error)
 	if buf, err = json.Marshal(_m.NextResetAt); err != nil {
 		return nil, err
 	}
-	node.Fields[8] = &Field{
+	node.Fields[12] = &Field{
 		Type:  "time.Time",
 		Name:  "next_reset_at",
 		Value: string(buf),
@@ -1617,7 +1822,7 @@ func (_m *ProviderQuotaStatus) Node(ctx context.Context) (node *Node, err error)
 	if buf, err = json.Marshal(_m.Ready); err != nil {
 		return nil, err
 	}
-	node.Fields[9] = &Field{
+	node.Fields[13] = &Field{
 		Type:  "bool",
 		Name:  "ready",
 		Value: string(buf),
@@ -1625,7 +1830,7 @@ func (_m *ProviderQuotaStatus) Node(ctx context.Context) (node *Node, err error)
 	if buf, err = json.Marshal(_m.NextCheckAt); err != nil {
 		return nil, err
 	}
-	node.Fields[10] = &Field{
+	node.Fields[14] = &Field{
 		Type:  "time.Time",
 		Name:  "next_check_at",
 		Value: string(buf),
@@ -1647,6 +1852,16 @@ func (_m *ProviderQuotaStatus) Node(ctx context.Context) (node *Node, err error)
 	err = _m.QueryCredential().
 		Select(upstreamcredential.FieldID).
 		Scan(ctx, &node.Edges[1].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[2] = &Edge{
+		Type: "CredentialQuotaScope",
+		Name: "quota_scope",
+	}
+	err = _m.QueryQuotaScope().
+		Select(credentialquotascope.FieldID).
+		Scan(ctx, &node.Edges[2].IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -1948,8 +2163,8 @@ func (_m *RequestExecution) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     _m.ID,
 		Type:   "RequestExecution",
-		Fields: make([]*Field, 26),
-		Edges:  make([]*Edge, 4),
+		Fields: make([]*Field, 31),
+		Edges:  make([]*Edge, 5),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(_m.CreatedAt); err != nil {
@@ -2032,10 +2247,50 @@ func (_m *RequestExecution) Node(ctx context.Context) (node *Node, err error) {
 		Name:  "credential_fingerprint",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(_m.CredentialNameSnapshot); err != nil {
+	if buf, err = json.Marshal(_m.SecretFingerprint); err != nil {
 		return nil, err
 	}
 	node.Fields[10] = &Field{
+		Type:  "string",
+		Name:  "secret_fingerprint",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.ResourceScopeKey); err != nil {
+		return nil, err
+	}
+	node.Fields[11] = &Field{
+		Type:  "string",
+		Name:  "resource_scope_key",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.QuotaScopeID); err != nil {
+		return nil, err
+	}
+	node.Fields[12] = &Field{
+		Type:  "int",
+		Name:  "quota_scope_id",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.QuotaScopeNameSnapshot); err != nil {
+		return nil, err
+	}
+	node.Fields[13] = &Field{
+		Type:  "string",
+		Name:  "quota_scope_name_snapshot",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.QuotaScopeStatusSnapshot); err != nil {
+		return nil, err
+	}
+	node.Fields[14] = &Field{
+		Type:  "string",
+		Name:  "quota_scope_status_snapshot",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.CredentialNameSnapshot); err != nil {
+		return nil, err
+	}
+	node.Fields[15] = &Field{
 		Type:  "string",
 		Name:  "credential_name_snapshot",
 		Value: string(buf),
@@ -2043,7 +2298,7 @@ func (_m *RequestExecution) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.CredentialKeyHint); err != nil {
 		return nil, err
 	}
-	node.Fields[11] = &Field{
+	node.Fields[16] = &Field{
 		Type:  "string",
 		Name:  "credential_key_hint",
 		Value: string(buf),
@@ -2051,7 +2306,7 @@ func (_m *RequestExecution) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.CredentialSource); err != nil {
 		return nil, err
 	}
-	node.Fields[12] = &Field{
+	node.Fields[17] = &Field{
 		Type:  "string",
 		Name:  "credential_source",
 		Value: string(buf),
@@ -2059,7 +2314,7 @@ func (_m *RequestExecution) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.CredentialQuotaStatusSnapshot); err != nil {
 		return nil, err
 	}
-	node.Fields[13] = &Field{
+	node.Fields[18] = &Field{
 		Type:  "string",
 		Name:  "credential_quota_status_snapshot",
 		Value: string(buf),
@@ -2067,7 +2322,7 @@ func (_m *RequestExecution) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.Format); err != nil {
 		return nil, err
 	}
-	node.Fields[14] = &Field{
+	node.Fields[19] = &Field{
 		Type:  "string",
 		Name:  "format",
 		Value: string(buf),
@@ -2075,7 +2330,7 @@ func (_m *RequestExecution) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.RequestBody); err != nil {
 		return nil, err
 	}
-	node.Fields[15] = &Field{
+	node.Fields[20] = &Field{
 		Type:  "objects.JSONRawMessage",
 		Name:  "request_body",
 		Value: string(buf),
@@ -2083,7 +2338,7 @@ func (_m *RequestExecution) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.ResponseBody); err != nil {
 		return nil, err
 	}
-	node.Fields[16] = &Field{
+	node.Fields[21] = &Field{
 		Type:  "objects.JSONRawMessage",
 		Name:  "response_body",
 		Value: string(buf),
@@ -2091,7 +2346,7 @@ func (_m *RequestExecution) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.ResponseChunks); err != nil {
 		return nil, err
 	}
-	node.Fields[17] = &Field{
+	node.Fields[22] = &Field{
 		Type:  "[]objects.JSONRawMessage",
 		Name:  "response_chunks",
 		Value: string(buf),
@@ -2099,7 +2354,7 @@ func (_m *RequestExecution) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.ErrorMessage); err != nil {
 		return nil, err
 	}
-	node.Fields[18] = &Field{
+	node.Fields[23] = &Field{
 		Type:  "string",
 		Name:  "error_message",
 		Value: string(buf),
@@ -2107,7 +2362,7 @@ func (_m *RequestExecution) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.ResponseStatusCode); err != nil {
 		return nil, err
 	}
-	node.Fields[19] = &Field{
+	node.Fields[24] = &Field{
 		Type:  "int",
 		Name:  "response_status_code",
 		Value: string(buf),
@@ -2115,7 +2370,7 @@ func (_m *RequestExecution) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.Status); err != nil {
 		return nil, err
 	}
-	node.Fields[20] = &Field{
+	node.Fields[25] = &Field{
 		Type:  "requestexecution.Status",
 		Name:  "status",
 		Value: string(buf),
@@ -2123,7 +2378,7 @@ func (_m *RequestExecution) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.Stream); err != nil {
 		return nil, err
 	}
-	node.Fields[21] = &Field{
+	node.Fields[26] = &Field{
 		Type:  "bool",
 		Name:  "stream",
 		Value: string(buf),
@@ -2131,7 +2386,7 @@ func (_m *RequestExecution) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.MetricsLatencyMs); err != nil {
 		return nil, err
 	}
-	node.Fields[22] = &Field{
+	node.Fields[27] = &Field{
 		Type:  "int64",
 		Name:  "metrics_latency_ms",
 		Value: string(buf),
@@ -2139,7 +2394,7 @@ func (_m *RequestExecution) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.MetricsFirstTokenLatencyMs); err != nil {
 		return nil, err
 	}
-	node.Fields[23] = &Field{
+	node.Fields[28] = &Field{
 		Type:  "int64",
 		Name:  "metrics_first_token_latency_ms",
 		Value: string(buf),
@@ -2147,7 +2402,7 @@ func (_m *RequestExecution) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.MetricsReasoningDurationMs); err != nil {
 		return nil, err
 	}
-	node.Fields[24] = &Field{
+	node.Fields[29] = &Field{
 		Type:  "int64",
 		Name:  "metrics_reasoning_duration_ms",
 		Value: string(buf),
@@ -2155,7 +2410,7 @@ func (_m *RequestExecution) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.RequestHeaders); err != nil {
 		return nil, err
 	}
-	node.Fields[25] = &Field{
+	node.Fields[30] = &Field{
 		Type:  "objects.JSONRawMessage",
 		Name:  "request_headers",
 		Value: string(buf),
@@ -2191,12 +2446,22 @@ func (_m *RequestExecution) Node(ctx context.Context) (node *Node, err error) {
 		return nil, err
 	}
 	node.Edges[3] = &Edge{
+		Type: "CredentialQuotaScope",
+		Name: "quota_scope",
+	}
+	err = _m.QueryQuotaScope().
+		Select(credentialquotascope.FieldID).
+		Scan(ctx, &node.Edges[3].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[4] = &Edge{
 		Type: "DataStorage",
 		Name: "data_storage",
 	}
 	err = _m.QueryDataStorage().
 		Select(datastorage.FieldID).
-		Scan(ctx, &node.Edges[3].IDs)
+		Scan(ctx, &node.Edges[4].IDs)
 	if err != nil {
 		return nil, err
 	}
@@ -2488,8 +2753,8 @@ func (_m *UpstreamCredential) Node(ctx context.Context) (node *Node, err error) 
 	node = &Node{
 		ID:     _m.ID,
 		Type:   "UpstreamCredential",
-		Fields: make([]*Field, 16),
-		Edges:  make([]*Edge, 4),
+		Fields: make([]*Field, 11),
+		Edges:  make([]*Edge, 5),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(_m.CreatedAt); err != nil {
@@ -2516,50 +2781,10 @@ func (_m *UpstreamCredential) Node(ctx context.Context) (node *Node, err error) 
 		Name:  "name",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(_m.ProviderType); err != nil {
-		return nil, err
-	}
-	node.Fields[3] = &Field{
-		Type:  "string",
-		Name:  "provider_type",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(_m.BaseURL); err != nil {
-		return nil, err
-	}
-	node.Fields[4] = &Field{
-		Type:  "string",
-		Name:  "base_url",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(_m.AuthKind); err != nil {
-		return nil, err
-	}
-	node.Fields[5] = &Field{
-		Type:  "upstreamcredential.AuthKind",
-		Name:  "auth_kind",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(_m.SecretKind); err != nil {
-		return nil, err
-	}
-	node.Fields[6] = &Field{
-		Type:  "upstreamcredential.SecretKind",
-		Name:  "secret_kind",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(_m.IssuerScope); err != nil {
-		return nil, err
-	}
-	node.Fields[7] = &Field{
-		Type:  "string",
-		Name:  "issuer_scope",
-		Value: string(buf),
-	}
 	if buf, err = json.Marshal(_m.KeyHint); err != nil {
 		return nil, err
 	}
-	node.Fields[8] = &Field{
+	node.Fields[3] = &Field{
 		Type:  "string",
 		Name:  "key_hint",
 		Value: string(buf),
@@ -2567,7 +2792,7 @@ func (_m *UpstreamCredential) Node(ctx context.Context) (node *Node, err error) 
 	if buf, err = json.Marshal(_m.QuotaScopeID); err != nil {
 		return nil, err
 	}
-	node.Fields[9] = &Field{
+	node.Fields[4] = &Field{
 		Type:  "int",
 		Name:  "quota_scope_id",
 		Value: string(buf),
@@ -2575,31 +2800,31 @@ func (_m *UpstreamCredential) Node(ctx context.Context) (node *Node, err error) 
 	if buf, err = json.Marshal(_m.Fingerprint); err != nil {
 		return nil, err
 	}
-	node.Fields[10] = &Field{
+	node.Fields[5] = &Field{
 		Type:  "string",
 		Name:  "fingerprint",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.SecretFingerprint); err != nil {
+		return nil, err
+	}
+	node.Fields[6] = &Field{
+		Type:  "string",
+		Name:  "secret_fingerprint",
 		Value: string(buf),
 	}
 	if buf, err = json.Marshal(_m.Status); err != nil {
 		return nil, err
 	}
-	node.Fields[11] = &Field{
+	node.Fields[7] = &Field{
 		Type:  "upstreamcredential.Status",
 		Name:  "status",
-		Value: string(buf),
-	}
-	if buf, err = json.Marshal(_m.Weight); err != nil {
-		return nil, err
-	}
-	node.Fields[12] = &Field{
-		Type:  "int",
-		Name:  "weight",
 		Value: string(buf),
 	}
 	if buf, err = json.Marshal(_m.QuotaStatus); err != nil {
 		return nil, err
 	}
-	node.Fields[13] = &Field{
+	node.Fields[8] = &Field{
 		Type:  "string",
 		Name:  "quota_status",
 		Value: string(buf),
@@ -2607,7 +2832,7 @@ func (_m *UpstreamCredential) Node(ctx context.Context) (node *Node, err error) 
 	if buf, err = json.Marshal(_m.LastError); err != nil {
 		return nil, err
 	}
-	node.Fields[14] = &Field{
+	node.Fields[9] = &Field{
 		Type:  "string",
 		Name:  "last_error",
 		Value: string(buf),
@@ -2615,7 +2840,7 @@ func (_m *UpstreamCredential) Node(ctx context.Context) (node *Node, err error) 
 	if buf, err = json.Marshal(_m.Remark); err != nil {
 		return nil, err
 	}
-	node.Fields[15] = &Field{
+	node.Fields[10] = &Field{
 		Type:  "string",
 		Name:  "remark",
 		Value: string(buf),
@@ -2660,6 +2885,16 @@ func (_m *UpstreamCredential) Node(ctx context.Context) (node *Node, err error) 
 	if err != nil {
 		return nil, err
 	}
+	node.Edges[4] = &Edge{
+		Type: "CredentialQuotaScope",
+		Name: "quota_scope",
+	}
+	err = _m.QueryQuotaScope().
+		Select(credentialquotascope.FieldID).
+		Scan(ctx, &node.Edges[4].IDs)
+	if err != nil {
+		return nil, err
+	}
 	return node, nil
 }
 
@@ -2668,8 +2903,8 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	node = &Node{
 		ID:     _m.ID,
 		Type:   "UsageLog",
-		Fields: make([]*Field, 29),
-		Edges:  make([]*Edge, 4),
+		Fields: make([]*Field, 35),
+		Edges:  make([]*Edge, 5),
 	}
 	var buf []byte
 	if buf, err = json.Marshal(_m.CreatedAt); err != nil {
@@ -2744,10 +2979,50 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 		Name:  "credential_fingerprint",
 		Value: string(buf),
 	}
-	if buf, err = json.Marshal(_m.CredentialNameSnapshot); err != nil {
+	if buf, err = json.Marshal(_m.SecretFingerprint); err != nil {
 		return nil, err
 	}
 	node.Fields[9] = &Field{
+		Type:  "string",
+		Name:  "secret_fingerprint",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.ResourceScopeKey); err != nil {
+		return nil, err
+	}
+	node.Fields[10] = &Field{
+		Type:  "string",
+		Name:  "resource_scope_key",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.QuotaScopeID); err != nil {
+		return nil, err
+	}
+	node.Fields[11] = &Field{
+		Type:  "int",
+		Name:  "quota_scope_id",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.QuotaScopeNameSnapshot); err != nil {
+		return nil, err
+	}
+	node.Fields[12] = &Field{
+		Type:  "string",
+		Name:  "quota_scope_name_snapshot",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.QuotaScopeStatusSnapshot); err != nil {
+		return nil, err
+	}
+	node.Fields[13] = &Field{
+		Type:  "string",
+		Name:  "quota_scope_status_snapshot",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.CredentialNameSnapshot); err != nil {
+		return nil, err
+	}
+	node.Fields[14] = &Field{
 		Type:  "string",
 		Name:  "credential_name_snapshot",
 		Value: string(buf),
@@ -2755,7 +3030,7 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.CredentialKeyHint); err != nil {
 		return nil, err
 	}
-	node.Fields[10] = &Field{
+	node.Fields[15] = &Field{
 		Type:  "string",
 		Name:  "credential_key_hint",
 		Value: string(buf),
@@ -2763,15 +3038,23 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.CredentialSource); err != nil {
 		return nil, err
 	}
-	node.Fields[11] = &Field{
+	node.Fields[16] = &Field{
 		Type:  "string",
 		Name:  "credential_source",
+		Value: string(buf),
+	}
+	if buf, err = json.Marshal(_m.CredentialQuotaStatusSnapshot); err != nil {
+		return nil, err
+	}
+	node.Fields[17] = &Field{
+		Type:  "string",
+		Name:  "credential_quota_status_snapshot",
 		Value: string(buf),
 	}
 	if buf, err = json.Marshal(_m.PromptTokens); err != nil {
 		return nil, err
 	}
-	node.Fields[12] = &Field{
+	node.Fields[18] = &Field{
 		Type:  "int64",
 		Name:  "prompt_tokens",
 		Value: string(buf),
@@ -2779,7 +3062,7 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.CompletionTokens); err != nil {
 		return nil, err
 	}
-	node.Fields[13] = &Field{
+	node.Fields[19] = &Field{
 		Type:  "int64",
 		Name:  "completion_tokens",
 		Value: string(buf),
@@ -2787,7 +3070,7 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.TotalTokens); err != nil {
 		return nil, err
 	}
-	node.Fields[14] = &Field{
+	node.Fields[20] = &Field{
 		Type:  "int64",
 		Name:  "total_tokens",
 		Value: string(buf),
@@ -2795,7 +3078,7 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.PromptAudioTokens); err != nil {
 		return nil, err
 	}
-	node.Fields[15] = &Field{
+	node.Fields[21] = &Field{
 		Type:  "int64",
 		Name:  "prompt_audio_tokens",
 		Value: string(buf),
@@ -2803,7 +3086,7 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.PromptCachedTokens); err != nil {
 		return nil, err
 	}
-	node.Fields[16] = &Field{
+	node.Fields[22] = &Field{
 		Type:  "int64",
 		Name:  "prompt_cached_tokens",
 		Value: string(buf),
@@ -2811,7 +3094,7 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.PromptWriteCachedTokens); err != nil {
 		return nil, err
 	}
-	node.Fields[17] = &Field{
+	node.Fields[23] = &Field{
 		Type:  "int64",
 		Name:  "prompt_write_cached_tokens",
 		Value: string(buf),
@@ -2819,7 +3102,7 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.PromptWriteCachedTokens5m); err != nil {
 		return nil, err
 	}
-	node.Fields[18] = &Field{
+	node.Fields[24] = &Field{
 		Type:  "int64",
 		Name:  "prompt_write_cached_tokens_5m",
 		Value: string(buf),
@@ -2827,7 +3110,7 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.PromptWriteCachedTokens1h); err != nil {
 		return nil, err
 	}
-	node.Fields[19] = &Field{
+	node.Fields[25] = &Field{
 		Type:  "int64",
 		Name:  "prompt_write_cached_tokens_1h",
 		Value: string(buf),
@@ -2835,7 +3118,7 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.CompletionAudioTokens); err != nil {
 		return nil, err
 	}
-	node.Fields[20] = &Field{
+	node.Fields[26] = &Field{
 		Type:  "int64",
 		Name:  "completion_audio_tokens",
 		Value: string(buf),
@@ -2843,7 +3126,7 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.CompletionReasoningTokens); err != nil {
 		return nil, err
 	}
-	node.Fields[21] = &Field{
+	node.Fields[27] = &Field{
 		Type:  "int64",
 		Name:  "completion_reasoning_tokens",
 		Value: string(buf),
@@ -2851,7 +3134,7 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.CompletionAcceptedPredictionTokens); err != nil {
 		return nil, err
 	}
-	node.Fields[22] = &Field{
+	node.Fields[28] = &Field{
 		Type:  "int64",
 		Name:  "completion_accepted_prediction_tokens",
 		Value: string(buf),
@@ -2859,7 +3142,7 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.CompletionRejectedPredictionTokens); err != nil {
 		return nil, err
 	}
-	node.Fields[23] = &Field{
+	node.Fields[29] = &Field{
 		Type:  "int64",
 		Name:  "completion_rejected_prediction_tokens",
 		Value: string(buf),
@@ -2867,7 +3150,7 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.Source); err != nil {
 		return nil, err
 	}
-	node.Fields[24] = &Field{
+	node.Fields[30] = &Field{
 		Type:  "usagelog.Source",
 		Name:  "source",
 		Value: string(buf),
@@ -2875,7 +3158,7 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.Format); err != nil {
 		return nil, err
 	}
-	node.Fields[25] = &Field{
+	node.Fields[31] = &Field{
 		Type:  "string",
 		Name:  "format",
 		Value: string(buf),
@@ -2883,7 +3166,7 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.TotalCost); err != nil {
 		return nil, err
 	}
-	node.Fields[26] = &Field{
+	node.Fields[32] = &Field{
 		Type:  "float64",
 		Name:  "total_cost",
 		Value: string(buf),
@@ -2891,7 +3174,7 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.CostItems); err != nil {
 		return nil, err
 	}
-	node.Fields[27] = &Field{
+	node.Fields[33] = &Field{
 		Type:  "[]objects.CostItem",
 		Name:  "cost_items",
 		Value: string(buf),
@@ -2899,7 +3182,7 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	if buf, err = json.Marshal(_m.CostPriceReferenceID); err != nil {
 		return nil, err
 	}
-	node.Fields[28] = &Field{
+	node.Fields[34] = &Field{
 		Type:  "string",
 		Name:  "cost_price_reference_id",
 		Value: string(buf),
@@ -2941,6 +3224,16 @@ func (_m *UsageLog) Node(ctx context.Context) (node *Node, err error) {
 	err = _m.QueryCredential().
 		Select(upstreamcredential.FieldID).
 		Scan(ctx, &node.Edges[3].IDs)
+	if err != nil {
+		return nil, err
+	}
+	node.Edges[4] = &Edge{
+		Type: "CredentialQuotaScope",
+		Name: "quota_scope",
+	}
+	err = _m.QueryQuotaScope().
+		Select(credentialquotascope.FieldID).
+		Scan(ctx, &node.Edges[4].IDs)
 	if err != nil {
 		return nil, err
 	}

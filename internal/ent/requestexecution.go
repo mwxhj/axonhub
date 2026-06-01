@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/datastorage"
 	"github.com/looplj/axonhub/internal/ent/request"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
@@ -41,8 +42,18 @@ type RequestExecution struct {
 	ExternalID string `json:"external_id,omitempty"`
 	// ModelID holds the value of the "model_id" field.
 	ModelID string `json:"model_id,omitempty"`
-	// Safe upstream credential identity used for this execution; never stores the raw secret
+	// Legacy safe upstream credential identity used for this execution; never stores the raw secret
 	CredentialFingerprint string `json:"credential_fingerprint,omitempty"`
+	// Safe secret-only identity used for this execution; never stores the raw secret
+	SecretFingerprint string `json:"secret_fingerprint,omitempty"`
+	// Safe runtime resource scope for channel resource namespace plus secret fingerprint
+	ResourceScopeKey string `json:"resource_scope_key,omitempty"`
+	// Credential quota scope used for this execution when known
+	QuotaScopeID int `json:"quota_scope_id,omitempty"`
+	// Quota scope display name captured at execution time
+	QuotaScopeNameSnapshot string `json:"quota_scope_name_snapshot,omitempty"`
+	// Quota scope status captured at execution time
+	QuotaScopeStatusSnapshot string `json:"quota_scope_status_snapshot,omitempty"`
 	// Credential display name captured at execution time
 	CredentialNameSnapshot string `json:"credential_name_snapshot,omitempty"`
 	// Safe credential key hint captured at execution time
@@ -89,13 +100,15 @@ type RequestExecutionEdges struct {
 	Channel *Channel `json:"channel,omitempty"`
 	// Credential holds the value of the credential edge.
 	Credential *UpstreamCredential `json:"credential,omitempty"`
+	// QuotaScope holds the value of the quota_scope edge.
+	QuotaScope *CredentialQuotaScope `json:"quota_scope,omitempty"`
 	// DataStorage holds the value of the data_storage edge.
 	DataStorage *DataStorage `json:"data_storage,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [5]bool
 	// totalCount holds the count of the edges above.
-	totalCount [4]map[string]int
+	totalCount [5]map[string]int
 }
 
 // RequestOrErr returns the Request value or an error if the edge
@@ -131,12 +144,23 @@ func (e RequestExecutionEdges) CredentialOrErr() (*UpstreamCredential, error) {
 	return nil, &NotLoadedError{edge: "credential"}
 }
 
+// QuotaScopeOrErr returns the QuotaScope value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e RequestExecutionEdges) QuotaScopeOrErr() (*CredentialQuotaScope, error) {
+	if e.QuotaScope != nil {
+		return e.QuotaScope, nil
+	} else if e.loadedTypes[3] {
+		return nil, &NotFoundError{label: credentialquotascope.Label}
+	}
+	return nil, &NotLoadedError{edge: "quota_scope"}
+}
+
 // DataStorageOrErr returns the DataStorage value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e RequestExecutionEdges) DataStorageOrErr() (*DataStorage, error) {
 	if e.DataStorage != nil {
 		return e.DataStorage, nil
-	} else if e.loadedTypes[3] {
+	} else if e.loadedTypes[4] {
 		return nil, &NotFoundError{label: datastorage.Label}
 	}
 	return nil, &NotLoadedError{edge: "data_storage"}
@@ -151,9 +175,9 @@ func (*RequestExecution) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case requestexecution.FieldStream:
 			values[i] = new(sql.NullBool)
-		case requestexecution.FieldID, requestexecution.FieldProjectID, requestexecution.FieldRequestID, requestexecution.FieldChannelID, requestexecution.FieldCredentialID, requestexecution.FieldDataStorageID, requestexecution.FieldResponseStatusCode, requestexecution.FieldMetricsLatencyMs, requestexecution.FieldMetricsFirstTokenLatencyMs, requestexecution.FieldMetricsReasoningDurationMs:
+		case requestexecution.FieldID, requestexecution.FieldProjectID, requestexecution.FieldRequestID, requestexecution.FieldChannelID, requestexecution.FieldCredentialID, requestexecution.FieldDataStorageID, requestexecution.FieldQuotaScopeID, requestexecution.FieldResponseStatusCode, requestexecution.FieldMetricsLatencyMs, requestexecution.FieldMetricsFirstTokenLatencyMs, requestexecution.FieldMetricsReasoningDurationMs:
 			values[i] = new(sql.NullInt64)
-		case requestexecution.FieldExternalID, requestexecution.FieldModelID, requestexecution.FieldCredentialFingerprint, requestexecution.FieldCredentialNameSnapshot, requestexecution.FieldCredentialKeyHint, requestexecution.FieldCredentialSource, requestexecution.FieldCredentialQuotaStatusSnapshot, requestexecution.FieldFormat, requestexecution.FieldErrorMessage, requestexecution.FieldStatus:
+		case requestexecution.FieldExternalID, requestexecution.FieldModelID, requestexecution.FieldCredentialFingerprint, requestexecution.FieldSecretFingerprint, requestexecution.FieldResourceScopeKey, requestexecution.FieldQuotaScopeNameSnapshot, requestexecution.FieldQuotaScopeStatusSnapshot, requestexecution.FieldCredentialNameSnapshot, requestexecution.FieldCredentialKeyHint, requestexecution.FieldCredentialSource, requestexecution.FieldCredentialQuotaStatusSnapshot, requestexecution.FieldFormat, requestexecution.FieldErrorMessage, requestexecution.FieldStatus:
 			values[i] = new(sql.NullString)
 		case requestexecution.FieldCreatedAt, requestexecution.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -237,6 +261,36 @@ func (_m *RequestExecution) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field credential_fingerprint", values[i])
 			} else if value.Valid {
 				_m.CredentialFingerprint = value.String
+			}
+		case requestexecution.FieldSecretFingerprint:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field secret_fingerprint", values[i])
+			} else if value.Valid {
+				_m.SecretFingerprint = value.String
+			}
+		case requestexecution.FieldResourceScopeKey:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field resource_scope_key", values[i])
+			} else if value.Valid {
+				_m.ResourceScopeKey = value.String
+			}
+		case requestexecution.FieldQuotaScopeID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field quota_scope_id", values[i])
+			} else if value.Valid {
+				_m.QuotaScopeID = int(value.Int64)
+			}
+		case requestexecution.FieldQuotaScopeNameSnapshot:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field quota_scope_name_snapshot", values[i])
+			} else if value.Valid {
+				_m.QuotaScopeNameSnapshot = value.String
+			}
+		case requestexecution.FieldQuotaScopeStatusSnapshot:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field quota_scope_status_snapshot", values[i])
+			} else if value.Valid {
+				_m.QuotaScopeStatusSnapshot = value.String
 			}
 		case requestexecution.FieldCredentialNameSnapshot:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -374,6 +428,11 @@ func (_m *RequestExecution) QueryCredential() *UpstreamCredentialQuery {
 	return NewRequestExecutionClient(_m.config).QueryCredential(_m)
 }
 
+// QueryQuotaScope queries the "quota_scope" edge of the RequestExecution entity.
+func (_m *RequestExecution) QueryQuotaScope() *CredentialQuotaScopeQuery {
+	return NewRequestExecutionClient(_m.config).QueryQuotaScope(_m)
+}
+
 // QueryDataStorage queries the "data_storage" edge of the RequestExecution entity.
 func (_m *RequestExecution) QueryDataStorage() *DataStorageQuery {
 	return NewRequestExecutionClient(_m.config).QueryDataStorage(_m)
@@ -431,6 +490,21 @@ func (_m *RequestExecution) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("credential_fingerprint=")
 	builder.WriteString(_m.CredentialFingerprint)
+	builder.WriteString(", ")
+	builder.WriteString("secret_fingerprint=")
+	builder.WriteString(_m.SecretFingerprint)
+	builder.WriteString(", ")
+	builder.WriteString("resource_scope_key=")
+	builder.WriteString(_m.ResourceScopeKey)
+	builder.WriteString(", ")
+	builder.WriteString("quota_scope_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.QuotaScopeID))
+	builder.WriteString(", ")
+	builder.WriteString("quota_scope_name_snapshot=")
+	builder.WriteString(_m.QuotaScopeNameSnapshot)
+	builder.WriteString(", ")
+	builder.WriteString("quota_scope_status_snapshot=")
+	builder.WriteString(_m.QuotaScopeStatusSnapshot)
 	builder.WriteString(", ")
 	builder.WriteString("credential_name_snapshot=")
 	builder.WriteString(_m.CredentialNameSnapshot)

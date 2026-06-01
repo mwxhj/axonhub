@@ -21,11 +21,11 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { JsonViewer } from '@/components/json-tree-view';
 import { useRequests, useRequest } from '@/features/requests/data';
 import { CurlPreviewDialog } from '@/features/requests/components/curl-preview-dialog';
-import { generateRequestCurl } from '@/features/requests/utils/curl-generator';
+import { generateRequestCurl, maskSensitiveBody, maskSensitiveHeaders } from '@/features/requests/utils/curl-generator';
 import { getStatusColor } from '@/features/requests/components/help';
 import { Channel } from '../data/schema';
 
@@ -88,7 +88,7 @@ export function ChannelsTestHistoryDrawer({ open, onOpenChange, channel }: Props
 
   const handleCurlPreview = () => {
     if (!request) return;
-    const curl = generateRequestCurl(request.requestHeaders, request.requestBody, request.format as any);
+    const curl = generateRequestCurl(maskSensitiveHeaders(request.requestHeaders), request.requestBody, request.format as any);
     setCurlCommand(curl);
     setShowCurlPreview(true);
   };
@@ -216,7 +216,7 @@ export function ChannelsTestHistoryDrawer({ open, onOpenChange, channel }: Props
                     variant='outline'
                     size='icon'
                     className='h-9 w-9 flex-shrink-0'
-                    onClick={() => copyBody(activeTab === 'request' ? request.requestBody : request.responseBody)}
+                    onClick={() => copyBody(activeTab === 'request' ? maskSensitiveBody(request.requestBody) : request.responseBody)}
                     title={t('requests.actions.copy')}
                   >
                     <Copy className='h-4 w-4' />
@@ -239,7 +239,7 @@ export function ChannelsTestHistoryDrawer({ open, onOpenChange, channel }: Props
                     <ScrollArea className='bg-muted/20 h-full w-full rounded-lg border p-4'>
                       {request.requestBody ? (
                         <JsonViewer
-                          data={request.requestBody}
+                          data={maskSensitiveBody(request.requestBody)}
                           rootName=''
                           defaultExpanded={true}
                           expandDepth='all'

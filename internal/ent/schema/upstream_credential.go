@@ -29,6 +29,9 @@ func (UpstreamCredential) Indexes() []ent.Index {
 		index.Fields("fingerprint", "deleted_at").
 			StorageKey("upstream_credentials_by_fingerprint").
 			Unique(),
+		index.Fields("secret_fingerprint", "deleted_at").
+			StorageKey("upstream_credentials_by_secret_fingerprint").
+			Unique(),
 		index.Fields("provider_type", "status").
 			StorageKey("upstream_credentials_by_provider_type_status"),
 		index.Fields("issuer_scope", "status").
@@ -54,6 +57,7 @@ func (UpstreamCredential) Fields() []ent.Field {
 			Comment("Provider or channel type scope used to identify the upstream credential").
 			Annotations(
 				entgql.OrderField("PROVIDER_TYPE"),
+				entgql.Skip(entgql.SkipType, entgql.SkipWhereInput, entgql.SkipOrderField),
 			),
 		field.String("base_url").
 			Optional().
@@ -61,6 +65,7 @@ func (UpstreamCredential) Fields() []ent.Field {
 			Comment("Normalized upstream base URL scope for this credential").
 			Annotations(
 				entgql.OrderField("BASE_URL"),
+				entgql.Skip(entgql.SkipType, entgql.SkipWhereInput, entgql.SkipOrderField),
 			),
 		field.Enum("auth_kind").
 			Values("api_key", "oauth", "azure", "gcp", "other").
@@ -68,6 +73,7 @@ func (UpstreamCredential) Fields() []ent.Field {
 			Immutable().
 			Annotations(
 				entgql.OrderField("AUTH_KIND"),
+				entgql.Skip(entgql.SkipType, entgql.SkipEnumField, entgql.SkipWhereInput, entgql.SkipOrderField),
 			),
 		field.Enum("secret_kind").
 			Values("api_key", "oauth", "azure", "gcp", "other").
@@ -75,6 +81,7 @@ func (UpstreamCredential) Fields() []ent.Field {
 			Comment("Internal secret kind for the upstream account asset; not a channel/API-format setting").
 			Annotations(
 				entgql.OrderField("SECRET_KIND"),
+				entgql.Skip(entgql.SkipType, entgql.SkipEnumField, entgql.SkipWhereInput, entgql.SkipOrderField),
 			),
 		field.String("issuer_scope").
 			Optional().
@@ -82,6 +89,7 @@ func (UpstreamCredential) Fields() []ent.Field {
 			Comment("Coarse upstream issuer namespace used for credential identity; not the channel base URL").
 			Annotations(
 				entgql.OrderField("ISSUER_SCOPE"),
+				entgql.Skip(entgql.SkipType, entgql.SkipWhereInput, entgql.SkipOrderField),
 			),
 		field.String("key_hint").
 			Optional().
@@ -104,9 +112,17 @@ func (UpstreamCredential) Fields() []ent.Field {
 			),
 		field.String("fingerprint").
 			MaxLen(128).
-			Comment("Safe upstream credential identity; never contains raw secret material").
+			Comment("Legacy safe upstream credential identity; never contains raw secret material").
 			Annotations(
 				entgql.OrderField("FINGERPRINT"),
+			),
+		field.String("secret_fingerprint").
+			Optional().
+			Nillable().
+			MaxLen(128).
+			Comment("Safe secret-only identity for deduping the same raw secret across channels/resources").
+			Annotations(
+				entgql.OrderField("SECRET_FINGERPRINT"),
 			),
 		field.Enum("status").
 			Values("enabled", "disabled", "archived").
@@ -119,6 +135,7 @@ func (UpstreamCredential) Fields() []ent.Field {
 			Comment("Default credential selection weight inside eligible channel refs").
 			Annotations(
 				entgql.OrderField("WEIGHT"),
+				entgql.Skip(entgql.SkipType, entgql.SkipWhereInput, entgql.SkipOrderField),
 			),
 		field.String("quota_status").
 			Optional().
@@ -156,6 +173,14 @@ func (UpstreamCredential) Edges() []ent.Edge {
 			),
 		edge.To("provider_quota_statuses", ProviderQuotaStatus.Type).
 			Annotations(
+				entgql.Skip(entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
+			),
+		edge.From("quota_scope", CredentialQuotaScope.Type).
+			Ref("credentials").
+			Field("quota_scope_id").
+			Unique().
+			Annotations(
+				entgql.Directives(forceResolver()),
 				entgql.Skip(entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
 			),
 	}

@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/datastorage"
 	"github.com/looplj/axonhub/internal/ent/request"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
@@ -147,6 +148,76 @@ func (_c *RequestExecutionCreate) SetCredentialFingerprint(v string) *RequestExe
 func (_c *RequestExecutionCreate) SetNillableCredentialFingerprint(v *string) *RequestExecutionCreate {
 	if v != nil {
 		_c.SetCredentialFingerprint(*v)
+	}
+	return _c
+}
+
+// SetSecretFingerprint sets the "secret_fingerprint" field.
+func (_c *RequestExecutionCreate) SetSecretFingerprint(v string) *RequestExecutionCreate {
+	_c.mutation.SetSecretFingerprint(v)
+	return _c
+}
+
+// SetNillableSecretFingerprint sets the "secret_fingerprint" field if the given value is not nil.
+func (_c *RequestExecutionCreate) SetNillableSecretFingerprint(v *string) *RequestExecutionCreate {
+	if v != nil {
+		_c.SetSecretFingerprint(*v)
+	}
+	return _c
+}
+
+// SetResourceScopeKey sets the "resource_scope_key" field.
+func (_c *RequestExecutionCreate) SetResourceScopeKey(v string) *RequestExecutionCreate {
+	_c.mutation.SetResourceScopeKey(v)
+	return _c
+}
+
+// SetNillableResourceScopeKey sets the "resource_scope_key" field if the given value is not nil.
+func (_c *RequestExecutionCreate) SetNillableResourceScopeKey(v *string) *RequestExecutionCreate {
+	if v != nil {
+		_c.SetResourceScopeKey(*v)
+	}
+	return _c
+}
+
+// SetQuotaScopeID sets the "quota_scope_id" field.
+func (_c *RequestExecutionCreate) SetQuotaScopeID(v int) *RequestExecutionCreate {
+	_c.mutation.SetQuotaScopeID(v)
+	return _c
+}
+
+// SetNillableQuotaScopeID sets the "quota_scope_id" field if the given value is not nil.
+func (_c *RequestExecutionCreate) SetNillableQuotaScopeID(v *int) *RequestExecutionCreate {
+	if v != nil {
+		_c.SetQuotaScopeID(*v)
+	}
+	return _c
+}
+
+// SetQuotaScopeNameSnapshot sets the "quota_scope_name_snapshot" field.
+func (_c *RequestExecutionCreate) SetQuotaScopeNameSnapshot(v string) *RequestExecutionCreate {
+	_c.mutation.SetQuotaScopeNameSnapshot(v)
+	return _c
+}
+
+// SetNillableQuotaScopeNameSnapshot sets the "quota_scope_name_snapshot" field if the given value is not nil.
+func (_c *RequestExecutionCreate) SetNillableQuotaScopeNameSnapshot(v *string) *RequestExecutionCreate {
+	if v != nil {
+		_c.SetQuotaScopeNameSnapshot(*v)
+	}
+	return _c
+}
+
+// SetQuotaScopeStatusSnapshot sets the "quota_scope_status_snapshot" field.
+func (_c *RequestExecutionCreate) SetQuotaScopeStatusSnapshot(v string) *RequestExecutionCreate {
+	_c.mutation.SetQuotaScopeStatusSnapshot(v)
+	return _c
+}
+
+// SetNillableQuotaScopeStatusSnapshot sets the "quota_scope_status_snapshot" field if the given value is not nil.
+func (_c *RequestExecutionCreate) SetNillableQuotaScopeStatusSnapshot(v *string) *RequestExecutionCreate {
+	if v != nil {
+		_c.SetQuotaScopeStatusSnapshot(*v)
 	}
 	return _c
 }
@@ -350,6 +421,11 @@ func (_c *RequestExecutionCreate) SetCredential(v *UpstreamCredential) *RequestE
 	return _c.SetCredentialID(v.ID)
 }
 
+// SetQuotaScope sets the "quota_scope" edge to the CredentialQuotaScope entity.
+func (_c *RequestExecutionCreate) SetQuotaScope(v *CredentialQuotaScope) *RequestExecutionCreate {
+	return _c.SetQuotaScopeID(v.ID)
+}
+
 // SetDataStorage sets the "data_storage" edge to the DataStorage entity.
 func (_c *RequestExecutionCreate) SetDataStorage(v *DataStorage) *RequestExecutionCreate {
 	return _c.SetDataStorageID(v.ID)
@@ -433,6 +509,16 @@ func (_c *RequestExecutionCreate) check() error {
 			return &ValidationError{Name: "credential_fingerprint", err: fmt.Errorf(`ent: validator failed for field "RequestExecution.credential_fingerprint": %w`, err)}
 		}
 	}
+	if v, ok := _c.mutation.SecretFingerprint(); ok {
+		if err := requestexecution.SecretFingerprintValidator(v); err != nil {
+			return &ValidationError{Name: "secret_fingerprint", err: fmt.Errorf(`ent: validator failed for field "RequestExecution.secret_fingerprint": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.ResourceScopeKey(); ok {
+		if err := requestexecution.ResourceScopeKeyValidator(v); err != nil {
+			return &ValidationError{Name: "resource_scope_key", err: fmt.Errorf(`ent: validator failed for field "RequestExecution.resource_scope_key": %w`, err)}
+		}
+	}
 	if _, ok := _c.mutation.Format(); !ok {
 		return &ValidationError{Name: "format", err: errors.New(`ent: missing required field "RequestExecution.format"`)}
 	}
@@ -503,6 +589,22 @@ func (_c *RequestExecutionCreate) createSpec() (*RequestExecution, *sqlgraph.Cre
 	if value, ok := _c.mutation.CredentialFingerprint(); ok {
 		_spec.SetField(requestexecution.FieldCredentialFingerprint, field.TypeString, value)
 		_node.CredentialFingerprint = value
+	}
+	if value, ok := _c.mutation.SecretFingerprint(); ok {
+		_spec.SetField(requestexecution.FieldSecretFingerprint, field.TypeString, value)
+		_node.SecretFingerprint = value
+	}
+	if value, ok := _c.mutation.ResourceScopeKey(); ok {
+		_spec.SetField(requestexecution.FieldResourceScopeKey, field.TypeString, value)
+		_node.ResourceScopeKey = value
+	}
+	if value, ok := _c.mutation.QuotaScopeNameSnapshot(); ok {
+		_spec.SetField(requestexecution.FieldQuotaScopeNameSnapshot, field.TypeString, value)
+		_node.QuotaScopeNameSnapshot = value
+	}
+	if value, ok := _c.mutation.QuotaScopeStatusSnapshot(); ok {
+		_spec.SetField(requestexecution.FieldQuotaScopeStatusSnapshot, field.TypeString, value)
+		_node.QuotaScopeStatusSnapshot = value
 	}
 	if value, ok := _c.mutation.CredentialNameSnapshot(); ok {
 		_spec.SetField(requestexecution.FieldCredentialNameSnapshot, field.TypeString, value)
@@ -617,6 +719,23 @@ func (_c *RequestExecutionCreate) createSpec() (*RequestExecution, *sqlgraph.Cre
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.CredentialID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.QuotaScopeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   requestexecution.QuotaScopeTable,
+			Columns: []string{requestexecution.QuotaScopeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credentialquotascope.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.QuotaScopeID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.DataStorageIDs(); len(nodes) > 0 {
@@ -932,6 +1051,21 @@ func (u *RequestExecutionUpsertOne) UpdateNewValues() *RequestExecutionUpsertOne
 		}
 		if _, exists := u.create.mutation.CredentialFingerprint(); exists {
 			s.SetIgnore(requestexecution.FieldCredentialFingerprint)
+		}
+		if _, exists := u.create.mutation.SecretFingerprint(); exists {
+			s.SetIgnore(requestexecution.FieldSecretFingerprint)
+		}
+		if _, exists := u.create.mutation.ResourceScopeKey(); exists {
+			s.SetIgnore(requestexecution.FieldResourceScopeKey)
+		}
+		if _, exists := u.create.mutation.QuotaScopeID(); exists {
+			s.SetIgnore(requestexecution.FieldQuotaScopeID)
+		}
+		if _, exists := u.create.mutation.QuotaScopeNameSnapshot(); exists {
+			s.SetIgnore(requestexecution.FieldQuotaScopeNameSnapshot)
+		}
+		if _, exists := u.create.mutation.QuotaScopeStatusSnapshot(); exists {
+			s.SetIgnore(requestexecution.FieldQuotaScopeStatusSnapshot)
 		}
 		if _, exists := u.create.mutation.CredentialNameSnapshot(); exists {
 			s.SetIgnore(requestexecution.FieldCredentialNameSnapshot)
@@ -1429,6 +1563,21 @@ func (u *RequestExecutionUpsertBulk) UpdateNewValues() *RequestExecutionUpsertBu
 			}
 			if _, exists := b.mutation.CredentialFingerprint(); exists {
 				s.SetIgnore(requestexecution.FieldCredentialFingerprint)
+			}
+			if _, exists := b.mutation.SecretFingerprint(); exists {
+				s.SetIgnore(requestexecution.FieldSecretFingerprint)
+			}
+			if _, exists := b.mutation.ResourceScopeKey(); exists {
+				s.SetIgnore(requestexecution.FieldResourceScopeKey)
+			}
+			if _, exists := b.mutation.QuotaScopeID(); exists {
+				s.SetIgnore(requestexecution.FieldQuotaScopeID)
+			}
+			if _, exists := b.mutation.QuotaScopeNameSnapshot(); exists {
+				s.SetIgnore(requestexecution.FieldQuotaScopeNameSnapshot)
+			}
+			if _, exists := b.mutation.QuotaScopeStatusSnapshot(); exists {
+				s.SetIgnore(requestexecution.FieldQuotaScopeStatusSnapshot)
 			}
 			if _, exists := b.mutation.CredentialNameSnapshot(); exists {
 				s.SetIgnore(requestexecution.FieldCredentialNameSnapshot)

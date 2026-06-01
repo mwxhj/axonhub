@@ -3,12 +3,14 @@ package biz
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 
 	"github.com/looplj/axonhub/internal/authz"
 	"github.com/looplj/axonhub/internal/ent"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/enttest"
 	"github.com/looplj/axonhub/internal/ent/project"
 	"github.com/looplj/axonhub/internal/ent/request"
@@ -74,6 +76,163 @@ func TestUsageLogService_CreateUsageLog_PromptWriteCachedTokens(t *testing.T) {
 	require.Equal(t, int64(2), created.PromptCachedTokens)
 	require.Equal(t, int64(3), created.PromptWriteCachedTokens)
 	require.Equal(t, "cred:v1:test", created.CredentialFingerprint)
+}
+
+func TestUsageLogService_CreateUsageLogStoresCredentialScopeAndAccountsQuota(t *testing.T) {
+	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
+	defer client.Close()
+
+	ctx := context.Background()
+	ctx = ent.NewContext(ctx, client)
+	ctx = authz.WithTestBypass(ctx)
+
+	p, err := client.Project.Create().
+		SetName("test-project").
+		SetStatus(project.StatusActive).
+		Save(ctx)
+	require.NoError(t, err)
+
+	req, err := client.Request.Create().
+		SetProjectID(p.ID).
+		SetModelID("test-model").
+		SetStatus(request.StatusCompleted).
+		SetRequestBody(objects.JSONRawMessage([]byte(`{}`))).
+		Save(ctx)
+	require.NoError(t, err)
+
+	quotaScope, err := client.CredentialQuotaScope.Create().
+		SetName("token budget").
+		SetStatus(credentialquotascope.StatusAvailable).
+		SetUnit(credentialquotascope.UnitToken).
+		SetLimitAmount("40").
+		SetUsedAmount("10").
+		SetWarningThresholdPercent(50).
+		Save(ctx)
+	require.NoError(t, err)
+
+	systemService := NewSystemService(SystemServiceParams{
+		CacheConfig: xcache.Config{},
+		Ent:         client,
+	})
+	channelService := NewChannelServiceForTest(client)
+	svc := NewUsageLogService(client, systemService, channelService)
+
+	created, err := svc.CreateUsageLog(ctx, CreateUsageLogParams{
+		RequestID:             req.ID,
+		ProjectID:             p.ID,
+		ChannelID:             0,
+		ActualModelID:         "test-model",
+		CredentialID:          123,
+		CredentialFingerprint: "cred:v1:test",
+		SecretFingerprint:     "secret:v1:test",
+		ResourceScopeKey:      "openai:secret:v1:test",
+		CredentialName:        "OpenAI key",
+		CredentialKeyHint:     "sk-...-test",
+		CredentialSource:      ChannelCredentialSourceRef,
+		CredentialQuotaStatus: "available",
+		QuotaScopeID:          quotaScope.ID,
+		QuotaScopeName:        quotaScope.Name,
+		QuotaScopeStatus:      quotaScope.Status.String(),
+		Usage: &llm.Usage{
+			PromptTokens:     10,
+			CompletionTokens: 20,
+			TotalTokens:      30,
+		},
+		Source:   usagelog.SourceAPI,
+		Format:   "openai/chat_completions",
+		APIKeyID: nil,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, created)
+	require.Equal(t, "cred:v1:test", created.CredentialFingerprint)
+	require.Equal(t, "secret:v1:test", created.SecretFingerprint)
+	require.Equal(t, "openai:secret:v1:test", created.ResourceScopeKey)
+	require.Equal(t, "OpenAI key", created.CredentialNameSnapshot)
+	require.Equal(t, "sk-...-test", created.CredentialKeyHint)
+	require.Equal(t, ChannelCredentialSourceRef, created.CredentialSource)
+	require.Equal(t, "available", created.CredentialQuotaStatusSnapshot)
+	require.Equal(t, quotaScope.ID, created.QuotaScopeID)
+	require.Equal(t, quotaScope.Name, created.QuotaScopeNameSnapshot)
+	require.Equal(t, quotaScope.Status.String(), created.QuotaScopeStatusSnapshot)
+
+	updatedScope, err := client.CredentialQuotaScope.Get(ctx, quotaScope.ID)
+	require.NoError(t, err)
+	require.Equal(t, "40", updatedScope.UsedAmount)
+	require.Equal(t, credentialquotascope.StatusWarning, updatedScope.Status)
+}
+
+func TestUsageLogService_CreateUsageLogResetsExpiredQuotaWindowBeforeAccounting(t *testing.T) {
+	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
+	defer client.Close()
+
+	ctx := context.Background()
+	ctx = ent.NewContext(ctx, client)
+	ctx = authz.WithTestBypass(ctx)
+
+	p, err := client.Project.Create().
+		SetName("test-project").
+		SetStatus(project.StatusActive).
+		Save(ctx)
+	require.NoError(t, err)
+
+	req, err := client.Request.Create().
+		SetProjectID(p.ID).
+		SetModelID("test-model").
+		SetStatus(request.StatusCompleted).
+		SetRequestBody(objects.JSONRawMessage([]byte(`{}`))).
+		Save(ctx)
+	require.NoError(t, err)
+
+	startedAt := time.Now().Add(-25 * time.Hour).UTC().Truncate(time.Second)
+	expiredResetAt := time.Now().Add(-time.Hour).UTC().Truncate(time.Second)
+	pauseUntil := time.Now().Add(time.Hour).UTC().Truncate(time.Second)
+	quotaScope, err := client.CredentialQuotaScope.Create().
+		SetName("daily token budget").
+		SetStatus(credentialquotascope.StatusPaused).
+		SetUnit(credentialquotascope.UnitToken).
+		SetLimitAmount("100").
+		SetUsedAmount("90").
+		SetResetPolicy(credentialquotascope.ResetPolicyDaily).
+		SetResetAt(expiredResetAt).
+		SetWindowStartedAt(startedAt).
+		SetOverLimitAction(credentialquotascope.OverLimitActionPause).
+		SetPauseUntil(pauseUntil).
+		Save(ctx)
+	require.NoError(t, err)
+
+	systemService := NewSystemService(SystemServiceParams{
+		CacheConfig: xcache.Config{},
+		Ent:         client,
+	})
+	channelService := NewChannelServiceForTest(client)
+	svc := NewUsageLogService(client, systemService, channelService)
+
+	created, err := svc.CreateUsageLog(ctx, CreateUsageLogParams{
+		RequestID:     req.ID,
+		ProjectID:     p.ID,
+		ChannelID:     0,
+		ActualModelID: "test-model",
+		QuotaScopeID:  quotaScope.ID,
+		Usage: &llm.Usage{
+			PromptTokens: 5,
+			TotalTokens:  5,
+		},
+		Source:   usagelog.SourceAPI,
+		Format:   "openai/chat_completions",
+		APIKeyID: nil,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, created)
+
+	updatedScope, err := client.CredentialQuotaScope.Get(ctx, quotaScope.ID)
+	require.NoError(t, err)
+	require.Equal(t, "5", updatedScope.UsedAmount)
+	require.Equal(t, credentialquotascope.StatusAvailable, updatedScope.Status)
+	require.NotNil(t, updatedScope.ResetAt)
+	require.True(t, updatedScope.ResetAt.After(time.Now()))
+	require.NotNil(t, updatedScope.WindowStartedAt)
+	require.True(t, updatedScope.WindowStartedAt.After(startedAt))
+	require.Nil(t, updatedScope.PauseUntil)
 }
 
 func TestUsageLogService_CreateUsageLog_WithPriceReferenceID(t *testing.T) {

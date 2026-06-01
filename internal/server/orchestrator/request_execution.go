@@ -19,9 +19,7 @@ import (
 
 // Precompiled regex patterns for sanitizeResponseBody to avoid recompiling on each call.
 var (
-	tokenRegex  = regexp.MustCompile(`(?i)(bearer[\s:=]+)[a-zA-Z0-9_\-\.]+`)
-	apiKeyRegex = regexp.MustCompile(`(api[keyK]ey|API[keyK]ey)["']?\s*[:=]\s*["']?([a-zA-Z0-9_\-\.]{8,})["']?`)
-	emailRegex  = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
+	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 )
 
 // sanitizeResponseBody redacts obvious secrets and truncates the body for safe logging.
@@ -30,13 +28,7 @@ func sanitizeResponseBody(body []byte, maxLen int) []byte {
 		return body
 	}
 
-	str := string(body)
-
-	// Redact bearer tokens (case-insensitive), preserving the bearer prefix
-	str = tokenRegex.ReplaceAllString(str, "${1}[REDACTED]")
-
-	// Redact API keys (common patterns)
-	str = apiKeyRegex.ReplaceAllString(str, "$1=[REDACTED]")
+	str := string(httpclient.RedactSensitiveBody(body))
 
 	// Redact email addresses
 	str = emailRegex.ReplaceAllString(str, "[EMAIL REDACTED]")
@@ -88,6 +80,9 @@ func (m *persistRequestExecutionMiddleware) OnOutboundRawRequest(ctx context.Con
 	if state.CurrentCredentialFingerprint != "" {
 		ctx = contexts.WithChannelCredentialFingerprint(ctx, state.CurrentCredentialFingerprint)
 	}
+	if state.CurrentSecretFingerprint != "" || state.CurrentResourceScopeKey != "" {
+		ctx = contexts.WithChannelCredentialIdentity(ctx, state.CurrentSecretFingerprint, state.CurrentResourceScopeKey)
+	}
 	if state.CurrentCredentialName != "" || state.CurrentCredentialKeyHint != "" || state.CurrentCredentialSource != "" || state.CurrentCredentialQuotaStatus != "" {
 		ctx = contexts.WithChannelCredentialMetadata(
 			ctx,
@@ -96,6 +91,9 @@ func (m *persistRequestExecutionMiddleware) OnOutboundRawRequest(ctx context.Con
 			state.CurrentCredentialSource,
 			state.CurrentCredentialQuotaStatus,
 		)
+	}
+	if state.CurrentQuotaScopeID > 0 || state.CurrentQuotaScopeName != "" || state.CurrentQuotaScopeStatus != "" {
+		ctx = contexts.WithChannelCredentialQuotaScope(ctx, state.CurrentQuotaScopeID, state.CurrentQuotaScopeName, state.CurrentQuotaScopeStatus)
 	}
 
 	requestExec, err := state.RequestService.CreateRequestExecution(
@@ -115,6 +113,12 @@ func (m *persistRequestExecutionMiddleware) OnOutboundRawRequest(ctx context.Con
 	if state.CurrentCredentialFingerprint != "" {
 		requestExec.CredentialFingerprint = state.CurrentCredentialFingerprint
 	}
+	if state.CurrentSecretFingerprint != "" {
+		requestExec.SecretFingerprint = state.CurrentSecretFingerprint
+	}
+	if state.CurrentResourceScopeKey != "" {
+		requestExec.ResourceScopeKey = state.CurrentResourceScopeKey
+	}
 	if state.CurrentCredentialName != "" {
 		requestExec.CredentialNameSnapshot = state.CurrentCredentialName
 	}
@@ -126,6 +130,15 @@ func (m *persistRequestExecutionMiddleware) OnOutboundRawRequest(ctx context.Con
 	}
 	if state.CurrentCredentialQuotaStatus != "" {
 		requestExec.CredentialQuotaStatusSnapshot = state.CurrentCredentialQuotaStatus
+	}
+	if state.CurrentQuotaScopeID > 0 {
+		requestExec.QuotaScopeID = state.CurrentQuotaScopeID
+	}
+	if state.CurrentQuotaScopeName != "" {
+		requestExec.QuotaScopeNameSnapshot = state.CurrentQuotaScopeName
+	}
+	if state.CurrentQuotaScopeStatus != "" {
+		requestExec.QuotaScopeStatusSnapshot = state.CurrentQuotaScopeStatus
 	}
 
 	// Update request with channel ID after channel selection

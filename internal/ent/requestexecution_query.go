@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/datastorage"
 	"github.com/looplj/axonhub/internal/ent/predicate"
 	"github.com/looplj/axonhub/internal/ent/request"
@@ -29,6 +30,7 @@ type RequestExecutionQuery struct {
 	withRequest     *RequestQuery
 	withChannel     *ChannelQuery
 	withCredential  *UpstreamCredentialQuery
+	withQuotaScope  *CredentialQuotaScopeQuery
 	withDataStorage *DataStorageQuery
 	loadTotal       []func(context.Context, []*RequestExecution) error
 	modifiers       []func(*sql.Selector)
@@ -127,6 +129,28 @@ func (_q *RequestExecutionQuery) QueryCredential() *UpstreamCredentialQuery {
 			sqlgraph.From(requestexecution.Table, requestexecution.FieldID, selector),
 			sqlgraph.To(upstreamcredential.Table, upstreamcredential.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, requestexecution.CredentialTable, requestexecution.CredentialColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryQuotaScope chains the current query on the "quota_scope" edge.
+func (_q *RequestExecutionQuery) QueryQuotaScope() *CredentialQuotaScopeQuery {
+	query := (&CredentialQuotaScopeClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(requestexecution.Table, requestexecution.FieldID, selector),
+			sqlgraph.To(credentialquotascope.Table, credentialquotascope.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, requestexecution.QuotaScopeTable, requestexecution.QuotaScopeColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -351,6 +375,7 @@ func (_q *RequestExecutionQuery) Clone() *RequestExecutionQuery {
 		withRequest:     _q.withRequest.Clone(),
 		withChannel:     _q.withChannel.Clone(),
 		withCredential:  _q.withCredential.Clone(),
+		withQuotaScope:  _q.withQuotaScope.Clone(),
 		withDataStorage: _q.withDataStorage.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
@@ -389,6 +414,17 @@ func (_q *RequestExecutionQuery) WithCredential(opts ...func(*UpstreamCredential
 		opt(query)
 	}
 	_q.withCredential = query
+	return _q
+}
+
+// WithQuotaScope tells the query-builder to eager-load the nodes that are connected to
+// the "quota_scope" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *RequestExecutionQuery) WithQuotaScope(opts ...func(*CredentialQuotaScopeQuery)) *RequestExecutionQuery {
+	query := (&CredentialQuotaScopeClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withQuotaScope = query
 	return _q
 }
 
@@ -481,10 +517,11 @@ func (_q *RequestExecutionQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	var (
 		nodes       = []*RequestExecution{}
 		_spec       = _q.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			_q.withRequest != nil,
 			_q.withChannel != nil,
 			_q.withCredential != nil,
+			_q.withQuotaScope != nil,
 			_q.withDataStorage != nil,
 		}
 	)
@@ -524,6 +561,12 @@ func (_q *RequestExecutionQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	if query := _q.withCredential; query != nil {
 		if err := _q.loadCredential(ctx, query, nodes, nil,
 			func(n *RequestExecution, e *UpstreamCredential) { n.Edges.Credential = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withQuotaScope; query != nil {
+		if err := _q.loadQuotaScope(ctx, query, nodes, nil,
+			func(n *RequestExecution, e *CredentialQuotaScope) { n.Edges.QuotaScope = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -628,6 +671,35 @@ func (_q *RequestExecutionQuery) loadCredential(ctx context.Context, query *Upst
 	}
 	return nil
 }
+func (_q *RequestExecutionQuery) loadQuotaScope(ctx context.Context, query *CredentialQuotaScopeQuery, nodes []*RequestExecution, init func(*RequestExecution), assign func(*RequestExecution, *CredentialQuotaScope)) error {
+	ids := make([]int, 0, len(nodes))
+	nodeids := make(map[int][]*RequestExecution)
+	for i := range nodes {
+		fk := nodes[i].QuotaScopeID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(credentialquotascope.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "quota_scope_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
 func (_q *RequestExecutionQuery) loadDataStorage(ctx context.Context, query *DataStorageQuery, nodes []*RequestExecution, init func(*RequestExecution), assign func(*RequestExecution, *DataStorage)) error {
 	ids := make([]int, 0, len(nodes))
 	nodeids := make(map[int][]*RequestExecution)
@@ -694,6 +766,9 @@ func (_q *RequestExecutionQuery) querySpec() *sqlgraph.QuerySpec {
 		}
 		if _q.withCredential != nil {
 			_spec.Node.AddColumnOnce(requestexecution.FieldCredentialID)
+		}
+		if _q.withQuotaScope != nil {
+			_spec.Node.AddColumnOnce(requestexecution.FieldQuotaScopeID)
 		}
 		if _q.withDataStorage != nil {
 			_spec.Node.AddColumnOnce(requestexecution.FieldDataStorageID)

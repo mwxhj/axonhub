@@ -15,6 +15,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/apikey"
 	"github.com/looplj/axonhub/internal/ent/channel"
 	"github.com/looplj/axonhub/internal/ent/project"
+	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/request"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/user"
@@ -83,6 +84,51 @@ func (r *channelResolver) DisabledAPIKeys(ctx context.Context, obj *ent.Channel)
 	}
 
 	return lo.ToSlicePtr(obj.DisabledAPIKeys), nil
+}
+
+// ProviderQuotaStatus is the resolver for the providerQuotaStatus field.
+// It returns null (not an error) when no quota status exists for the channel.
+func (r *channelResolver) ProviderQuotaStatus(ctx context.Context, obj *ent.Channel) (*ent.ProviderQuotaStatus, error) {
+	if obj == nil {
+		return nil, nil
+	}
+
+	scopeKey := biz.ProviderQuotaChannelScopeKey(obj.ID)
+	pqs, err := r.client.ProviderQuotaStatus.Query().
+		Where(
+			providerquotastatus.ScopeKey(scopeKey),
+		).
+		Order(ent.Desc(providerquotastatus.FieldUpdatedAt)).
+		First(ctx)
+	if ent.IsNotFound(err) {
+		legacy, legacyErr := r.client.ProviderQuotaStatus.Query().
+			Where(
+				providerquotastatus.ChannelID(obj.ID),
+				providerquotastatus.ScopeKey("channel"),
+			).
+			Order(ent.Desc(providerquotastatus.FieldUpdatedAt)).
+			First(ctx)
+		if legacyErr == nil {
+			return legacy, nil
+		}
+		if !ent.IsNotFound(legacyErr) {
+			return nil, legacyErr
+		}
+
+		statuses, allErr := r.client.ProviderQuotaStatus.Query().
+			Where(providerquotastatus.ChannelID(obj.ID)).
+			Order(ent.Desc(providerquotastatus.FieldUpdatedAt)).
+			All(ctx)
+		if allErr != nil {
+			return nil, allErr
+		}
+		if len(statuses) == 0 {
+			return nil, nil
+		}
+		return statuses[0], nil
+	}
+
+	return pqs, err
 }
 
 // LiveLimiterStats is the resolver for the liveLimiterStats field.
@@ -377,6 +423,16 @@ func (r *mutationResolver) CreateUpstreamCredential(ctx context.Context, input b
 // UpdateUpstreamCredential is the resolver for the updateUpstreamCredential field.
 func (r *mutationResolver) UpdateUpstreamCredential(ctx context.Context, id objects.GUID, input biz.UpdateUpstreamCredentialInput) (*ent.UpstreamCredential, error) {
 	return r.upstreamCredentialService.UpdateUpstreamCredential(ctx, id.ID, input)
+}
+
+// CreateCredentialQuotaScope is the resolver for the createCredentialQuotaScope field.
+func (r *mutationResolver) CreateCredentialQuotaScope(ctx context.Context, input biz.CreateCredentialQuotaScopeInput) (*ent.CredentialQuotaScope, error) {
+	return r.upstreamCredentialService.CreateCredentialQuotaScope(ctx, input)
+}
+
+// UpdateCredentialQuotaScope is the resolver for the updateCredentialQuotaScope field.
+func (r *mutationResolver) UpdateCredentialQuotaScope(ctx context.Context, id objects.GUID, input biz.UpdateCredentialQuotaScopeInput) (*ent.CredentialQuotaScope, error) {
+	return r.upstreamCredentialService.UpdateCredentialQuotaScope(ctx, id.ID, input)
 }
 
 // RotateUpstreamCredentialSecret is the resolver for the rotateUpstreamCredentialSecret field.

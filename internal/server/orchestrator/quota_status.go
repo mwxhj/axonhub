@@ -17,8 +17,11 @@ func quotaStatusForChannel(provider ProviderQuotaStatusProvider, channel *biz.Ch
 	}
 
 	credentialStatuses := make([]*biz.QuotaChannelStatus, 0, len(views))
+	seenQuotaScopes := map[int]struct{}{}
+	seenResourceScopes := map[string]struct{}{}
 	seenIDs := map[int]struct{}{}
 	seenFingerprints := map[string]struct{}{}
+	noDataViews := 0
 
 	for _, view := range views {
 		if !view.Enabled {
@@ -26,7 +29,19 @@ func quotaStatusForChannel(provider ProviderQuotaStatusProvider, channel *biz.Ch
 		}
 
 		var status *biz.QuotaChannelStatus
-		if view.CredentialID > 0 {
+		if view.QuotaScopeID > 0 {
+			if _, ok := seenQuotaScopes[view.QuotaScopeID]; !ok {
+				seenQuotaScopes[view.QuotaScopeID] = struct{}{}
+				status = provider.GetQuotaScopeQuotaStatus(view.QuotaScopeID)
+			}
+		}
+		if status == nil && view.ResourceScopeKey != "" {
+			if _, ok := seenResourceScopes[view.ResourceScopeKey]; !ok {
+				seenResourceScopes[view.ResourceScopeKey] = struct{}{}
+				status = provider.GetResourceScopeQuotaStatus(view.ResourceScopeKey)
+			}
+		}
+		if status == nil && view.CredentialID > 0 {
 			if _, ok := seenIDs[view.CredentialID]; ok {
 				continue
 			}
@@ -42,13 +57,68 @@ func quotaStatusForChannel(provider ProviderQuotaStatusProvider, channel *biz.Ch
 		}
 		if status != nil {
 			credentialStatuses = append(credentialStatuses, status)
+			continue
 		}
+		noDataViews++
 	}
 	if len(credentialStatuses) == 0 {
 		return provider.GetQuotaStatus(channel.ID)
 	}
+	for range noDataViews {
+		credentialStatuses = append(credentialStatuses, &biz.QuotaChannelStatus{
+			Status: providerquotastatus.StatusUnknown,
+			Ready:  true,
+		})
+	}
 
 	return aggregateCredentialStatuses(credentialStatuses, limitType)
+}
+
+func quotaStatusForCredentialView(provider ProviderQuotaStatusProvider, view biz.ChannelCredentialView) *biz.QuotaChannelStatus {
+	if provider == nil {
+		return nil
+	}
+
+	if view.QuotaScopeID > 0 {
+		if status := provider.GetQuotaScopeQuotaStatus(view.QuotaScopeID); status != nil {
+			return status
+		}
+	}
+	if view.ResourceScopeKey != "" {
+		if status := provider.GetResourceScopeQuotaStatus(view.ResourceScopeKey); status != nil {
+			return status
+		}
+	}
+	if view.CredentialID > 0 {
+		if status := provider.GetCredentialQuotaStatusByID(view.CredentialID); status != nil {
+			return status
+		}
+	}
+	if view.Fingerprint != "" {
+		if status := provider.GetCredentialQuotaStatus(view.Fingerprint); status != nil {
+			return status
+		}
+	}
+
+	return nil
+}
+
+func quotaStatusSelectable(status *biz.QuotaChannelStatus, limitType provider_quota.QuotaLimitType) bool {
+	if status == nil {
+		return true
+	}
+
+	effectiveStatus, _ := status.EffectiveStatus(limitType)
+	switch effectiveStatus {
+	case providerquotastatus.StatusAvailable,
+		providerquotastatus.StatusWarning,
+		providerquotastatus.StatusUnknown:
+		return true
+	case providerquotastatus.StatusExhausted:
+		return false
+	default:
+		return true
+	}
 }
 
 func aggregateCredentialStatuses(statuses []*biz.QuotaChannelStatus, limitType provider_quota.QuotaLimitType) *biz.QuotaChannelStatus {

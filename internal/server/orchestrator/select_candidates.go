@@ -6,7 +6,6 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/server/biz"
 	"github.com/looplj/axonhub/internal/server/biz/provider_quota"
@@ -177,8 +176,7 @@ func areAllChannelsExhausted(candidates []*ChannelModelsCandidate, quotaProvider
 			return false
 		}
 
-		effectiveStatus, _ := quotaStatus.EffectiveStatus(limitType)
-		if effectiveStatus != providerquotastatus.StatusExhausted {
+		if quotaStatusSelectable(quotaStatus, limitType) {
 			return false
 		}
 	}

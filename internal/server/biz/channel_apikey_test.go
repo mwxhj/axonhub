@@ -110,6 +110,48 @@ func TestTraceStickyKeyProvider_PrefersCredentialFingerprint(t *testing.T) {
 	require.Equal(t, targetFingerprint, fingerprint)
 }
 
+func TestTraceStickyKeyProvider_AllowedCredentialsConstrainSelection(t *testing.T) {
+	keys := []string{"key-1", "key-2", "key-3"}
+	ch := &Channel{
+		Channel: &ent.Channel{
+			Type:    channel.TypeOpenai,
+			BaseURL: "https://api.openai.com/v1",
+			Credentials: objects.ChannelCredentials{
+				APIKeys: keys,
+			},
+		},
+		cachedEnabledAPIKeys: keys,
+	}
+
+	targetFingerprint := ch.CredentialFingerprintForAPIKey("key-2")
+	ctx := contexts.WithAllowedCredentials(context.Background(), nil, []string{targetFingerprint})
+
+	key := NewTraceStickyKeyProvider(ch).Get(ctx)
+	fingerprint, ok := contexts.GetChannelCredentialFingerprint(ctx)
+
+	require.Equal(t, "key-2", key)
+	require.True(t, ok)
+	require.Equal(t, targetFingerprint, fingerprint)
+}
+
+func TestTraceStickyKeyProvider_AllowedCredentialsDoNotFallbackToDisallowedKeys(t *testing.T) {
+	keys := []string{"key-1", "key-2"}
+	ch := &Channel{
+		Channel: &ent.Channel{
+			Type:    channel.TypeOpenai,
+			BaseURL: "https://api.openai.com/v1",
+			Credentials: objects.ChannelCredentials{
+				APIKeys: keys,
+			},
+		},
+		cachedEnabledAPIKeys: keys,
+	}
+
+	ctx := contexts.WithAllowedCredentials(context.Background(), nil, []string{"cred:v1:not-present"})
+
+	require.Empty(t, NewTraceStickyKeyProvider(ch).Get(ctx))
+}
+
 func TestChannelCredentialFingerprintForAPIKey_DeduplicatesByCredentialScope(t *testing.T) {
 	fp1 := ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://api.openai.com/v1/", "shared-key")
 	fp2 := ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://api.openai.com/v1", "shared-key")

@@ -37,12 +37,24 @@ const (
 	FieldModelID = "model_id"
 	// FieldCredentialFingerprint holds the string denoting the credential_fingerprint field in the database.
 	FieldCredentialFingerprint = "credential_fingerprint"
+	// FieldSecretFingerprint holds the string denoting the secret_fingerprint field in the database.
+	FieldSecretFingerprint = "secret_fingerprint"
+	// FieldResourceScopeKey holds the string denoting the resource_scope_key field in the database.
+	FieldResourceScopeKey = "resource_scope_key"
+	// FieldQuotaScopeID holds the string denoting the quota_scope_id field in the database.
+	FieldQuotaScopeID = "quota_scope_id"
+	// FieldQuotaScopeNameSnapshot holds the string denoting the quota_scope_name_snapshot field in the database.
+	FieldQuotaScopeNameSnapshot = "quota_scope_name_snapshot"
+	// FieldQuotaScopeStatusSnapshot holds the string denoting the quota_scope_status_snapshot field in the database.
+	FieldQuotaScopeStatusSnapshot = "quota_scope_status_snapshot"
 	// FieldCredentialNameSnapshot holds the string denoting the credential_name_snapshot field in the database.
 	FieldCredentialNameSnapshot = "credential_name_snapshot"
 	// FieldCredentialKeyHint holds the string denoting the credential_key_hint field in the database.
 	FieldCredentialKeyHint = "credential_key_hint"
 	// FieldCredentialSource holds the string denoting the credential_source field in the database.
 	FieldCredentialSource = "credential_source"
+	// FieldCredentialQuotaStatusSnapshot holds the string denoting the credential_quota_status_snapshot field in the database.
+	FieldCredentialQuotaStatusSnapshot = "credential_quota_status_snapshot"
 	// FieldPromptTokens holds the string denoting the prompt_tokens field in the database.
 	FieldPromptTokens = "prompt_tokens"
 	// FieldCompletionTokens holds the string denoting the completion_tokens field in the database.
@@ -85,6 +97,8 @@ const (
 	EdgeChannel = "channel"
 	// EdgeCredential holds the string denoting the credential edge name in mutations.
 	EdgeCredential = "credential"
+	// EdgeQuotaScope holds the string denoting the quota_scope edge name in mutations.
+	EdgeQuotaScope = "quota_scope"
 	// Table holds the table name of the usagelog in the database.
 	Table = "usage_logs"
 	// RequestTable is the table that holds the request relation/edge.
@@ -115,6 +129,13 @@ const (
 	CredentialInverseTable = "upstream_credentials"
 	// CredentialColumn is the table column denoting the credential relation/edge.
 	CredentialColumn = "credential_id"
+	// QuotaScopeTable is the table that holds the quota_scope relation/edge.
+	QuotaScopeTable = "usage_logs"
+	// QuotaScopeInverseTable is the table name for the CredentialQuotaScope entity.
+	// It exists in this package in order to avoid circular dependency with the "credentialquotascope" package.
+	QuotaScopeInverseTable = "credential_quota_scopes"
+	// QuotaScopeColumn is the table column denoting the quota_scope relation/edge.
+	QuotaScopeColumn = "quota_scope_id"
 )
 
 // Columns holds all SQL columns for usagelog fields.
@@ -129,9 +150,15 @@ var Columns = []string{
 	FieldCredentialID,
 	FieldModelID,
 	FieldCredentialFingerprint,
+	FieldSecretFingerprint,
+	FieldResourceScopeKey,
+	FieldQuotaScopeID,
+	FieldQuotaScopeNameSnapshot,
+	FieldQuotaScopeStatusSnapshot,
 	FieldCredentialNameSnapshot,
 	FieldCredentialKeyHint,
 	FieldCredentialSource,
+	FieldCredentialQuotaStatusSnapshot,
 	FieldPromptTokens,
 	FieldCompletionTokens,
 	FieldTotalTokens,
@@ -179,6 +206,10 @@ var (
 	DefaultProjectID int
 	// CredentialFingerprintValidator is a validator for the "credential_fingerprint" field. It is called by the builders before save.
 	CredentialFingerprintValidator func(string) error
+	// SecretFingerprintValidator is a validator for the "secret_fingerprint" field. It is called by the builders before save.
+	SecretFingerprintValidator func(string) error
+	// ResourceScopeKeyValidator is a validator for the "resource_scope_key" field. It is called by the builders before save.
+	ResourceScopeKeyValidator func(string) error
 	// DefaultPromptTokens holds the default value on creation for the "prompt_tokens" field.
 	DefaultPromptTokens int64
 	// DefaultCompletionTokens holds the default value on creation for the "completion_tokens" field.
@@ -289,6 +320,31 @@ func ByCredentialFingerprint(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCredentialFingerprint, opts...).ToFunc()
 }
 
+// BySecretFingerprint orders the results by the secret_fingerprint field.
+func BySecretFingerprint(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSecretFingerprint, opts...).ToFunc()
+}
+
+// ByResourceScopeKey orders the results by the resource_scope_key field.
+func ByResourceScopeKey(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldResourceScopeKey, opts...).ToFunc()
+}
+
+// ByQuotaScopeID orders the results by the quota_scope_id field.
+func ByQuotaScopeID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldQuotaScopeID, opts...).ToFunc()
+}
+
+// ByQuotaScopeNameSnapshot orders the results by the quota_scope_name_snapshot field.
+func ByQuotaScopeNameSnapshot(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldQuotaScopeNameSnapshot, opts...).ToFunc()
+}
+
+// ByQuotaScopeStatusSnapshot orders the results by the quota_scope_status_snapshot field.
+func ByQuotaScopeStatusSnapshot(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldQuotaScopeStatusSnapshot, opts...).ToFunc()
+}
+
 // ByCredentialNameSnapshot orders the results by the credential_name_snapshot field.
 func ByCredentialNameSnapshot(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCredentialNameSnapshot, opts...).ToFunc()
@@ -302,6 +358,11 @@ func ByCredentialKeyHint(opts ...sql.OrderTermOption) OrderOption {
 // ByCredentialSource orders the results by the credential_source field.
 func ByCredentialSource(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCredentialSource, opts...).ToFunc()
+}
+
+// ByCredentialQuotaStatusSnapshot orders the results by the credential_quota_status_snapshot field.
+func ByCredentialQuotaStatusSnapshot(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCredentialQuotaStatusSnapshot, opts...).ToFunc()
 }
 
 // ByPromptTokens orders the results by the prompt_tokens field.
@@ -411,6 +472,13 @@ func ByCredentialField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newCredentialStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByQuotaScopeField orders the results by quota_scope field.
+func ByQuotaScopeField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newQuotaScopeStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newRequestStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -437,6 +505,13 @@ func newCredentialStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CredentialInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, CredentialTable, CredentialColumn),
+	)
+}
+func newQuotaScopeStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(QuotaScopeInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, QuotaScopeTable, QuotaScopeColumn),
 	)
 }
 

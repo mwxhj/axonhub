@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/predicate"
 	"github.com/looplj/axonhub/internal/ent/project"
 	"github.com/looplj/axonhub/internal/ent/request"
@@ -31,6 +32,7 @@ type UsageLogQuery struct {
 	withProject    *ProjectQuery
 	withChannel    *ChannelQuery
 	withCredential *UpstreamCredentialQuery
+	withQuotaScope *CredentialQuotaScopeQuery
 	loadTotal      []func(context.Context, []*UsageLog) error
 	modifiers      []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
@@ -150,6 +152,28 @@ func (_q *UsageLogQuery) QueryCredential() *UpstreamCredentialQuery {
 			sqlgraph.From(usagelog.Table, usagelog.FieldID, selector),
 			sqlgraph.To(upstreamcredential.Table, upstreamcredential.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, usagelog.CredentialTable, usagelog.CredentialColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryQuotaScope chains the current query on the "quota_scope" edge.
+func (_q *UsageLogQuery) QueryQuotaScope() *CredentialQuotaScopeQuery {
+	query := (&CredentialQuotaScopeClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(usagelog.Table, usagelog.FieldID, selector),
+			sqlgraph.To(credentialquotascope.Table, credentialquotascope.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, usagelog.QuotaScopeTable, usagelog.QuotaScopeColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -353,6 +377,7 @@ func (_q *UsageLogQuery) Clone() *UsageLogQuery {
 		withProject:    _q.withProject.Clone(),
 		withChannel:    _q.withChannel.Clone(),
 		withCredential: _q.withCredential.Clone(),
+		withQuotaScope: _q.withQuotaScope.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -401,6 +426,17 @@ func (_q *UsageLogQuery) WithCredential(opts ...func(*UpstreamCredentialQuery)) 
 		opt(query)
 	}
 	_q.withCredential = query
+	return _q
+}
+
+// WithQuotaScope tells the query-builder to eager-load the nodes that are connected to
+// the "quota_scope" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *UsageLogQuery) WithQuotaScope(opts ...func(*CredentialQuotaScopeQuery)) *UsageLogQuery {
+	query := (&CredentialQuotaScopeClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withQuotaScope = query
 	return _q
 }
 
@@ -488,11 +524,12 @@ func (_q *UsageLogQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Usa
 	var (
 		nodes       = []*UsageLog{}
 		_spec       = _q.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [5]bool{
 			_q.withRequest != nil,
 			_q.withProject != nil,
 			_q.withChannel != nil,
 			_q.withCredential != nil,
+			_q.withQuotaScope != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -537,6 +574,12 @@ func (_q *UsageLogQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Usa
 	if query := _q.withCredential; query != nil {
 		if err := _q.loadCredential(ctx, query, nodes, nil,
 			func(n *UsageLog, e *UpstreamCredential) { n.Edges.Credential = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withQuotaScope; query != nil {
+		if err := _q.loadQuotaScope(ctx, query, nodes, nil,
+			func(n *UsageLog, e *CredentialQuotaScope) { n.Edges.QuotaScope = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -664,6 +707,35 @@ func (_q *UsageLogQuery) loadCredential(ctx context.Context, query *UpstreamCred
 	}
 	return nil
 }
+func (_q *UsageLogQuery) loadQuotaScope(ctx context.Context, query *CredentialQuotaScopeQuery, nodes []*UsageLog, init func(*UsageLog), assign func(*UsageLog, *CredentialQuotaScope)) error {
+	ids := make([]int, 0, len(nodes))
+	nodeids := make(map[int][]*UsageLog)
+	for i := range nodes {
+		fk := nodes[i].QuotaScopeID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(credentialquotascope.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "quota_scope_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
 
 func (_q *UsageLogQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
@@ -704,6 +776,9 @@ func (_q *UsageLogQuery) querySpec() *sqlgraph.QuerySpec {
 		}
 		if _q.withCredential != nil {
 			_spec.Node.AddColumnOnce(usagelog.FieldCredentialID)
+		}
+		if _q.withQuotaScope != nil {
+			_spec.Node.AddColumnOnce(usagelog.FieldQuotaScopeID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

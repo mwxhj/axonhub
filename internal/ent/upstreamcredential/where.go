@@ -105,6 +105,11 @@ func Fingerprint(v string) predicate.UpstreamCredential {
 	return predicate.UpstreamCredential(sql.FieldEQ(FieldFingerprint, v))
 }
 
+// SecretFingerprint applies equality check predicate on the "secret_fingerprint" field. It's identical to SecretFingerprintEQ.
+func SecretFingerprint(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldEQ(FieldSecretFingerprint, v))
+}
+
 // Weight applies equality check predicate on the "weight" field. It's identical to WeightEQ.
 func Weight(v int) predicate.UpstreamCredential {
 	return predicate.UpstreamCredential(sql.FieldEQ(FieldWeight, v))
@@ -670,26 +675,6 @@ func QuotaScopeIDNotIn(vs ...int) predicate.UpstreamCredential {
 	return predicate.UpstreamCredential(sql.FieldNotIn(FieldQuotaScopeID, vs...))
 }
 
-// QuotaScopeIDGT applies the GT predicate on the "quota_scope_id" field.
-func QuotaScopeIDGT(v int) predicate.UpstreamCredential {
-	return predicate.UpstreamCredential(sql.FieldGT(FieldQuotaScopeID, v))
-}
-
-// QuotaScopeIDGTE applies the GTE predicate on the "quota_scope_id" field.
-func QuotaScopeIDGTE(v int) predicate.UpstreamCredential {
-	return predicate.UpstreamCredential(sql.FieldGTE(FieldQuotaScopeID, v))
-}
-
-// QuotaScopeIDLT applies the LT predicate on the "quota_scope_id" field.
-func QuotaScopeIDLT(v int) predicate.UpstreamCredential {
-	return predicate.UpstreamCredential(sql.FieldLT(FieldQuotaScopeID, v))
-}
-
-// QuotaScopeIDLTE applies the LTE predicate on the "quota_scope_id" field.
-func QuotaScopeIDLTE(v int) predicate.UpstreamCredential {
-	return predicate.UpstreamCredential(sql.FieldLTE(FieldQuotaScopeID, v))
-}
-
 // QuotaScopeIDIsNil applies the IsNil predicate on the "quota_scope_id" field.
 func QuotaScopeIDIsNil() predicate.UpstreamCredential {
 	return predicate.UpstreamCredential(sql.FieldIsNull(FieldQuotaScopeID))
@@ -763,6 +748,81 @@ func FingerprintEqualFold(v string) predicate.UpstreamCredential {
 // FingerprintContainsFold applies the ContainsFold predicate on the "fingerprint" field.
 func FingerprintContainsFold(v string) predicate.UpstreamCredential {
 	return predicate.UpstreamCredential(sql.FieldContainsFold(FieldFingerprint, v))
+}
+
+// SecretFingerprintEQ applies the EQ predicate on the "secret_fingerprint" field.
+func SecretFingerprintEQ(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldEQ(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintNEQ applies the NEQ predicate on the "secret_fingerprint" field.
+func SecretFingerprintNEQ(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNEQ(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintIn applies the In predicate on the "secret_fingerprint" field.
+func SecretFingerprintIn(vs ...string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldIn(FieldSecretFingerprint, vs...))
+}
+
+// SecretFingerprintNotIn applies the NotIn predicate on the "secret_fingerprint" field.
+func SecretFingerprintNotIn(vs ...string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNotIn(FieldSecretFingerprint, vs...))
+}
+
+// SecretFingerprintGT applies the GT predicate on the "secret_fingerprint" field.
+func SecretFingerprintGT(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldGT(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintGTE applies the GTE predicate on the "secret_fingerprint" field.
+func SecretFingerprintGTE(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldGTE(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintLT applies the LT predicate on the "secret_fingerprint" field.
+func SecretFingerprintLT(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldLT(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintLTE applies the LTE predicate on the "secret_fingerprint" field.
+func SecretFingerprintLTE(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldLTE(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintContains applies the Contains predicate on the "secret_fingerprint" field.
+func SecretFingerprintContains(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldContains(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintHasPrefix applies the HasPrefix predicate on the "secret_fingerprint" field.
+func SecretFingerprintHasPrefix(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldHasPrefix(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintHasSuffix applies the HasSuffix predicate on the "secret_fingerprint" field.
+func SecretFingerprintHasSuffix(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldHasSuffix(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintIsNil applies the IsNil predicate on the "secret_fingerprint" field.
+func SecretFingerprintIsNil() predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldIsNull(FieldSecretFingerprint))
+}
+
+// SecretFingerprintNotNil applies the NotNil predicate on the "secret_fingerprint" field.
+func SecretFingerprintNotNil() predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldNotNull(FieldSecretFingerprint))
+}
+
+// SecretFingerprintEqualFold applies the EqualFold predicate on the "secret_fingerprint" field.
+func SecretFingerprintEqualFold(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldEqualFold(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintContainsFold applies the ContainsFold predicate on the "secret_fingerprint" field.
+func SecretFingerprintContainsFold(v string) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(sql.FieldContainsFold(FieldSecretFingerprint, v))
 }
 
 // StatusEQ applies the EQ predicate on the "status" field.
@@ -1134,6 +1194,29 @@ func HasProviderQuotaStatuses() predicate.UpstreamCredential {
 func HasProviderQuotaStatusesWith(preds ...predicate.ProviderQuotaStatus) predicate.UpstreamCredential {
 	return predicate.UpstreamCredential(func(s *sql.Selector) {
 		step := newProviderQuotaStatusesStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasQuotaScope applies the HasEdge predicate on the "quota_scope" edge.
+func HasQuotaScope() predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, QuotaScopeTable, QuotaScopeColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasQuotaScopeWith applies the HasEdge predicate on the "quota_scope" edge with a given conditions (other predicates).
+func HasQuotaScopeWith(preds ...predicate.CredentialQuotaScope) predicate.UpstreamCredential {
+	return predicate.UpstreamCredential(func(s *sql.Selector) {
+		step := newQuotaScopeStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

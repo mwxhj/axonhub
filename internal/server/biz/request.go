@@ -273,6 +273,7 @@ func (s *RequestService) CreateRequestExecution(
 
 			requestBodyBytes = b
 		}
+		requestBodyBytes = objects.JSONRawMessage(httpclient.RedactSensitiveBody(requestBodyBytes))
 
 		if len(channelRequest.Headers) > 0 {
 			requestHeadersBytes, _ = xjson.Marshal(httpclient.MaskSensitiveHeaders(channelRequest.Headers))
@@ -319,6 +320,12 @@ func (s *RequestService) CreateRequestExecution(
 	if fingerprint, ok := contexts.GetChannelCredentialFingerprint(ctx); ok && fingerprint != "" {
 		mut = mut.SetCredentialFingerprint(fingerprint)
 	}
+	if secretFingerprint, ok := contexts.GetChannelCredentialSecretFingerprint(ctx); ok && secretFingerprint != "" {
+		mut = mut.SetSecretFingerprint(secretFingerprint)
+	}
+	if resourceScopeKey, ok := contexts.GetChannelCredentialResourceScopeKey(ctx); ok && resourceScopeKey != "" {
+		mut = mut.SetResourceScopeKey(resourceScopeKey)
+	}
 	if credentialID, ok := contexts.GetChannelCredentialID(ctx); ok && credentialID > 0 {
 		mut = mut.SetCredentialID(credentialID)
 	}
@@ -333,6 +340,15 @@ func (s *RequestService) CreateRequestExecution(
 	}
 	if quotaStatus, ok := contexts.GetChannelCredentialQuotaStatus(ctx); ok && quotaStatus != "" {
 		mut = mut.SetCredentialQuotaStatusSnapshot(quotaStatus)
+	}
+	if quotaScopeID, ok := contexts.GetChannelCredentialQuotaScopeID(ctx); ok && quotaScopeID > 0 {
+		mut = mut.SetQuotaScopeID(quotaScopeID)
+	}
+	if quotaScopeName, ok := contexts.GetChannelCredentialQuotaScopeName(ctx); ok && quotaScopeName != "" {
+		mut = mut.SetQuotaScopeNameSnapshot(quotaScopeName)
+	}
+	if quotaScopeStatus, ok := contexts.GetChannelCredentialQuotaScopeStatus(ctx); ok && quotaScopeStatus != "" {
+		mut = mut.SetQuotaScopeStatusSnapshot(quotaScopeStatus)
 	}
 
 	// Use the same data storage as the request

@@ -30,6 +30,51 @@ function buildRequestsQuery(permissions: { canViewApiKeys: boolean; canViewChann
                   name
                 }`
     : '';
+  const executionChannelFields = permissions.canViewChannels
+    ? `
+                  channel {
+                    id
+                    name
+                  }`
+    : '';
+  const credentialFields = permissions.canViewChannels
+    ? `
+                  credentialID
+                  credentialFingerprint
+                  secretFingerprint
+                  resourceScopeKey
+                  quotaScopeID
+                  quotaScopeNameSnapshot
+                  quotaScopeStatusSnapshot
+                  credentialNameSnapshot
+                  credentialKeyHint
+                  credentialSource
+                  credentialQuotaStatusSnapshot
+                  credential {
+                    id
+                    name
+                    keyHint
+                  }`
+    : '';
+  const usageLogCredentialFields = permissions.canViewChannels
+    ? `
+                  credentialID
+                  credentialFingerprint
+                  secretFingerprint
+                  resourceScopeKey
+                  quotaScopeID
+                  quotaScopeNameSnapshot
+                  quotaScopeStatusSnapshot
+                  credentialNameSnapshot
+                  credentialKeyHint
+                  credentialSource
+                  credentialQuotaStatusSnapshot
+                  credential {
+                    id
+                    name
+                    keyHint
+                  }`
+    : '';
 
   return `
     query GetRequests(
@@ -59,22 +104,10 @@ function buildRequestsQuery(permissions: { canViewApiKeys: boolean; canViewChann
             executions(first: 10, orderBy: { field: CREATED_AT, direction: DESC }) {
               edges {
                 node {
+                  id
+                  createdAt
                   modelID
-                  status
-                  credentialID
-                  credentialFingerprint
-                  credentialNameSnapshot
-                  credentialKeyHint
-                  credentialSource
-                  credential {
-                    id
-                    name
-                    keyHint
-                  }
-                  channel {
-                    id
-                    name
-                  }
+                  status${credentialFields}${executionChannelFields}
                 }
                 cursor
               }
@@ -90,6 +123,7 @@ function buildRequestsQuery(permissions: { canViewApiKeys: boolean; canViewChann
               edges {
                 node {
                   id
+                  ${usageLogCredentialFields}
                   promptTokens
                   completionTokens
                   totalTokens
@@ -130,6 +164,25 @@ function buildRequestDetailQuery(permissions: { canViewApiKeys: boolean; canView
             name
           }`
     : '';
+  const usageLogCredentialFields = permissions.canViewChannels
+    ? `
+                  credentialID
+                  credentialFingerprint
+                  secretFingerprint
+                  resourceScopeKey
+                  quotaScopeID
+                  quotaScopeNameSnapshot
+                  quotaScopeStatusSnapshot
+                  credentialNameSnapshot
+                  credentialKeyHint
+                  credentialSource
+                  credentialQuotaStatusSnapshot
+                  credential {
+                    id
+                    name
+                    keyHint
+                  }`
+    : '';
 
   return `
     query GetRequestDetail($id: ID!) {
@@ -157,6 +210,7 @@ function buildRequestDetailQuery(permissions: { canViewApiKeys: boolean; canView
             edges {
               node {
                   id
+                  ${usageLogCredentialFields}
                   promptTokens
                   completionTokens
                   totalTokens
@@ -223,6 +277,25 @@ function buildRequestExecutionsQuery(permissions: { canViewChannels: boolean }) 
                   baseURL
               }`
     : '';
+  const credentialFields = permissions.canViewChannels
+    ? `
+                credentialID
+                credentialFingerprint
+                secretFingerprint
+                resourceScopeKey
+                quotaScopeID
+                quotaScopeNameSnapshot
+                quotaScopeStatusSnapshot
+                credentialNameSnapshot
+                credentialKeyHint
+                credentialSource
+                credentialQuotaStatusSnapshot
+                credential {
+                  id
+                  name
+                  keyHint
+                }`
+    : '';
 
   return `
     query GetRequestExecutions(
@@ -240,18 +313,7 @@ function buildRequestExecutionsQuery(permissions: { canViewChannels: boolean }) 
                 id
                 createdAt
                 updatedAt
-                requestID${channelFields}
-                credentialID
-                credentialFingerprint
-                credentialNameSnapshot
-                credentialKeyHint
-                credentialSource
-                credentialQuotaStatusSnapshot
-                credential {
-                  id
-                  name
-                  keyHint
-                }
+                requestID${channelFields}${credentialFields}
                 modelID
                 projectID
                 dataStorageID

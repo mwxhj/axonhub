@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 )
@@ -26,12 +27,20 @@ type ProviderQuotaStatus struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// DeletedAt holds the value of the "deleted_at" field.
 	DeletedAt int `json:"deleted_at,omitempty"`
-	// ChannelID holds the value of the "channel_id" field.
+	// Channel that observed or last updated this quota status; not part of provider quota identity
 	ChannelID int `json:"channel_id,omitempty"`
+	// Stable provider quota row identity, e.g. channel:<id>, credential/resource/quota scope
+	ScopeKey string `json:"scope_key,omitempty"`
 	// Upstream credential represented by this quota status when known
 	CredentialID int `json:"credential_id,omitempty"`
-	// Safe upstream credential identity represented by this quota status when known
+	// Legacy safe upstream credential identity represented by this quota status when known
 	CredentialFingerprint string `json:"credential_fingerprint,omitempty"`
+	// Safe secret-only identity represented by this quota status when known
+	SecretFingerprint string `json:"secret_fingerprint,omitempty"`
+	// Safe runtime resource scope represented by this quota status when known
+	ResourceScopeKey string `json:"resource_scope_key,omitempty"`
+	// Credential quota scope represented by this quota status when known
+	QuotaScopeID int `json:"quota_scope_id,omitempty"`
 	// ProviderType holds the value of the "provider_type" field.
 	ProviderType providerquotastatus.ProviderType `json:"provider_type,omitempty"`
 	// Overall status: available, warning, exhausted, unknown
@@ -56,11 +65,13 @@ type ProviderQuotaStatusEdges struct {
 	Channel *Channel `json:"channel,omitempty"`
 	// Credential holds the value of the credential edge.
 	Credential *UpstreamCredential `json:"credential,omitempty"`
+	// QuotaScope holds the value of the quota_scope edge.
+	QuotaScope *CredentialQuotaScope `json:"quota_scope,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 	// totalCount holds the count of the edges above.
-	totalCount [2]map[string]int
+	totalCount [3]map[string]int
 }
 
 // ChannelOrErr returns the Channel value or an error if the edge
@@ -85,6 +96,17 @@ func (e ProviderQuotaStatusEdges) CredentialOrErr() (*UpstreamCredential, error)
 	return nil, &NotLoadedError{edge: "credential"}
 }
 
+// QuotaScopeOrErr returns the QuotaScope value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e ProviderQuotaStatusEdges) QuotaScopeOrErr() (*CredentialQuotaScope, error) {
+	if e.QuotaScope != nil {
+		return e.QuotaScope, nil
+	} else if e.loadedTypes[2] {
+		return nil, &NotFoundError{label: credentialquotascope.Label}
+	}
+	return nil, &NotLoadedError{edge: "quota_scope"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*ProviderQuotaStatus) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -94,9 +116,9 @@ func (*ProviderQuotaStatus) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case providerquotastatus.FieldReady:
 			values[i] = new(sql.NullBool)
-		case providerquotastatus.FieldID, providerquotastatus.FieldDeletedAt, providerquotastatus.FieldChannelID, providerquotastatus.FieldCredentialID:
+		case providerquotastatus.FieldID, providerquotastatus.FieldDeletedAt, providerquotastatus.FieldChannelID, providerquotastatus.FieldCredentialID, providerquotastatus.FieldQuotaScopeID:
 			values[i] = new(sql.NullInt64)
-		case providerquotastatus.FieldCredentialFingerprint, providerquotastatus.FieldProviderType, providerquotastatus.FieldStatus:
+		case providerquotastatus.FieldScopeKey, providerquotastatus.FieldCredentialFingerprint, providerquotastatus.FieldSecretFingerprint, providerquotastatus.FieldResourceScopeKey, providerquotastatus.FieldProviderType, providerquotastatus.FieldStatus:
 			values[i] = new(sql.NullString)
 		case providerquotastatus.FieldCreatedAt, providerquotastatus.FieldUpdatedAt, providerquotastatus.FieldNextResetAt, providerquotastatus.FieldNextCheckAt:
 			values[i] = new(sql.NullTime)
@@ -145,6 +167,12 @@ func (_m *ProviderQuotaStatus) assignValues(columns []string, values []any) erro
 			} else if value.Valid {
 				_m.ChannelID = int(value.Int64)
 			}
+		case providerquotastatus.FieldScopeKey:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field scope_key", values[i])
+			} else if value.Valid {
+				_m.ScopeKey = value.String
+			}
 		case providerquotastatus.FieldCredentialID:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field credential_id", values[i])
@@ -156,6 +184,24 @@ func (_m *ProviderQuotaStatus) assignValues(columns []string, values []any) erro
 				return fmt.Errorf("unexpected type %T for field credential_fingerprint", values[i])
 			} else if value.Valid {
 				_m.CredentialFingerprint = value.String
+			}
+		case providerquotastatus.FieldSecretFingerprint:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field secret_fingerprint", values[i])
+			} else if value.Valid {
+				_m.SecretFingerprint = value.String
+			}
+		case providerquotastatus.FieldResourceScopeKey:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field resource_scope_key", values[i])
+			} else if value.Valid {
+				_m.ResourceScopeKey = value.String
+			}
+		case providerquotastatus.FieldQuotaScopeID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field quota_scope_id", values[i])
+			} else if value.Valid {
+				_m.QuotaScopeID = int(value.Int64)
 			}
 		case providerquotastatus.FieldProviderType:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -219,6 +265,11 @@ func (_m *ProviderQuotaStatus) QueryCredential() *UpstreamCredentialQuery {
 	return NewProviderQuotaStatusClient(_m.config).QueryCredential(_m)
 }
 
+// QueryQuotaScope queries the "quota_scope" edge of the ProviderQuotaStatus entity.
+func (_m *ProviderQuotaStatus) QueryQuotaScope() *CredentialQuotaScopeQuery {
+	return NewProviderQuotaStatusClient(_m.config).QueryQuotaScope(_m)
+}
+
 // Update returns a builder for updating this ProviderQuotaStatus.
 // Note that you need to call ProviderQuotaStatus.Unwrap() before calling this method if this ProviderQuotaStatus
 // was returned from a transaction, and the transaction was committed or rolled back.
@@ -254,11 +305,23 @@ func (_m *ProviderQuotaStatus) String() string {
 	builder.WriteString("channel_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.ChannelID))
 	builder.WriteString(", ")
+	builder.WriteString("scope_key=")
+	builder.WriteString(_m.ScopeKey)
+	builder.WriteString(", ")
 	builder.WriteString("credential_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.CredentialID))
 	builder.WriteString(", ")
 	builder.WriteString("credential_fingerprint=")
 	builder.WriteString(_m.CredentialFingerprint)
+	builder.WriteString(", ")
+	builder.WriteString("secret_fingerprint=")
+	builder.WriteString(_m.SecretFingerprint)
+	builder.WriteString(", ")
+	builder.WriteString("resource_scope_key=")
+	builder.WriteString(_m.ResourceScopeKey)
+	builder.WriteString(", ")
+	builder.WriteString("quota_scope_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.QuotaScopeID))
 	builder.WriteString(", ")
 	builder.WriteString("provider_type=")
 	builder.WriteString(fmt.Sprintf("%v", _m.ProviderType))

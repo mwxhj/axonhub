@@ -18,11 +18,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useCredentialsContext } from '../context/credentials-context';
 import { useCreateUpstreamCredential } from '../data/credentials';
-import type { CredentialAuthKind, CredentialFormValues, CredentialStatus } from '../data/schema';
+import type { CredentialFormValues, CredentialStatus } from '../data/schema';
+import { CredentialQuotaFields } from './credential-quota-fields';
 import { CredentialSecretFields } from './credential-secret-fields';
 import { buildCreateCredentialInput, defaultCredentialFormValues } from './form-utils';
 
-const authKinds: CredentialAuthKind[] = ['api_key', 'oauth', 'azure', 'gcp', 'other'];
 const statuses: CredentialStatus[] = ['enabled', 'disabled', 'archived'];
 
 export function CreateCredentialDialog() {
@@ -42,7 +42,6 @@ export function CreateCredentialDialog() {
     defaultValues: defaultCredentialFormValues,
   });
 
-  const authKind = watch('authKind');
   const status = watch('status');
 
   useEffect(() => {
@@ -59,40 +58,21 @@ export function CreateCredentialDialog() {
 
   return (
     <Dialog open={isOpen} onOpenChange={(nextOpen) => setOpen(nextOpen ? 'create' : null)}>
-      <DialogContent className='sm:max-w-[760px]'>
+      <DialogContent className='sm:max-w-[720px]'>
         <DialogHeader>
           <DialogTitle>{t('credentials.dialogs.create.title')}</DialogTitle>
           <DialogDescription>{t('credentials.dialogs.create.description')}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit, () => {})} noValidate>
           <div className='grid max-h-[72vh] gap-4 overflow-y-auto py-4 pr-1'>
-            <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-              <div className='grid gap-2'>
-                <Label htmlFor='credential-name'>{t('credentials.fields.name')}</Label>
-                <Input id='credential-name' {...register('name')} />
-              </div>
-              <div className='grid gap-2'>
-                <Label htmlFor='credential-issuer-scope'>{t('credentials.fields.issuerScope')}</Label>
-                <Input id='credential-issuer-scope' placeholder='openai' {...register('issuerScope')} />
-              </div>
+            <div className='grid gap-2'>
+              <Label htmlFor='credential-name'>{t('credentials.fields.name')}</Label>
+              <Input id='credential-name' {...register('name')} />
             </div>
 
-            <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
-              <div className='grid gap-2'>
-                <Label htmlFor='credential-auth-kind'>{t('credentials.fields.authKind')}</Label>
-                <Select value={authKind} onValueChange={(value) => setValue('authKind', value as CredentialAuthKind)}>
-                  <SelectTrigger id='credential-auth-kind'>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {authKinds.map((kind) => (
-                      <SelectItem key={kind} value={kind}>
-                        {t(`credentials.authKinds.${kind}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <CredentialSecretFields register={register} errors={errors} />
+
+            <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
               <div className='grid gap-2'>
                 <Label htmlFor='credential-status'>{t('credentials.fields.status')}</Label>
                 <Select value={status} onValueChange={(value) => setValue('status', value as CredentialStatus)}>
@@ -108,22 +88,9 @@ export function CreateCredentialDialog() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className='grid gap-2'>
-                <Label htmlFor='credential-weight'>{t('credentials.fields.weight')}</Label>
-                <Input
-                  id='credential-weight'
-                  type='number'
-                  min={1}
-                  {...register('weight', {
-                    valueAsNumber: true,
-                    min: { value: 1, message: t('credentials.validation.weightPositive') },
-                  })}
-                />
-                {errors.weight && <span className='text-sm text-red-500'>{errors.weight.message}</span>}
-              </div>
             </div>
 
-            <CredentialSecretFields authKind={authKind} register={register} errors={errors} />
+            <CredentialQuotaFields register={register} setValue={setValue} watch={watch} errors={errors} />
 
             <div className='grid gap-2'>
               <Label htmlFor='credential-remark'>{t('credentials.fields.remark')}</Label>

@@ -1257,6 +1257,35 @@ func TestOverrideHeadersMiddleware_OverrideExistingAuth(t *testing.T) {
 	require.Equal(t, "override-x-key", modifiedRequest.Headers.Get("X-Api-Key"))
 }
 
+func TestSanitizeResponseBodyRedactsSecrets(t *testing.T) {
+	body := []byte(`{"api_key":"sk-secret","access_token":"access-secret","nested":{"client_secret":"client-secret"},"message":"Bearer bearer-secret","email":"admin@example.com"}`)
+
+	got := string(sanitizeResponseBody(body, 2048))
+
+	require.NotContains(t, got, "sk-secret")
+	require.NotContains(t, got, "access-secret")
+	require.NotContains(t, got, "client-secret")
+	require.NotContains(t, got, "bearer-secret")
+	require.NotContains(t, got, "admin@example.com")
+	require.Contains(t, got, `"api_key":"[REDACTED]"`)
+	require.Contains(t, got, `"access_token":"[REDACTED]"`)
+}
+
+func TestSanitizeOverrideOperationsRedactsSensitivePaths(t *testing.T) {
+	ops := []objects.OverrideOperation{
+		{Op: objects.OverrideOpSet, Path: "api_key", Value: "sk-secret", Condition: `{{ eq .Model "gpt-5" }}`},
+		{Op: objects.OverrideOpSet, Path: "metadata.trace", Value: `{"access_token":"nested-secret"}`, Condition: `{{ eq .RequestHeader.authorization "Bearer token" }}`},
+	}
+
+	got := sanitizeOverrideOperations(ops)
+
+	require.Equal(t, "[REDACTED]", got[0].Value)
+	require.Empty(t, got[0].Condition)
+	require.NotContains(t, got[1].Value, "nested-secret")
+	require.NotContains(t, got[1].Condition, "Bearer token")
+	require.Equal(t, "sk-secret", ops[0].Value)
+}
+
 func TestOverrideHeadersMiddleware_BlockedHeaders(t *testing.T) {
 	tests := []struct {
 		name            string

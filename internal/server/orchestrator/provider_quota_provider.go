@@ -9,4 +9,6 @@ type ProviderQuotaStatusProvider interface {
 	GetQuotaStatus(channelID int) *biz.QuotaChannelStatus
 	GetCredentialQuotaStatusByID(credentialID int) *biz.QuotaChannelStatus
 	GetCredentialQuotaStatus(fingerprint string) *biz.QuotaChannelStatus
+	GetResourceScopeQuotaStatus(resourceScopeKey string) *biz.QuotaChannelStatus
+	GetQuotaScopeQuotaStatus(quotaScopeID int) *biz.QuotaChannelStatus
 }

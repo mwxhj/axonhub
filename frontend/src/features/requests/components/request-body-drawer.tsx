@@ -29,7 +29,7 @@ import { useRequest, fetchAdjacentRequestPage } from '../data';
 import { Request, RequestConnection } from '../data/schema';
 import { CurlPreviewDialog } from './curl-preview-dialog';
 import { getStatusColor } from './help';
-import { generateRequestCurl } from '../utils/curl-generator';
+import { generateRequestCurl, maskSensitiveBody, maskSensitiveHeaders } from '../utils/curl-generator';
 
 interface RequestBodyDrawerProps {
   open: boolean;
@@ -118,7 +118,7 @@ export function RequestBodyDrawer({
 
   const handleCurlPreview = useCallback(() => {
     if (!displayedRequest) return;
-    const curl = generateRequestCurl(displayedRequest.requestHeaders, displayedRequest.requestBody, displayedRequest.format as any);
+    const curl = generateRequestCurl(maskSensitiveHeaders(displayedRequest.requestHeaders), displayedRequest.requestBody, displayedRequest.format as any);
     setCurlCommand(curl);
     setShowCurlPreview(true);
   }, [displayedRequest]);
@@ -308,7 +308,7 @@ export function RequestBodyDrawer({
                     size='icon'
                     className='h-9 w-9 flex-shrink-0'
                     onClick={() =>
-                      copyBody(activeTab === 'request' ? displayedRequest.requestBody : displayedRequest.responseBody)
+                      copyBody(activeTab === 'request' ? maskSensitiveBody(displayedRequest.requestBody) : displayedRequest.responseBody)
                     }
                     title={t('requests.actions.copy')}
                   >
@@ -332,7 +332,7 @@ export function RequestBodyDrawer({
                     {displayedRequest.requestBody ? (
                       <JsonViewer
                         key={`req-${currentRequestId}`}
-                        data={displayedRequest.requestBody}
+                        data={maskSensitiveBody(displayedRequest.requestBody)}
                         rootName=''
                         defaultExpanded={true}
                         expandDepth='all'

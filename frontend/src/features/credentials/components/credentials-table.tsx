@@ -18,13 +18,11 @@ interface CredentialsTableProps {
   pageSize: number;
   totalCount?: number;
   nameFilter: string;
-  issuerFilter: string;
   statusFilter: CredentialStatus | 'active';
   onNextPage: () => void;
   onPreviousPage: () => void;
   onPageSizeChange: (pageSize: number) => void;
   onNameFilterChange: (filter: string) => void;
-  onIssuerFilterChange: (filter: string) => void;
   onStatusFilterChange: (filter: CredentialStatus | 'active') => void;
 }
 
@@ -38,13 +36,11 @@ export function CredentialsTable({
   pageSize,
   totalCount,
   nameFilter,
-  issuerFilter,
   statusFilter,
   onNextPage,
   onPreviousPage,
   onPageSizeChange,
   onNameFilterChange,
-  onIssuerFilterChange,
   onStatusFilterChange,
 }: CredentialsTableProps) {
   const { t } = useTranslation();
@@ -62,12 +58,6 @@ export function CredentialsTable({
           value={nameFilter}
           onChange={(event) => onNameFilterChange(event.target.value)}
           className='w-full max-w-sm'
-        />
-        <Input
-          placeholder={t('credentials.filters.provider')}
-          value={issuerFilter}
-          onChange={(event) => onIssuerFilterChange(event.target.value)}
-          className='w-full max-w-[220px]'
         />
         <Select value={statusFilter} onValueChange={(value) => onStatusFilterChange(value as CredentialStatus | 'active')}>
           <SelectTrigger className='w-[180px]'>

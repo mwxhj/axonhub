@@ -25,6 +25,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/channeloverridetemplate"
 	"github.com/looplj/axonhub/internal/ent/channelprobe"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/datastorage"
 	"github.com/looplj/axonhub/internal/ent/model"
 	"github.com/looplj/axonhub/internal/ent/project"
@@ -189,6 +190,7 @@ var guidTypeToNodeType = map[string]string{
 	ent.TypeChannelCredentialRef:    channelcredentialref.Table,
 	ent.TypeChannelProbe:            channelprobe.Table,
 	ent.TypeChannelOverrideTemplate: channeloverridetemplate.Table,
+	ent.TypeCredentialQuotaScope:    credentialquotascope.Table,
 	ent.TypeProviderQuotaStatus:     providerquotastatus.Table,
 	ent.TypeRequest:                 request.Table,
 	ent.TypeRequestExecution:        requestexecution.Table,
@@ -245,6 +247,27 @@ func getNilableUpstreamCredential(ctx context.Context, client *ent.Client, crede
 	}
 
 	return credential, nil
+}
+
+func getNilableCredentialQuotaScope(ctx context.Context, client *ent.Client, quotaScopeID int) (*ent.CredentialQuotaScope, error) {
+	if quotaScopeID == 0 {
+		return nil, nil
+	}
+
+	scope, err := client.CredentialQuotaScope.Query().Where(credentialquotascope.ID(quotaScopeID)).First(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil
+		}
+
+		if errors.Is(err, privacy.Deny) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("failed to load credential quota scope: %w", err)
+	}
+
+	return scope, nil
 }
 
 func getNilableUser(ctx context.Context, client *ent.Client, userID int) (*ent.User, error) {

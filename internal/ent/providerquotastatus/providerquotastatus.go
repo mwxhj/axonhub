@@ -26,10 +26,18 @@ const (
 	FieldDeletedAt = "deleted_at"
 	// FieldChannelID holds the string denoting the channel_id field in the database.
 	FieldChannelID = "channel_id"
+	// FieldScopeKey holds the string denoting the scope_key field in the database.
+	FieldScopeKey = "scope_key"
 	// FieldCredentialID holds the string denoting the credential_id field in the database.
 	FieldCredentialID = "credential_id"
 	// FieldCredentialFingerprint holds the string denoting the credential_fingerprint field in the database.
 	FieldCredentialFingerprint = "credential_fingerprint"
+	// FieldSecretFingerprint holds the string denoting the secret_fingerprint field in the database.
+	FieldSecretFingerprint = "secret_fingerprint"
+	// FieldResourceScopeKey holds the string denoting the resource_scope_key field in the database.
+	FieldResourceScopeKey = "resource_scope_key"
+	// FieldQuotaScopeID holds the string denoting the quota_scope_id field in the database.
+	FieldQuotaScopeID = "quota_scope_id"
 	// FieldProviderType holds the string denoting the provider_type field in the database.
 	FieldProviderType = "provider_type"
 	// FieldStatus holds the string denoting the status field in the database.
@@ -46,6 +54,8 @@ const (
 	EdgeChannel = "channel"
 	// EdgeCredential holds the string denoting the credential edge name in mutations.
 	EdgeCredential = "credential"
+	// EdgeQuotaScope holds the string denoting the quota_scope edge name in mutations.
+	EdgeQuotaScope = "quota_scope"
 	// Table holds the table name of the providerquotastatus in the database.
 	Table = "provider_quota_status"
 	// ChannelTable is the table that holds the channel relation/edge.
@@ -62,6 +72,13 @@ const (
 	CredentialInverseTable = "upstream_credentials"
 	// CredentialColumn is the table column denoting the credential relation/edge.
 	CredentialColumn = "credential_id"
+	// QuotaScopeTable is the table that holds the quota_scope relation/edge.
+	QuotaScopeTable = "provider_quota_status"
+	// QuotaScopeInverseTable is the table name for the CredentialQuotaScope entity.
+	// It exists in this package in order to avoid circular dependency with the "credentialquotascope" package.
+	QuotaScopeInverseTable = "credential_quota_scopes"
+	// QuotaScopeColumn is the table column denoting the quota_scope relation/edge.
+	QuotaScopeColumn = "quota_scope_id"
 )
 
 // Columns holds all SQL columns for providerquotastatus fields.
@@ -71,8 +88,12 @@ var Columns = []string{
 	FieldUpdatedAt,
 	FieldDeletedAt,
 	FieldChannelID,
+	FieldScopeKey,
 	FieldCredentialID,
 	FieldCredentialFingerprint,
+	FieldSecretFingerprint,
+	FieldResourceScopeKey,
+	FieldQuotaScopeID,
 	FieldProviderType,
 	FieldStatus,
 	FieldQuotaData,
@@ -107,8 +128,16 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 	// DefaultDeletedAt holds the default value on creation for the "deleted_at" field.
 	DefaultDeletedAt int
+	// DefaultScopeKey holds the default value on creation for the "scope_key" field.
+	DefaultScopeKey string
+	// ScopeKeyValidator is a validator for the "scope_key" field. It is called by the builders before save.
+	ScopeKeyValidator func(string) error
 	// CredentialFingerprintValidator is a validator for the "credential_fingerprint" field. It is called by the builders before save.
 	CredentialFingerprintValidator func(string) error
+	// SecretFingerprintValidator is a validator for the "secret_fingerprint" field. It is called by the builders before save.
+	SecretFingerprintValidator func(string) error
+	// ResourceScopeKeyValidator is a validator for the "resource_scope_key" field. It is called by the builders before save.
+	ResourceScopeKeyValidator func(string) error
 	// DefaultReady holds the default value on creation for the "ready" field.
 	DefaultReady bool
 )
@@ -194,6 +223,11 @@ func ByChannelID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldChannelID, opts...).ToFunc()
 }
 
+// ByScopeKey orders the results by the scope_key field.
+func ByScopeKey(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldScopeKey, opts...).ToFunc()
+}
+
 // ByCredentialID orders the results by the credential_id field.
 func ByCredentialID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCredentialID, opts...).ToFunc()
@@ -202,6 +236,21 @@ func ByCredentialID(opts ...sql.OrderTermOption) OrderOption {
 // ByCredentialFingerprint orders the results by the credential_fingerprint field.
 func ByCredentialFingerprint(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCredentialFingerprint, opts...).ToFunc()
+}
+
+// BySecretFingerprint orders the results by the secret_fingerprint field.
+func BySecretFingerprint(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSecretFingerprint, opts...).ToFunc()
+}
+
+// ByResourceScopeKey orders the results by the resource_scope_key field.
+func ByResourceScopeKey(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldResourceScopeKey, opts...).ToFunc()
+}
+
+// ByQuotaScopeID orders the results by the quota_scope_id field.
+func ByQuotaScopeID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldQuotaScopeID, opts...).ToFunc()
 }
 
 // ByProviderType orders the results by the provider_type field.
@@ -242,11 +291,18 @@ func ByCredentialField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newCredentialStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByQuotaScopeField orders the results by quota_scope field.
+func ByQuotaScopeField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newQuotaScopeStep(), sql.OrderByField(field, opts...))
+	}
+}
 func newChannelStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(ChannelInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2O, true, ChannelTable, ChannelColumn),
+		sqlgraph.Edge(sqlgraph.M2O, true, ChannelTable, ChannelColumn),
 	)
 }
 func newCredentialStep() *sqlgraph.Step {
@@ -254,6 +310,13 @@ func newCredentialStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CredentialInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, CredentialTable, CredentialColumn),
+	)
+}
+func newQuotaScopeStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(QuotaScopeInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, QuotaScopeTable, QuotaScopeColumn),
 	)
 }
 

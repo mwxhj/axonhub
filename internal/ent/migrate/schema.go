@@ -303,6 +303,50 @@ var (
 			},
 		},
 	}
+	// CredentialQuotaScopesColumns holds the columns for the "credential_quota_scopes" table.
+	CredentialQuotaScopesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, Default: schema.Expr("CURRENT_TIMESTAMP")},
+		{Name: "updated_at", Type: field.TypeTime, Default: schema.Expr("CURRENT_TIMESTAMP")},
+		{Name: "deleted_at", Type: field.TypeInt, Default: 0},
+		{Name: "name", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"available", "warning", "exhausted", "paused", "disabled", "unknown"}, Default: "unknown"},
+		{Name: "unit", Type: field.TypeEnum, Enums: []string{"usd", "token", "request", "credit", "custom", "unknown"}, Default: "unknown"},
+		{Name: "limit_amount", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "used_amount", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "warning_threshold_percent", Type: field.TypeInt, Nullable: true},
+		{Name: "reset_policy", Type: field.TypeEnum, Enums: []string{"none", "manual", "daily", "monthly", "custom"}, Default: "none"},
+		{Name: "reset_at", Type: field.TypeTime, Nullable: true},
+		{Name: "window_started_at", Type: field.TypeTime, Nullable: true},
+		{Name: "over_limit_action", Type: field.TypeEnum, Enums: []string{"warn", "pause", "disable"}, Default: "warn"},
+		{Name: "pause_until", Type: field.TypeTime, Nullable: true},
+		{Name: "source", Type: field.TypeEnum, Enums: []string{"local_budget", "provider_api", "response_error", "manual", "inferred", "unknown"}, Default: "local_budget"},
+		{Name: "last_error", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "remark", Type: field.TypeString, Nullable: true, Default: ""},
+	}
+	// CredentialQuotaScopesTable holds the schema information for the "credential_quota_scopes" table.
+	CredentialQuotaScopesTable = &schema.Table{
+		Name:       "credential_quota_scopes",
+		Columns:    CredentialQuotaScopesColumns,
+		PrimaryKey: []*schema.Column{CredentialQuotaScopesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "credential_quota_scopes_by_status",
+				Unique:  false,
+				Columns: []*schema.Column{CredentialQuotaScopesColumns[5]},
+			},
+			{
+				Name:    "credential_quota_scopes_by_source",
+				Unique:  false,
+				Columns: []*schema.Column{CredentialQuotaScopesColumns[15]},
+			},
+			{
+				Name:    "credential_quota_scopes_by_reset_at",
+				Unique:  false,
+				Columns: []*schema.Column{CredentialQuotaScopesColumns[11]},
+			},
+		},
+	}
 	// DataStoragesColumns holds the columns for the "data_storages" table.
 	DataStoragesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -491,14 +535,18 @@ var (
 		{Name: "created_at", Type: field.TypeTime, Default: schema.Expr("CURRENT_TIMESTAMP")},
 		{Name: "updated_at", Type: field.TypeTime, Default: schema.Expr("CURRENT_TIMESTAMP")},
 		{Name: "deleted_at", Type: field.TypeInt, Default: 0},
+		{Name: "scope_key", Type: field.TypeString, Size: 640, Default: "channel"},
 		{Name: "credential_fingerprint", Type: field.TypeString, Nullable: true, Size: 128},
+		{Name: "secret_fingerprint", Type: field.TypeString, Nullable: true, Size: 128},
+		{Name: "resource_scope_key", Type: field.TypeString, Nullable: true, Size: 512},
 		{Name: "provider_type", Type: field.TypeEnum, Enums: []string{"claudecode", "codex", "github_copilot", "nanogpt", "wafer", "synthetic", "neuralwatt"}},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"available", "warning", "exhausted", "unknown"}},
 		{Name: "quota_data", Type: field.TypeJSON},
 		{Name: "next_reset_at", Type: field.TypeTime, Nullable: true},
 		{Name: "ready", Type: field.TypeBool, Default: true},
 		{Name: "next_check_at", Type: field.TypeTime},
-		{Name: "channel_id", Type: field.TypeInt, Unique: true},
+		{Name: "channel_id", Type: field.TypeInt, Nullable: true},
+		{Name: "quota_scope_id", Type: field.TypeInt, Nullable: true},
 		{Name: "credential_id", Type: field.TypeInt, Nullable: true},
 	}
 	// ProviderQuotaStatusTable holds the schema information for the "provider_quota_status" table.
@@ -508,38 +556,69 @@ var (
 		PrimaryKey: []*schema.Column{ProviderQuotaStatusColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "provider_quota_status_channels_provider_quota_status",
-				Columns:    []*schema.Column{ProviderQuotaStatusColumns[11]},
+				Symbol:     "provider_quota_status_channels_provider_quota_statuses",
+				Columns:    []*schema.Column{ProviderQuotaStatusColumns[14]},
 				RefColumns: []*schema.Column{ChannelsColumns[0]},
-				OnDelete:   schema.NoAction,
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "provider_quota_status_credential_quota_scopes_provider_quota_statuses",
+				Columns:    []*schema.Column{ProviderQuotaStatusColumns[15]},
+				RefColumns: []*schema.Column{CredentialQuotaScopesColumns[0]},
+				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "provider_quota_status_upstream_credentials_provider_quota_statuses",
-				Columns:    []*schema.Column{ProviderQuotaStatusColumns[12]},
+				Columns:    []*schema.Column{ProviderQuotaStatusColumns[16]},
 				RefColumns: []*schema.Column{UpstreamCredentialsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "providerquotastatus_channel_id",
-				Unique:  true,
-				Columns: []*schema.Column{ProviderQuotaStatusColumns[11]},
+				Name:    "provider_quota_status_by_provider_scope",
+				Unique:  false,
+				Columns: []*schema.Column{ProviderQuotaStatusColumns[8], ProviderQuotaStatusColumns[4]},
 			},
 			{
 				Name:    "providerquotastatus_credential_id",
 				Unique:  false,
-				Columns: []*schema.Column{ProviderQuotaStatusColumns[12]},
+				Columns: []*schema.Column{ProviderQuotaStatusColumns[16]},
 			},
 			{
 				Name:    "providerquotastatus_credential_fingerprint",
 				Unique:  false,
-				Columns: []*schema.Column{ProviderQuotaStatusColumns[4]},
+				Columns: []*schema.Column{ProviderQuotaStatusColumns[5]},
+			},
+			{
+				Name:    "providerquotastatus_secret_fingerprint",
+				Unique:  false,
+				Columns: []*schema.Column{ProviderQuotaStatusColumns[6]},
+			},
+			{
+				Name:    "providerquotastatus_resource_scope_key",
+				Unique:  false,
+				Columns: []*schema.Column{ProviderQuotaStatusColumns[7]},
+			},
+			{
+				Name:    "providerquotastatus_quota_scope_id",
+				Unique:  false,
+				Columns: []*schema.Column{ProviderQuotaStatusColumns[15]},
+			},
+			{
+				Name:    "providerquotastatus_channel_id",
+				Unique:  false,
+				Columns: []*schema.Column{ProviderQuotaStatusColumns[14]},
+			},
+			{
+				Name:    "provider_quota_status_by_channel_credential_resource",
+				Unique:  false,
+				Columns: []*schema.Column{ProviderQuotaStatusColumns[14], ProviderQuotaStatusColumns[16], ProviderQuotaStatusColumns[7]},
 			},
 			{
 				Name:    "providerquotastatus_next_check_at",
 				Unique:  false,
-				Columns: []*schema.Column{ProviderQuotaStatusColumns[10]},
+				Columns: []*schema.Column{ProviderQuotaStatusColumns[13]},
 			},
 		},
 	}
@@ -647,6 +726,10 @@ var (
 		{Name: "external_id", Type: field.TypeString, Nullable: true, Size: 512},
 		{Name: "model_id", Type: field.TypeString},
 		{Name: "credential_fingerprint", Type: field.TypeString, Nullable: true, Size: 128},
+		{Name: "secret_fingerprint", Type: field.TypeString, Nullable: true, Size: 128},
+		{Name: "resource_scope_key", Type: field.TypeString, Nullable: true, Size: 512},
+		{Name: "quota_scope_name_snapshot", Type: field.TypeString, Nullable: true},
+		{Name: "quota_scope_status_snapshot", Type: field.TypeString, Nullable: true},
 		{Name: "credential_name_snapshot", Type: field.TypeString, Nullable: true},
 		{Name: "credential_key_hint", Type: field.TypeString, Nullable: true},
 		{Name: "credential_source", Type: field.TypeString, Nullable: true},
@@ -664,6 +747,7 @@ var (
 		{Name: "metrics_reasoning_duration_ms", Type: field.TypeInt64, Nullable: true},
 		{Name: "request_headers", Type: field.TypeJSON, Nullable: true},
 		{Name: "channel_id", Type: field.TypeInt, Nullable: true},
+		{Name: "quota_scope_id", Type: field.TypeInt, Nullable: true},
 		{Name: "data_storage_id", Type: field.TypeInt, Nullable: true},
 		{Name: "request_id", Type: field.TypeInt},
 		{Name: "credential_id", Type: field.TypeInt, Nullable: true},
@@ -676,25 +760,31 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "request_executions_channels_executions",
-				Columns:    []*schema.Column{RequestExecutionsColumns[23]},
+				Columns:    []*schema.Column{RequestExecutionsColumns[27]},
 				RefColumns: []*schema.Column{ChannelsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
+				Symbol:     "request_executions_credential_quota_scopes_executions",
+				Columns:    []*schema.Column{RequestExecutionsColumns[28]},
+				RefColumns: []*schema.Column{CredentialQuotaScopesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
 				Symbol:     "request_executions_data_storages_executions",
-				Columns:    []*schema.Column{RequestExecutionsColumns[24]},
+				Columns:    []*schema.Column{RequestExecutionsColumns[29]},
 				RefColumns: []*schema.Column{DataStoragesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "request_executions_requests_executions",
-				Columns:    []*schema.Column{RequestExecutionsColumns[25]},
+				Columns:    []*schema.Column{RequestExecutionsColumns[30]},
 				RefColumns: []*schema.Column{RequestsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "request_executions_upstream_credentials_executions",
-				Columns:    []*schema.Column{RequestExecutionsColumns[26]},
+				Columns:    []*schema.Column{RequestExecutionsColumns[31]},
 				RefColumns: []*schema.Column{UpstreamCredentialsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -703,27 +793,42 @@ var (
 			{
 				Name:    "request_executions_by_request_id_status_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{RequestExecutionsColumns[25], RequestExecutionsColumns[17], RequestExecutionsColumns[1]},
+				Columns: []*schema.Column{RequestExecutionsColumns[30], RequestExecutionsColumns[21], RequestExecutionsColumns[1]},
 			},
 			{
 				Name:    "request_executions_by_request_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{RequestExecutionsColumns[25], RequestExecutionsColumns[1]},
+				Columns: []*schema.Column{RequestExecutionsColumns[30], RequestExecutionsColumns[1]},
 			},
 			{
 				Name:    "request_executions_by_channel_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{RequestExecutionsColumns[23], RequestExecutionsColumns[1]},
+				Columns: []*schema.Column{RequestExecutionsColumns[27], RequestExecutionsColumns[1]},
 			},
 			{
 				Name:    "request_executions_by_credential_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{RequestExecutionsColumns[26], RequestExecutionsColumns[1]},
+				Columns: []*schema.Column{RequestExecutionsColumns[31], RequestExecutionsColumns[1]},
 			},
 			{
 				Name:    "request_executions_by_credential_fingerprint_created_at",
 				Unique:  false,
 				Columns: []*schema.Column{RequestExecutionsColumns[6], RequestExecutionsColumns[1]},
+			},
+			{
+				Name:    "request_executions_by_secret_fingerprint_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{RequestExecutionsColumns[7], RequestExecutionsColumns[1]},
+			},
+			{
+				Name:    "request_executions_by_resource_scope_key_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{RequestExecutionsColumns[8], RequestExecutionsColumns[1]},
+			},
+			{
+				Name:    "request_executions_by_quota_scope_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{RequestExecutionsColumns[28], RequestExecutionsColumns[1]},
 			},
 		},
 	}
@@ -872,23 +977,37 @@ var (
 		{Name: "secret_kind", Type: field.TypeEnum, Enums: []string{"api_key", "oauth", "azure", "gcp", "other"}, Default: "api_key"},
 		{Name: "issuer_scope", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "key_hint", Type: field.TypeString, Nullable: true, Default: ""},
-		{Name: "quota_scope_id", Type: field.TypeInt, Nullable: true},
 		{Name: "secret_payload", Type: field.TypeJSON},
 		{Name: "fingerprint", Type: field.TypeString, Size: 128},
+		{Name: "secret_fingerprint", Type: field.TypeString, Nullable: true, Size: 128},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"enabled", "disabled", "archived"}, Default: "enabled"},
 		{Name: "weight", Type: field.TypeInt, Default: 100},
 		{Name: "quota_status", Type: field.TypeString, Nullable: true, Default: "unknown"},
 		{Name: "last_error", Type: field.TypeString, Nullable: true, Default: ""},
 		{Name: "remark", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "quota_scope_id", Type: field.TypeInt, Nullable: true},
 	}
 	// UpstreamCredentialsTable holds the schema information for the "upstream_credentials" table.
 	UpstreamCredentialsTable = &schema.Table{
 		Name:       "upstream_credentials",
 		Columns:    UpstreamCredentialsColumns,
 		PrimaryKey: []*schema.Column{UpstreamCredentialsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "upstream_credentials_credential_quota_scopes_credentials",
+				Columns:    []*schema.Column{UpstreamCredentialsColumns[19]},
+				RefColumns: []*schema.Column{CredentialQuotaScopesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "upstream_credentials_by_fingerprint",
+				Unique:  true,
+				Columns: []*schema.Column{UpstreamCredentialsColumns[12], UpstreamCredentialsColumns[3]},
+			},
+			{
+				Name:    "upstream_credentials_by_secret_fingerprint",
 				Unique:  true,
 				Columns: []*schema.Column{UpstreamCredentialsColumns[13], UpstreamCredentialsColumns[3]},
 			},
@@ -910,7 +1029,7 @@ var (
 			{
 				Name:    "upstream_credentials_by_quota_scope_id",
 				Unique:  false,
-				Columns: []*schema.Column{UpstreamCredentialsColumns[11]},
+				Columns: []*schema.Column{UpstreamCredentialsColumns[19]},
 			},
 		},
 	}
@@ -922,9 +1041,14 @@ var (
 		{Name: "api_key_id", Type: field.TypeInt, Nullable: true},
 		{Name: "model_id", Type: field.TypeString},
 		{Name: "credential_fingerprint", Type: field.TypeString, Nullable: true, Size: 128},
+		{Name: "secret_fingerprint", Type: field.TypeString, Nullable: true, Size: 128},
+		{Name: "resource_scope_key", Type: field.TypeString, Nullable: true, Size: 512},
+		{Name: "quota_scope_name_snapshot", Type: field.TypeString, Nullable: true},
+		{Name: "quota_scope_status_snapshot", Type: field.TypeString, Nullable: true},
 		{Name: "credential_name_snapshot", Type: field.TypeString, Nullable: true},
 		{Name: "credential_key_hint", Type: field.TypeString, Nullable: true},
 		{Name: "credential_source", Type: field.TypeString, Nullable: true},
+		{Name: "credential_quota_status_snapshot", Type: field.TypeString, Nullable: true},
 		{Name: "prompt_tokens", Type: field.TypeInt64, Default: 0},
 		{Name: "completion_tokens", Type: field.TypeInt64, Default: 0},
 		{Name: "total_tokens", Type: field.TypeInt64, Default: 0},
@@ -943,6 +1067,7 @@ var (
 		{Name: "cost_items", Type: field.TypeJSON, Nullable: true},
 		{Name: "cost_price_reference_id", Type: field.TypeString, Nullable: true},
 		{Name: "channel_id", Type: field.TypeInt, Nullable: true},
+		{Name: "quota_scope_id", Type: field.TypeInt, Nullable: true},
 		{Name: "project_id", Type: field.TypeInt, Default: 1},
 		{Name: "request_id", Type: field.TypeInt},
 		{Name: "credential_id", Type: field.TypeInt, Nullable: true},
@@ -955,25 +1080,31 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "usage_logs_channels_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[26]},
+				Columns:    []*schema.Column{UsageLogsColumns[31]},
 				RefColumns: []*schema.Column{ChannelsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
+				Symbol:     "usage_logs_credential_quota_scopes_usage_logs",
+				Columns:    []*schema.Column{UsageLogsColumns[32]},
+				RefColumns: []*schema.Column{CredentialQuotaScopesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
 				Symbol:     "usage_logs_projects_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[27]},
+				Columns:    []*schema.Column{UsageLogsColumns[33]},
 				RefColumns: []*schema.Column{ProjectsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "usage_logs_requests_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[28]},
+				Columns:    []*schema.Column{UsageLogsColumns[34]},
 				RefColumns: []*schema.Column{RequestsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "usage_logs_upstream_credentials_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[29]},
+				Columns:    []*schema.Column{UsageLogsColumns[35]},
 				RefColumns: []*schema.Column{UpstreamCredentialsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -982,7 +1113,7 @@ var (
 			{
 				Name:    "usage_logs_by_request_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[28]},
+				Columns: []*schema.Column{UsageLogsColumns[34]},
 			},
 			{
 				Name:    "usage_logs_by_created_at",
@@ -997,22 +1128,37 @@ var (
 			{
 				Name:    "usage_logs_by_project_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[27], UsageLogsColumns[1]},
+				Columns: []*schema.Column{UsageLogsColumns[33], UsageLogsColumns[1]},
 			},
 			{
 				Name:    "usage_logs_by_channel_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[26], UsageLogsColumns[1]},
+				Columns: []*schema.Column{UsageLogsColumns[31], UsageLogsColumns[1]},
 			},
 			{
 				Name:    "usage_logs_by_credential_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[29], UsageLogsColumns[1]},
+				Columns: []*schema.Column{UsageLogsColumns[35], UsageLogsColumns[1]},
 			},
 			{
 				Name:    "usage_logs_by_credential_fingerprint_created_at",
 				Unique:  false,
 				Columns: []*schema.Column{UsageLogsColumns[5], UsageLogsColumns[1]},
+			},
+			{
+				Name:    "usage_logs_by_secret_fingerprint_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{UsageLogsColumns[6], UsageLogsColumns[1]},
+			},
+			{
+				Name:    "usage_logs_by_resource_scope_key_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{UsageLogsColumns[7], UsageLogsColumns[1]},
+			},
+			{
+				Name:    "usage_logs_by_quota_scope_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{UsageLogsColumns[32], UsageLogsColumns[1]},
 			},
 			{
 				Name:    "usage_logs_by_api_key_id_created_at",
@@ -1167,6 +1313,7 @@ var (
 		ChannelModelPriceVersionsTable,
 		ChannelOverrideTemplatesTable,
 		ChannelProbesTable,
+		CredentialQuotaScopesTable,
 		DataStoragesTable,
 		ModelsTable,
 		OidcIdentitiesTable,
@@ -1201,24 +1348,28 @@ func init() {
 	ChannelProbesTable.ForeignKeys[0].RefTable = ChannelsTable
 	OidcIdentitiesTable.ForeignKeys[0].RefTable = UsersTable
 	ProviderQuotaStatusTable.ForeignKeys[0].RefTable = ChannelsTable
-	ProviderQuotaStatusTable.ForeignKeys[1].RefTable = UpstreamCredentialsTable
+	ProviderQuotaStatusTable.ForeignKeys[1].RefTable = CredentialQuotaScopesTable
+	ProviderQuotaStatusTable.ForeignKeys[2].RefTable = UpstreamCredentialsTable
 	RequestsTable.ForeignKeys[0].RefTable = APIKeysTable
 	RequestsTable.ForeignKeys[1].RefTable = ChannelsTable
 	RequestsTable.ForeignKeys[2].RefTable = DataStoragesTable
 	RequestsTable.ForeignKeys[3].RefTable = ProjectsTable
 	RequestsTable.ForeignKeys[4].RefTable = TracesTable
 	RequestExecutionsTable.ForeignKeys[0].RefTable = ChannelsTable
-	RequestExecutionsTable.ForeignKeys[1].RefTable = DataStoragesTable
-	RequestExecutionsTable.ForeignKeys[2].RefTable = RequestsTable
-	RequestExecutionsTable.ForeignKeys[3].RefTable = UpstreamCredentialsTable
+	RequestExecutionsTable.ForeignKeys[1].RefTable = CredentialQuotaScopesTable
+	RequestExecutionsTable.ForeignKeys[2].RefTable = DataStoragesTable
+	RequestExecutionsTable.ForeignKeys[3].RefTable = RequestsTable
+	RequestExecutionsTable.ForeignKeys[4].RefTable = UpstreamCredentialsTable
 	RolesTable.ForeignKeys[0].RefTable = ProjectsTable
 	ThreadsTable.ForeignKeys[0].RefTable = ProjectsTable
 	TracesTable.ForeignKeys[0].RefTable = ProjectsTable
 	TracesTable.ForeignKeys[1].RefTable = ThreadsTable
+	UpstreamCredentialsTable.ForeignKeys[0].RefTable = CredentialQuotaScopesTable
 	UsageLogsTable.ForeignKeys[0].RefTable = ChannelsTable
-	UsageLogsTable.ForeignKeys[1].RefTable = ProjectsTable
-	UsageLogsTable.ForeignKeys[2].RefTable = RequestsTable
-	UsageLogsTable.ForeignKeys[3].RefTable = UpstreamCredentialsTable
+	UsageLogsTable.ForeignKeys[1].RefTable = CredentialQuotaScopesTable
+	UsageLogsTable.ForeignKeys[2].RefTable = ProjectsTable
+	UsageLogsTable.ForeignKeys[3].RefTable = RequestsTable
+	UsageLogsTable.ForeignKeys[4].RefTable = UpstreamCredentialsTable
 	UserProjectsTable.ForeignKeys[0].RefTable = UsersTable
 	UserProjectsTable.ForeignKeys[1].RefTable = ProjectsTable
 	UserRolesTable.ForeignKeys[0].RefTable = UsersTable

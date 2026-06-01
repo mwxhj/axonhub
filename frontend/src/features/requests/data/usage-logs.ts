@@ -16,6 +16,25 @@ function buildUsageLogsQuery(permissions: { canViewChannels: boolean }) {
             type
           }`
     : '';
+  const credentialFields = permissions.canViewChannels
+    ? `
+            credentialID
+            credentialFingerprint
+            secretFingerprint
+            resourceScopeKey
+            quotaScopeID
+            quotaScopeNameSnapshot
+            quotaScopeStatusSnapshot
+            credentialNameSnapshot
+            credentialKeyHint
+            credentialSource
+            credentialQuotaStatusSnapshot
+            credential {
+              id
+              name
+              keyHint
+            }`
+    : '';
 
   return `
     query GetUsageLogs($first: Int, $after: Cursor, $orderBy: UsageLogOrder, $where: UsageLogWhereInput) {
@@ -25,7 +44,7 @@ function buildUsageLogsQuery(permissions: { canViewChannels: boolean }) {
             id
             createdAt
             updatedAt
-            requestID${channelFields}
+            requestID${channelFields}${credentialFields}
             modelID
             promptTokens
             completionTokens
@@ -69,6 +88,25 @@ function buildUsageLogDetailQuery(permissions: { canViewChannels: boolean }) {
           type
         }`
     : '';
+  const credentialFields = permissions.canViewChannels
+    ? `
+          credentialID
+          credentialFingerprint
+          secretFingerprint
+          resourceScopeKey
+          quotaScopeID
+          quotaScopeNameSnapshot
+          quotaScopeStatusSnapshot
+          credentialNameSnapshot
+          credentialKeyHint
+          credentialSource
+          credentialQuotaStatusSnapshot
+          credential {
+            id
+            name
+            keyHint
+          }`
+    : '';
 
   return `
     query GetUsageLog($id: ID!) {
@@ -77,7 +115,7 @@ function buildUsageLogDetailQuery(permissions: { canViewChannels: boolean }) {
           id
           createdAt
           updatedAt
-          requestID${channelFields}
+          requestID${channelFields}${credentialFields}
           modelID
           promptTokens
           completionTokens

@@ -105,6 +105,31 @@ func CredentialFingerprint(v string) predicate.RequestExecution {
 	return predicate.RequestExecution(sql.FieldEQ(FieldCredentialFingerprint, v))
 }
 
+// SecretFingerprint applies equality check predicate on the "secret_fingerprint" field. It's identical to SecretFingerprintEQ.
+func SecretFingerprint(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldSecretFingerprint, v))
+}
+
+// ResourceScopeKey applies equality check predicate on the "resource_scope_key" field. It's identical to ResourceScopeKeyEQ.
+func ResourceScopeKey(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldResourceScopeKey, v))
+}
+
+// QuotaScopeID applies equality check predicate on the "quota_scope_id" field. It's identical to QuotaScopeIDEQ.
+func QuotaScopeID(v int) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldQuotaScopeID, v))
+}
+
+// QuotaScopeNameSnapshot applies equality check predicate on the "quota_scope_name_snapshot" field. It's identical to QuotaScopeNameSnapshotEQ.
+func QuotaScopeNameSnapshot(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldQuotaScopeNameSnapshot, v))
+}
+
+// QuotaScopeStatusSnapshot applies equality check predicate on the "quota_scope_status_snapshot" field. It's identical to QuotaScopeStatusSnapshotEQ.
+func QuotaScopeStatusSnapshot(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldQuotaScopeStatusSnapshot, v))
+}
+
 // CredentialNameSnapshot applies equality check predicate on the "credential_name_snapshot" field. It's identical to CredentialNameSnapshotEQ.
 func CredentialNameSnapshot(v string) predicate.RequestExecution {
 	return predicate.RequestExecution(sql.FieldEQ(FieldCredentialNameSnapshot, v))
@@ -603,6 +628,336 @@ func CredentialFingerprintEqualFold(v string) predicate.RequestExecution {
 // CredentialFingerprintContainsFold applies the ContainsFold predicate on the "credential_fingerprint" field.
 func CredentialFingerprintContainsFold(v string) predicate.RequestExecution {
 	return predicate.RequestExecution(sql.FieldContainsFold(FieldCredentialFingerprint, v))
+}
+
+// SecretFingerprintEQ applies the EQ predicate on the "secret_fingerprint" field.
+func SecretFingerprintEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintNEQ applies the NEQ predicate on the "secret_fingerprint" field.
+func SecretFingerprintNEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNEQ(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintIn applies the In predicate on the "secret_fingerprint" field.
+func SecretFingerprintIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIn(FieldSecretFingerprint, vs...))
+}
+
+// SecretFingerprintNotIn applies the NotIn predicate on the "secret_fingerprint" field.
+func SecretFingerprintNotIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotIn(FieldSecretFingerprint, vs...))
+}
+
+// SecretFingerprintGT applies the GT predicate on the "secret_fingerprint" field.
+func SecretFingerprintGT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGT(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintGTE applies the GTE predicate on the "secret_fingerprint" field.
+func SecretFingerprintGTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGTE(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintLT applies the LT predicate on the "secret_fingerprint" field.
+func SecretFingerprintLT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLT(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintLTE applies the LTE predicate on the "secret_fingerprint" field.
+func SecretFingerprintLTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLTE(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintContains applies the Contains predicate on the "secret_fingerprint" field.
+func SecretFingerprintContains(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContains(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintHasPrefix applies the HasPrefix predicate on the "secret_fingerprint" field.
+func SecretFingerprintHasPrefix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasPrefix(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintHasSuffix applies the HasSuffix predicate on the "secret_fingerprint" field.
+func SecretFingerprintHasSuffix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasSuffix(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintIsNil applies the IsNil predicate on the "secret_fingerprint" field.
+func SecretFingerprintIsNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIsNull(FieldSecretFingerprint))
+}
+
+// SecretFingerprintNotNil applies the NotNil predicate on the "secret_fingerprint" field.
+func SecretFingerprintNotNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotNull(FieldSecretFingerprint))
+}
+
+// SecretFingerprintEqualFold applies the EqualFold predicate on the "secret_fingerprint" field.
+func SecretFingerprintEqualFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEqualFold(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintContainsFold applies the ContainsFold predicate on the "secret_fingerprint" field.
+func SecretFingerprintContainsFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContainsFold(FieldSecretFingerprint, v))
+}
+
+// ResourceScopeKeyEQ applies the EQ predicate on the "resource_scope_key" field.
+func ResourceScopeKeyEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyNEQ applies the NEQ predicate on the "resource_scope_key" field.
+func ResourceScopeKeyNEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNEQ(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyIn applies the In predicate on the "resource_scope_key" field.
+func ResourceScopeKeyIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIn(FieldResourceScopeKey, vs...))
+}
+
+// ResourceScopeKeyNotIn applies the NotIn predicate on the "resource_scope_key" field.
+func ResourceScopeKeyNotIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotIn(FieldResourceScopeKey, vs...))
+}
+
+// ResourceScopeKeyGT applies the GT predicate on the "resource_scope_key" field.
+func ResourceScopeKeyGT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGT(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyGTE applies the GTE predicate on the "resource_scope_key" field.
+func ResourceScopeKeyGTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGTE(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyLT applies the LT predicate on the "resource_scope_key" field.
+func ResourceScopeKeyLT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLT(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyLTE applies the LTE predicate on the "resource_scope_key" field.
+func ResourceScopeKeyLTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLTE(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyContains applies the Contains predicate on the "resource_scope_key" field.
+func ResourceScopeKeyContains(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContains(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyHasPrefix applies the HasPrefix predicate on the "resource_scope_key" field.
+func ResourceScopeKeyHasPrefix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasPrefix(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyHasSuffix applies the HasSuffix predicate on the "resource_scope_key" field.
+func ResourceScopeKeyHasSuffix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasSuffix(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyIsNil applies the IsNil predicate on the "resource_scope_key" field.
+func ResourceScopeKeyIsNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIsNull(FieldResourceScopeKey))
+}
+
+// ResourceScopeKeyNotNil applies the NotNil predicate on the "resource_scope_key" field.
+func ResourceScopeKeyNotNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotNull(FieldResourceScopeKey))
+}
+
+// ResourceScopeKeyEqualFold applies the EqualFold predicate on the "resource_scope_key" field.
+func ResourceScopeKeyEqualFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEqualFold(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyContainsFold applies the ContainsFold predicate on the "resource_scope_key" field.
+func ResourceScopeKeyContainsFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContainsFold(FieldResourceScopeKey, v))
+}
+
+// QuotaScopeIDEQ applies the EQ predicate on the "quota_scope_id" field.
+func QuotaScopeIDEQ(v int) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldQuotaScopeID, v))
+}
+
+// QuotaScopeIDNEQ applies the NEQ predicate on the "quota_scope_id" field.
+func QuotaScopeIDNEQ(v int) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNEQ(FieldQuotaScopeID, v))
+}
+
+// QuotaScopeIDIn applies the In predicate on the "quota_scope_id" field.
+func QuotaScopeIDIn(vs ...int) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIn(FieldQuotaScopeID, vs...))
+}
+
+// QuotaScopeIDNotIn applies the NotIn predicate on the "quota_scope_id" field.
+func QuotaScopeIDNotIn(vs ...int) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotIn(FieldQuotaScopeID, vs...))
+}
+
+// QuotaScopeIDIsNil applies the IsNil predicate on the "quota_scope_id" field.
+func QuotaScopeIDIsNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIsNull(FieldQuotaScopeID))
+}
+
+// QuotaScopeIDNotNil applies the NotNil predicate on the "quota_scope_id" field.
+func QuotaScopeIDNotNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotNull(FieldQuotaScopeID))
+}
+
+// QuotaScopeNameSnapshotEQ applies the EQ predicate on the "quota_scope_name_snapshot" field.
+func QuotaScopeNameSnapshotEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldQuotaScopeNameSnapshot, v))
+}
+
+// QuotaScopeNameSnapshotNEQ applies the NEQ predicate on the "quota_scope_name_snapshot" field.
+func QuotaScopeNameSnapshotNEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNEQ(FieldQuotaScopeNameSnapshot, v))
+}
+
+// QuotaScopeNameSnapshotIn applies the In predicate on the "quota_scope_name_snapshot" field.
+func QuotaScopeNameSnapshotIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIn(FieldQuotaScopeNameSnapshot, vs...))
+}
+
+// QuotaScopeNameSnapshotNotIn applies the NotIn predicate on the "quota_scope_name_snapshot" field.
+func QuotaScopeNameSnapshotNotIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotIn(FieldQuotaScopeNameSnapshot, vs...))
+}
+
+// QuotaScopeNameSnapshotGT applies the GT predicate on the "quota_scope_name_snapshot" field.
+func QuotaScopeNameSnapshotGT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGT(FieldQuotaScopeNameSnapshot, v))
+}
+
+// QuotaScopeNameSnapshotGTE applies the GTE predicate on the "quota_scope_name_snapshot" field.
+func QuotaScopeNameSnapshotGTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGTE(FieldQuotaScopeNameSnapshot, v))
+}
+
+// QuotaScopeNameSnapshotLT applies the LT predicate on the "quota_scope_name_snapshot" field.
+func QuotaScopeNameSnapshotLT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLT(FieldQuotaScopeNameSnapshot, v))
+}
+
+// QuotaScopeNameSnapshotLTE applies the LTE predicate on the "quota_scope_name_snapshot" field.
+func QuotaScopeNameSnapshotLTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLTE(FieldQuotaScopeNameSnapshot, v))
+}
+
+// QuotaScopeNameSnapshotContains applies the Contains predicate on the "quota_scope_name_snapshot" field.
+func QuotaScopeNameSnapshotContains(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContains(FieldQuotaScopeNameSnapshot, v))
+}
+
+// QuotaScopeNameSnapshotHasPrefix applies the HasPrefix predicate on the "quota_scope_name_snapshot" field.
+func QuotaScopeNameSnapshotHasPrefix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasPrefix(FieldQuotaScopeNameSnapshot, v))
+}
+
+// QuotaScopeNameSnapshotHasSuffix applies the HasSuffix predicate on the "quota_scope_name_snapshot" field.
+func QuotaScopeNameSnapshotHasSuffix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasSuffix(FieldQuotaScopeNameSnapshot, v))
+}
+
+// QuotaScopeNameSnapshotIsNil applies the IsNil predicate on the "quota_scope_name_snapshot" field.
+func QuotaScopeNameSnapshotIsNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIsNull(FieldQuotaScopeNameSnapshot))
+}
+
+// QuotaScopeNameSnapshotNotNil applies the NotNil predicate on the "quota_scope_name_snapshot" field.
+func QuotaScopeNameSnapshotNotNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotNull(FieldQuotaScopeNameSnapshot))
+}
+
+// QuotaScopeNameSnapshotEqualFold applies the EqualFold predicate on the "quota_scope_name_snapshot" field.
+func QuotaScopeNameSnapshotEqualFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEqualFold(FieldQuotaScopeNameSnapshot, v))
+}
+
+// QuotaScopeNameSnapshotContainsFold applies the ContainsFold predicate on the "quota_scope_name_snapshot" field.
+func QuotaScopeNameSnapshotContainsFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContainsFold(FieldQuotaScopeNameSnapshot, v))
+}
+
+// QuotaScopeStatusSnapshotEQ applies the EQ predicate on the "quota_scope_status_snapshot" field.
+func QuotaScopeStatusSnapshotEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldQuotaScopeStatusSnapshot, v))
+}
+
+// QuotaScopeStatusSnapshotNEQ applies the NEQ predicate on the "quota_scope_status_snapshot" field.
+func QuotaScopeStatusSnapshotNEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNEQ(FieldQuotaScopeStatusSnapshot, v))
+}
+
+// QuotaScopeStatusSnapshotIn applies the In predicate on the "quota_scope_status_snapshot" field.
+func QuotaScopeStatusSnapshotIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIn(FieldQuotaScopeStatusSnapshot, vs...))
+}
+
+// QuotaScopeStatusSnapshotNotIn applies the NotIn predicate on the "quota_scope_status_snapshot" field.
+func QuotaScopeStatusSnapshotNotIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotIn(FieldQuotaScopeStatusSnapshot, vs...))
+}
+
+// QuotaScopeStatusSnapshotGT applies the GT predicate on the "quota_scope_status_snapshot" field.
+func QuotaScopeStatusSnapshotGT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGT(FieldQuotaScopeStatusSnapshot, v))
+}
+
+// QuotaScopeStatusSnapshotGTE applies the GTE predicate on the "quota_scope_status_snapshot" field.
+func QuotaScopeStatusSnapshotGTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGTE(FieldQuotaScopeStatusSnapshot, v))
+}
+
+// QuotaScopeStatusSnapshotLT applies the LT predicate on the "quota_scope_status_snapshot" field.
+func QuotaScopeStatusSnapshotLT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLT(FieldQuotaScopeStatusSnapshot, v))
+}
+
+// QuotaScopeStatusSnapshotLTE applies the LTE predicate on the "quota_scope_status_snapshot" field.
+func QuotaScopeStatusSnapshotLTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLTE(FieldQuotaScopeStatusSnapshot, v))
+}
+
+// QuotaScopeStatusSnapshotContains applies the Contains predicate on the "quota_scope_status_snapshot" field.
+func QuotaScopeStatusSnapshotContains(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContains(FieldQuotaScopeStatusSnapshot, v))
+}
+
+// QuotaScopeStatusSnapshotHasPrefix applies the HasPrefix predicate on the "quota_scope_status_snapshot" field.
+func QuotaScopeStatusSnapshotHasPrefix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasPrefix(FieldQuotaScopeStatusSnapshot, v))
+}
+
+// QuotaScopeStatusSnapshotHasSuffix applies the HasSuffix predicate on the "quota_scope_status_snapshot" field.
+func QuotaScopeStatusSnapshotHasSuffix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasSuffix(FieldQuotaScopeStatusSnapshot, v))
+}
+
+// QuotaScopeStatusSnapshotIsNil applies the IsNil predicate on the "quota_scope_status_snapshot" field.
+func QuotaScopeStatusSnapshotIsNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIsNull(FieldQuotaScopeStatusSnapshot))
+}
+
+// QuotaScopeStatusSnapshotNotNil applies the NotNil predicate on the "quota_scope_status_snapshot" field.
+func QuotaScopeStatusSnapshotNotNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotNull(FieldQuotaScopeStatusSnapshot))
+}
+
+// QuotaScopeStatusSnapshotEqualFold applies the EqualFold predicate on the "quota_scope_status_snapshot" field.
+func QuotaScopeStatusSnapshotEqualFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEqualFold(FieldQuotaScopeStatusSnapshot, v))
+}
+
+// QuotaScopeStatusSnapshotContainsFold applies the ContainsFold predicate on the "quota_scope_status_snapshot" field.
+func QuotaScopeStatusSnapshotContainsFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContainsFold(FieldQuotaScopeStatusSnapshot, v))
 }
 
 // CredentialNameSnapshotEQ applies the EQ predicate on the "credential_name_snapshot" field.
@@ -1366,6 +1721,29 @@ func HasCredential() predicate.RequestExecution {
 func HasCredentialWith(preds ...predicate.UpstreamCredential) predicate.RequestExecution {
 	return predicate.RequestExecution(func(s *sql.Selector) {
 		step := newCredentialStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasQuotaScope applies the HasEdge predicate on the "quota_scope" edge.
+func HasQuotaScope() predicate.RequestExecution {
+	return predicate.RequestExecution(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, QuotaScopeTable, QuotaScopeColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasQuotaScopeWith applies the HasEdge predicate on the "quota_scope" edge with a given conditions (other predicates).
+func HasQuotaScopeWith(preds ...predicate.CredentialQuotaScope) predicate.RequestExecution {
+	return predicate.RequestExecution(func(s *sql.Selector) {
+		step := newQuotaScopeStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

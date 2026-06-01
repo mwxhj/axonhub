@@ -233,21 +233,57 @@ input UpstreamCredentialSecretInput {
 
 input CreateUpstreamCredentialInput {
   name: String
-  providerType: String
-  baseURL: String
-  authKind: UpstreamCredentialAuthKind
-  secretKind: UpstreamCredentialSecretKind
-  issuerScope: String
   secret: UpstreamCredentialSecretInput!
   status: UpstreamCredentialStatus
-  weight: Int
+  quotaScopeID: ID
+  quota: CreateCredentialQuotaScopeInput
   remark: String
 }
 
 input UpdateUpstreamCredentialInput {
   name: String
   status: UpstreamCredentialStatus
-  weight: Int
+  quotaScopeID: ID
+  clearQuotaScope: Boolean
+  quota: UpdateCredentialQuotaScopeInput
+  remark: String
+}
+
+input CreateCredentialQuotaScopeInput {
+  name: String
+  status: CredentialQuotaScopeStatus
+  unit: CredentialQuotaScopeUnit
+  limitAmount: String
+  usedAmount: String
+  warningThresholdPercent: Int
+  resetPolicy: CredentialQuotaScopeResetPolicy
+  resetAt: Time
+  windowStartedAt: Time
+  overLimitAction: CredentialQuotaScopeOverLimitAction
+  pauseUntil: Time
+  source: CredentialQuotaScopeSource
+  lastError: String
+  remark: String
+}
+
+input UpdateCredentialQuotaScopeInput {
+  name: String
+  status: CredentialQuotaScopeStatus
+  unit: CredentialQuotaScopeUnit
+  limitAmount: String
+  usedAmount: String
+  warningThresholdPercent: Int
+  clearWarningThreshold: Boolean
+  resetPolicy: CredentialQuotaScopeResetPolicy
+  resetAt: Time
+  clearResetAt: Boolean
+  windowStartedAt: Time
+  clearWindowStartedAt: Boolean
+  overLimitAction: CredentialQuotaScopeOverLimitAction
+  pauseUntil: Time
+  clearPauseUntil: Boolean
+  source: CredentialQuotaScopeSource
+  lastError: String
   remark: String
 }
 
@@ -259,13 +295,10 @@ input AttachCredentialToChannelInput {
   channelID: ID!
   credentialID: ID!
   enabled: Boolean
-  weightOverride: Int
 }
 
 input UpdateChannelCredentialRefInput {
   enabled: Boolean
-  weightOverride: Int
-  clearWeightOverride: Boolean
 }
 
 type MigrateLegacyCredentialsPayload {
@@ -678,6 +711,12 @@ extend type Channel {
   disabledAPIKeys: [DisabledAPIKey!] @goField(forceResolver: true)
 
   """
+  Backward-compatible aggregate provider quota status for channel quota badges.
+  Credential/resource-scoped rows are available through providerQuotaStatuses.
+  """
+  providerQuotaStatus: ProviderQuotaStatus @goField(forceResolver: true)
+
+  """
   Real-time per-channel concurrency limiter snapshot. Returns null when the channel
   has no MaxConcurrent configured (no admission control).
   """
@@ -847,6 +886,8 @@ type Mutation {
   # Upstream Credential Management
   createUpstreamCredential(input: CreateUpstreamCredentialInput!): UpstreamCredential!
   updateUpstreamCredential(id: ID!, input: UpdateUpstreamCredentialInput!): UpstreamCredential!
+  createCredentialQuotaScope(input: CreateCredentialQuotaScopeInput!): CredentialQuotaScope!
+  updateCredentialQuotaScope(id: ID!, input: UpdateCredentialQuotaScopeInput!): CredentialQuotaScope!
   rotateUpstreamCredentialSecret(
     id: ID!
     input: RotateUpstreamCredentialSecretInput!

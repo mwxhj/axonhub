@@ -1,6 +1,6 @@
 'use client';
 
-import { Archive, KeyRound, Link, MoreHorizontal, Pencil, Power } from 'lucide-react';
+import { Archive, Info, KeyRound, Link, MoreHorizontal, Pencil, Power } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PermissionGuard } from '@/components/permission-guard';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ export function CredentialsActions({ credential }: CredentialsActionsProps) {
   const { t } = useTranslation();
   const { setOpen, setCurrentCredential } = useCredentialsContext();
 
-  const openDialog = (dialog: 'edit' | 'rotate' | 'status' | 'channels') => {
+  const openDialog = (dialog: 'detail' | 'edit' | 'rotate' | 'status' | 'channels') => {
     setCurrentCredential(credential);
     setOpen(dialog);
   };
@@ -31,6 +31,10 @@ export function CredentialsActions({ credential }: CredentialsActionsProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align='end'>
+          <DropdownMenuItem onClick={() => openDialog('detail')}>
+            <Info className='mr-2 h-4 w-4' />
+            {t('credentials.actions.detail')}
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openDialog('channels')}>
             <Link className='mr-2 h-4 w-4' />
             {t('credentials.actions.channels')}

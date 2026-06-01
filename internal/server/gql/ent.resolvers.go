@@ -80,17 +80,6 @@ func (r *channelResolver) Policies(ctx context.Context, obj *ent.Channel) (*obje
 	return &obj.Policies, nil
 }
 
-// ProviderQuotaStatus is the resolver for the providerQuotaStatus field.
-// It returns null (not an error) when no quota status exists for the channel.
-func (r *channelResolver) ProviderQuotaStatus(ctx context.Context, obj *ent.Channel) (*ent.ProviderQuotaStatus, error) {
-	pqs, err := obj.ProviderQuotaStatus(ctx)
-	if ent.IsNotFound(err) {
-		return nil, nil
-	}
-
-	return pqs, err
-}
-
 // ID is the resolver for the id field.
 func (r *channelCredentialRefResolver) ID(ctx context.Context, obj *ent.ChannelCredentialRef) (*objects.GUID, error) {
 	return &objects.GUID{
@@ -234,6 +223,14 @@ func (r *channelProbeResolver) ChannelID(ctx context.Context, obj *ent.ChannelPr
 }
 
 // ID is the resolver for the id field.
+func (r *credentialQuotaScopeResolver) ID(ctx context.Context, obj *ent.CredentialQuotaScope) (*objects.GUID, error) {
+	return &objects.GUID{
+		Type: ent.TypeCredentialQuotaScope,
+		ID:   obj.ID,
+	}, nil
+}
+
+// ID is the resolver for the id field.
 func (r *dataStorageResolver) ID(ctx context.Context, obj *ent.DataStorage) (*objects.GUID, error) {
 	return &objects.GUID{
 		Type: ent.TypeDataStorage,
@@ -304,6 +301,10 @@ func (r *providerQuotaStatusResolver) ID(ctx context.Context, obj *ent.ProviderQ
 
 // ChannelID is the resolver for the channelID field.
 func (r *providerQuotaStatusResolver) ChannelID(ctx context.Context, obj *ent.ProviderQuotaStatus) (*objects.GUID, error) {
+	if obj.ChannelID == 0 {
+		return nil, nil
+	}
+
 	return &objects.GUID{
 		Type: ent.TypeChannel,
 		ID:   obj.ChannelID,
@@ -319,6 +320,18 @@ func (r *providerQuotaStatusResolver) CredentialID(ctx context.Context, obj *ent
 	return &objects.GUID{
 		Type: ent.TypeUpstreamCredential,
 		ID:   obj.CredentialID,
+	}, nil
+}
+
+// QuotaScopeID is the resolver for the quotaScopeID field.
+func (r *providerQuotaStatusResolver) QuotaScopeID(ctx context.Context, obj *ent.ProviderQuotaStatus) (*objects.GUID, error) {
+	if obj.QuotaScopeID == 0 {
+		return nil, nil
+	}
+
+	return &objects.GUID{
+		Type: ent.TypeCredentialQuotaScope,
+		ID:   obj.QuotaScopeID,
 	}, nil
 }
 
@@ -410,6 +423,22 @@ func (r *queryResolver) ChannelOverrideTemplates(ctx context.Context, after *ent
 	return r.client.ChannelOverrideTemplate.Query().Paginate(ctx, after, first, before, last,
 		ent.WithChannelOverrideTemplateOrder(orderBy),
 		ent.WithChannelOverrideTemplateFilter(where.Filter),
+	)
+}
+
+// CredentialQuotaScopes is the resolver for the credentialQuotaScopes field.
+func (r *queryResolver) CredentialQuotaScopes(ctx context.Context, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.CredentialQuotaScopeOrder, where *ent.CredentialQuotaScopeWhereInput) (*ent.CredentialQuotaScopeConnection, error) {
+	if err := validatePaginationArgs(first, last); err != nil {
+		return nil, err
+	}
+
+	if orderBy != nil && orderBy.Field.String() == "CREATED_AT" {
+		orderBy.Field = ent.DefaultCredentialQuotaScopeOrder.Field
+	}
+
+	return r.client.CredentialQuotaScope.Query().Paginate(ctx, after, first, before, last,
+		ent.WithCredentialQuotaScopeOrder(orderBy),
+		ent.WithCredentialQuotaScopeFilter(where.Filter),
 	)
 }
 
@@ -775,6 +804,18 @@ func (r *requestExecutionResolver) DataStorageID(ctx context.Context, obj *ent.R
 	}, nil
 }
 
+// QuotaScopeID is the resolver for the quotaScopeID field.
+func (r *requestExecutionResolver) QuotaScopeID(ctx context.Context, obj *ent.RequestExecution) (*objects.GUID, error) {
+	if obj.QuotaScopeID == 0 {
+		return nil, nil
+	}
+
+	return &objects.GUID{
+		Type: ent.TypeCredentialQuotaScope,
+		ID:   obj.QuotaScopeID,
+	}, nil
+}
+
 // RequestBody is the resolver for the requestBody field.
 func (r *requestExecutionResolver) RequestBody(ctx context.Context, obj *ent.RequestExecution) (objects.JSONRawMessage, error) {
 	value, err := r.requestService.LoadRequestExecutionRequestBody(ctx, obj)
@@ -820,6 +861,11 @@ func (r *requestExecutionResolver) Channel(ctx context.Context, obj *ent.Request
 // Credential is the resolver for the credential field.
 func (r *requestExecutionResolver) Credential(ctx context.Context, obj *ent.RequestExecution) (*ent.UpstreamCredential, error) {
 	return getNilableUpstreamCredential(ctx, r.client, obj.CredentialID)
+}
+
+// QuotaScope is the resolver for the quotaScope field.
+func (r *requestExecutionResolver) QuotaScope(ctx context.Context, obj *ent.RequestExecution) (*ent.CredentialQuotaScope, error) {
+	return getNilableCredentialQuotaScope(ctx, r.client, obj.QuotaScopeID)
 }
 
 // ID is the resolver for the id field.
@@ -904,6 +950,27 @@ func (r *upstreamCredentialResolver) ID(ctx context.Context, obj *ent.UpstreamCr
 	}, nil
 }
 
+// QuotaScopeID is the resolver for the quotaScopeID field.
+func (r *upstreamCredentialResolver) QuotaScopeID(ctx context.Context, obj *ent.UpstreamCredential) (*objects.GUID, error) {
+	if obj.QuotaScopeID == nil || *obj.QuotaScopeID == 0 {
+		return nil, nil
+	}
+
+	return &objects.GUID{
+		Type: ent.TypeCredentialQuotaScope,
+		ID:   *obj.QuotaScopeID,
+	}, nil
+}
+
+// QuotaScope is the resolver for the quotaScope field.
+func (r *upstreamCredentialResolver) QuotaScope(ctx context.Context, obj *ent.UpstreamCredential) (*ent.CredentialQuotaScope, error) {
+	if obj.QuotaScopeID == nil {
+		return nil, nil
+	}
+
+	return getNilableCredentialQuotaScope(ctx, r.client, *obj.QuotaScopeID)
+}
+
 // ID is the resolver for the id field.
 func (r *usageLogResolver) ID(ctx context.Context, obj *ent.UsageLog) (*objects.GUID, error) {
 	return &objects.GUID{
@@ -948,6 +1015,18 @@ func (r *usageLogResolver) CredentialID(ctx context.Context, obj *ent.UsageLog) 
 	}, nil
 }
 
+// QuotaScopeID is the resolver for the quotaScopeID field.
+func (r *usageLogResolver) QuotaScopeID(ctx context.Context, obj *ent.UsageLog) (*objects.GUID, error) {
+	if obj.QuotaScopeID == 0 {
+		return nil, nil
+	}
+
+	return &objects.GUID{
+		Type: ent.TypeCredentialQuotaScope,
+		ID:   obj.QuotaScopeID,
+	}, nil
+}
+
 // Channel is the resolver for the channel field.
 func (r *usageLogResolver) Channel(ctx context.Context, obj *ent.UsageLog) (*ent.Channel, error) {
 	return getNilableChannel(ctx, r.client, obj.ChannelID)
@@ -956,6 +1035,11 @@ func (r *usageLogResolver) Channel(ctx context.Context, obj *ent.UsageLog) (*ent
 // Credential is the resolver for the credential field.
 func (r *usageLogResolver) Credential(ctx context.Context, obj *ent.UsageLog) (*ent.UpstreamCredential, error) {
 	return getNilableUpstreamCredential(ctx, r.client, obj.CredentialID)
+}
+
+// QuotaScope is the resolver for the quotaScope field.
+func (r *usageLogResolver) QuotaScope(ctx context.Context, obj *ent.UsageLog) (*ent.CredentialQuotaScope, error) {
+	return getNilableCredentialQuotaScope(ctx, r.client, obj.QuotaScopeID)
 }
 
 // ID is the resolver for the id field.
@@ -1058,6 +1142,11 @@ func (r *Resolver) ChannelOverrideTemplate() ChannelOverrideTemplateResolver {
 // ChannelProbe returns ChannelProbeResolver implementation.
 func (r *Resolver) ChannelProbe() ChannelProbeResolver { return &channelProbeResolver{r} }
 
+// CredentialQuotaScope returns CredentialQuotaScopeResolver implementation.
+func (r *Resolver) CredentialQuotaScope() CredentialQuotaScopeResolver {
+	return &credentialQuotaScopeResolver{r}
+}
+
 // DataStorage returns DataStorageResolver implementation.
 func (r *Resolver) DataStorage() DataStorageResolver { return &dataStorageResolver{r} }
 
@@ -1129,6 +1218,7 @@ type channelModelPriceResolver struct{ *Resolver }
 type channelModelPriceVersionResolver struct{ *Resolver }
 type channelOverrideTemplateResolver struct{ *Resolver }
 type channelProbeResolver struct{ *Resolver }
+type credentialQuotaScopeResolver struct{ *Resolver }
 type dataStorageResolver struct{ *Resolver }
 type modelResolver struct{ *Resolver }
 type oIDCIdentityResolver struct{ *Resolver }

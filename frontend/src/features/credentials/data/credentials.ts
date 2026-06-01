@@ -7,16 +7,19 @@ import {
   attachCredentialToChannelInputSchema,
   attachableChannelsConnectionSchema,
   createUpstreamCredentialInputSchema,
+  credentialQuotaScopesConnectionSchema,
   credentialRefSchema,
   migrateLegacyCredentialsPayloadSchema,
   rotateUpstreamCredentialSecretInputSchema,
   updateChannelCredentialRefInputSchema,
   updateUpstreamCredentialInputSchema,
+  upstreamCredentialDetailSchema,
   upstreamCredentialSchema,
   upstreamCredentialsConnectionSchema,
   type AttachCredentialToChannelInput,
   type AttachableChannelsConnection,
   type CreateUpstreamCredentialInput,
+  type CredentialQuotaScopesConnection,
   type CredentialRef,
   type CredentialStatus,
   type MigrateLegacyCredentialsPayload,
@@ -24,6 +27,7 @@ import {
   type UpdateChannelCredentialRefInput,
   type UpdateUpstreamCredentialInput,
   type UpstreamCredential,
+  type UpstreamCredentialDetail,
   type UpstreamCredentialsConnection,
 } from './schema';
 
@@ -31,6 +35,7 @@ export type {
   AttachCredentialToChannelInput,
   AttachableChannelsConnection,
   CreateUpstreamCredentialInput,
+  CredentialQuotaScopesConnection,
   CredentialRef,
   CredentialStatus,
   MigrateLegacyCredentialsPayload,
@@ -38,21 +43,37 @@ export type {
   UpdateChannelCredentialRefInput,
   UpdateUpstreamCredentialInput,
   UpstreamCredential,
+  UpstreamCredentialDetail,
   UpstreamCredentialsConnection,
 };
 
 const CREDENTIAL_FIELDS = `
   id
   name
-  secretKind
-  issuerScope
   keyHint
   quotaScopeID
+  secretFingerprint
+  quotaScope {
+    id
+    name
+    status
+    unit
+    limitAmount
+    usedAmount
+    warningThresholdPercent
+    resetPolicy
+    resetAt
+    windowStartedAt
+    overLimitAction
+    pauseUntil
+    source
+    lastError
+    remark
+  }
   quotaStatus
   lastError
   fingerprint
   status
-  weight
   remark
   createdAt
   updatedAt
@@ -64,7 +85,6 @@ const CREDENTIAL_FIELDS = `
         channelID
         credentialID
         enabled
-        weightOverride
         channel {
           id
           name
@@ -82,7 +102,6 @@ const REF_FIELDS = `
   channelID
   credentialID
   enabled
-  weightOverride
   channel {
     id
     name
@@ -141,7 +160,6 @@ const ATTACHABLE_CHANNELS_QUERY = `
                 channelID
                 credentialID
                 enabled
-                weightOverride
                 channel {
                   id
                   name
@@ -161,6 +179,124 @@ const ATTACHABLE_CHANNELS_QUERY = `
         endCursor
       }
       totalCount
+    }
+  }
+`;
+
+const CREDENTIAL_QUOTA_SCOPES_QUERY = `
+  query CredentialQuotaScopes(
+    $first: Int
+    $after: Cursor
+    $where: CredentialQuotaScopeWhereInput
+    $orderBy: CredentialQuotaScopeOrder
+  ) {
+    credentialQuotaScopes(first: $first, after: $after, where: $where, orderBy: $orderBy) {
+      edges {
+        node {
+          id
+          name
+          status
+          unit
+          limitAmount
+          usedAmount
+          warningThresholdPercent
+          resetPolicy
+          resetAt
+          windowStartedAt
+          overLimitAction
+          pauseUntil
+          source
+          lastError
+          remark
+        }
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
+      totalCount
+    }
+  }
+`;
+
+const UPSTREAM_CREDENTIAL_DETAIL_QUERY = `
+  query UpstreamCredentialDetail($id: ID!) {
+    node(id: $id) {
+      ... on UpstreamCredential {
+        ${CREDENTIAL_FIELDS}
+        executions(first: 20, orderBy: { field: CREATED_AT, direction: DESC }) {
+          edges {
+            node {
+              id
+              createdAt
+              status
+              modelID
+              responseStatusCode
+              errorMessage
+              credentialNameSnapshot
+              credentialKeyHint
+              credentialSource
+              resourceScopeKey
+              quotaScopeNameSnapshot
+              quotaScopeStatusSnapshot
+              channel {
+                id
+                name
+                type
+                baseURL
+                status
+              }
+            }
+            cursor
+          }
+          pageInfo {
+            hasNextPage
+            hasPreviousPage
+            startCursor
+            endCursor
+          }
+          totalCount
+        }
+        usageLogs(first: 20, orderBy: { field: CREATED_AT, direction: DESC }) {
+          edges {
+            node {
+              id
+              createdAt
+              requestID
+              modelID
+              promptTokens
+              completionTokens
+              totalTokens
+              totalCost
+              source
+              format
+              credentialNameSnapshot
+              credentialKeyHint
+              credentialSource
+              resourceScopeKey
+              quotaScopeNameSnapshot
+              quotaScopeStatusSnapshot
+              channel {
+                id
+                name
+                type
+                baseURL
+                status
+              }
+            }
+            cursor
+          }
+          pageInfo {
+            hasNextPage
+            hasPreviousPage
+            startCursor
+            endCursor
+          }
+          totalCount
+        }
+      }
     }
   }
 `;
@@ -232,6 +368,7 @@ const MIGRATE_LEGACY_CHANNEL_CREDENTIALS_MUTATION = `
 
 function invalidateCredentialQueries(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: ['upstreamCredentials'] });
+  queryClient.invalidateQueries({ queryKey: ['credentialQuotaScopes'] });
   queryClient.invalidateQueries({ queryKey: ['credentialAttachableChannels'] });
   queryClient.invalidateQueries({ queryKey: ['channels'] });
 }
@@ -272,6 +409,47 @@ export function useAttachableChannels(variables?: Record<string, unknown>, optio
           variables
         );
         return attachableChannelsConnectionSchema.parse(data.channels);
+      } catch (error) {
+        handleError(error, t('common.errors.internalServerError'));
+        throw error;
+      }
+    },
+  });
+}
+
+export function useCredentialQuotaScopes(variables?: Record<string, unknown>, options?: { enabled?: boolean }) {
+  const { t } = useTranslation();
+  const { handleError } = useErrorHandler();
+
+  return useQuery({
+    enabled: options?.enabled ?? true,
+    queryKey: ['credentialQuotaScopes', variables],
+    queryFn: async () => {
+      try {
+        const data = await graphqlRequest<{ credentialQuotaScopes: CredentialQuotaScopesConnection }>(
+          CREDENTIAL_QUOTA_SCOPES_QUERY,
+          variables
+        );
+        return credentialQuotaScopesConnectionSchema.parse(data.credentialQuotaScopes);
+      } catch (error) {
+        handleError(error, t('common.errors.internalServerError'));
+        throw error;
+      }
+    },
+  });
+}
+
+export function useUpstreamCredentialDetail(id?: string, options?: { enabled?: boolean }) {
+  const { t } = useTranslation();
+  const { handleError } = useErrorHandler();
+
+  return useQuery({
+    enabled: Boolean(id) && (options?.enabled ?? true),
+    queryKey: ['upstreamCredentialDetail', id],
+    queryFn: async () => {
+      try {
+        const data = await graphqlRequest<{ node: unknown }>(UPSTREAM_CREDENTIAL_DETAIL_QUERY, { id });
+        return upstreamCredentialDetailSchema.nullable().parse(data.node);
       } catch (error) {
         handleError(error, t('common.errors.internalServerError'));
         throw error;

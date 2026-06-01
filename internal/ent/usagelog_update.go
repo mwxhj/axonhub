@@ -493,6 +493,18 @@ func (_u *UsageLogUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.CredentialFingerprintCleared() {
 		_spec.ClearField(usagelog.FieldCredentialFingerprint, field.TypeString)
 	}
+	if _u.mutation.SecretFingerprintCleared() {
+		_spec.ClearField(usagelog.FieldSecretFingerprint, field.TypeString)
+	}
+	if _u.mutation.ResourceScopeKeyCleared() {
+		_spec.ClearField(usagelog.FieldResourceScopeKey, field.TypeString)
+	}
+	if _u.mutation.QuotaScopeNameSnapshotCleared() {
+		_spec.ClearField(usagelog.FieldQuotaScopeNameSnapshot, field.TypeString)
+	}
+	if _u.mutation.QuotaScopeStatusSnapshotCleared() {
+		_spec.ClearField(usagelog.FieldQuotaScopeStatusSnapshot, field.TypeString)
+	}
 	if _u.mutation.CredentialNameSnapshotCleared() {
 		_spec.ClearField(usagelog.FieldCredentialNameSnapshot, field.TypeString)
 	}
@@ -501,6 +513,9 @@ func (_u *UsageLogUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.CredentialSourceCleared() {
 		_spec.ClearField(usagelog.FieldCredentialSource, field.TypeString)
+	}
+	if _u.mutation.CredentialQuotaStatusSnapshotCleared() {
+		_spec.ClearField(usagelog.FieldCredentialQuotaStatusSnapshot, field.TypeString)
 	}
 	if value, ok := _u.mutation.PromptTokens(); ok {
 		_spec.SetField(usagelog.FieldPromptTokens, field.TypeInt64, value)
@@ -1141,6 +1156,18 @@ func (_u *UsageLogUpdateOne) sqlSave(ctx context.Context) (_node *UsageLog, err 
 	if _u.mutation.CredentialFingerprintCleared() {
 		_spec.ClearField(usagelog.FieldCredentialFingerprint, field.TypeString)
 	}
+	if _u.mutation.SecretFingerprintCleared() {
+		_spec.ClearField(usagelog.FieldSecretFingerprint, field.TypeString)
+	}
+	if _u.mutation.ResourceScopeKeyCleared() {
+		_spec.ClearField(usagelog.FieldResourceScopeKey, field.TypeString)
+	}
+	if _u.mutation.QuotaScopeNameSnapshotCleared() {
+		_spec.ClearField(usagelog.FieldQuotaScopeNameSnapshot, field.TypeString)
+	}
+	if _u.mutation.QuotaScopeStatusSnapshotCleared() {
+		_spec.ClearField(usagelog.FieldQuotaScopeStatusSnapshot, field.TypeString)
+	}
 	if _u.mutation.CredentialNameSnapshotCleared() {
 		_spec.ClearField(usagelog.FieldCredentialNameSnapshot, field.TypeString)
 	}
@@ -1149,6 +1176,9 @@ func (_u *UsageLogUpdateOne) sqlSave(ctx context.Context) (_node *UsageLog, err 
 	}
 	if _u.mutation.CredentialSourceCleared() {
 		_spec.ClearField(usagelog.FieldCredentialSource, field.TypeString)
+	}
+	if _u.mutation.CredentialQuotaStatusSnapshotCleared() {
+		_spec.ClearField(usagelog.FieldCredentialQuotaStatusSnapshot, field.TypeString)
 	}
 	if value, ok := _u.mutation.PromptTokens(); ok {
 		_spec.SetField(usagelog.FieldPromptTokens, field.TypeInt64, value)

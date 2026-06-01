@@ -696,7 +696,7 @@ func TestBackupService_Restore_UsageStats(t *testing.T) {
 	proj := createBackupTestProject(t, client, ctx, "Project1", "Test Project")
 	ch := createBackupTestChannel(t, client, ctx, "Channel 1", channel.TypeOpenai)
 	ak := createBackupTestAPIKey(t, client, ctx, user, proj, "API Key 1", "sk-test-key-1")
-	_, usage := createBackupTestUsage(t, client, ctx, proj, ch, ak)
+	_, _, usage := createBackupTestUsage(t, client, ctx, proj, ch, ak)
 
 	data, err := service.Backup(ctx, BackupOptions{
 		IncludeAPIKeys:    true,
@@ -727,6 +727,7 @@ func TestBackupService_Restore_UsageStats(t *testing.T) {
 	require.NotNil(t, usageLogs[0].TotalCost)
 	require.Equal(t, *usage.TotalCost, *usageLogs[0].TotalCost)
 	require.Equal(t, "price-ref", usageLogs[0].CostPriceReferenceID)
+	require.Equal(t, "available", usageLogs[0].CredentialQuotaStatusSnapshot)
 
 	restoredRequest, err := client.Request.Get(ctx, usageLogs[0].RequestID)
 	require.NoError(t, err)

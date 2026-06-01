@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 )
@@ -72,6 +73,28 @@ func (_c *ProviderQuotaStatusCreate) SetChannelID(v int) *ProviderQuotaStatusCre
 	return _c
 }
 
+// SetNillableChannelID sets the "channel_id" field if the given value is not nil.
+func (_c *ProviderQuotaStatusCreate) SetNillableChannelID(v *int) *ProviderQuotaStatusCreate {
+	if v != nil {
+		_c.SetChannelID(*v)
+	}
+	return _c
+}
+
+// SetScopeKey sets the "scope_key" field.
+func (_c *ProviderQuotaStatusCreate) SetScopeKey(v string) *ProviderQuotaStatusCreate {
+	_c.mutation.SetScopeKey(v)
+	return _c
+}
+
+// SetNillableScopeKey sets the "scope_key" field if the given value is not nil.
+func (_c *ProviderQuotaStatusCreate) SetNillableScopeKey(v *string) *ProviderQuotaStatusCreate {
+	if v != nil {
+		_c.SetScopeKey(*v)
+	}
+	return _c
+}
+
 // SetCredentialID sets the "credential_id" field.
 func (_c *ProviderQuotaStatusCreate) SetCredentialID(v int) *ProviderQuotaStatusCreate {
 	_c.mutation.SetCredentialID(v)
@@ -96,6 +119,48 @@ func (_c *ProviderQuotaStatusCreate) SetCredentialFingerprint(v string) *Provide
 func (_c *ProviderQuotaStatusCreate) SetNillableCredentialFingerprint(v *string) *ProviderQuotaStatusCreate {
 	if v != nil {
 		_c.SetCredentialFingerprint(*v)
+	}
+	return _c
+}
+
+// SetSecretFingerprint sets the "secret_fingerprint" field.
+func (_c *ProviderQuotaStatusCreate) SetSecretFingerprint(v string) *ProviderQuotaStatusCreate {
+	_c.mutation.SetSecretFingerprint(v)
+	return _c
+}
+
+// SetNillableSecretFingerprint sets the "secret_fingerprint" field if the given value is not nil.
+func (_c *ProviderQuotaStatusCreate) SetNillableSecretFingerprint(v *string) *ProviderQuotaStatusCreate {
+	if v != nil {
+		_c.SetSecretFingerprint(*v)
+	}
+	return _c
+}
+
+// SetResourceScopeKey sets the "resource_scope_key" field.
+func (_c *ProviderQuotaStatusCreate) SetResourceScopeKey(v string) *ProviderQuotaStatusCreate {
+	_c.mutation.SetResourceScopeKey(v)
+	return _c
+}
+
+// SetNillableResourceScopeKey sets the "resource_scope_key" field if the given value is not nil.
+func (_c *ProviderQuotaStatusCreate) SetNillableResourceScopeKey(v *string) *ProviderQuotaStatusCreate {
+	if v != nil {
+		_c.SetResourceScopeKey(*v)
+	}
+	return _c
+}
+
+// SetQuotaScopeID sets the "quota_scope_id" field.
+func (_c *ProviderQuotaStatusCreate) SetQuotaScopeID(v int) *ProviderQuotaStatusCreate {
+	_c.mutation.SetQuotaScopeID(v)
+	return _c
+}
+
+// SetNillableQuotaScopeID sets the "quota_scope_id" field if the given value is not nil.
+func (_c *ProviderQuotaStatusCreate) SetNillableQuotaScopeID(v *int) *ProviderQuotaStatusCreate {
+	if v != nil {
+		_c.SetQuotaScopeID(*v)
 	}
 	return _c
 }
@@ -162,6 +227,11 @@ func (_c *ProviderQuotaStatusCreate) SetCredential(v *UpstreamCredential) *Provi
 	return _c.SetCredentialID(v.ID)
 }
 
+// SetQuotaScope sets the "quota_scope" edge to the CredentialQuotaScope entity.
+func (_c *ProviderQuotaStatusCreate) SetQuotaScope(v *CredentialQuotaScope) *ProviderQuotaStatusCreate {
+	return _c.SetQuotaScopeID(v.ID)
+}
+
 // Mutation returns the ProviderQuotaStatusMutation object of the builder.
 func (_c *ProviderQuotaStatusCreate) Mutation() *ProviderQuotaStatusMutation {
 	return _c.mutation
@@ -217,6 +287,10 @@ func (_c *ProviderQuotaStatusCreate) defaults() error {
 		v := providerquotastatus.DefaultDeletedAt
 		_c.mutation.SetDeletedAt(v)
 	}
+	if _, ok := _c.mutation.ScopeKey(); !ok {
+		v := providerquotastatus.DefaultScopeKey
+		_c.mutation.SetScopeKey(v)
+	}
 	if _, ok := _c.mutation.Ready(); !ok {
 		v := providerquotastatus.DefaultReady
 		_c.mutation.SetReady(v)
@@ -229,12 +303,27 @@ func (_c *ProviderQuotaStatusCreate) check() error {
 	if _, ok := _c.mutation.DeletedAt(); !ok {
 		return &ValidationError{Name: "deleted_at", err: errors.New(`ent: missing required field "ProviderQuotaStatus.deleted_at"`)}
 	}
-	if _, ok := _c.mutation.ChannelID(); !ok {
-		return &ValidationError{Name: "channel_id", err: errors.New(`ent: missing required field "ProviderQuotaStatus.channel_id"`)}
+	if _, ok := _c.mutation.ScopeKey(); !ok {
+		return &ValidationError{Name: "scope_key", err: errors.New(`ent: missing required field "ProviderQuotaStatus.scope_key"`)}
+	}
+	if v, ok := _c.mutation.ScopeKey(); ok {
+		if err := providerquotastatus.ScopeKeyValidator(v); err != nil {
+			return &ValidationError{Name: "scope_key", err: fmt.Errorf(`ent: validator failed for field "ProviderQuotaStatus.scope_key": %w`, err)}
+		}
 	}
 	if v, ok := _c.mutation.CredentialFingerprint(); ok {
 		if err := providerquotastatus.CredentialFingerprintValidator(v); err != nil {
 			return &ValidationError{Name: "credential_fingerprint", err: fmt.Errorf(`ent: validator failed for field "ProviderQuotaStatus.credential_fingerprint": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.SecretFingerprint(); ok {
+		if err := providerquotastatus.SecretFingerprintValidator(v); err != nil {
+			return &ValidationError{Name: "secret_fingerprint", err: fmt.Errorf(`ent: validator failed for field "ProviderQuotaStatus.secret_fingerprint": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.ResourceScopeKey(); ok {
+		if err := providerquotastatus.ResourceScopeKeyValidator(v); err != nil {
+			return &ValidationError{Name: "resource_scope_key", err: fmt.Errorf(`ent: validator failed for field "ProviderQuotaStatus.resource_scope_key": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.ProviderType(); !ok {
@@ -261,9 +350,6 @@ func (_c *ProviderQuotaStatusCreate) check() error {
 	}
 	if _, ok := _c.mutation.NextCheckAt(); !ok {
 		return &ValidationError{Name: "next_check_at", err: errors.New(`ent: missing required field "ProviderQuotaStatus.next_check_at"`)}
-	}
-	if len(_c.mutation.ChannelIDs()) == 0 {
-		return &ValidationError{Name: "channel", err: errors.New(`ent: missing required edge "ProviderQuotaStatus.channel"`)}
 	}
 	return nil
 }
@@ -304,9 +390,21 @@ func (_c *ProviderQuotaStatusCreate) createSpec() (*ProviderQuotaStatus, *sqlgra
 		_spec.SetField(providerquotastatus.FieldDeletedAt, field.TypeInt, value)
 		_node.DeletedAt = value
 	}
+	if value, ok := _c.mutation.ScopeKey(); ok {
+		_spec.SetField(providerquotastatus.FieldScopeKey, field.TypeString, value)
+		_node.ScopeKey = value
+	}
 	if value, ok := _c.mutation.CredentialFingerprint(); ok {
 		_spec.SetField(providerquotastatus.FieldCredentialFingerprint, field.TypeString, value)
 		_node.CredentialFingerprint = value
+	}
+	if value, ok := _c.mutation.SecretFingerprint(); ok {
+		_spec.SetField(providerquotastatus.FieldSecretFingerprint, field.TypeString, value)
+		_node.SecretFingerprint = value
+	}
+	if value, ok := _c.mutation.ResourceScopeKey(); ok {
+		_spec.SetField(providerquotastatus.FieldResourceScopeKey, field.TypeString, value)
+		_node.ResourceScopeKey = value
 	}
 	if value, ok := _c.mutation.ProviderType(); ok {
 		_spec.SetField(providerquotastatus.FieldProviderType, field.TypeEnum, value)
@@ -334,7 +432,7 @@ func (_c *ProviderQuotaStatusCreate) createSpec() (*ProviderQuotaStatus, *sqlgra
 	}
 	if nodes := _c.mutation.ChannelIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2O,
+			Rel:     sqlgraph.M2O,
 			Inverse: true,
 			Table:   providerquotastatus.ChannelTable,
 			Columns: []string{providerquotastatus.ChannelColumn},
@@ -364,6 +462,23 @@ func (_c *ProviderQuotaStatusCreate) createSpec() (*ProviderQuotaStatus, *sqlgra
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.CredentialID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.QuotaScopeIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   providerquotastatus.QuotaScopeTable,
+			Columns: []string{providerquotastatus.QuotaScopeColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(credentialquotascope.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.QuotaScopeID = nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
@@ -448,6 +563,36 @@ func (u *ProviderQuotaStatusUpsert) AddDeletedAt(v int) *ProviderQuotaStatusUpse
 	return u
 }
 
+// SetChannelID sets the "channel_id" field.
+func (u *ProviderQuotaStatusUpsert) SetChannelID(v int) *ProviderQuotaStatusUpsert {
+	u.Set(providerquotastatus.FieldChannelID, v)
+	return u
+}
+
+// UpdateChannelID sets the "channel_id" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsert) UpdateChannelID() *ProviderQuotaStatusUpsert {
+	u.SetExcluded(providerquotastatus.FieldChannelID)
+	return u
+}
+
+// ClearChannelID clears the value of the "channel_id" field.
+func (u *ProviderQuotaStatusUpsert) ClearChannelID() *ProviderQuotaStatusUpsert {
+	u.SetNull(providerquotastatus.FieldChannelID)
+	return u
+}
+
+// SetScopeKey sets the "scope_key" field.
+func (u *ProviderQuotaStatusUpsert) SetScopeKey(v string) *ProviderQuotaStatusUpsert {
+	u.Set(providerquotastatus.FieldScopeKey, v)
+	return u
+}
+
+// UpdateScopeKey sets the "scope_key" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsert) UpdateScopeKey() *ProviderQuotaStatusUpsert {
+	u.SetExcluded(providerquotastatus.FieldScopeKey)
+	return u
+}
+
 // SetCredentialID sets the "credential_id" field.
 func (u *ProviderQuotaStatusUpsert) SetCredentialID(v int) *ProviderQuotaStatusUpsert {
 	u.Set(providerquotastatus.FieldCredentialID, v)
@@ -481,6 +626,60 @@ func (u *ProviderQuotaStatusUpsert) UpdateCredentialFingerprint() *ProviderQuota
 // ClearCredentialFingerprint clears the value of the "credential_fingerprint" field.
 func (u *ProviderQuotaStatusUpsert) ClearCredentialFingerprint() *ProviderQuotaStatusUpsert {
 	u.SetNull(providerquotastatus.FieldCredentialFingerprint)
+	return u
+}
+
+// SetSecretFingerprint sets the "secret_fingerprint" field.
+func (u *ProviderQuotaStatusUpsert) SetSecretFingerprint(v string) *ProviderQuotaStatusUpsert {
+	u.Set(providerquotastatus.FieldSecretFingerprint, v)
+	return u
+}
+
+// UpdateSecretFingerprint sets the "secret_fingerprint" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsert) UpdateSecretFingerprint() *ProviderQuotaStatusUpsert {
+	u.SetExcluded(providerquotastatus.FieldSecretFingerprint)
+	return u
+}
+
+// ClearSecretFingerprint clears the value of the "secret_fingerprint" field.
+func (u *ProviderQuotaStatusUpsert) ClearSecretFingerprint() *ProviderQuotaStatusUpsert {
+	u.SetNull(providerquotastatus.FieldSecretFingerprint)
+	return u
+}
+
+// SetResourceScopeKey sets the "resource_scope_key" field.
+func (u *ProviderQuotaStatusUpsert) SetResourceScopeKey(v string) *ProviderQuotaStatusUpsert {
+	u.Set(providerquotastatus.FieldResourceScopeKey, v)
+	return u
+}
+
+// UpdateResourceScopeKey sets the "resource_scope_key" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsert) UpdateResourceScopeKey() *ProviderQuotaStatusUpsert {
+	u.SetExcluded(providerquotastatus.FieldResourceScopeKey)
+	return u
+}
+
+// ClearResourceScopeKey clears the value of the "resource_scope_key" field.
+func (u *ProviderQuotaStatusUpsert) ClearResourceScopeKey() *ProviderQuotaStatusUpsert {
+	u.SetNull(providerquotastatus.FieldResourceScopeKey)
+	return u
+}
+
+// SetQuotaScopeID sets the "quota_scope_id" field.
+func (u *ProviderQuotaStatusUpsert) SetQuotaScopeID(v int) *ProviderQuotaStatusUpsert {
+	u.Set(providerquotastatus.FieldQuotaScopeID, v)
+	return u
+}
+
+// UpdateQuotaScopeID sets the "quota_scope_id" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsert) UpdateQuotaScopeID() *ProviderQuotaStatusUpsert {
+	u.SetExcluded(providerquotastatus.FieldQuotaScopeID)
+	return u
+}
+
+// ClearQuotaScopeID clears the value of the "quota_scope_id" field.
+func (u *ProviderQuotaStatusUpsert) ClearQuotaScopeID() *ProviderQuotaStatusUpsert {
+	u.SetNull(providerquotastatus.FieldQuotaScopeID)
 	return u
 }
 
@@ -564,9 +763,6 @@ func (u *ProviderQuotaStatusUpsertOne) UpdateNewValues() *ProviderQuotaStatusUps
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(providerquotastatus.FieldCreatedAt)
 		}
-		if _, exists := u.create.mutation.ChannelID(); exists {
-			s.SetIgnore(providerquotastatus.FieldChannelID)
-		}
 		if _, exists := u.create.mutation.ProviderType(); exists {
 			s.SetIgnore(providerquotastatus.FieldProviderType)
 		}
@@ -636,6 +832,41 @@ func (u *ProviderQuotaStatusUpsertOne) UpdateDeletedAt() *ProviderQuotaStatusUps
 	})
 }
 
+// SetChannelID sets the "channel_id" field.
+func (u *ProviderQuotaStatusUpsertOne) SetChannelID(v int) *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.SetChannelID(v)
+	})
+}
+
+// UpdateChannelID sets the "channel_id" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsertOne) UpdateChannelID() *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.UpdateChannelID()
+	})
+}
+
+// ClearChannelID clears the value of the "channel_id" field.
+func (u *ProviderQuotaStatusUpsertOne) ClearChannelID() *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.ClearChannelID()
+	})
+}
+
+// SetScopeKey sets the "scope_key" field.
+func (u *ProviderQuotaStatusUpsertOne) SetScopeKey(v string) *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.SetScopeKey(v)
+	})
+}
+
+// UpdateScopeKey sets the "scope_key" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsertOne) UpdateScopeKey() *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.UpdateScopeKey()
+	})
+}
+
 // SetCredentialID sets the "credential_id" field.
 func (u *ProviderQuotaStatusUpsertOne) SetCredentialID(v int) *ProviderQuotaStatusUpsertOne {
 	return u.Update(func(s *ProviderQuotaStatusUpsert) {
@@ -675,6 +906,69 @@ func (u *ProviderQuotaStatusUpsertOne) UpdateCredentialFingerprint() *ProviderQu
 func (u *ProviderQuotaStatusUpsertOne) ClearCredentialFingerprint() *ProviderQuotaStatusUpsertOne {
 	return u.Update(func(s *ProviderQuotaStatusUpsert) {
 		s.ClearCredentialFingerprint()
+	})
+}
+
+// SetSecretFingerprint sets the "secret_fingerprint" field.
+func (u *ProviderQuotaStatusUpsertOne) SetSecretFingerprint(v string) *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.SetSecretFingerprint(v)
+	})
+}
+
+// UpdateSecretFingerprint sets the "secret_fingerprint" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsertOne) UpdateSecretFingerprint() *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.UpdateSecretFingerprint()
+	})
+}
+
+// ClearSecretFingerprint clears the value of the "secret_fingerprint" field.
+func (u *ProviderQuotaStatusUpsertOne) ClearSecretFingerprint() *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.ClearSecretFingerprint()
+	})
+}
+
+// SetResourceScopeKey sets the "resource_scope_key" field.
+func (u *ProviderQuotaStatusUpsertOne) SetResourceScopeKey(v string) *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.SetResourceScopeKey(v)
+	})
+}
+
+// UpdateResourceScopeKey sets the "resource_scope_key" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsertOne) UpdateResourceScopeKey() *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.UpdateResourceScopeKey()
+	})
+}
+
+// ClearResourceScopeKey clears the value of the "resource_scope_key" field.
+func (u *ProviderQuotaStatusUpsertOne) ClearResourceScopeKey() *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.ClearResourceScopeKey()
+	})
+}
+
+// SetQuotaScopeID sets the "quota_scope_id" field.
+func (u *ProviderQuotaStatusUpsertOne) SetQuotaScopeID(v int) *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.SetQuotaScopeID(v)
+	})
+}
+
+// UpdateQuotaScopeID sets the "quota_scope_id" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsertOne) UpdateQuotaScopeID() *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.UpdateQuotaScopeID()
+	})
+}
+
+// ClearQuotaScopeID clears the value of the "quota_scope_id" field.
+func (u *ProviderQuotaStatusUpsertOne) ClearQuotaScopeID() *ProviderQuotaStatusUpsertOne {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.ClearQuotaScopeID()
 	})
 }
 
@@ -934,9 +1228,6 @@ func (u *ProviderQuotaStatusUpsertBulk) UpdateNewValues() *ProviderQuotaStatusUp
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(providerquotastatus.FieldCreatedAt)
 			}
-			if _, exists := b.mutation.ChannelID(); exists {
-				s.SetIgnore(providerquotastatus.FieldChannelID)
-			}
 			if _, exists := b.mutation.ProviderType(); exists {
 				s.SetIgnore(providerquotastatus.FieldProviderType)
 			}
@@ -1007,6 +1298,41 @@ func (u *ProviderQuotaStatusUpsertBulk) UpdateDeletedAt() *ProviderQuotaStatusUp
 	})
 }
 
+// SetChannelID sets the "channel_id" field.
+func (u *ProviderQuotaStatusUpsertBulk) SetChannelID(v int) *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.SetChannelID(v)
+	})
+}
+
+// UpdateChannelID sets the "channel_id" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsertBulk) UpdateChannelID() *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.UpdateChannelID()
+	})
+}
+
+// ClearChannelID clears the value of the "channel_id" field.
+func (u *ProviderQuotaStatusUpsertBulk) ClearChannelID() *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.ClearChannelID()
+	})
+}
+
+// SetScopeKey sets the "scope_key" field.
+func (u *ProviderQuotaStatusUpsertBulk) SetScopeKey(v string) *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.SetScopeKey(v)
+	})
+}
+
+// UpdateScopeKey sets the "scope_key" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsertBulk) UpdateScopeKey() *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.UpdateScopeKey()
+	})
+}
+
 // SetCredentialID sets the "credential_id" field.
 func (u *ProviderQuotaStatusUpsertBulk) SetCredentialID(v int) *ProviderQuotaStatusUpsertBulk {
 	return u.Update(func(s *ProviderQuotaStatusUpsert) {
@@ -1046,6 +1372,69 @@ func (u *ProviderQuotaStatusUpsertBulk) UpdateCredentialFingerprint() *ProviderQ
 func (u *ProviderQuotaStatusUpsertBulk) ClearCredentialFingerprint() *ProviderQuotaStatusUpsertBulk {
 	return u.Update(func(s *ProviderQuotaStatusUpsert) {
 		s.ClearCredentialFingerprint()
+	})
+}
+
+// SetSecretFingerprint sets the "secret_fingerprint" field.
+func (u *ProviderQuotaStatusUpsertBulk) SetSecretFingerprint(v string) *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.SetSecretFingerprint(v)
+	})
+}
+
+// UpdateSecretFingerprint sets the "secret_fingerprint" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsertBulk) UpdateSecretFingerprint() *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.UpdateSecretFingerprint()
+	})
+}
+
+// ClearSecretFingerprint clears the value of the "secret_fingerprint" field.
+func (u *ProviderQuotaStatusUpsertBulk) ClearSecretFingerprint() *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.ClearSecretFingerprint()
+	})
+}
+
+// SetResourceScopeKey sets the "resource_scope_key" field.
+func (u *ProviderQuotaStatusUpsertBulk) SetResourceScopeKey(v string) *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.SetResourceScopeKey(v)
+	})
+}
+
+// UpdateResourceScopeKey sets the "resource_scope_key" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsertBulk) UpdateResourceScopeKey() *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.UpdateResourceScopeKey()
+	})
+}
+
+// ClearResourceScopeKey clears the value of the "resource_scope_key" field.
+func (u *ProviderQuotaStatusUpsertBulk) ClearResourceScopeKey() *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.ClearResourceScopeKey()
+	})
+}
+
+// SetQuotaScopeID sets the "quota_scope_id" field.
+func (u *ProviderQuotaStatusUpsertBulk) SetQuotaScopeID(v int) *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.SetQuotaScopeID(v)
+	})
+}
+
+// UpdateQuotaScopeID sets the "quota_scope_id" field to the value that was provided on create.
+func (u *ProviderQuotaStatusUpsertBulk) UpdateQuotaScopeID() *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.UpdateQuotaScopeID()
+	})
+}
+
+// ClearQuotaScopeID clears the value of the "quota_scope_id" field.
+func (u *ProviderQuotaStatusUpsertBulk) ClearQuotaScopeID() *ProviderQuotaStatusUpsertBulk {
+	return u.Update(func(s *ProviderQuotaStatusUpsert) {
+		s.ClearQuotaScopeID()
 	})
 }
 

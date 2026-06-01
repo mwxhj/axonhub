@@ -39,6 +39,12 @@ func (UsageLog) Indexes() []ent.Index {
 			StorageKey("usage_logs_by_credential_id_created_at"),
 		index.Fields("credential_fingerprint", "created_at").
 			StorageKey("usage_logs_by_credential_fingerprint_created_at"),
+		index.Fields("secret_fingerprint", "created_at").
+			StorageKey("usage_logs_by_secret_fingerprint_created_at"),
+		index.Fields("resource_scope_key", "created_at").
+			StorageKey("usage_logs_by_resource_scope_key_created_at"),
+		index.Fields("quota_scope_id", "created_at").
+			StorageKey("usage_logs_by_quota_scope_id_created_at"),
 		index.Fields("api_key_id", "created_at").
 			StorageKey("usage_logs_by_api_key_id_created_at"),
 	}
@@ -59,7 +65,29 @@ func (UsageLog) Fields() []ent.Field {
 			Optional().
 			Immutable().
 			MaxLen(128).
-			Comment("Safe upstream credential identity used for this request; never stores the raw secret"),
+			Comment("Legacy safe upstream credential identity used for this request; never stores the raw secret"),
+		field.String("secret_fingerprint").
+			Optional().
+			Immutable().
+			MaxLen(128).
+			Comment("Safe secret-only identity used for this request; never stores the raw secret"),
+		field.String("resource_scope_key").
+			Optional().
+			Immutable().
+			MaxLen(512).
+			Comment("Safe runtime resource scope for channel resource namespace plus secret fingerprint"),
+		field.Int("quota_scope_id").
+			Optional().
+			Immutable().
+			Comment("Credential quota scope used for this request when known"),
+		field.String("quota_scope_name_snapshot").
+			Optional().
+			Immutable().
+			Comment("Quota scope display name captured when usage was logged"),
+		field.String("quota_scope_status_snapshot").
+			Optional().
+			Immutable().
+			Comment("Quota scope status captured when usage was logged"),
 		field.String("credential_name_snapshot").
 			Optional().
 			Immutable().
@@ -72,6 +100,10 @@ func (UsageLog) Fields() []ent.Field {
 			Optional().
 			Immutable().
 			Comment("Credential source used for this request: ref, legacy, or unknown"),
+		field.String("credential_quota_status_snapshot").
+			Optional().
+			Immutable().
+			Comment("Credential quota/budget status captured when usage was logged"),
 
 		// Core usage metrics from llm.Usage
 		field.Int64("prompt_tokens").Default(0).Comment("Number of tokens in the prompt"),
@@ -135,6 +167,14 @@ func (UsageLog) Edges() []ent.Edge {
 		edge.From("credential", UpstreamCredential.Type).
 			Ref("usage_logs").
 			Field("credential_id").
+			Immutable().
+			Annotations(
+				entgql.Directives(forceResolver()),
+			).
+			Unique(),
+		edge.From("quota_scope", CredentialQuotaScope.Type).
+			Ref("usage_logs").
+			Field("quota_scope_id").
 			Immutable().
 			Annotations(
 				entgql.Directives(forceResolver()),

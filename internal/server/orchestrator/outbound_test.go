@@ -12,10 +12,14 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/looplj/axonhub/internal/authz"
+	"github.com/looplj/axonhub/internal/contexts"
 	"github.com/looplj/axonhub/internal/ent"
+	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/enttest"
 	"github.com/looplj/axonhub/internal/ent/request"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/objects"
 	"github.com/looplj/axonhub/internal/server/biz"
 	"github.com/looplj/axonhub/llm"
@@ -31,9 +35,35 @@ type mockTransformer struct {
 	aggregatedMeta     llm.ResponseMeta
 	aggregatedErr      error
 	apiFormat          llm.APIFormat
+
+	credentialID          int
+	credentialAPIKey      string
+	credentialFingerprint string
+	secretFingerprint     string
+	resourceScopeKey      string
+	credentialName        string
+	credentialKeyHint     string
+	credentialSource      string
+	credentialQuotaStatus string
+	quotaScopeID          int
+	quotaScopeName        string
+	quotaScopeStatus      string
 }
 
 func (m *mockTransformer) TransformRequest(ctx context.Context, req *llm.Request) (*httpclient.Request, error) {
+	if m.credentialID > 0 || m.credentialAPIKey != "" || m.credentialFingerprint != "" {
+		contexts.WithChannelCredential(ctx, m.credentialID, m.credentialAPIKey, m.credentialFingerprint)
+	}
+	if m.secretFingerprint != "" || m.resourceScopeKey != "" {
+		contexts.WithChannelCredentialIdentity(ctx, m.secretFingerprint, m.resourceScopeKey)
+	}
+	if m.credentialName != "" || m.credentialKeyHint != "" || m.credentialSource != "" || m.credentialQuotaStatus != "" {
+		contexts.WithChannelCredentialMetadata(ctx, m.credentialName, m.credentialKeyHint, m.credentialSource, m.credentialQuotaStatus)
+	}
+	if m.quotaScopeID > 0 || m.quotaScopeName != "" || m.quotaScopeStatus != "" {
+		contexts.WithChannelCredentialQuotaScope(ctx, m.quotaScopeID, m.quotaScopeName, m.quotaScopeStatus)
+	}
+
 	body, err := json.Marshal(map[string]any{
 		"model":       req.Model,
 		"messages":    req.Messages,
@@ -163,6 +193,171 @@ func TestPersistentOutboundTransformer_TransformRequest_OriginalModelRestoration
 			require.Equal(t, tt.expectedFinalModel, llmRequest.Model)
 		})
 	}
+}
+
+func TestPersistRequestExecutionStoresCredentialPerRetryAttempt(t *testing.T) {
+	ctx, client := setupTest(t)
+	project := createTestProject(t, ctx, client)
+	ch1 := createTestChannel(t, ctx, client)
+	ch2, err := client.Channel.Create().
+		SetType(channel.TypeOpenai).
+		SetName("Second OpenAI Channel").
+		SetBaseURL("https://api.openai.com/v1").
+		SetCredentials(objects.ChannelCredentials{APIKey: "second-test-api-key"}).
+		SetSupportedModels([]string{"gpt-4"}).
+		SetDefaultTestModel("gpt-4").
+		Save(ctx)
+	require.NoError(t, err)
+	_, requestService, _, _ := setupTestServices(t, client)
+
+	req, err := client.Request.Create().
+		SetProjectID(project.ID).
+		SetModelID("gpt-4").
+		SetStatus(request.StatusProcessing).
+		SetRequestBody(objects.JSONRawMessage([]byte(`{"model":"gpt-4"}`))).
+		Save(ctx)
+	require.NoError(t, err)
+
+	scope1, err := client.CredentialQuotaScope.Create().
+		SetName("scope-one").
+		SetStatus(credentialquotascope.StatusAvailable).
+		Save(ctx)
+	require.NoError(t, err)
+	scope2, err := client.CredentialQuotaScope.Create().
+		SetName("scope-two").
+		SetStatus(credentialquotascope.StatusWarning).
+		Save(ctx)
+	require.NoError(t, err)
+	cred1, err := client.UpstreamCredential.Create().
+		SetName("first credential").
+		SetAuthKind(upstreamcredential.AuthKindAPIKey).
+		SetSecretKind(upstreamcredential.SecretKindAPIKey).
+		SetSecretPayload(objects.UpstreamCredentialSecretFromAPIKey("first-raw-key")).
+		SetFingerprint("cred:first").
+		SetSecretFingerprint("secret:first").
+		SetKeyHint("firs...t-key").
+		SetQuotaStatus("available").
+		SetQuotaScopeID(scope1.ID).
+		Save(ctx)
+	require.NoError(t, err)
+	cred2, err := client.UpstreamCredential.Create().
+		SetName("second credential").
+		SetAuthKind(upstreamcredential.AuthKindAPIKey).
+		SetSecretKind(upstreamcredential.SecretKindAPIKey).
+		SetSecretPayload(objects.UpstreamCredentialSecretFromAPIKey("second-raw-key")).
+		SetFingerprint("cred:second").
+		SetSecretFingerprint("secret:second").
+		SetKeyHint("seco...d-key").
+		SetQuotaStatus("warning").
+		SetQuotaScopeID(scope2.ID).
+		Save(ctx)
+	require.NoError(t, err)
+
+	firstOutbound := &mockTransformer{
+		credentialID:          cred1.ID,
+		credentialAPIKey:      "first-raw-key",
+		credentialFingerprint: "cred:first",
+		secretFingerprint:     "secret:first",
+		resourceScopeKey:      "openai:secret:first",
+		credentialName:        "first credential",
+		credentialKeyHint:     "firs...t-key",
+		credentialSource:      biz.ChannelCredentialSourceRef,
+		credentialQuotaStatus: "available",
+		quotaScopeID:          scope1.ID,
+		quotaScopeName:        scope1.Name,
+		quotaScopeStatus:      scope1.Status.String(),
+	}
+	secondOutbound := &mockTransformer{
+		credentialID:          cred2.ID,
+		credentialAPIKey:      "second-raw-key",
+		credentialFingerprint: "cred:second",
+		secretFingerprint:     "secret:second",
+		resourceScopeKey:      "openai:secret:second",
+		credentialName:        "second credential",
+		credentialKeyHint:     "seco...d-key",
+		credentialSource:      biz.ChannelCredentialSourceLegacy,
+		credentialQuotaStatus: "warning",
+		quotaScopeID:          scope2.ID,
+		quotaScopeName:        scope2.Name,
+		quotaScopeStatus:      scope2.Status.String(),
+	}
+
+	state := &PersistenceState{
+		Request:        req,
+		RequestService: requestService,
+		ChannelModelsCandidates: []*ChannelModelsCandidate{
+			{
+				Channel:  &biz.Channel{Channel: ch1, Outbound: firstOutbound},
+				Models:   []biz.ChannelModelEntry{{RequestModel: "gpt-4", ActualModel: "gpt-4"}},
+				Priority: 0,
+			},
+			{
+				Channel:  &biz.Channel{Channel: ch2, Outbound: secondOutbound},
+				Models:   []biz.ChannelModelEntry{{RequestModel: "gpt-4", ActualModel: "gpt-4"}},
+				Priority: 0,
+			},
+		},
+		CurrentCandidateIndex: 0,
+		CurrentModelIndex:     0,
+		CurrentCandidate:      &ChannelModelsCandidate{Channel: &biz.Channel{Channel: ch1, Outbound: firstOutbound}},
+	}
+	state.CurrentCandidate = state.ChannelModelsCandidates[0]
+	processor := &PersistentOutboundTransformer{
+		wrapped: firstOutbound,
+		state:   state,
+	}
+	middleware := persistRequestExecution(processor)
+	llmReq := &llm.Request{Model: "gpt-4"}
+
+	rawReq, err := processor.TransformRequest(ctx, llmReq)
+	require.NoError(t, err)
+	_, err = middleware.OnOutboundRawRequest(ctx, rawReq)
+	require.NoError(t, err)
+	firstExec := processor.GetRequestExecution()
+	require.NotNil(t, firstExec)
+
+	require.NoError(t, processor.NextChannel(ctx))
+	rawReq, err = processor.TransformRequest(ctx, llmReq)
+	require.NoError(t, err)
+	_, err = middleware.OnOutboundRawRequest(ctx, rawReq)
+	require.NoError(t, err)
+	secondExec := processor.GetRequestExecution()
+	require.NotNil(t, secondExec)
+
+	executions, err := client.RequestExecution.Query().
+		Where(requestexecution.RequestID(req.ID)).
+		Order(ent.Asc(requestexecution.FieldID)).
+		All(ctx)
+	require.NoError(t, err)
+	require.Len(t, executions, 2)
+
+	require.Equal(t, firstExec.ID, executions[0].ID)
+	require.Equal(t, ch1.ID, executions[0].ChannelID)
+	require.Equal(t, cred1.ID, executions[0].CredentialID)
+	require.Equal(t, "cred:first", executions[0].CredentialFingerprint)
+	require.Equal(t, "secret:first", executions[0].SecretFingerprint)
+	require.Equal(t, "openai:secret:first", executions[0].ResourceScopeKey)
+	require.Equal(t, "first credential", executions[0].CredentialNameSnapshot)
+	require.Equal(t, "firs...t-key", executions[0].CredentialKeyHint)
+	require.Equal(t, biz.ChannelCredentialSourceRef, executions[0].CredentialSource)
+	require.Equal(t, "available", executions[0].CredentialQuotaStatusSnapshot)
+	require.Equal(t, scope1.ID, executions[0].QuotaScopeID)
+	require.Equal(t, "scope-one", executions[0].QuotaScopeNameSnapshot)
+	require.Equal(t, credentialquotascope.StatusAvailable.String(), executions[0].QuotaScopeStatusSnapshot)
+
+	require.Equal(t, secondExec.ID, executions[1].ID)
+	require.Equal(t, ch2.ID, executions[1].ChannelID)
+	require.Equal(t, cred2.ID, executions[1].CredentialID)
+	require.Equal(t, "cred:second", executions[1].CredentialFingerprint)
+	require.Equal(t, "secret:second", executions[1].SecretFingerprint)
+	require.Equal(t, "openai:secret:second", executions[1].ResourceScopeKey)
+	require.Equal(t, "second credential", executions[1].CredentialNameSnapshot)
+	require.Equal(t, "seco...d-key", executions[1].CredentialKeyHint)
+	require.Equal(t, biz.ChannelCredentialSourceLegacy, executions[1].CredentialSource)
+	require.Equal(t, "warning", executions[1].CredentialQuotaStatusSnapshot)
+	require.Equal(t, scope2.ID, executions[1].QuotaScopeID)
+	require.Equal(t, "scope-two", executions[1].QuotaScopeNameSnapshot)
+	require.Equal(t, credentialquotascope.StatusWarning.String(), executions[1].QuotaScopeStatusSnapshot)
 }
 
 func TestPersistentOutboundTransformer_PrepareForRetry(t *testing.T) {

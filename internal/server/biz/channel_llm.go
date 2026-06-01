@@ -163,6 +163,9 @@ func getAPIKeyProvider(ch *Channel) auth.APIKeyProvider {
 	if len(enabled) >= 1 {
 		return NewTraceStickyKeyProvider(ch)
 	}
+	if len(authCapableAPIKeyCredentialViews(ch.cachedCredentialViews)) >= 1 {
+		return NewTraceStickyKeyProvider(ch)
+	}
 
 	panic(fmt.Errorf("no enabled api key configured for channel %s", ch.Name))
 }
@@ -442,7 +445,7 @@ func (svc *ChannelService) buildChannelWithTransformer(c *ent.Channel) (*Channel
 	// Validate credentials early so we can fail fast without constructing HTTP clients/transformers.
 	//
 	// NOTE: "enabled" keys excludes keys that were explicitly disabled for this channel.
-	enabledKeys := enabledAPIKeysFromCredentialViews(credentialViews)
+	enabledKeys := authCapableAPIKeysFromCredentialViews(credentialViews)
 	if len(enabledKeys) == 0 {
 		enabledKeys = resolvedCredentials.GetEnabledAPIKeys(c.DisabledAPIKeys)
 	}
@@ -1017,7 +1020,7 @@ func (svc *ChannelService) buildChannelWithTransformer(c *ent.Channel) (*Channel
 	case channel.TypeOllama:
 		// Ollama is often used locally without API key, but may also be configured with one
 		var apiKeyProvider auth.APIKeyProvider
-		if len(ch.cachedEnabledAPIKeys) > 0 {
+		if len(ch.cachedEnabledAPIKeys) > 0 || len(authCapableAPIKeyCredentialViews(ch.cachedCredentialViews)) > 0 {
 			apiKeyProvider = getAPIKeyProvider(ch)
 		}
 

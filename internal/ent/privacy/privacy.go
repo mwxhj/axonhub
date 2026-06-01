@@ -303,6 +303,30 @@ func (f ChannelProbeMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mu
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ChannelProbeMutation", m)
 }
 
+// The CredentialQuotaScopeQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type CredentialQuotaScopeQueryRuleFunc func(context.Context, *ent.CredentialQuotaScopeQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f CredentialQuotaScopeQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.CredentialQuotaScopeQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.CredentialQuotaScopeQuery", q)
+}
+
+// The CredentialQuotaScopeMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type CredentialQuotaScopeMutationRuleFunc func(context.Context, *ent.CredentialQuotaScopeMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f CredentialQuotaScopeMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.CredentialQuotaScopeMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.CredentialQuotaScopeMutation", m)
+}
+
 // The DataStorageQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type DataStorageQueryRuleFunc func(context.Context, *ent.DataStorageQuery) error
@@ -786,6 +810,8 @@ func queryFilter(q ent.Query) (Filter, error) {
 		return q.Filter(), nil
 	case *ent.ChannelProbeQuery:
 		return q.Filter(), nil
+	case *ent.CredentialQuotaScopeQuery:
+		return q.Filter(), nil
 	case *ent.DataStorageQuery:
 		return q.Filter(), nil
 	case *ent.ModelQuery:
@@ -844,6 +870,8 @@ func mutationFilter(m ent.Mutation) (Filter, error) {
 	case *ent.ChannelOverrideTemplateMutation:
 		return m.Filter(), nil
 	case *ent.ChannelProbeMutation:
+		return m.Filter(), nil
+	case *ent.CredentialQuotaScopeMutation:
 		return m.Filter(), nil
 	case *ent.DataStorageMutation:
 		return m.Filter(), nil

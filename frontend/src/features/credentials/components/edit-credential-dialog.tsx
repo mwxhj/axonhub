@@ -19,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useCredentialsContext } from '../context/credentials-context';
 import { useUpdateUpstreamCredential } from '../data/credentials';
 import type { CredentialFormValues, CredentialStatus } from '../data/schema';
+import { CredentialQuotaFields } from './credential-quota-fields';
 import { buildUpdateCredentialInput, defaultCredentialFormValues } from './form-utils';
 
 const statuses: CredentialStatus[] = ['enabled', 'disabled', 'archived'];
@@ -47,10 +48,18 @@ export function EditCredentialDialog() {
       reset({
         ...defaultCredentialFormValues,
         name: currentCredential.name ?? '',
-        authKind: currentCredential.secretKind,
-        issuerScope: currentCredential.issuerScope ?? '',
         status: currentCredential.status,
-        weight: currentCredential.weight,
+        quotaScopeMode: currentCredential.quotaScope ? 'new' : currentCredential.quotaScopeID ? 'shared' : 'none',
+        quotaScopeID: currentCredential.quotaScopeID ?? '',
+        quotaScopeName: currentCredential.quotaScope?.name ?? '',
+        quotaUnit: currentCredential.quotaScope?.unit ?? 'usd',
+        quotaLimitAmount: currentCredential.quotaScope?.limitAmount ?? '',
+        quotaUsedAmount: currentCredential.quotaScope?.usedAmount ?? '',
+        quotaResetPolicy: currentCredential.quotaScope?.resetPolicy ?? 'none',
+        quotaResetAt: currentCredential.quotaScope?.resetAt ? currentCredential.quotaScope.resetAt.slice(0, 16) : '',
+        quotaWarningThresholdPercent: currentCredential.quotaScope?.warningThresholdPercent ?? 80,
+        quotaOverLimitAction: currentCredential.quotaScope?.overLimitAction ?? 'warn',
+        quotaRemark: currentCredential.quotaScope?.remark ?? '',
         remark: currentCredential.remark ?? '',
       });
     }
@@ -89,50 +98,32 @@ export function EditCredentialDialog() {
 
             <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
               <div className='grid gap-2'>
-                <Label>{t('credentials.fields.secretKind')}</Label>
-                <Input value={currentCredential ? t(`credentials.authKinds.${currentCredential.secretKind}`) : ''} readOnly className='bg-muted' />
-              </div>
-              <div className='grid gap-2'>
                 <Label>{t('credentials.fields.keyHint')}</Label>
                 <Input value={currentCredential?.keyHint ?? ''} readOnly className='bg-muted' />
+              </div>
+              <div className='grid gap-2'>
+                <Label>{t('credentials.fields.secretFingerprint')}</Label>
+                <Input value={currentCredential?.secretFingerprint ?? currentCredential?.fingerprint ?? ''} readOnly className='bg-muted font-mono text-xs' />
               </div>
             </div>
 
             <div className='grid gap-2'>
-              <Label>{t('credentials.fields.issuerScope')}</Label>
-              <Input value={currentCredential?.issuerScope ?? ''} readOnly className='bg-muted' />
+              <Label htmlFor='edit-credential-status'>{t('credentials.fields.status')}</Label>
+              <Select value={status} onValueChange={(value) => setValue('status', value as CredentialStatus)}>
+                <SelectTrigger id='edit-credential-status'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {statuses.map((item) => (
+                    <SelectItem key={item} value={item}>
+                      {t(`credentials.status.${item}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-              <div className='grid gap-2'>
-                <Label htmlFor='edit-credential-status'>{t('credentials.fields.status')}</Label>
-                <Select value={status} onValueChange={(value) => setValue('status', value as CredentialStatus)}>
-                  <SelectTrigger id='edit-credential-status'>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statuses.map((item) => (
-                      <SelectItem key={item} value={item}>
-                        {t(`credentials.status.${item}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className='grid gap-2'>
-                <Label htmlFor='edit-credential-weight'>{t('credentials.fields.weight')}</Label>
-                <Input
-                  id='edit-credential-weight'
-                  type='number'
-                  min={1}
-                  {...register('weight', {
-                    valueAsNumber: true,
-                    min: { value: 1, message: t('credentials.validation.weightPositive') },
-                  })}
-                />
-                {errors.weight && <span className='text-sm text-red-500'>{errors.weight.message}</span>}
-              </div>
-            </div>
+            <CredentialQuotaFields register={register} setValue={setValue} watch={watch} errors={errors} />
 
             <div className='grid gap-2'>
               <Label htmlFor='edit-credential-remark'>{t('credentials.fields.remark')}</Label>

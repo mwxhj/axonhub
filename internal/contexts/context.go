@@ -139,6 +139,15 @@ func WithChannelCredential(ctx context.Context, credentialID int, apiKey string,
 	return withContainer(ctx, container)
 }
 
+// WithChannelCredentialIdentity stores safe selected credential identity values.
+func WithChannelCredentialIdentity(ctx context.Context, secretFingerprint string, resourceScopeKey string) context.Context {
+	container := getContainer(ctx)
+	container.ChannelCredentialSecretFingerprint = &secretFingerprint
+	container.ChannelCredentialResourceScopeKey = &resourceScopeKey
+
+	return withContainer(ctx, container)
+}
+
 // WithChannelCredentialMetadata stores safe selected credential display metadata.
 func WithChannelCredentialMetadata(ctx context.Context, name string, keyHint string, source string, quotaStatus string) context.Context {
 	container := getContainer(ctx)
@@ -146,6 +155,20 @@ func WithChannelCredentialMetadata(ctx context.Context, name string, keyHint str
 	container.ChannelCredentialKeyHint = &keyHint
 	container.ChannelCredentialSource = &source
 	container.ChannelCredentialQuotaStatus = &quotaStatus
+
+	return withContainer(ctx, container)
+}
+
+// WithChannelCredentialQuotaScope stores selected quota scope snapshot metadata.
+func WithChannelCredentialQuotaScope(ctx context.Context, quotaScopeID int, name string, status string) context.Context {
+	container := getContainer(ctx)
+	if quotaScopeID > 0 {
+		container.ChannelCredentialQuotaScopeID = &quotaScopeID
+	} else {
+		container.ChannelCredentialQuotaScopeID = nil
+	}
+	container.ChannelCredentialQuotaScopeName = &name
+	container.ChannelCredentialQuotaScopeStatus = &status
 
 	return withContainer(ctx, container)
 }
@@ -244,6 +267,84 @@ func GetChannelCredentialQuotaStatus(ctx context.Context) (string, bool) {
 	return "", false
 }
 
+// WithChannelCredentialSecretFingerprint stores the selected secret-only fingerprint in the context.
+func WithChannelCredentialSecretFingerprint(ctx context.Context, fingerprint string) context.Context {
+	container := getContainer(ctx)
+	container.ChannelCredentialSecretFingerprint = &fingerprint
+
+	return withContainer(ctx, container)
+}
+
+// GetChannelCredentialSecretFingerprint retrieves the selected secret-only fingerprint from the context.
+func GetChannelCredentialSecretFingerprint(ctx context.Context) (string, bool) {
+	container := getContainer(ctx)
+	if container.ChannelCredentialSecretFingerprint != nil {
+		return *container.ChannelCredentialSecretFingerprint, true
+	}
+
+	return "", false
+}
+
+// WithChannelCredentialResourceScopeKey stores the selected resource scope in the context.
+func WithChannelCredentialResourceScopeKey(ctx context.Context, resourceScopeKey string) context.Context {
+	container := getContainer(ctx)
+	container.ChannelCredentialResourceScopeKey = &resourceScopeKey
+
+	return withContainer(ctx, container)
+}
+
+// GetChannelCredentialResourceScopeKey retrieves the selected resource scope from the context.
+func GetChannelCredentialResourceScopeKey(ctx context.Context) (string, bool) {
+	container := getContainer(ctx)
+	if container.ChannelCredentialResourceScopeKey != nil {
+		return *container.ChannelCredentialResourceScopeKey, true
+	}
+
+	return "", false
+}
+
+// WithChannelCredentialQuotaScopeID stores the selected quota scope row ID in the context.
+func WithChannelCredentialQuotaScopeID(ctx context.Context, quotaScopeID int) context.Context {
+	container := getContainer(ctx)
+	if quotaScopeID > 0 {
+		container.ChannelCredentialQuotaScopeID = &quotaScopeID
+	} else {
+		container.ChannelCredentialQuotaScopeID = nil
+	}
+
+	return withContainer(ctx, container)
+}
+
+// GetChannelCredentialQuotaScopeID retrieves the selected quota scope row ID from the context.
+func GetChannelCredentialQuotaScopeID(ctx context.Context) (int, bool) {
+	container := getContainer(ctx)
+	if container.ChannelCredentialQuotaScopeID != nil {
+		return *container.ChannelCredentialQuotaScopeID, true
+	}
+
+	return 0, false
+}
+
+// GetChannelCredentialQuotaScopeName retrieves the selected quota scope display name from the context.
+func GetChannelCredentialQuotaScopeName(ctx context.Context) (string, bool) {
+	container := getContainer(ctx)
+	if container.ChannelCredentialQuotaScopeName != nil {
+		return *container.ChannelCredentialQuotaScopeName, true
+	}
+
+	return "", false
+}
+
+// GetChannelCredentialQuotaScopeStatus retrieves the selected quota scope status from the context.
+func GetChannelCredentialQuotaScopeStatus(ctx context.Context) (string, bool) {
+	container := getContainer(ctx)
+	if container.ChannelCredentialQuotaScopeStatus != nil {
+		return *container.ChannelCredentialQuotaScopeStatus, true
+	}
+
+	return "", false
+}
+
 // WithChannelCredentialFingerprint stores the selected channel credential fingerprint in the context.
 func WithChannelCredentialFingerprint(ctx context.Context, fingerprint string) context.Context {
 	container := getContainer(ctx)
@@ -331,6 +432,27 @@ func GetPreferredCredentialFingerprint(ctx context.Context) (string, bool) {
 	}
 
 	return "", false
+}
+
+// WithAllowedCredentials stores the credential identities routing kept for the
+// current candidate. Channel credential providers must not select credentials
+// outside this set when it is non-empty.
+func WithAllowedCredentials(ctx context.Context, credentialIDs []int, fingerprints []string) context.Context {
+	container := getContainer(ctx)
+	container.AllowedCredentialIDs = slices.Clone(credentialIDs)
+	container.AllowedCredentialFingerprints = slices.Clone(fingerprints)
+
+	return withContainer(ctx, container)
+}
+
+// GetAllowedCredentials retrieves the candidate-scoped credential allow-list.
+func GetAllowedCredentials(ctx context.Context) ([]int, []string, bool) {
+	container := getContainer(ctx)
+	if len(container.AllowedCredentialIDs) == 0 && len(container.AllowedCredentialFingerprints) == 0 {
+		return nil, nil, false
+	}
+
+	return slices.Clone(container.AllowedCredentialIDs), slices.Clone(container.AllowedCredentialFingerprints), true
 }
 
 // WithProjectID stores the project ID in the context.

@@ -15,6 +15,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/channelmodelpriceversion"
 	"github.com/looplj/axonhub/internal/ent/channeloverridetemplate"
 	"github.com/looplj/axonhub/internal/ent/channelprobe"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/datastorage"
 	"github.com/looplj/axonhub/internal/ent/model"
 	"github.com/looplj/axonhub/internal/ent/oidcidentity"
@@ -1007,9 +1008,9 @@ type ChannelWhereInput struct {
 	HasCredentialRefs     *bool                             `json:"hasCredentialRefs,omitempty"`
 	HasCredentialRefsWith []*ChannelCredentialRefWhereInput `json:"hasCredentialRefsWith,omitempty"`
 
-	// "provider_quota_status" edge predicates.
-	HasProviderQuotaStatus     *bool                            `json:"hasProviderQuotaStatus,omitempty"`
-	HasProviderQuotaStatusWith []*ProviderQuotaStatusWhereInput `json:"hasProviderQuotaStatusWith,omitempty"`
+	// "provider_quota_statuses" edge predicates.
+	HasProviderQuotaStatuses     *bool                            `json:"hasProviderQuotaStatuses,omitempty"`
+	HasProviderQuotaStatusesWith []*ProviderQuotaStatusWhereInput `json:"hasProviderQuotaStatusesWith,omitempty"`
 }
 
 // AddPredicates adds custom predicates to the where input to be used during the filtering phase.
@@ -1576,23 +1577,23 @@ func (i *ChannelWhereInput) P() (predicate.Channel, error) {
 		}
 		predicates = append(predicates, channel.HasCredentialRefsWith(with...))
 	}
-	if i.HasProviderQuotaStatus != nil {
-		p := channel.HasProviderQuotaStatus()
-		if !*i.HasProviderQuotaStatus {
+	if i.HasProviderQuotaStatuses != nil {
+		p := channel.HasProviderQuotaStatuses()
+		if !*i.HasProviderQuotaStatuses {
 			p = channel.Not(p)
 		}
 		predicates = append(predicates, p)
 	}
-	if len(i.HasProviderQuotaStatusWith) > 0 {
-		with := make([]predicate.ProviderQuotaStatus, 0, len(i.HasProviderQuotaStatusWith))
-		for _, w := range i.HasProviderQuotaStatusWith {
+	if len(i.HasProviderQuotaStatusesWith) > 0 {
+		with := make([]predicate.ProviderQuotaStatus, 0, len(i.HasProviderQuotaStatusesWith))
+		for _, w := range i.HasProviderQuotaStatusesWith {
 			p, err := w.P()
 			if err != nil {
-				return nil, fmt.Errorf("%w: field 'HasProviderQuotaStatusWith'", err)
+				return nil, fmt.Errorf("%w: field 'HasProviderQuotaStatusesWith'", err)
 			}
 			with = append(with, p)
 		}
-		predicates = append(predicates, channel.HasProviderQuotaStatusWith(with...))
+		predicates = append(predicates, channel.HasProviderQuotaStatusesWith(with...))
 	}
 	switch len(predicates) {
 	case 0:
@@ -1656,18 +1657,6 @@ type ChannelCredentialRefWhereInput struct {
 	// "enabled" field predicates.
 	Enabled    *bool `json:"enabled,omitempty"`
 	EnabledNEQ *bool `json:"enabledNEQ,omitempty"`
-
-	// "weight_override" field predicates.
-	WeightOverride       *int  `json:"weightOverride,omitempty"`
-	WeightOverrideNEQ    *int  `json:"weightOverrideNEQ,omitempty"`
-	WeightOverrideIn     []int `json:"weightOverrideIn,omitempty"`
-	WeightOverrideNotIn  []int `json:"weightOverrideNotIn,omitempty"`
-	WeightOverrideGT     *int  `json:"weightOverrideGT,omitempty"`
-	WeightOverrideGTE    *int  `json:"weightOverrideGTE,omitempty"`
-	WeightOverrideLT     *int  `json:"weightOverrideLT,omitempty"`
-	WeightOverrideLTE    *int  `json:"weightOverrideLTE,omitempty"`
-	WeightOverrideIsNil  bool  `json:"weightOverrideIsNil,omitempty"`
-	WeightOverrideNotNil bool  `json:"weightOverrideNotNil,omitempty"`
 
 	// "channel" edge predicates.
 	HasChannel     *bool                `json:"hasChannel,omitempty"`
@@ -1850,36 +1839,6 @@ func (i *ChannelCredentialRefWhereInput) P() (predicate.ChannelCredentialRef, er
 	}
 	if i.EnabledNEQ != nil {
 		predicates = append(predicates, channelcredentialref.EnabledNEQ(*i.EnabledNEQ))
-	}
-	if i.WeightOverride != nil {
-		predicates = append(predicates, channelcredentialref.WeightOverrideEQ(*i.WeightOverride))
-	}
-	if i.WeightOverrideNEQ != nil {
-		predicates = append(predicates, channelcredentialref.WeightOverrideNEQ(*i.WeightOverrideNEQ))
-	}
-	if len(i.WeightOverrideIn) > 0 {
-		predicates = append(predicates, channelcredentialref.WeightOverrideIn(i.WeightOverrideIn...))
-	}
-	if len(i.WeightOverrideNotIn) > 0 {
-		predicates = append(predicates, channelcredentialref.WeightOverrideNotIn(i.WeightOverrideNotIn...))
-	}
-	if i.WeightOverrideGT != nil {
-		predicates = append(predicates, channelcredentialref.WeightOverrideGT(*i.WeightOverrideGT))
-	}
-	if i.WeightOverrideGTE != nil {
-		predicates = append(predicates, channelcredentialref.WeightOverrideGTE(*i.WeightOverrideGTE))
-	}
-	if i.WeightOverrideLT != nil {
-		predicates = append(predicates, channelcredentialref.WeightOverrideLT(*i.WeightOverrideLT))
-	}
-	if i.WeightOverrideLTE != nil {
-		predicates = append(predicates, channelcredentialref.WeightOverrideLTE(*i.WeightOverrideLTE))
-	}
-	if i.WeightOverrideIsNil {
-		predicates = append(predicates, channelcredentialref.WeightOverrideIsNil())
-	}
-	if i.WeightOverrideNotNil {
-		predicates = append(predicates, channelcredentialref.WeightOverrideNotNil())
 	}
 
 	if i.HasChannel != nil {
@@ -3515,6 +3474,854 @@ func (i *ChannelProbeWhereInput) P() (predicate.ChannelProbe, error) {
 		return predicates[0], nil
 	default:
 		return channelprobe.And(predicates...), nil
+	}
+}
+
+// CredentialQuotaScopeWhereInput represents a where input for filtering CredentialQuotaScope queries.
+type CredentialQuotaScopeWhereInput struct {
+	Predicates []predicate.CredentialQuotaScope  `json:"-"`
+	Not        *CredentialQuotaScopeWhereInput   `json:"not,omitempty"`
+	Or         []*CredentialQuotaScopeWhereInput `json:"or,omitempty"`
+	And        []*CredentialQuotaScopeWhereInput `json:"and,omitempty"`
+
+	// "id" field predicates.
+	ID      *int  `json:"id,omitempty"`
+	IDNEQ   *int  `json:"idNEQ,omitempty"`
+	IDIn    []int `json:"idIn,omitempty"`
+	IDNotIn []int `json:"idNotIn,omitempty"`
+	IDGT    *int  `json:"idGT,omitempty"`
+	IDGTE   *int  `json:"idGTE,omitempty"`
+	IDLT    *int  `json:"idLT,omitempty"`
+	IDLTE   *int  `json:"idLTE,omitempty"`
+
+	// "created_at" field predicates.
+	CreatedAt      *time.Time  `json:"createdAt,omitempty"`
+	CreatedAtNEQ   *time.Time  `json:"createdAtNEQ,omitempty"`
+	CreatedAtIn    []time.Time `json:"createdAtIn,omitempty"`
+	CreatedAtNotIn []time.Time `json:"createdAtNotIn,omitempty"`
+	CreatedAtGT    *time.Time  `json:"createdAtGT,omitempty"`
+	CreatedAtGTE   *time.Time  `json:"createdAtGTE,omitempty"`
+	CreatedAtLT    *time.Time  `json:"createdAtLT,omitempty"`
+	CreatedAtLTE   *time.Time  `json:"createdAtLTE,omitempty"`
+
+	// "updated_at" field predicates.
+	UpdatedAt      *time.Time  `json:"updatedAt,omitempty"`
+	UpdatedAtNEQ   *time.Time  `json:"updatedAtNEQ,omitempty"`
+	UpdatedAtIn    []time.Time `json:"updatedAtIn,omitempty"`
+	UpdatedAtNotIn []time.Time `json:"updatedAtNotIn,omitempty"`
+	UpdatedAtGT    *time.Time  `json:"updatedAtGT,omitempty"`
+	UpdatedAtGTE   *time.Time  `json:"updatedAtGTE,omitempty"`
+	UpdatedAtLT    *time.Time  `json:"updatedAtLT,omitempty"`
+	UpdatedAtLTE   *time.Time  `json:"updatedAtLTE,omitempty"`
+
+	// "name" field predicates.
+	Name             *string  `json:"name,omitempty"`
+	NameNEQ          *string  `json:"nameNEQ,omitempty"`
+	NameIn           []string `json:"nameIn,omitempty"`
+	NameNotIn        []string `json:"nameNotIn,omitempty"`
+	NameGT           *string  `json:"nameGT,omitempty"`
+	NameGTE          *string  `json:"nameGTE,omitempty"`
+	NameLT           *string  `json:"nameLT,omitempty"`
+	NameLTE          *string  `json:"nameLTE,omitempty"`
+	NameContains     *string  `json:"nameContains,omitempty"`
+	NameHasPrefix    *string  `json:"nameHasPrefix,omitempty"`
+	NameHasSuffix    *string  `json:"nameHasSuffix,omitempty"`
+	NameIsNil        bool     `json:"nameIsNil,omitempty"`
+	NameNotNil       bool     `json:"nameNotNil,omitempty"`
+	NameEqualFold    *string  `json:"nameEqualFold,omitempty"`
+	NameContainsFold *string  `json:"nameContainsFold,omitempty"`
+
+	// "status" field predicates.
+	Status      *credentialquotascope.Status  `json:"status,omitempty"`
+	StatusNEQ   *credentialquotascope.Status  `json:"statusNEQ,omitempty"`
+	StatusIn    []credentialquotascope.Status `json:"statusIn,omitempty"`
+	StatusNotIn []credentialquotascope.Status `json:"statusNotIn,omitempty"`
+
+	// "unit" field predicates.
+	Unit      *credentialquotascope.Unit  `json:"unit,omitempty"`
+	UnitNEQ   *credentialquotascope.Unit  `json:"unitNEQ,omitempty"`
+	UnitIn    []credentialquotascope.Unit `json:"unitIn,omitempty"`
+	UnitNotIn []credentialquotascope.Unit `json:"unitNotIn,omitempty"`
+
+	// "limit_amount" field predicates.
+	LimitAmount             *string  `json:"limitAmount,omitempty"`
+	LimitAmountNEQ          *string  `json:"limitAmountNEQ,omitempty"`
+	LimitAmountIn           []string `json:"limitAmountIn,omitempty"`
+	LimitAmountNotIn        []string `json:"limitAmountNotIn,omitempty"`
+	LimitAmountGT           *string  `json:"limitAmountGT,omitempty"`
+	LimitAmountGTE          *string  `json:"limitAmountGTE,omitempty"`
+	LimitAmountLT           *string  `json:"limitAmountLT,omitempty"`
+	LimitAmountLTE          *string  `json:"limitAmountLTE,omitempty"`
+	LimitAmountContains     *string  `json:"limitAmountContains,omitempty"`
+	LimitAmountHasPrefix    *string  `json:"limitAmountHasPrefix,omitempty"`
+	LimitAmountHasSuffix    *string  `json:"limitAmountHasSuffix,omitempty"`
+	LimitAmountIsNil        bool     `json:"limitAmountIsNil,omitempty"`
+	LimitAmountNotNil       bool     `json:"limitAmountNotNil,omitempty"`
+	LimitAmountEqualFold    *string  `json:"limitAmountEqualFold,omitempty"`
+	LimitAmountContainsFold *string  `json:"limitAmountContainsFold,omitempty"`
+
+	// "used_amount" field predicates.
+	UsedAmount             *string  `json:"usedAmount,omitempty"`
+	UsedAmountNEQ          *string  `json:"usedAmountNEQ,omitempty"`
+	UsedAmountIn           []string `json:"usedAmountIn,omitempty"`
+	UsedAmountNotIn        []string `json:"usedAmountNotIn,omitempty"`
+	UsedAmountGT           *string  `json:"usedAmountGT,omitempty"`
+	UsedAmountGTE          *string  `json:"usedAmountGTE,omitempty"`
+	UsedAmountLT           *string  `json:"usedAmountLT,omitempty"`
+	UsedAmountLTE          *string  `json:"usedAmountLTE,omitempty"`
+	UsedAmountContains     *string  `json:"usedAmountContains,omitempty"`
+	UsedAmountHasPrefix    *string  `json:"usedAmountHasPrefix,omitempty"`
+	UsedAmountHasSuffix    *string  `json:"usedAmountHasSuffix,omitempty"`
+	UsedAmountIsNil        bool     `json:"usedAmountIsNil,omitempty"`
+	UsedAmountNotNil       bool     `json:"usedAmountNotNil,omitempty"`
+	UsedAmountEqualFold    *string  `json:"usedAmountEqualFold,omitempty"`
+	UsedAmountContainsFold *string  `json:"usedAmountContainsFold,omitempty"`
+
+	// "warning_threshold_percent" field predicates.
+	WarningThresholdPercent       *int  `json:"warningThresholdPercent,omitempty"`
+	WarningThresholdPercentNEQ    *int  `json:"warningThresholdPercentNEQ,omitempty"`
+	WarningThresholdPercentIn     []int `json:"warningThresholdPercentIn,omitempty"`
+	WarningThresholdPercentNotIn  []int `json:"warningThresholdPercentNotIn,omitempty"`
+	WarningThresholdPercentGT     *int  `json:"warningThresholdPercentGT,omitempty"`
+	WarningThresholdPercentGTE    *int  `json:"warningThresholdPercentGTE,omitempty"`
+	WarningThresholdPercentLT     *int  `json:"warningThresholdPercentLT,omitempty"`
+	WarningThresholdPercentLTE    *int  `json:"warningThresholdPercentLTE,omitempty"`
+	WarningThresholdPercentIsNil  bool  `json:"warningThresholdPercentIsNil,omitempty"`
+	WarningThresholdPercentNotNil bool  `json:"warningThresholdPercentNotNil,omitempty"`
+
+	// "reset_policy" field predicates.
+	ResetPolicy      *credentialquotascope.ResetPolicy  `json:"resetPolicy,omitempty"`
+	ResetPolicyNEQ   *credentialquotascope.ResetPolicy  `json:"resetPolicyNEQ,omitempty"`
+	ResetPolicyIn    []credentialquotascope.ResetPolicy `json:"resetPolicyIn,omitempty"`
+	ResetPolicyNotIn []credentialquotascope.ResetPolicy `json:"resetPolicyNotIn,omitempty"`
+
+	// "reset_at" field predicates.
+	ResetAt       *time.Time  `json:"resetAt,omitempty"`
+	ResetAtNEQ    *time.Time  `json:"resetAtNEQ,omitempty"`
+	ResetAtIn     []time.Time `json:"resetAtIn,omitempty"`
+	ResetAtNotIn  []time.Time `json:"resetAtNotIn,omitempty"`
+	ResetAtGT     *time.Time  `json:"resetAtGT,omitempty"`
+	ResetAtGTE    *time.Time  `json:"resetAtGTE,omitempty"`
+	ResetAtLT     *time.Time  `json:"resetAtLT,omitempty"`
+	ResetAtLTE    *time.Time  `json:"resetAtLTE,omitempty"`
+	ResetAtIsNil  bool        `json:"resetAtIsNil,omitempty"`
+	ResetAtNotNil bool        `json:"resetAtNotNil,omitempty"`
+
+	// "window_started_at" field predicates.
+	WindowStartedAt       *time.Time  `json:"windowStartedAt,omitempty"`
+	WindowStartedAtNEQ    *time.Time  `json:"windowStartedAtNEQ,omitempty"`
+	WindowStartedAtIn     []time.Time `json:"windowStartedAtIn,omitempty"`
+	WindowStartedAtNotIn  []time.Time `json:"windowStartedAtNotIn,omitempty"`
+	WindowStartedAtGT     *time.Time  `json:"windowStartedAtGT,omitempty"`
+	WindowStartedAtGTE    *time.Time  `json:"windowStartedAtGTE,omitempty"`
+	WindowStartedAtLT     *time.Time  `json:"windowStartedAtLT,omitempty"`
+	WindowStartedAtLTE    *time.Time  `json:"windowStartedAtLTE,omitempty"`
+	WindowStartedAtIsNil  bool        `json:"windowStartedAtIsNil,omitempty"`
+	WindowStartedAtNotNil bool        `json:"windowStartedAtNotNil,omitempty"`
+
+	// "over_limit_action" field predicates.
+	OverLimitAction      *credentialquotascope.OverLimitAction  `json:"overLimitAction,omitempty"`
+	OverLimitActionNEQ   *credentialquotascope.OverLimitAction  `json:"overLimitActionNEQ,omitempty"`
+	OverLimitActionIn    []credentialquotascope.OverLimitAction `json:"overLimitActionIn,omitempty"`
+	OverLimitActionNotIn []credentialquotascope.OverLimitAction `json:"overLimitActionNotIn,omitempty"`
+
+	// "pause_until" field predicates.
+	PauseUntil       *time.Time  `json:"pauseUntil,omitempty"`
+	PauseUntilNEQ    *time.Time  `json:"pauseUntilNEQ,omitempty"`
+	PauseUntilIn     []time.Time `json:"pauseUntilIn,omitempty"`
+	PauseUntilNotIn  []time.Time `json:"pauseUntilNotIn,omitempty"`
+	PauseUntilGT     *time.Time  `json:"pauseUntilGT,omitempty"`
+	PauseUntilGTE    *time.Time  `json:"pauseUntilGTE,omitempty"`
+	PauseUntilLT     *time.Time  `json:"pauseUntilLT,omitempty"`
+	PauseUntilLTE    *time.Time  `json:"pauseUntilLTE,omitempty"`
+	PauseUntilIsNil  bool        `json:"pauseUntilIsNil,omitempty"`
+	PauseUntilNotNil bool        `json:"pauseUntilNotNil,omitempty"`
+
+	// "source" field predicates.
+	Source      *credentialquotascope.Source  `json:"source,omitempty"`
+	SourceNEQ   *credentialquotascope.Source  `json:"sourceNEQ,omitempty"`
+	SourceIn    []credentialquotascope.Source `json:"sourceIn,omitempty"`
+	SourceNotIn []credentialquotascope.Source `json:"sourceNotIn,omitempty"`
+
+	// "last_error" field predicates.
+	LastError             *string  `json:"lastError,omitempty"`
+	LastErrorNEQ          *string  `json:"lastErrorNEQ,omitempty"`
+	LastErrorIn           []string `json:"lastErrorIn,omitempty"`
+	LastErrorNotIn        []string `json:"lastErrorNotIn,omitempty"`
+	LastErrorGT           *string  `json:"lastErrorGT,omitempty"`
+	LastErrorGTE          *string  `json:"lastErrorGTE,omitempty"`
+	LastErrorLT           *string  `json:"lastErrorLT,omitempty"`
+	LastErrorLTE          *string  `json:"lastErrorLTE,omitempty"`
+	LastErrorContains     *string  `json:"lastErrorContains,omitempty"`
+	LastErrorHasPrefix    *string  `json:"lastErrorHasPrefix,omitempty"`
+	LastErrorHasSuffix    *string  `json:"lastErrorHasSuffix,omitempty"`
+	LastErrorIsNil        bool     `json:"lastErrorIsNil,omitempty"`
+	LastErrorNotNil       bool     `json:"lastErrorNotNil,omitempty"`
+	LastErrorEqualFold    *string  `json:"lastErrorEqualFold,omitempty"`
+	LastErrorContainsFold *string  `json:"lastErrorContainsFold,omitempty"`
+
+	// "remark" field predicates.
+	Remark             *string  `json:"remark,omitempty"`
+	RemarkNEQ          *string  `json:"remarkNEQ,omitempty"`
+	RemarkIn           []string `json:"remarkIn,omitempty"`
+	RemarkNotIn        []string `json:"remarkNotIn,omitempty"`
+	RemarkGT           *string  `json:"remarkGT,omitempty"`
+	RemarkGTE          *string  `json:"remarkGTE,omitempty"`
+	RemarkLT           *string  `json:"remarkLT,omitempty"`
+	RemarkLTE          *string  `json:"remarkLTE,omitempty"`
+	RemarkContains     *string  `json:"remarkContains,omitempty"`
+	RemarkHasPrefix    *string  `json:"remarkHasPrefix,omitempty"`
+	RemarkHasSuffix    *string  `json:"remarkHasSuffix,omitempty"`
+	RemarkIsNil        bool     `json:"remarkIsNil,omitempty"`
+	RemarkNotNil       bool     `json:"remarkNotNil,omitempty"`
+	RemarkEqualFold    *string  `json:"remarkEqualFold,omitempty"`
+	RemarkContainsFold *string  `json:"remarkContainsFold,omitempty"`
+
+	// "credentials" edge predicates.
+	HasCredentials     *bool                           `json:"hasCredentials,omitempty"`
+	HasCredentialsWith []*UpstreamCredentialWhereInput `json:"hasCredentialsWith,omitempty"`
+
+	// "provider_quota_statuses" edge predicates.
+	HasProviderQuotaStatuses     *bool                            `json:"hasProviderQuotaStatuses,omitempty"`
+	HasProviderQuotaStatusesWith []*ProviderQuotaStatusWhereInput `json:"hasProviderQuotaStatusesWith,omitempty"`
+
+	// "executions" edge predicates.
+	HasExecutions     *bool                         `json:"hasExecutions,omitempty"`
+	HasExecutionsWith []*RequestExecutionWhereInput `json:"hasExecutionsWith,omitempty"`
+
+	// "usage_logs" edge predicates.
+	HasUsageLogs     *bool                 `json:"hasUsageLogs,omitempty"`
+	HasUsageLogsWith []*UsageLogWhereInput `json:"hasUsageLogsWith,omitempty"`
+}
+
+// AddPredicates adds custom predicates to the where input to be used during the filtering phase.
+func (i *CredentialQuotaScopeWhereInput) AddPredicates(predicates ...predicate.CredentialQuotaScope) {
+	i.Predicates = append(i.Predicates, predicates...)
+}
+
+// Filter applies the CredentialQuotaScopeWhereInput filter on the CredentialQuotaScopeQuery builder.
+func (i *CredentialQuotaScopeWhereInput) Filter(q *CredentialQuotaScopeQuery) (*CredentialQuotaScopeQuery, error) {
+	if i == nil {
+		return q, nil
+	}
+	p, err := i.P()
+	if err != nil {
+		if err == ErrEmptyCredentialQuotaScopeWhereInput {
+			return q, nil
+		}
+		return nil, err
+	}
+	return q.Where(p), nil
+}
+
+// ErrEmptyCredentialQuotaScopeWhereInput is returned in case the CredentialQuotaScopeWhereInput is empty.
+var ErrEmptyCredentialQuotaScopeWhereInput = errors.New("ent: empty predicate CredentialQuotaScopeWhereInput")
+
+// P returns a predicate for filtering credentialquotascopes.
+// An error is returned if the input is empty or invalid.
+func (i *CredentialQuotaScopeWhereInput) P() (predicate.CredentialQuotaScope, error) {
+	var predicates []predicate.CredentialQuotaScope
+	if i.Not != nil {
+		p, err := i.Not.P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'not'", err)
+		}
+		predicates = append(predicates, credentialquotascope.Not(p))
+	}
+	switch n := len(i.Or); {
+	case n == 1:
+		p, err := i.Or[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'or'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		or := make([]predicate.CredentialQuotaScope, 0, n)
+		for _, w := range i.Or {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'or'", err)
+			}
+			or = append(or, p)
+		}
+		predicates = append(predicates, credentialquotascope.Or(or...))
+	}
+	switch n := len(i.And); {
+	case n == 1:
+		p, err := i.And[0].P()
+		if err != nil {
+			return nil, fmt.Errorf("%w: field 'and'", err)
+		}
+		predicates = append(predicates, p)
+	case n > 1:
+		and := make([]predicate.CredentialQuotaScope, 0, n)
+		for _, w := range i.And {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'and'", err)
+			}
+			and = append(and, p)
+		}
+		predicates = append(predicates, credentialquotascope.And(and...))
+	}
+	predicates = append(predicates, i.Predicates...)
+	if i.ID != nil {
+		predicates = append(predicates, credentialquotascope.IDEQ(*i.ID))
+	}
+	if i.IDNEQ != nil {
+		predicates = append(predicates, credentialquotascope.IDNEQ(*i.IDNEQ))
+	}
+	if len(i.IDIn) > 0 {
+		predicates = append(predicates, credentialquotascope.IDIn(i.IDIn...))
+	}
+	if len(i.IDNotIn) > 0 {
+		predicates = append(predicates, credentialquotascope.IDNotIn(i.IDNotIn...))
+	}
+	if i.IDGT != nil {
+		predicates = append(predicates, credentialquotascope.IDGT(*i.IDGT))
+	}
+	if i.IDGTE != nil {
+		predicates = append(predicates, credentialquotascope.IDGTE(*i.IDGTE))
+	}
+	if i.IDLT != nil {
+		predicates = append(predicates, credentialquotascope.IDLT(*i.IDLT))
+	}
+	if i.IDLTE != nil {
+		predicates = append(predicates, credentialquotascope.IDLTE(*i.IDLTE))
+	}
+	if i.CreatedAt != nil {
+		predicates = append(predicates, credentialquotascope.CreatedAtEQ(*i.CreatedAt))
+	}
+	if i.CreatedAtNEQ != nil {
+		predicates = append(predicates, credentialquotascope.CreatedAtNEQ(*i.CreatedAtNEQ))
+	}
+	if len(i.CreatedAtIn) > 0 {
+		predicates = append(predicates, credentialquotascope.CreatedAtIn(i.CreatedAtIn...))
+	}
+	if len(i.CreatedAtNotIn) > 0 {
+		predicates = append(predicates, credentialquotascope.CreatedAtNotIn(i.CreatedAtNotIn...))
+	}
+	if i.CreatedAtGT != nil {
+		predicates = append(predicates, credentialquotascope.CreatedAtGT(*i.CreatedAtGT))
+	}
+	if i.CreatedAtGTE != nil {
+		predicates = append(predicates, credentialquotascope.CreatedAtGTE(*i.CreatedAtGTE))
+	}
+	if i.CreatedAtLT != nil {
+		predicates = append(predicates, credentialquotascope.CreatedAtLT(*i.CreatedAtLT))
+	}
+	if i.CreatedAtLTE != nil {
+		predicates = append(predicates, credentialquotascope.CreatedAtLTE(*i.CreatedAtLTE))
+	}
+	if i.UpdatedAt != nil {
+		predicates = append(predicates, credentialquotascope.UpdatedAtEQ(*i.UpdatedAt))
+	}
+	if i.UpdatedAtNEQ != nil {
+		predicates = append(predicates, credentialquotascope.UpdatedAtNEQ(*i.UpdatedAtNEQ))
+	}
+	if len(i.UpdatedAtIn) > 0 {
+		predicates = append(predicates, credentialquotascope.UpdatedAtIn(i.UpdatedAtIn...))
+	}
+	if len(i.UpdatedAtNotIn) > 0 {
+		predicates = append(predicates, credentialquotascope.UpdatedAtNotIn(i.UpdatedAtNotIn...))
+	}
+	if i.UpdatedAtGT != nil {
+		predicates = append(predicates, credentialquotascope.UpdatedAtGT(*i.UpdatedAtGT))
+	}
+	if i.UpdatedAtGTE != nil {
+		predicates = append(predicates, credentialquotascope.UpdatedAtGTE(*i.UpdatedAtGTE))
+	}
+	if i.UpdatedAtLT != nil {
+		predicates = append(predicates, credentialquotascope.UpdatedAtLT(*i.UpdatedAtLT))
+	}
+	if i.UpdatedAtLTE != nil {
+		predicates = append(predicates, credentialquotascope.UpdatedAtLTE(*i.UpdatedAtLTE))
+	}
+	if i.Name != nil {
+		predicates = append(predicates, credentialquotascope.NameEQ(*i.Name))
+	}
+	if i.NameNEQ != nil {
+		predicates = append(predicates, credentialquotascope.NameNEQ(*i.NameNEQ))
+	}
+	if len(i.NameIn) > 0 {
+		predicates = append(predicates, credentialquotascope.NameIn(i.NameIn...))
+	}
+	if len(i.NameNotIn) > 0 {
+		predicates = append(predicates, credentialquotascope.NameNotIn(i.NameNotIn...))
+	}
+	if i.NameGT != nil {
+		predicates = append(predicates, credentialquotascope.NameGT(*i.NameGT))
+	}
+	if i.NameGTE != nil {
+		predicates = append(predicates, credentialquotascope.NameGTE(*i.NameGTE))
+	}
+	if i.NameLT != nil {
+		predicates = append(predicates, credentialquotascope.NameLT(*i.NameLT))
+	}
+	if i.NameLTE != nil {
+		predicates = append(predicates, credentialquotascope.NameLTE(*i.NameLTE))
+	}
+	if i.NameContains != nil {
+		predicates = append(predicates, credentialquotascope.NameContains(*i.NameContains))
+	}
+	if i.NameHasPrefix != nil {
+		predicates = append(predicates, credentialquotascope.NameHasPrefix(*i.NameHasPrefix))
+	}
+	if i.NameHasSuffix != nil {
+		predicates = append(predicates, credentialquotascope.NameHasSuffix(*i.NameHasSuffix))
+	}
+	if i.NameIsNil {
+		predicates = append(predicates, credentialquotascope.NameIsNil())
+	}
+	if i.NameNotNil {
+		predicates = append(predicates, credentialquotascope.NameNotNil())
+	}
+	if i.NameEqualFold != nil {
+		predicates = append(predicates, credentialquotascope.NameEqualFold(*i.NameEqualFold))
+	}
+	if i.NameContainsFold != nil {
+		predicates = append(predicates, credentialquotascope.NameContainsFold(*i.NameContainsFold))
+	}
+	if i.Status != nil {
+		predicates = append(predicates, credentialquotascope.StatusEQ(*i.Status))
+	}
+	if i.StatusNEQ != nil {
+		predicates = append(predicates, credentialquotascope.StatusNEQ(*i.StatusNEQ))
+	}
+	if len(i.StatusIn) > 0 {
+		predicates = append(predicates, credentialquotascope.StatusIn(i.StatusIn...))
+	}
+	if len(i.StatusNotIn) > 0 {
+		predicates = append(predicates, credentialquotascope.StatusNotIn(i.StatusNotIn...))
+	}
+	if i.Unit != nil {
+		predicates = append(predicates, credentialquotascope.UnitEQ(*i.Unit))
+	}
+	if i.UnitNEQ != nil {
+		predicates = append(predicates, credentialquotascope.UnitNEQ(*i.UnitNEQ))
+	}
+	if len(i.UnitIn) > 0 {
+		predicates = append(predicates, credentialquotascope.UnitIn(i.UnitIn...))
+	}
+	if len(i.UnitNotIn) > 0 {
+		predicates = append(predicates, credentialquotascope.UnitNotIn(i.UnitNotIn...))
+	}
+	if i.LimitAmount != nil {
+		predicates = append(predicates, credentialquotascope.LimitAmountEQ(*i.LimitAmount))
+	}
+	if i.LimitAmountNEQ != nil {
+		predicates = append(predicates, credentialquotascope.LimitAmountNEQ(*i.LimitAmountNEQ))
+	}
+	if len(i.LimitAmountIn) > 0 {
+		predicates = append(predicates, credentialquotascope.LimitAmountIn(i.LimitAmountIn...))
+	}
+	if len(i.LimitAmountNotIn) > 0 {
+		predicates = append(predicates, credentialquotascope.LimitAmountNotIn(i.LimitAmountNotIn...))
+	}
+	if i.LimitAmountGT != nil {
+		predicates = append(predicates, credentialquotascope.LimitAmountGT(*i.LimitAmountGT))
+	}
+	if i.LimitAmountGTE != nil {
+		predicates = append(predicates, credentialquotascope.LimitAmountGTE(*i.LimitAmountGTE))
+	}
+	if i.LimitAmountLT != nil {
+		predicates = append(predicates, credentialquotascope.LimitAmountLT(*i.LimitAmountLT))
+	}
+	if i.LimitAmountLTE != nil {
+		predicates = append(predicates, credentialquotascope.LimitAmountLTE(*i.LimitAmountLTE))
+	}
+	if i.LimitAmountContains != nil {
+		predicates = append(predicates, credentialquotascope.LimitAmountContains(*i.LimitAmountContains))
+	}
+	if i.LimitAmountHasPrefix != nil {
+		predicates = append(predicates, credentialquotascope.LimitAmountHasPrefix(*i.LimitAmountHasPrefix))
+	}
+	if i.LimitAmountHasSuffix != nil {
+		predicates = append(predicates, credentialquotascope.LimitAmountHasSuffix(*i.LimitAmountHasSuffix))
+	}
+	if i.LimitAmountIsNil {
+		predicates = append(predicates, credentialquotascope.LimitAmountIsNil())
+	}
+	if i.LimitAmountNotNil {
+		predicates = append(predicates, credentialquotascope.LimitAmountNotNil())
+	}
+	if i.LimitAmountEqualFold != nil {
+		predicates = append(predicates, credentialquotascope.LimitAmountEqualFold(*i.LimitAmountEqualFold))
+	}
+	if i.LimitAmountContainsFold != nil {
+		predicates = append(predicates, credentialquotascope.LimitAmountContainsFold(*i.LimitAmountContainsFold))
+	}
+	if i.UsedAmount != nil {
+		predicates = append(predicates, credentialquotascope.UsedAmountEQ(*i.UsedAmount))
+	}
+	if i.UsedAmountNEQ != nil {
+		predicates = append(predicates, credentialquotascope.UsedAmountNEQ(*i.UsedAmountNEQ))
+	}
+	if len(i.UsedAmountIn) > 0 {
+		predicates = append(predicates, credentialquotascope.UsedAmountIn(i.UsedAmountIn...))
+	}
+	if len(i.UsedAmountNotIn) > 0 {
+		predicates = append(predicates, credentialquotascope.UsedAmountNotIn(i.UsedAmountNotIn...))
+	}
+	if i.UsedAmountGT != nil {
+		predicates = append(predicates, credentialquotascope.UsedAmountGT(*i.UsedAmountGT))
+	}
+	if i.UsedAmountGTE != nil {
+		predicates = append(predicates, credentialquotascope.UsedAmountGTE(*i.UsedAmountGTE))
+	}
+	if i.UsedAmountLT != nil {
+		predicates = append(predicates, credentialquotascope.UsedAmountLT(*i.UsedAmountLT))
+	}
+	if i.UsedAmountLTE != nil {
+		predicates = append(predicates, credentialquotascope.UsedAmountLTE(*i.UsedAmountLTE))
+	}
+	if i.UsedAmountContains != nil {
+		predicates = append(predicates, credentialquotascope.UsedAmountContains(*i.UsedAmountContains))
+	}
+	if i.UsedAmountHasPrefix != nil {
+		predicates = append(predicates, credentialquotascope.UsedAmountHasPrefix(*i.UsedAmountHasPrefix))
+	}
+	if i.UsedAmountHasSuffix != nil {
+		predicates = append(predicates, credentialquotascope.UsedAmountHasSuffix(*i.UsedAmountHasSuffix))
+	}
+	if i.UsedAmountIsNil {
+		predicates = append(predicates, credentialquotascope.UsedAmountIsNil())
+	}
+	if i.UsedAmountNotNil {
+		predicates = append(predicates, credentialquotascope.UsedAmountNotNil())
+	}
+	if i.UsedAmountEqualFold != nil {
+		predicates = append(predicates, credentialquotascope.UsedAmountEqualFold(*i.UsedAmountEqualFold))
+	}
+	if i.UsedAmountContainsFold != nil {
+		predicates = append(predicates, credentialquotascope.UsedAmountContainsFold(*i.UsedAmountContainsFold))
+	}
+	if i.WarningThresholdPercent != nil {
+		predicates = append(predicates, credentialquotascope.WarningThresholdPercentEQ(*i.WarningThresholdPercent))
+	}
+	if i.WarningThresholdPercentNEQ != nil {
+		predicates = append(predicates, credentialquotascope.WarningThresholdPercentNEQ(*i.WarningThresholdPercentNEQ))
+	}
+	if len(i.WarningThresholdPercentIn) > 0 {
+		predicates = append(predicates, credentialquotascope.WarningThresholdPercentIn(i.WarningThresholdPercentIn...))
+	}
+	if len(i.WarningThresholdPercentNotIn) > 0 {
+		predicates = append(predicates, credentialquotascope.WarningThresholdPercentNotIn(i.WarningThresholdPercentNotIn...))
+	}
+	if i.WarningThresholdPercentGT != nil {
+		predicates = append(predicates, credentialquotascope.WarningThresholdPercentGT(*i.WarningThresholdPercentGT))
+	}
+	if i.WarningThresholdPercentGTE != nil {
+		predicates = append(predicates, credentialquotascope.WarningThresholdPercentGTE(*i.WarningThresholdPercentGTE))
+	}
+	if i.WarningThresholdPercentLT != nil {
+		predicates = append(predicates, credentialquotascope.WarningThresholdPercentLT(*i.WarningThresholdPercentLT))
+	}
+	if i.WarningThresholdPercentLTE != nil {
+		predicates = append(predicates, credentialquotascope.WarningThresholdPercentLTE(*i.WarningThresholdPercentLTE))
+	}
+	if i.WarningThresholdPercentIsNil {
+		predicates = append(predicates, credentialquotascope.WarningThresholdPercentIsNil())
+	}
+	if i.WarningThresholdPercentNotNil {
+		predicates = append(predicates, credentialquotascope.WarningThresholdPercentNotNil())
+	}
+	if i.ResetPolicy != nil {
+		predicates = append(predicates, credentialquotascope.ResetPolicyEQ(*i.ResetPolicy))
+	}
+	if i.ResetPolicyNEQ != nil {
+		predicates = append(predicates, credentialquotascope.ResetPolicyNEQ(*i.ResetPolicyNEQ))
+	}
+	if len(i.ResetPolicyIn) > 0 {
+		predicates = append(predicates, credentialquotascope.ResetPolicyIn(i.ResetPolicyIn...))
+	}
+	if len(i.ResetPolicyNotIn) > 0 {
+		predicates = append(predicates, credentialquotascope.ResetPolicyNotIn(i.ResetPolicyNotIn...))
+	}
+	if i.ResetAt != nil {
+		predicates = append(predicates, credentialquotascope.ResetAtEQ(*i.ResetAt))
+	}
+	if i.ResetAtNEQ != nil {
+		predicates = append(predicates, credentialquotascope.ResetAtNEQ(*i.ResetAtNEQ))
+	}
+	if len(i.ResetAtIn) > 0 {
+		predicates = append(predicates, credentialquotascope.ResetAtIn(i.ResetAtIn...))
+	}
+	if len(i.ResetAtNotIn) > 0 {
+		predicates = append(predicates, credentialquotascope.ResetAtNotIn(i.ResetAtNotIn...))
+	}
+	if i.ResetAtGT != nil {
+		predicates = append(predicates, credentialquotascope.ResetAtGT(*i.ResetAtGT))
+	}
+	if i.ResetAtGTE != nil {
+		predicates = append(predicates, credentialquotascope.ResetAtGTE(*i.ResetAtGTE))
+	}
+	if i.ResetAtLT != nil {
+		predicates = append(predicates, credentialquotascope.ResetAtLT(*i.ResetAtLT))
+	}
+	if i.ResetAtLTE != nil {
+		predicates = append(predicates, credentialquotascope.ResetAtLTE(*i.ResetAtLTE))
+	}
+	if i.ResetAtIsNil {
+		predicates = append(predicates, credentialquotascope.ResetAtIsNil())
+	}
+	if i.ResetAtNotNil {
+		predicates = append(predicates, credentialquotascope.ResetAtNotNil())
+	}
+	if i.WindowStartedAt != nil {
+		predicates = append(predicates, credentialquotascope.WindowStartedAtEQ(*i.WindowStartedAt))
+	}
+	if i.WindowStartedAtNEQ != nil {
+		predicates = append(predicates, credentialquotascope.WindowStartedAtNEQ(*i.WindowStartedAtNEQ))
+	}
+	if len(i.WindowStartedAtIn) > 0 {
+		predicates = append(predicates, credentialquotascope.WindowStartedAtIn(i.WindowStartedAtIn...))
+	}
+	if len(i.WindowStartedAtNotIn) > 0 {
+		predicates = append(predicates, credentialquotascope.WindowStartedAtNotIn(i.WindowStartedAtNotIn...))
+	}
+	if i.WindowStartedAtGT != nil {
+		predicates = append(predicates, credentialquotascope.WindowStartedAtGT(*i.WindowStartedAtGT))
+	}
+	if i.WindowStartedAtGTE != nil {
+		predicates = append(predicates, credentialquotascope.WindowStartedAtGTE(*i.WindowStartedAtGTE))
+	}
+	if i.WindowStartedAtLT != nil {
+		predicates = append(predicates, credentialquotascope.WindowStartedAtLT(*i.WindowStartedAtLT))
+	}
+	if i.WindowStartedAtLTE != nil {
+		predicates = append(predicates, credentialquotascope.WindowStartedAtLTE(*i.WindowStartedAtLTE))
+	}
+	if i.WindowStartedAtIsNil {
+		predicates = append(predicates, credentialquotascope.WindowStartedAtIsNil())
+	}
+	if i.WindowStartedAtNotNil {
+		predicates = append(predicates, credentialquotascope.WindowStartedAtNotNil())
+	}
+	if i.OverLimitAction != nil {
+		predicates = append(predicates, credentialquotascope.OverLimitActionEQ(*i.OverLimitAction))
+	}
+	if i.OverLimitActionNEQ != nil {
+		predicates = append(predicates, credentialquotascope.OverLimitActionNEQ(*i.OverLimitActionNEQ))
+	}
+	if len(i.OverLimitActionIn) > 0 {
+		predicates = append(predicates, credentialquotascope.OverLimitActionIn(i.OverLimitActionIn...))
+	}
+	if len(i.OverLimitActionNotIn) > 0 {
+		predicates = append(predicates, credentialquotascope.OverLimitActionNotIn(i.OverLimitActionNotIn...))
+	}
+	if i.PauseUntil != nil {
+		predicates = append(predicates, credentialquotascope.PauseUntilEQ(*i.PauseUntil))
+	}
+	if i.PauseUntilNEQ != nil {
+		predicates = append(predicates, credentialquotascope.PauseUntilNEQ(*i.PauseUntilNEQ))
+	}
+	if len(i.PauseUntilIn) > 0 {
+		predicates = append(predicates, credentialquotascope.PauseUntilIn(i.PauseUntilIn...))
+	}
+	if len(i.PauseUntilNotIn) > 0 {
+		predicates = append(predicates, credentialquotascope.PauseUntilNotIn(i.PauseUntilNotIn...))
+	}
+	if i.PauseUntilGT != nil {
+		predicates = append(predicates, credentialquotascope.PauseUntilGT(*i.PauseUntilGT))
+	}
+	if i.PauseUntilGTE != nil {
+		predicates = append(predicates, credentialquotascope.PauseUntilGTE(*i.PauseUntilGTE))
+	}
+	if i.PauseUntilLT != nil {
+		predicates = append(predicates, credentialquotascope.PauseUntilLT(*i.PauseUntilLT))
+	}
+	if i.PauseUntilLTE != nil {
+		predicates = append(predicates, credentialquotascope.PauseUntilLTE(*i.PauseUntilLTE))
+	}
+	if i.PauseUntilIsNil {
+		predicates = append(predicates, credentialquotascope.PauseUntilIsNil())
+	}
+	if i.PauseUntilNotNil {
+		predicates = append(predicates, credentialquotascope.PauseUntilNotNil())
+	}
+	if i.Source != nil {
+		predicates = append(predicates, credentialquotascope.SourceEQ(*i.Source))
+	}
+	if i.SourceNEQ != nil {
+		predicates = append(predicates, credentialquotascope.SourceNEQ(*i.SourceNEQ))
+	}
+	if len(i.SourceIn) > 0 {
+		predicates = append(predicates, credentialquotascope.SourceIn(i.SourceIn...))
+	}
+	if len(i.SourceNotIn) > 0 {
+		predicates = append(predicates, credentialquotascope.SourceNotIn(i.SourceNotIn...))
+	}
+	if i.LastError != nil {
+		predicates = append(predicates, credentialquotascope.LastErrorEQ(*i.LastError))
+	}
+	if i.LastErrorNEQ != nil {
+		predicates = append(predicates, credentialquotascope.LastErrorNEQ(*i.LastErrorNEQ))
+	}
+	if len(i.LastErrorIn) > 0 {
+		predicates = append(predicates, credentialquotascope.LastErrorIn(i.LastErrorIn...))
+	}
+	if len(i.LastErrorNotIn) > 0 {
+		predicates = append(predicates, credentialquotascope.LastErrorNotIn(i.LastErrorNotIn...))
+	}
+	if i.LastErrorGT != nil {
+		predicates = append(predicates, credentialquotascope.LastErrorGT(*i.LastErrorGT))
+	}
+	if i.LastErrorGTE != nil {
+		predicates = append(predicates, credentialquotascope.LastErrorGTE(*i.LastErrorGTE))
+	}
+	if i.LastErrorLT != nil {
+		predicates = append(predicates, credentialquotascope.LastErrorLT(*i.LastErrorLT))
+	}
+	if i.LastErrorLTE != nil {
+		predicates = append(predicates, credentialquotascope.LastErrorLTE(*i.LastErrorLTE))
+	}
+	if i.LastErrorContains != nil {
+		predicates = append(predicates, credentialquotascope.LastErrorContains(*i.LastErrorContains))
+	}
+	if i.LastErrorHasPrefix != nil {
+		predicates = append(predicates, credentialquotascope.LastErrorHasPrefix(*i.LastErrorHasPrefix))
+	}
+	if i.LastErrorHasSuffix != nil {
+		predicates = append(predicates, credentialquotascope.LastErrorHasSuffix(*i.LastErrorHasSuffix))
+	}
+	if i.LastErrorIsNil {
+		predicates = append(predicates, credentialquotascope.LastErrorIsNil())
+	}
+	if i.LastErrorNotNil {
+		predicates = append(predicates, credentialquotascope.LastErrorNotNil())
+	}
+	if i.LastErrorEqualFold != nil {
+		predicates = append(predicates, credentialquotascope.LastErrorEqualFold(*i.LastErrorEqualFold))
+	}
+	if i.LastErrorContainsFold != nil {
+		predicates = append(predicates, credentialquotascope.LastErrorContainsFold(*i.LastErrorContainsFold))
+	}
+	if i.Remark != nil {
+		predicates = append(predicates, credentialquotascope.RemarkEQ(*i.Remark))
+	}
+	if i.RemarkNEQ != nil {
+		predicates = append(predicates, credentialquotascope.RemarkNEQ(*i.RemarkNEQ))
+	}
+	if len(i.RemarkIn) > 0 {
+		predicates = append(predicates, credentialquotascope.RemarkIn(i.RemarkIn...))
+	}
+	if len(i.RemarkNotIn) > 0 {
+		predicates = append(predicates, credentialquotascope.RemarkNotIn(i.RemarkNotIn...))
+	}
+	if i.RemarkGT != nil {
+		predicates = append(predicates, credentialquotascope.RemarkGT(*i.RemarkGT))
+	}
+	if i.RemarkGTE != nil {
+		predicates = append(predicates, credentialquotascope.RemarkGTE(*i.RemarkGTE))
+	}
+	if i.RemarkLT != nil {
+		predicates = append(predicates, credentialquotascope.RemarkLT(*i.RemarkLT))
+	}
+	if i.RemarkLTE != nil {
+		predicates = append(predicates, credentialquotascope.RemarkLTE(*i.RemarkLTE))
+	}
+	if i.RemarkContains != nil {
+		predicates = append(predicates, credentialquotascope.RemarkContains(*i.RemarkContains))
+	}
+	if i.RemarkHasPrefix != nil {
+		predicates = append(predicates, credentialquotascope.RemarkHasPrefix(*i.RemarkHasPrefix))
+	}
+	if i.RemarkHasSuffix != nil {
+		predicates = append(predicates, credentialquotascope.RemarkHasSuffix(*i.RemarkHasSuffix))
+	}
+	if i.RemarkIsNil {
+		predicates = append(predicates, credentialquotascope.RemarkIsNil())
+	}
+	if i.RemarkNotNil {
+		predicates = append(predicates, credentialquotascope.RemarkNotNil())
+	}
+	if i.RemarkEqualFold != nil {
+		predicates = append(predicates, credentialquotascope.RemarkEqualFold(*i.RemarkEqualFold))
+	}
+	if i.RemarkContainsFold != nil {
+		predicates = append(predicates, credentialquotascope.RemarkContainsFold(*i.RemarkContainsFold))
+	}
+
+	if i.HasCredentials != nil {
+		p := credentialquotascope.HasCredentials()
+		if !*i.HasCredentials {
+			p = credentialquotascope.Not(p)
+		}
+		predicates = append(predicates, p)
+	}
+	if len(i.HasCredentialsWith) > 0 {
+		with := make([]predicate.UpstreamCredential, 0, len(i.HasCredentialsWith))
+		for _, w := range i.HasCredentialsWith {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'HasCredentialsWith'", err)
+			}
+			with = append(with, p)
+		}
+		predicates = append(predicates, credentialquotascope.HasCredentialsWith(with...))
+	}
+	if i.HasProviderQuotaStatuses != nil {
+		p := credentialquotascope.HasProviderQuotaStatuses()
+		if !*i.HasProviderQuotaStatuses {
+			p = credentialquotascope.Not(p)
+		}
+		predicates = append(predicates, p)
+	}
+	if len(i.HasProviderQuotaStatusesWith) > 0 {
+		with := make([]predicate.ProviderQuotaStatus, 0, len(i.HasProviderQuotaStatusesWith))
+		for _, w := range i.HasProviderQuotaStatusesWith {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'HasProviderQuotaStatusesWith'", err)
+			}
+			with = append(with, p)
+		}
+		predicates = append(predicates, credentialquotascope.HasProviderQuotaStatusesWith(with...))
+	}
+	if i.HasExecutions != nil {
+		p := credentialquotascope.HasExecutions()
+		if !*i.HasExecutions {
+			p = credentialquotascope.Not(p)
+		}
+		predicates = append(predicates, p)
+	}
+	if len(i.HasExecutionsWith) > 0 {
+		with := make([]predicate.RequestExecution, 0, len(i.HasExecutionsWith))
+		for _, w := range i.HasExecutionsWith {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'HasExecutionsWith'", err)
+			}
+			with = append(with, p)
+		}
+		predicates = append(predicates, credentialquotascope.HasExecutionsWith(with...))
+	}
+	if i.HasUsageLogs != nil {
+		p := credentialquotascope.HasUsageLogs()
+		if !*i.HasUsageLogs {
+			p = credentialquotascope.Not(p)
+		}
+		predicates = append(predicates, p)
+	}
+	if len(i.HasUsageLogsWith) > 0 {
+		with := make([]predicate.UsageLog, 0, len(i.HasUsageLogsWith))
+		for _, w := range i.HasUsageLogsWith {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'HasUsageLogsWith'", err)
+			}
+			with = append(with, p)
+		}
+		predicates = append(predicates, credentialquotascope.HasUsageLogsWith(with...))
+	}
+	switch len(predicates) {
+	case 0:
+		return nil, ErrEmptyCredentialQuotaScopeWhereInput
+	case 1:
+		return predicates[0], nil
+	default:
+		return credentialquotascope.And(predicates...), nil
 	}
 }
 
@@ -6438,10 +7245,27 @@ type ProviderQuotaStatusWhereInput struct {
 	UpdatedAtLTE   *time.Time  `json:"updatedAtLTE,omitempty"`
 
 	// "channel_id" field predicates.
-	ChannelID      *int  `json:"channelID,omitempty"`
-	ChannelIDNEQ   *int  `json:"channelIDNEQ,omitempty"`
-	ChannelIDIn    []int `json:"channelIDIn,omitempty"`
-	ChannelIDNotIn []int `json:"channelIDNotIn,omitempty"`
+	ChannelID       *int  `json:"channelID,omitempty"`
+	ChannelIDNEQ    *int  `json:"channelIDNEQ,omitempty"`
+	ChannelIDIn     []int `json:"channelIDIn,omitempty"`
+	ChannelIDNotIn  []int `json:"channelIDNotIn,omitempty"`
+	ChannelIDIsNil  bool  `json:"channelIDIsNil,omitempty"`
+	ChannelIDNotNil bool  `json:"channelIDNotNil,omitempty"`
+
+	// "scope_key" field predicates.
+	ScopeKey             *string  `json:"scopeKey,omitempty"`
+	ScopeKeyNEQ          *string  `json:"scopeKeyNEQ,omitempty"`
+	ScopeKeyIn           []string `json:"scopeKeyIn,omitempty"`
+	ScopeKeyNotIn        []string `json:"scopeKeyNotIn,omitempty"`
+	ScopeKeyGT           *string  `json:"scopeKeyGT,omitempty"`
+	ScopeKeyGTE          *string  `json:"scopeKeyGTE,omitempty"`
+	ScopeKeyLT           *string  `json:"scopeKeyLT,omitempty"`
+	ScopeKeyLTE          *string  `json:"scopeKeyLTE,omitempty"`
+	ScopeKeyContains     *string  `json:"scopeKeyContains,omitempty"`
+	ScopeKeyHasPrefix    *string  `json:"scopeKeyHasPrefix,omitempty"`
+	ScopeKeyHasSuffix    *string  `json:"scopeKeyHasSuffix,omitempty"`
+	ScopeKeyEqualFold    *string  `json:"scopeKeyEqualFold,omitempty"`
+	ScopeKeyContainsFold *string  `json:"scopeKeyContainsFold,omitempty"`
 
 	// "credential_id" field predicates.
 	CredentialID       *int  `json:"credentialID,omitempty"`
@@ -6467,6 +7291,48 @@ type ProviderQuotaStatusWhereInput struct {
 	CredentialFingerprintNotNil       bool     `json:"credentialFingerprintNotNil,omitempty"`
 	CredentialFingerprintEqualFold    *string  `json:"credentialFingerprintEqualFold,omitempty"`
 	CredentialFingerprintContainsFold *string  `json:"credentialFingerprintContainsFold,omitempty"`
+
+	// "secret_fingerprint" field predicates.
+	SecretFingerprint             *string  `json:"secretFingerprint,omitempty"`
+	SecretFingerprintNEQ          *string  `json:"secretFingerprintNEQ,omitempty"`
+	SecretFingerprintIn           []string `json:"secretFingerprintIn,omitempty"`
+	SecretFingerprintNotIn        []string `json:"secretFingerprintNotIn,omitempty"`
+	SecretFingerprintGT           *string  `json:"secretFingerprintGT,omitempty"`
+	SecretFingerprintGTE          *string  `json:"secretFingerprintGTE,omitempty"`
+	SecretFingerprintLT           *string  `json:"secretFingerprintLT,omitempty"`
+	SecretFingerprintLTE          *string  `json:"secretFingerprintLTE,omitempty"`
+	SecretFingerprintContains     *string  `json:"secretFingerprintContains,omitempty"`
+	SecretFingerprintHasPrefix    *string  `json:"secretFingerprintHasPrefix,omitempty"`
+	SecretFingerprintHasSuffix    *string  `json:"secretFingerprintHasSuffix,omitempty"`
+	SecretFingerprintIsNil        bool     `json:"secretFingerprintIsNil,omitempty"`
+	SecretFingerprintNotNil       bool     `json:"secretFingerprintNotNil,omitempty"`
+	SecretFingerprintEqualFold    *string  `json:"secretFingerprintEqualFold,omitempty"`
+	SecretFingerprintContainsFold *string  `json:"secretFingerprintContainsFold,omitempty"`
+
+	// "resource_scope_key" field predicates.
+	ResourceScopeKey             *string  `json:"resourceScopeKey,omitempty"`
+	ResourceScopeKeyNEQ          *string  `json:"resourceScopeKeyNEQ,omitempty"`
+	ResourceScopeKeyIn           []string `json:"resourceScopeKeyIn,omitempty"`
+	ResourceScopeKeyNotIn        []string `json:"resourceScopeKeyNotIn,omitempty"`
+	ResourceScopeKeyGT           *string  `json:"resourceScopeKeyGT,omitempty"`
+	ResourceScopeKeyGTE          *string  `json:"resourceScopeKeyGTE,omitempty"`
+	ResourceScopeKeyLT           *string  `json:"resourceScopeKeyLT,omitempty"`
+	ResourceScopeKeyLTE          *string  `json:"resourceScopeKeyLTE,omitempty"`
+	ResourceScopeKeyContains     *string  `json:"resourceScopeKeyContains,omitempty"`
+	ResourceScopeKeyHasPrefix    *string  `json:"resourceScopeKeyHasPrefix,omitempty"`
+	ResourceScopeKeyHasSuffix    *string  `json:"resourceScopeKeyHasSuffix,omitempty"`
+	ResourceScopeKeyIsNil        bool     `json:"resourceScopeKeyIsNil,omitempty"`
+	ResourceScopeKeyNotNil       bool     `json:"resourceScopeKeyNotNil,omitempty"`
+	ResourceScopeKeyEqualFold    *string  `json:"resourceScopeKeyEqualFold,omitempty"`
+	ResourceScopeKeyContainsFold *string  `json:"resourceScopeKeyContainsFold,omitempty"`
+
+	// "quota_scope_id" field predicates.
+	QuotaScopeID       *int  `json:"quotaScopeID,omitempty"`
+	QuotaScopeIDNEQ    *int  `json:"quotaScopeIDNEQ,omitempty"`
+	QuotaScopeIDIn     []int `json:"quotaScopeIDIn,omitempty"`
+	QuotaScopeIDNotIn  []int `json:"quotaScopeIDNotIn,omitempty"`
+	QuotaScopeIDIsNil  bool  `json:"quotaScopeIDIsNil,omitempty"`
+	QuotaScopeIDNotNil bool  `json:"quotaScopeIDNotNil,omitempty"`
 
 	// "provider_type" field predicates.
 	ProviderType      *providerquotastatus.ProviderType  `json:"providerType,omitempty"`
@@ -6513,6 +7379,10 @@ type ProviderQuotaStatusWhereInput struct {
 	// "credential" edge predicates.
 	HasCredential     *bool                           `json:"hasCredential,omitempty"`
 	HasCredentialWith []*UpstreamCredentialWhereInput `json:"hasCredentialWith,omitempty"`
+
+	// "quota_scope" edge predicates.
+	HasQuotaScope     *bool                             `json:"hasQuotaScope,omitempty"`
+	HasQuotaScopeWith []*CredentialQuotaScopeWhereInput `json:"hasQuotaScopeWith,omitempty"`
 }
 
 // AddPredicates adds custom predicates to the where input to be used during the filtering phase.
@@ -6670,6 +7540,51 @@ func (i *ProviderQuotaStatusWhereInput) P() (predicate.ProviderQuotaStatus, erro
 	if len(i.ChannelIDNotIn) > 0 {
 		predicates = append(predicates, providerquotastatus.ChannelIDNotIn(i.ChannelIDNotIn...))
 	}
+	if i.ChannelIDIsNil {
+		predicates = append(predicates, providerquotastatus.ChannelIDIsNil())
+	}
+	if i.ChannelIDNotNil {
+		predicates = append(predicates, providerquotastatus.ChannelIDNotNil())
+	}
+	if i.ScopeKey != nil {
+		predicates = append(predicates, providerquotastatus.ScopeKeyEQ(*i.ScopeKey))
+	}
+	if i.ScopeKeyNEQ != nil {
+		predicates = append(predicates, providerquotastatus.ScopeKeyNEQ(*i.ScopeKeyNEQ))
+	}
+	if len(i.ScopeKeyIn) > 0 {
+		predicates = append(predicates, providerquotastatus.ScopeKeyIn(i.ScopeKeyIn...))
+	}
+	if len(i.ScopeKeyNotIn) > 0 {
+		predicates = append(predicates, providerquotastatus.ScopeKeyNotIn(i.ScopeKeyNotIn...))
+	}
+	if i.ScopeKeyGT != nil {
+		predicates = append(predicates, providerquotastatus.ScopeKeyGT(*i.ScopeKeyGT))
+	}
+	if i.ScopeKeyGTE != nil {
+		predicates = append(predicates, providerquotastatus.ScopeKeyGTE(*i.ScopeKeyGTE))
+	}
+	if i.ScopeKeyLT != nil {
+		predicates = append(predicates, providerquotastatus.ScopeKeyLT(*i.ScopeKeyLT))
+	}
+	if i.ScopeKeyLTE != nil {
+		predicates = append(predicates, providerquotastatus.ScopeKeyLTE(*i.ScopeKeyLTE))
+	}
+	if i.ScopeKeyContains != nil {
+		predicates = append(predicates, providerquotastatus.ScopeKeyContains(*i.ScopeKeyContains))
+	}
+	if i.ScopeKeyHasPrefix != nil {
+		predicates = append(predicates, providerquotastatus.ScopeKeyHasPrefix(*i.ScopeKeyHasPrefix))
+	}
+	if i.ScopeKeyHasSuffix != nil {
+		predicates = append(predicates, providerquotastatus.ScopeKeyHasSuffix(*i.ScopeKeyHasSuffix))
+	}
+	if i.ScopeKeyEqualFold != nil {
+		predicates = append(predicates, providerquotastatus.ScopeKeyEqualFold(*i.ScopeKeyEqualFold))
+	}
+	if i.ScopeKeyContainsFold != nil {
+		predicates = append(predicates, providerquotastatus.ScopeKeyContainsFold(*i.ScopeKeyContainsFold))
+	}
 	if i.CredentialID != nil {
 		predicates = append(predicates, providerquotastatus.CredentialIDEQ(*i.CredentialID))
 	}
@@ -6732,6 +7647,114 @@ func (i *ProviderQuotaStatusWhereInput) P() (predicate.ProviderQuotaStatus, erro
 	}
 	if i.CredentialFingerprintContainsFold != nil {
 		predicates = append(predicates, providerquotastatus.CredentialFingerprintContainsFold(*i.CredentialFingerprintContainsFold))
+	}
+	if i.SecretFingerprint != nil {
+		predicates = append(predicates, providerquotastatus.SecretFingerprintEQ(*i.SecretFingerprint))
+	}
+	if i.SecretFingerprintNEQ != nil {
+		predicates = append(predicates, providerquotastatus.SecretFingerprintNEQ(*i.SecretFingerprintNEQ))
+	}
+	if len(i.SecretFingerprintIn) > 0 {
+		predicates = append(predicates, providerquotastatus.SecretFingerprintIn(i.SecretFingerprintIn...))
+	}
+	if len(i.SecretFingerprintNotIn) > 0 {
+		predicates = append(predicates, providerquotastatus.SecretFingerprintNotIn(i.SecretFingerprintNotIn...))
+	}
+	if i.SecretFingerprintGT != nil {
+		predicates = append(predicates, providerquotastatus.SecretFingerprintGT(*i.SecretFingerprintGT))
+	}
+	if i.SecretFingerprintGTE != nil {
+		predicates = append(predicates, providerquotastatus.SecretFingerprintGTE(*i.SecretFingerprintGTE))
+	}
+	if i.SecretFingerprintLT != nil {
+		predicates = append(predicates, providerquotastatus.SecretFingerprintLT(*i.SecretFingerprintLT))
+	}
+	if i.SecretFingerprintLTE != nil {
+		predicates = append(predicates, providerquotastatus.SecretFingerprintLTE(*i.SecretFingerprintLTE))
+	}
+	if i.SecretFingerprintContains != nil {
+		predicates = append(predicates, providerquotastatus.SecretFingerprintContains(*i.SecretFingerprintContains))
+	}
+	if i.SecretFingerprintHasPrefix != nil {
+		predicates = append(predicates, providerquotastatus.SecretFingerprintHasPrefix(*i.SecretFingerprintHasPrefix))
+	}
+	if i.SecretFingerprintHasSuffix != nil {
+		predicates = append(predicates, providerquotastatus.SecretFingerprintHasSuffix(*i.SecretFingerprintHasSuffix))
+	}
+	if i.SecretFingerprintIsNil {
+		predicates = append(predicates, providerquotastatus.SecretFingerprintIsNil())
+	}
+	if i.SecretFingerprintNotNil {
+		predicates = append(predicates, providerquotastatus.SecretFingerprintNotNil())
+	}
+	if i.SecretFingerprintEqualFold != nil {
+		predicates = append(predicates, providerquotastatus.SecretFingerprintEqualFold(*i.SecretFingerprintEqualFold))
+	}
+	if i.SecretFingerprintContainsFold != nil {
+		predicates = append(predicates, providerquotastatus.SecretFingerprintContainsFold(*i.SecretFingerprintContainsFold))
+	}
+	if i.ResourceScopeKey != nil {
+		predicates = append(predicates, providerquotastatus.ResourceScopeKeyEQ(*i.ResourceScopeKey))
+	}
+	if i.ResourceScopeKeyNEQ != nil {
+		predicates = append(predicates, providerquotastatus.ResourceScopeKeyNEQ(*i.ResourceScopeKeyNEQ))
+	}
+	if len(i.ResourceScopeKeyIn) > 0 {
+		predicates = append(predicates, providerquotastatus.ResourceScopeKeyIn(i.ResourceScopeKeyIn...))
+	}
+	if len(i.ResourceScopeKeyNotIn) > 0 {
+		predicates = append(predicates, providerquotastatus.ResourceScopeKeyNotIn(i.ResourceScopeKeyNotIn...))
+	}
+	if i.ResourceScopeKeyGT != nil {
+		predicates = append(predicates, providerquotastatus.ResourceScopeKeyGT(*i.ResourceScopeKeyGT))
+	}
+	if i.ResourceScopeKeyGTE != nil {
+		predicates = append(predicates, providerquotastatus.ResourceScopeKeyGTE(*i.ResourceScopeKeyGTE))
+	}
+	if i.ResourceScopeKeyLT != nil {
+		predicates = append(predicates, providerquotastatus.ResourceScopeKeyLT(*i.ResourceScopeKeyLT))
+	}
+	if i.ResourceScopeKeyLTE != nil {
+		predicates = append(predicates, providerquotastatus.ResourceScopeKeyLTE(*i.ResourceScopeKeyLTE))
+	}
+	if i.ResourceScopeKeyContains != nil {
+		predicates = append(predicates, providerquotastatus.ResourceScopeKeyContains(*i.ResourceScopeKeyContains))
+	}
+	if i.ResourceScopeKeyHasPrefix != nil {
+		predicates = append(predicates, providerquotastatus.ResourceScopeKeyHasPrefix(*i.ResourceScopeKeyHasPrefix))
+	}
+	if i.ResourceScopeKeyHasSuffix != nil {
+		predicates = append(predicates, providerquotastatus.ResourceScopeKeyHasSuffix(*i.ResourceScopeKeyHasSuffix))
+	}
+	if i.ResourceScopeKeyIsNil {
+		predicates = append(predicates, providerquotastatus.ResourceScopeKeyIsNil())
+	}
+	if i.ResourceScopeKeyNotNil {
+		predicates = append(predicates, providerquotastatus.ResourceScopeKeyNotNil())
+	}
+	if i.ResourceScopeKeyEqualFold != nil {
+		predicates = append(predicates, providerquotastatus.ResourceScopeKeyEqualFold(*i.ResourceScopeKeyEqualFold))
+	}
+	if i.ResourceScopeKeyContainsFold != nil {
+		predicates = append(predicates, providerquotastatus.ResourceScopeKeyContainsFold(*i.ResourceScopeKeyContainsFold))
+	}
+	if i.QuotaScopeID != nil {
+		predicates = append(predicates, providerquotastatus.QuotaScopeIDEQ(*i.QuotaScopeID))
+	}
+	if i.QuotaScopeIDNEQ != nil {
+		predicates = append(predicates, providerquotastatus.QuotaScopeIDNEQ(*i.QuotaScopeIDNEQ))
+	}
+	if len(i.QuotaScopeIDIn) > 0 {
+		predicates = append(predicates, providerquotastatus.QuotaScopeIDIn(i.QuotaScopeIDIn...))
+	}
+	if len(i.QuotaScopeIDNotIn) > 0 {
+		predicates = append(predicates, providerquotastatus.QuotaScopeIDNotIn(i.QuotaScopeIDNotIn...))
+	}
+	if i.QuotaScopeIDIsNil {
+		predicates = append(predicates, providerquotastatus.QuotaScopeIDIsNil())
+	}
+	if i.QuotaScopeIDNotNil {
+		predicates = append(predicates, providerquotastatus.QuotaScopeIDNotNil())
 	}
 	if i.ProviderType != nil {
 		predicates = append(predicates, providerquotastatus.ProviderTypeEQ(*i.ProviderType))
@@ -6853,6 +7876,24 @@ func (i *ProviderQuotaStatusWhereInput) P() (predicate.ProviderQuotaStatus, erro
 			with = append(with, p)
 		}
 		predicates = append(predicates, providerquotastatus.HasCredentialWith(with...))
+	}
+	if i.HasQuotaScope != nil {
+		p := providerquotastatus.HasQuotaScope()
+		if !*i.HasQuotaScope {
+			p = providerquotastatus.Not(p)
+		}
+		predicates = append(predicates, p)
+	}
+	if len(i.HasQuotaScopeWith) > 0 {
+		with := make([]predicate.CredentialQuotaScope, 0, len(i.HasQuotaScopeWith))
+		for _, w := range i.HasQuotaScopeWith {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'HasQuotaScopeWith'", err)
+			}
+			with = append(with, p)
+		}
+		predicates = append(predicates, providerquotastatus.HasQuotaScopeWith(with...))
 	}
 	switch len(predicates) {
 	case 0:
@@ -8072,6 +9113,82 @@ type RequestExecutionWhereInput struct {
 	CredentialFingerprintEqualFold    *string  `json:"credentialFingerprintEqualFold,omitempty"`
 	CredentialFingerprintContainsFold *string  `json:"credentialFingerprintContainsFold,omitempty"`
 
+	// "secret_fingerprint" field predicates.
+	SecretFingerprint             *string  `json:"secretFingerprint,omitempty"`
+	SecretFingerprintNEQ          *string  `json:"secretFingerprintNEQ,omitempty"`
+	SecretFingerprintIn           []string `json:"secretFingerprintIn,omitempty"`
+	SecretFingerprintNotIn        []string `json:"secretFingerprintNotIn,omitempty"`
+	SecretFingerprintGT           *string  `json:"secretFingerprintGT,omitempty"`
+	SecretFingerprintGTE          *string  `json:"secretFingerprintGTE,omitempty"`
+	SecretFingerprintLT           *string  `json:"secretFingerprintLT,omitempty"`
+	SecretFingerprintLTE          *string  `json:"secretFingerprintLTE,omitempty"`
+	SecretFingerprintContains     *string  `json:"secretFingerprintContains,omitempty"`
+	SecretFingerprintHasPrefix    *string  `json:"secretFingerprintHasPrefix,omitempty"`
+	SecretFingerprintHasSuffix    *string  `json:"secretFingerprintHasSuffix,omitempty"`
+	SecretFingerprintIsNil        bool     `json:"secretFingerprintIsNil,omitempty"`
+	SecretFingerprintNotNil       bool     `json:"secretFingerprintNotNil,omitempty"`
+	SecretFingerprintEqualFold    *string  `json:"secretFingerprintEqualFold,omitempty"`
+	SecretFingerprintContainsFold *string  `json:"secretFingerprintContainsFold,omitempty"`
+
+	// "resource_scope_key" field predicates.
+	ResourceScopeKey             *string  `json:"resourceScopeKey,omitempty"`
+	ResourceScopeKeyNEQ          *string  `json:"resourceScopeKeyNEQ,omitempty"`
+	ResourceScopeKeyIn           []string `json:"resourceScopeKeyIn,omitempty"`
+	ResourceScopeKeyNotIn        []string `json:"resourceScopeKeyNotIn,omitempty"`
+	ResourceScopeKeyGT           *string  `json:"resourceScopeKeyGT,omitempty"`
+	ResourceScopeKeyGTE          *string  `json:"resourceScopeKeyGTE,omitempty"`
+	ResourceScopeKeyLT           *string  `json:"resourceScopeKeyLT,omitempty"`
+	ResourceScopeKeyLTE          *string  `json:"resourceScopeKeyLTE,omitempty"`
+	ResourceScopeKeyContains     *string  `json:"resourceScopeKeyContains,omitempty"`
+	ResourceScopeKeyHasPrefix    *string  `json:"resourceScopeKeyHasPrefix,omitempty"`
+	ResourceScopeKeyHasSuffix    *string  `json:"resourceScopeKeyHasSuffix,omitempty"`
+	ResourceScopeKeyIsNil        bool     `json:"resourceScopeKeyIsNil,omitempty"`
+	ResourceScopeKeyNotNil       bool     `json:"resourceScopeKeyNotNil,omitempty"`
+	ResourceScopeKeyEqualFold    *string  `json:"resourceScopeKeyEqualFold,omitempty"`
+	ResourceScopeKeyContainsFold *string  `json:"resourceScopeKeyContainsFold,omitempty"`
+
+	// "quota_scope_id" field predicates.
+	QuotaScopeID       *int  `json:"quotaScopeID,omitempty"`
+	QuotaScopeIDNEQ    *int  `json:"quotaScopeIDNEQ,omitempty"`
+	QuotaScopeIDIn     []int `json:"quotaScopeIDIn,omitempty"`
+	QuotaScopeIDNotIn  []int `json:"quotaScopeIDNotIn,omitempty"`
+	QuotaScopeIDIsNil  bool  `json:"quotaScopeIDIsNil,omitempty"`
+	QuotaScopeIDNotNil bool  `json:"quotaScopeIDNotNil,omitempty"`
+
+	// "quota_scope_name_snapshot" field predicates.
+	QuotaScopeNameSnapshot             *string  `json:"quotaScopeNameSnapshot,omitempty"`
+	QuotaScopeNameSnapshotNEQ          *string  `json:"quotaScopeNameSnapshotNEQ,omitempty"`
+	QuotaScopeNameSnapshotIn           []string `json:"quotaScopeNameSnapshotIn,omitempty"`
+	QuotaScopeNameSnapshotNotIn        []string `json:"quotaScopeNameSnapshotNotIn,omitempty"`
+	QuotaScopeNameSnapshotGT           *string  `json:"quotaScopeNameSnapshotGT,omitempty"`
+	QuotaScopeNameSnapshotGTE          *string  `json:"quotaScopeNameSnapshotGTE,omitempty"`
+	QuotaScopeNameSnapshotLT           *string  `json:"quotaScopeNameSnapshotLT,omitempty"`
+	QuotaScopeNameSnapshotLTE          *string  `json:"quotaScopeNameSnapshotLTE,omitempty"`
+	QuotaScopeNameSnapshotContains     *string  `json:"quotaScopeNameSnapshotContains,omitempty"`
+	QuotaScopeNameSnapshotHasPrefix    *string  `json:"quotaScopeNameSnapshotHasPrefix,omitempty"`
+	QuotaScopeNameSnapshotHasSuffix    *string  `json:"quotaScopeNameSnapshotHasSuffix,omitempty"`
+	QuotaScopeNameSnapshotIsNil        bool     `json:"quotaScopeNameSnapshotIsNil,omitempty"`
+	QuotaScopeNameSnapshotNotNil       bool     `json:"quotaScopeNameSnapshotNotNil,omitempty"`
+	QuotaScopeNameSnapshotEqualFold    *string  `json:"quotaScopeNameSnapshotEqualFold,omitempty"`
+	QuotaScopeNameSnapshotContainsFold *string  `json:"quotaScopeNameSnapshotContainsFold,omitempty"`
+
+	// "quota_scope_status_snapshot" field predicates.
+	QuotaScopeStatusSnapshot             *string  `json:"quotaScopeStatusSnapshot,omitempty"`
+	QuotaScopeStatusSnapshotNEQ          *string  `json:"quotaScopeStatusSnapshotNEQ,omitempty"`
+	QuotaScopeStatusSnapshotIn           []string `json:"quotaScopeStatusSnapshotIn,omitempty"`
+	QuotaScopeStatusSnapshotNotIn        []string `json:"quotaScopeStatusSnapshotNotIn,omitempty"`
+	QuotaScopeStatusSnapshotGT           *string  `json:"quotaScopeStatusSnapshotGT,omitempty"`
+	QuotaScopeStatusSnapshotGTE          *string  `json:"quotaScopeStatusSnapshotGTE,omitempty"`
+	QuotaScopeStatusSnapshotLT           *string  `json:"quotaScopeStatusSnapshotLT,omitempty"`
+	QuotaScopeStatusSnapshotLTE          *string  `json:"quotaScopeStatusSnapshotLTE,omitempty"`
+	QuotaScopeStatusSnapshotContains     *string  `json:"quotaScopeStatusSnapshotContains,omitempty"`
+	QuotaScopeStatusSnapshotHasPrefix    *string  `json:"quotaScopeStatusSnapshotHasPrefix,omitempty"`
+	QuotaScopeStatusSnapshotHasSuffix    *string  `json:"quotaScopeStatusSnapshotHasSuffix,omitempty"`
+	QuotaScopeStatusSnapshotIsNil        bool     `json:"quotaScopeStatusSnapshotIsNil,omitempty"`
+	QuotaScopeStatusSnapshotNotNil       bool     `json:"quotaScopeStatusSnapshotNotNil,omitempty"`
+	QuotaScopeStatusSnapshotEqualFold    *string  `json:"quotaScopeStatusSnapshotEqualFold,omitempty"`
+	QuotaScopeStatusSnapshotContainsFold *string  `json:"quotaScopeStatusSnapshotContainsFold,omitempty"`
+
 	// "credential_name_snapshot" field predicates.
 	CredentialNameSnapshot             *string  `json:"credentialNameSnapshot,omitempty"`
 	CredentialNameSnapshotNEQ          *string  `json:"credentialNameSnapshotNEQ,omitempty"`
@@ -8241,6 +9358,10 @@ type RequestExecutionWhereInput struct {
 	// "credential" edge predicates.
 	HasCredential     *bool                           `json:"hasCredential,omitempty"`
 	HasCredentialWith []*UpstreamCredentialWhereInput `json:"hasCredentialWith,omitempty"`
+
+	// "quota_scope" edge predicates.
+	HasQuotaScope     *bool                             `json:"hasQuotaScope,omitempty"`
+	HasQuotaScopeWith []*CredentialQuotaScopeWhereInput `json:"hasQuotaScopeWith,omitempty"`
 
 	// "data_storage" edge predicates.
 	HasDataStorage     *bool                    `json:"hasDataStorage,omitempty"`
@@ -8608,6 +9729,204 @@ func (i *RequestExecutionWhereInput) P() (predicate.RequestExecution, error) {
 	}
 	if i.CredentialFingerprintContainsFold != nil {
 		predicates = append(predicates, requestexecution.CredentialFingerprintContainsFold(*i.CredentialFingerprintContainsFold))
+	}
+	if i.SecretFingerprint != nil {
+		predicates = append(predicates, requestexecution.SecretFingerprintEQ(*i.SecretFingerprint))
+	}
+	if i.SecretFingerprintNEQ != nil {
+		predicates = append(predicates, requestexecution.SecretFingerprintNEQ(*i.SecretFingerprintNEQ))
+	}
+	if len(i.SecretFingerprintIn) > 0 {
+		predicates = append(predicates, requestexecution.SecretFingerprintIn(i.SecretFingerprintIn...))
+	}
+	if len(i.SecretFingerprintNotIn) > 0 {
+		predicates = append(predicates, requestexecution.SecretFingerprintNotIn(i.SecretFingerprintNotIn...))
+	}
+	if i.SecretFingerprintGT != nil {
+		predicates = append(predicates, requestexecution.SecretFingerprintGT(*i.SecretFingerprintGT))
+	}
+	if i.SecretFingerprintGTE != nil {
+		predicates = append(predicates, requestexecution.SecretFingerprintGTE(*i.SecretFingerprintGTE))
+	}
+	if i.SecretFingerprintLT != nil {
+		predicates = append(predicates, requestexecution.SecretFingerprintLT(*i.SecretFingerprintLT))
+	}
+	if i.SecretFingerprintLTE != nil {
+		predicates = append(predicates, requestexecution.SecretFingerprintLTE(*i.SecretFingerprintLTE))
+	}
+	if i.SecretFingerprintContains != nil {
+		predicates = append(predicates, requestexecution.SecretFingerprintContains(*i.SecretFingerprintContains))
+	}
+	if i.SecretFingerprintHasPrefix != nil {
+		predicates = append(predicates, requestexecution.SecretFingerprintHasPrefix(*i.SecretFingerprintHasPrefix))
+	}
+	if i.SecretFingerprintHasSuffix != nil {
+		predicates = append(predicates, requestexecution.SecretFingerprintHasSuffix(*i.SecretFingerprintHasSuffix))
+	}
+	if i.SecretFingerprintIsNil {
+		predicates = append(predicates, requestexecution.SecretFingerprintIsNil())
+	}
+	if i.SecretFingerprintNotNil {
+		predicates = append(predicates, requestexecution.SecretFingerprintNotNil())
+	}
+	if i.SecretFingerprintEqualFold != nil {
+		predicates = append(predicates, requestexecution.SecretFingerprintEqualFold(*i.SecretFingerprintEqualFold))
+	}
+	if i.SecretFingerprintContainsFold != nil {
+		predicates = append(predicates, requestexecution.SecretFingerprintContainsFold(*i.SecretFingerprintContainsFold))
+	}
+	if i.ResourceScopeKey != nil {
+		predicates = append(predicates, requestexecution.ResourceScopeKeyEQ(*i.ResourceScopeKey))
+	}
+	if i.ResourceScopeKeyNEQ != nil {
+		predicates = append(predicates, requestexecution.ResourceScopeKeyNEQ(*i.ResourceScopeKeyNEQ))
+	}
+	if len(i.ResourceScopeKeyIn) > 0 {
+		predicates = append(predicates, requestexecution.ResourceScopeKeyIn(i.ResourceScopeKeyIn...))
+	}
+	if len(i.ResourceScopeKeyNotIn) > 0 {
+		predicates = append(predicates, requestexecution.ResourceScopeKeyNotIn(i.ResourceScopeKeyNotIn...))
+	}
+	if i.ResourceScopeKeyGT != nil {
+		predicates = append(predicates, requestexecution.ResourceScopeKeyGT(*i.ResourceScopeKeyGT))
+	}
+	if i.ResourceScopeKeyGTE != nil {
+		predicates = append(predicates, requestexecution.ResourceScopeKeyGTE(*i.ResourceScopeKeyGTE))
+	}
+	if i.ResourceScopeKeyLT != nil {
+		predicates = append(predicates, requestexecution.ResourceScopeKeyLT(*i.ResourceScopeKeyLT))
+	}
+	if i.ResourceScopeKeyLTE != nil {
+		predicates = append(predicates, requestexecution.ResourceScopeKeyLTE(*i.ResourceScopeKeyLTE))
+	}
+	if i.ResourceScopeKeyContains != nil {
+		predicates = append(predicates, requestexecution.ResourceScopeKeyContains(*i.ResourceScopeKeyContains))
+	}
+	if i.ResourceScopeKeyHasPrefix != nil {
+		predicates = append(predicates, requestexecution.ResourceScopeKeyHasPrefix(*i.ResourceScopeKeyHasPrefix))
+	}
+	if i.ResourceScopeKeyHasSuffix != nil {
+		predicates = append(predicates, requestexecution.ResourceScopeKeyHasSuffix(*i.ResourceScopeKeyHasSuffix))
+	}
+	if i.ResourceScopeKeyIsNil {
+		predicates = append(predicates, requestexecution.ResourceScopeKeyIsNil())
+	}
+	if i.ResourceScopeKeyNotNil {
+		predicates = append(predicates, requestexecution.ResourceScopeKeyNotNil())
+	}
+	if i.ResourceScopeKeyEqualFold != nil {
+		predicates = append(predicates, requestexecution.ResourceScopeKeyEqualFold(*i.ResourceScopeKeyEqualFold))
+	}
+	if i.ResourceScopeKeyContainsFold != nil {
+		predicates = append(predicates, requestexecution.ResourceScopeKeyContainsFold(*i.ResourceScopeKeyContainsFold))
+	}
+	if i.QuotaScopeID != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeIDEQ(*i.QuotaScopeID))
+	}
+	if i.QuotaScopeIDNEQ != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeIDNEQ(*i.QuotaScopeIDNEQ))
+	}
+	if len(i.QuotaScopeIDIn) > 0 {
+		predicates = append(predicates, requestexecution.QuotaScopeIDIn(i.QuotaScopeIDIn...))
+	}
+	if len(i.QuotaScopeIDNotIn) > 0 {
+		predicates = append(predicates, requestexecution.QuotaScopeIDNotIn(i.QuotaScopeIDNotIn...))
+	}
+	if i.QuotaScopeIDIsNil {
+		predicates = append(predicates, requestexecution.QuotaScopeIDIsNil())
+	}
+	if i.QuotaScopeIDNotNil {
+		predicates = append(predicates, requestexecution.QuotaScopeIDNotNil())
+	}
+	if i.QuotaScopeNameSnapshot != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeNameSnapshotEQ(*i.QuotaScopeNameSnapshot))
+	}
+	if i.QuotaScopeNameSnapshotNEQ != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeNameSnapshotNEQ(*i.QuotaScopeNameSnapshotNEQ))
+	}
+	if len(i.QuotaScopeNameSnapshotIn) > 0 {
+		predicates = append(predicates, requestexecution.QuotaScopeNameSnapshotIn(i.QuotaScopeNameSnapshotIn...))
+	}
+	if len(i.QuotaScopeNameSnapshotNotIn) > 0 {
+		predicates = append(predicates, requestexecution.QuotaScopeNameSnapshotNotIn(i.QuotaScopeNameSnapshotNotIn...))
+	}
+	if i.QuotaScopeNameSnapshotGT != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeNameSnapshotGT(*i.QuotaScopeNameSnapshotGT))
+	}
+	if i.QuotaScopeNameSnapshotGTE != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeNameSnapshotGTE(*i.QuotaScopeNameSnapshotGTE))
+	}
+	if i.QuotaScopeNameSnapshotLT != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeNameSnapshotLT(*i.QuotaScopeNameSnapshotLT))
+	}
+	if i.QuotaScopeNameSnapshotLTE != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeNameSnapshotLTE(*i.QuotaScopeNameSnapshotLTE))
+	}
+	if i.QuotaScopeNameSnapshotContains != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeNameSnapshotContains(*i.QuotaScopeNameSnapshotContains))
+	}
+	if i.QuotaScopeNameSnapshotHasPrefix != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeNameSnapshotHasPrefix(*i.QuotaScopeNameSnapshotHasPrefix))
+	}
+	if i.QuotaScopeNameSnapshotHasSuffix != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeNameSnapshotHasSuffix(*i.QuotaScopeNameSnapshotHasSuffix))
+	}
+	if i.QuotaScopeNameSnapshotIsNil {
+		predicates = append(predicates, requestexecution.QuotaScopeNameSnapshotIsNil())
+	}
+	if i.QuotaScopeNameSnapshotNotNil {
+		predicates = append(predicates, requestexecution.QuotaScopeNameSnapshotNotNil())
+	}
+	if i.QuotaScopeNameSnapshotEqualFold != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeNameSnapshotEqualFold(*i.QuotaScopeNameSnapshotEqualFold))
+	}
+	if i.QuotaScopeNameSnapshotContainsFold != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeNameSnapshotContainsFold(*i.QuotaScopeNameSnapshotContainsFold))
+	}
+	if i.QuotaScopeStatusSnapshot != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeStatusSnapshotEQ(*i.QuotaScopeStatusSnapshot))
+	}
+	if i.QuotaScopeStatusSnapshotNEQ != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeStatusSnapshotNEQ(*i.QuotaScopeStatusSnapshotNEQ))
+	}
+	if len(i.QuotaScopeStatusSnapshotIn) > 0 {
+		predicates = append(predicates, requestexecution.QuotaScopeStatusSnapshotIn(i.QuotaScopeStatusSnapshotIn...))
+	}
+	if len(i.QuotaScopeStatusSnapshotNotIn) > 0 {
+		predicates = append(predicates, requestexecution.QuotaScopeStatusSnapshotNotIn(i.QuotaScopeStatusSnapshotNotIn...))
+	}
+	if i.QuotaScopeStatusSnapshotGT != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeStatusSnapshotGT(*i.QuotaScopeStatusSnapshotGT))
+	}
+	if i.QuotaScopeStatusSnapshotGTE != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeStatusSnapshotGTE(*i.QuotaScopeStatusSnapshotGTE))
+	}
+	if i.QuotaScopeStatusSnapshotLT != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeStatusSnapshotLT(*i.QuotaScopeStatusSnapshotLT))
+	}
+	if i.QuotaScopeStatusSnapshotLTE != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeStatusSnapshotLTE(*i.QuotaScopeStatusSnapshotLTE))
+	}
+	if i.QuotaScopeStatusSnapshotContains != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeStatusSnapshotContains(*i.QuotaScopeStatusSnapshotContains))
+	}
+	if i.QuotaScopeStatusSnapshotHasPrefix != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeStatusSnapshotHasPrefix(*i.QuotaScopeStatusSnapshotHasPrefix))
+	}
+	if i.QuotaScopeStatusSnapshotHasSuffix != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeStatusSnapshotHasSuffix(*i.QuotaScopeStatusSnapshotHasSuffix))
+	}
+	if i.QuotaScopeStatusSnapshotIsNil {
+		predicates = append(predicates, requestexecution.QuotaScopeStatusSnapshotIsNil())
+	}
+	if i.QuotaScopeStatusSnapshotNotNil {
+		predicates = append(predicates, requestexecution.QuotaScopeStatusSnapshotNotNil())
+	}
+	if i.QuotaScopeStatusSnapshotEqualFold != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeStatusSnapshotEqualFold(*i.QuotaScopeStatusSnapshotEqualFold))
+	}
+	if i.QuotaScopeStatusSnapshotContainsFold != nil {
+		predicates = append(predicates, requestexecution.QuotaScopeStatusSnapshotContainsFold(*i.QuotaScopeStatusSnapshotContainsFold))
 	}
 	if i.CredentialNameSnapshot != nil {
 		predicates = append(predicates, requestexecution.CredentialNameSnapshotEQ(*i.CredentialNameSnapshot))
@@ -9065,6 +10384,24 @@ func (i *RequestExecutionWhereInput) P() (predicate.RequestExecution, error) {
 			with = append(with, p)
 		}
 		predicates = append(predicates, requestexecution.HasCredentialWith(with...))
+	}
+	if i.HasQuotaScope != nil {
+		p := requestexecution.HasQuotaScope()
+		if !*i.HasQuotaScope {
+			p = requestexecution.Not(p)
+		}
+		predicates = append(predicates, p)
+	}
+	if len(i.HasQuotaScopeWith) > 0 {
+		with := make([]predicate.CredentialQuotaScope, 0, len(i.HasQuotaScopeWith))
+		for _, w := range i.HasQuotaScopeWith {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'HasQuotaScopeWith'", err)
+			}
+			with = append(with, p)
+		}
+		predicates = append(predicates, requestexecution.HasQuotaScopeWith(with...))
 	}
 	if i.HasDataStorage != nil {
 		p := requestexecution.HasDataStorage()
@@ -10468,67 +11805,6 @@ type UpstreamCredentialWhereInput struct {
 	NameEqualFold    *string  `json:"nameEqualFold,omitempty"`
 	NameContainsFold *string  `json:"nameContainsFold,omitempty"`
 
-	// "provider_type" field predicates.
-	ProviderType             *string  `json:"providerType,omitempty"`
-	ProviderTypeNEQ          *string  `json:"providerTypeNEQ,omitempty"`
-	ProviderTypeIn           []string `json:"providerTypeIn,omitempty"`
-	ProviderTypeNotIn        []string `json:"providerTypeNotIn,omitempty"`
-	ProviderTypeGT           *string  `json:"providerTypeGT,omitempty"`
-	ProviderTypeGTE          *string  `json:"providerTypeGTE,omitempty"`
-	ProviderTypeLT           *string  `json:"providerTypeLT,omitempty"`
-	ProviderTypeLTE          *string  `json:"providerTypeLTE,omitempty"`
-	ProviderTypeContains     *string  `json:"providerTypeContains,omitempty"`
-	ProviderTypeHasPrefix    *string  `json:"providerTypeHasPrefix,omitempty"`
-	ProviderTypeHasSuffix    *string  `json:"providerTypeHasSuffix,omitempty"`
-	ProviderTypeEqualFold    *string  `json:"providerTypeEqualFold,omitempty"`
-	ProviderTypeContainsFold *string  `json:"providerTypeContainsFold,omitempty"`
-
-	// "base_url" field predicates.
-	BaseURL             *string  `json:"baseURL,omitempty"`
-	BaseURLNEQ          *string  `json:"baseURLNEQ,omitempty"`
-	BaseURLIn           []string `json:"baseURLIn,omitempty"`
-	BaseURLNotIn        []string `json:"baseURLNotIn,omitempty"`
-	BaseURLGT           *string  `json:"baseURLGT,omitempty"`
-	BaseURLGTE          *string  `json:"baseURLGTE,omitempty"`
-	BaseURLLT           *string  `json:"baseURLLT,omitempty"`
-	BaseURLLTE          *string  `json:"baseURLLTE,omitempty"`
-	BaseURLContains     *string  `json:"baseURLContains,omitempty"`
-	BaseURLHasPrefix    *string  `json:"baseURLHasPrefix,omitempty"`
-	BaseURLHasSuffix    *string  `json:"baseURLHasSuffix,omitempty"`
-	BaseURLIsNil        bool     `json:"baseURLIsNil,omitempty"`
-	BaseURLNotNil       bool     `json:"baseURLNotNil,omitempty"`
-	BaseURLEqualFold    *string  `json:"baseURLEqualFold,omitempty"`
-	BaseURLContainsFold *string  `json:"baseURLContainsFold,omitempty"`
-
-	// "auth_kind" field predicates.
-	AuthKind      *upstreamcredential.AuthKind  `json:"authKind,omitempty"`
-	AuthKindNEQ   *upstreamcredential.AuthKind  `json:"authKindNEQ,omitempty"`
-	AuthKindIn    []upstreamcredential.AuthKind `json:"authKindIn,omitempty"`
-	AuthKindNotIn []upstreamcredential.AuthKind `json:"authKindNotIn,omitempty"`
-
-	// "secret_kind" field predicates.
-	SecretKind      *upstreamcredential.SecretKind  `json:"secretKind,omitempty"`
-	SecretKindNEQ   *upstreamcredential.SecretKind  `json:"secretKindNEQ,omitempty"`
-	SecretKindIn    []upstreamcredential.SecretKind `json:"secretKindIn,omitempty"`
-	SecretKindNotIn []upstreamcredential.SecretKind `json:"secretKindNotIn,omitempty"`
-
-	// "issuer_scope" field predicates.
-	IssuerScope             *string  `json:"issuerScope,omitempty"`
-	IssuerScopeNEQ          *string  `json:"issuerScopeNEQ,omitempty"`
-	IssuerScopeIn           []string `json:"issuerScopeIn,omitempty"`
-	IssuerScopeNotIn        []string `json:"issuerScopeNotIn,omitempty"`
-	IssuerScopeGT           *string  `json:"issuerScopeGT,omitempty"`
-	IssuerScopeGTE          *string  `json:"issuerScopeGTE,omitempty"`
-	IssuerScopeLT           *string  `json:"issuerScopeLT,omitempty"`
-	IssuerScopeLTE          *string  `json:"issuerScopeLTE,omitempty"`
-	IssuerScopeContains     *string  `json:"issuerScopeContains,omitempty"`
-	IssuerScopeHasPrefix    *string  `json:"issuerScopeHasPrefix,omitempty"`
-	IssuerScopeHasSuffix    *string  `json:"issuerScopeHasSuffix,omitempty"`
-	IssuerScopeIsNil        bool     `json:"issuerScopeIsNil,omitempty"`
-	IssuerScopeNotNil       bool     `json:"issuerScopeNotNil,omitempty"`
-	IssuerScopeEqualFold    *string  `json:"issuerScopeEqualFold,omitempty"`
-	IssuerScopeContainsFold *string  `json:"issuerScopeContainsFold,omitempty"`
-
 	// "key_hint" field predicates.
 	KeyHint             *string  `json:"keyHint,omitempty"`
 	KeyHintNEQ          *string  `json:"keyHintNEQ,omitempty"`
@@ -10551,10 +11827,6 @@ type UpstreamCredentialWhereInput struct {
 	QuotaScopeIDNEQ    *int  `json:"quotaScopeIDNEQ,omitempty"`
 	QuotaScopeIDIn     []int `json:"quotaScopeIDIn,omitempty"`
 	QuotaScopeIDNotIn  []int `json:"quotaScopeIDNotIn,omitempty"`
-	QuotaScopeIDGT     *int  `json:"quotaScopeIDGT,omitempty"`
-	QuotaScopeIDGTE    *int  `json:"quotaScopeIDGTE,omitempty"`
-	QuotaScopeIDLT     *int  `json:"quotaScopeIDLT,omitempty"`
-	QuotaScopeIDLTE    *int  `json:"quotaScopeIDLTE,omitempty"`
 	QuotaScopeIDIsNil  bool  `json:"quotaScopeIDIsNil,omitempty"`
 	QuotaScopeIDNotNil bool  `json:"quotaScopeIDNotNil,omitempty"`
 
@@ -10573,21 +11845,28 @@ type UpstreamCredentialWhereInput struct {
 	FingerprintEqualFold    *string  `json:"fingerprintEqualFold,omitempty"`
 	FingerprintContainsFold *string  `json:"fingerprintContainsFold,omitempty"`
 
+	// "secret_fingerprint" field predicates.
+	SecretFingerprint             *string  `json:"secretFingerprint,omitempty"`
+	SecretFingerprintNEQ          *string  `json:"secretFingerprintNEQ,omitempty"`
+	SecretFingerprintIn           []string `json:"secretFingerprintIn,omitempty"`
+	SecretFingerprintNotIn        []string `json:"secretFingerprintNotIn,omitempty"`
+	SecretFingerprintGT           *string  `json:"secretFingerprintGT,omitempty"`
+	SecretFingerprintGTE          *string  `json:"secretFingerprintGTE,omitempty"`
+	SecretFingerprintLT           *string  `json:"secretFingerprintLT,omitempty"`
+	SecretFingerprintLTE          *string  `json:"secretFingerprintLTE,omitempty"`
+	SecretFingerprintContains     *string  `json:"secretFingerprintContains,omitempty"`
+	SecretFingerprintHasPrefix    *string  `json:"secretFingerprintHasPrefix,omitempty"`
+	SecretFingerprintHasSuffix    *string  `json:"secretFingerprintHasSuffix,omitempty"`
+	SecretFingerprintIsNil        bool     `json:"secretFingerprintIsNil,omitempty"`
+	SecretFingerprintNotNil       bool     `json:"secretFingerprintNotNil,omitempty"`
+	SecretFingerprintEqualFold    *string  `json:"secretFingerprintEqualFold,omitempty"`
+	SecretFingerprintContainsFold *string  `json:"secretFingerprintContainsFold,omitempty"`
+
 	// "status" field predicates.
 	Status      *upstreamcredential.Status  `json:"status,omitempty"`
 	StatusNEQ   *upstreamcredential.Status  `json:"statusNEQ,omitempty"`
 	StatusIn    []upstreamcredential.Status `json:"statusIn,omitempty"`
 	StatusNotIn []upstreamcredential.Status `json:"statusNotIn,omitempty"`
-
-	// "weight" field predicates.
-	Weight      *int  `json:"weight,omitempty"`
-	WeightNEQ   *int  `json:"weightNEQ,omitempty"`
-	WeightIn    []int `json:"weightIn,omitempty"`
-	WeightNotIn []int `json:"weightNotIn,omitempty"`
-	WeightGT    *int  `json:"weightGT,omitempty"`
-	WeightGTE   *int  `json:"weightGTE,omitempty"`
-	WeightLT    *int  `json:"weightLT,omitempty"`
-	WeightLTE   *int  `json:"weightLTE,omitempty"`
 
 	// "quota_status" field predicates.
 	QuotaStatus             *string  `json:"quotaStatus,omitempty"`
@@ -10655,6 +11934,10 @@ type UpstreamCredentialWhereInput struct {
 	// "provider_quota_statuses" edge predicates.
 	HasProviderQuotaStatuses     *bool                            `json:"hasProviderQuotaStatuses,omitempty"`
 	HasProviderQuotaStatusesWith []*ProviderQuotaStatusWhereInput `json:"hasProviderQuotaStatusesWith,omitempty"`
+
+	// "quota_scope" edge predicates.
+	HasQuotaScope     *bool                             `json:"hasQuotaScope,omitempty"`
+	HasQuotaScopeWith []*CredentialQuotaScopeWhereInput `json:"hasQuotaScopeWith,omitempty"`
 }
 
 // AddPredicates adds custom predicates to the where input to be used during the filtering phase.
@@ -10845,159 +12128,6 @@ func (i *UpstreamCredentialWhereInput) P() (predicate.UpstreamCredential, error)
 	if i.NameContainsFold != nil {
 		predicates = append(predicates, upstreamcredential.NameContainsFold(*i.NameContainsFold))
 	}
-	if i.ProviderType != nil {
-		predicates = append(predicates, upstreamcredential.ProviderTypeEQ(*i.ProviderType))
-	}
-	if i.ProviderTypeNEQ != nil {
-		predicates = append(predicates, upstreamcredential.ProviderTypeNEQ(*i.ProviderTypeNEQ))
-	}
-	if len(i.ProviderTypeIn) > 0 {
-		predicates = append(predicates, upstreamcredential.ProviderTypeIn(i.ProviderTypeIn...))
-	}
-	if len(i.ProviderTypeNotIn) > 0 {
-		predicates = append(predicates, upstreamcredential.ProviderTypeNotIn(i.ProviderTypeNotIn...))
-	}
-	if i.ProviderTypeGT != nil {
-		predicates = append(predicates, upstreamcredential.ProviderTypeGT(*i.ProviderTypeGT))
-	}
-	if i.ProviderTypeGTE != nil {
-		predicates = append(predicates, upstreamcredential.ProviderTypeGTE(*i.ProviderTypeGTE))
-	}
-	if i.ProviderTypeLT != nil {
-		predicates = append(predicates, upstreamcredential.ProviderTypeLT(*i.ProviderTypeLT))
-	}
-	if i.ProviderTypeLTE != nil {
-		predicates = append(predicates, upstreamcredential.ProviderTypeLTE(*i.ProviderTypeLTE))
-	}
-	if i.ProviderTypeContains != nil {
-		predicates = append(predicates, upstreamcredential.ProviderTypeContains(*i.ProviderTypeContains))
-	}
-	if i.ProviderTypeHasPrefix != nil {
-		predicates = append(predicates, upstreamcredential.ProviderTypeHasPrefix(*i.ProviderTypeHasPrefix))
-	}
-	if i.ProviderTypeHasSuffix != nil {
-		predicates = append(predicates, upstreamcredential.ProviderTypeHasSuffix(*i.ProviderTypeHasSuffix))
-	}
-	if i.ProviderTypeEqualFold != nil {
-		predicates = append(predicates, upstreamcredential.ProviderTypeEqualFold(*i.ProviderTypeEqualFold))
-	}
-	if i.ProviderTypeContainsFold != nil {
-		predicates = append(predicates, upstreamcredential.ProviderTypeContainsFold(*i.ProviderTypeContainsFold))
-	}
-	if i.BaseURL != nil {
-		predicates = append(predicates, upstreamcredential.BaseURLEQ(*i.BaseURL))
-	}
-	if i.BaseURLNEQ != nil {
-		predicates = append(predicates, upstreamcredential.BaseURLNEQ(*i.BaseURLNEQ))
-	}
-	if len(i.BaseURLIn) > 0 {
-		predicates = append(predicates, upstreamcredential.BaseURLIn(i.BaseURLIn...))
-	}
-	if len(i.BaseURLNotIn) > 0 {
-		predicates = append(predicates, upstreamcredential.BaseURLNotIn(i.BaseURLNotIn...))
-	}
-	if i.BaseURLGT != nil {
-		predicates = append(predicates, upstreamcredential.BaseURLGT(*i.BaseURLGT))
-	}
-	if i.BaseURLGTE != nil {
-		predicates = append(predicates, upstreamcredential.BaseURLGTE(*i.BaseURLGTE))
-	}
-	if i.BaseURLLT != nil {
-		predicates = append(predicates, upstreamcredential.BaseURLLT(*i.BaseURLLT))
-	}
-	if i.BaseURLLTE != nil {
-		predicates = append(predicates, upstreamcredential.BaseURLLTE(*i.BaseURLLTE))
-	}
-	if i.BaseURLContains != nil {
-		predicates = append(predicates, upstreamcredential.BaseURLContains(*i.BaseURLContains))
-	}
-	if i.BaseURLHasPrefix != nil {
-		predicates = append(predicates, upstreamcredential.BaseURLHasPrefix(*i.BaseURLHasPrefix))
-	}
-	if i.BaseURLHasSuffix != nil {
-		predicates = append(predicates, upstreamcredential.BaseURLHasSuffix(*i.BaseURLHasSuffix))
-	}
-	if i.BaseURLIsNil {
-		predicates = append(predicates, upstreamcredential.BaseURLIsNil())
-	}
-	if i.BaseURLNotNil {
-		predicates = append(predicates, upstreamcredential.BaseURLNotNil())
-	}
-	if i.BaseURLEqualFold != nil {
-		predicates = append(predicates, upstreamcredential.BaseURLEqualFold(*i.BaseURLEqualFold))
-	}
-	if i.BaseURLContainsFold != nil {
-		predicates = append(predicates, upstreamcredential.BaseURLContainsFold(*i.BaseURLContainsFold))
-	}
-	if i.AuthKind != nil {
-		predicates = append(predicates, upstreamcredential.AuthKindEQ(*i.AuthKind))
-	}
-	if i.AuthKindNEQ != nil {
-		predicates = append(predicates, upstreamcredential.AuthKindNEQ(*i.AuthKindNEQ))
-	}
-	if len(i.AuthKindIn) > 0 {
-		predicates = append(predicates, upstreamcredential.AuthKindIn(i.AuthKindIn...))
-	}
-	if len(i.AuthKindNotIn) > 0 {
-		predicates = append(predicates, upstreamcredential.AuthKindNotIn(i.AuthKindNotIn...))
-	}
-	if i.SecretKind != nil {
-		predicates = append(predicates, upstreamcredential.SecretKindEQ(*i.SecretKind))
-	}
-	if i.SecretKindNEQ != nil {
-		predicates = append(predicates, upstreamcredential.SecretKindNEQ(*i.SecretKindNEQ))
-	}
-	if len(i.SecretKindIn) > 0 {
-		predicates = append(predicates, upstreamcredential.SecretKindIn(i.SecretKindIn...))
-	}
-	if len(i.SecretKindNotIn) > 0 {
-		predicates = append(predicates, upstreamcredential.SecretKindNotIn(i.SecretKindNotIn...))
-	}
-	if i.IssuerScope != nil {
-		predicates = append(predicates, upstreamcredential.IssuerScopeEQ(*i.IssuerScope))
-	}
-	if i.IssuerScopeNEQ != nil {
-		predicates = append(predicates, upstreamcredential.IssuerScopeNEQ(*i.IssuerScopeNEQ))
-	}
-	if len(i.IssuerScopeIn) > 0 {
-		predicates = append(predicates, upstreamcredential.IssuerScopeIn(i.IssuerScopeIn...))
-	}
-	if len(i.IssuerScopeNotIn) > 0 {
-		predicates = append(predicates, upstreamcredential.IssuerScopeNotIn(i.IssuerScopeNotIn...))
-	}
-	if i.IssuerScopeGT != nil {
-		predicates = append(predicates, upstreamcredential.IssuerScopeGT(*i.IssuerScopeGT))
-	}
-	if i.IssuerScopeGTE != nil {
-		predicates = append(predicates, upstreamcredential.IssuerScopeGTE(*i.IssuerScopeGTE))
-	}
-	if i.IssuerScopeLT != nil {
-		predicates = append(predicates, upstreamcredential.IssuerScopeLT(*i.IssuerScopeLT))
-	}
-	if i.IssuerScopeLTE != nil {
-		predicates = append(predicates, upstreamcredential.IssuerScopeLTE(*i.IssuerScopeLTE))
-	}
-	if i.IssuerScopeContains != nil {
-		predicates = append(predicates, upstreamcredential.IssuerScopeContains(*i.IssuerScopeContains))
-	}
-	if i.IssuerScopeHasPrefix != nil {
-		predicates = append(predicates, upstreamcredential.IssuerScopeHasPrefix(*i.IssuerScopeHasPrefix))
-	}
-	if i.IssuerScopeHasSuffix != nil {
-		predicates = append(predicates, upstreamcredential.IssuerScopeHasSuffix(*i.IssuerScopeHasSuffix))
-	}
-	if i.IssuerScopeIsNil {
-		predicates = append(predicates, upstreamcredential.IssuerScopeIsNil())
-	}
-	if i.IssuerScopeNotNil {
-		predicates = append(predicates, upstreamcredential.IssuerScopeNotNil())
-	}
-	if i.IssuerScopeEqualFold != nil {
-		predicates = append(predicates, upstreamcredential.IssuerScopeEqualFold(*i.IssuerScopeEqualFold))
-	}
-	if i.IssuerScopeContainsFold != nil {
-		predicates = append(predicates, upstreamcredential.IssuerScopeContainsFold(*i.IssuerScopeContainsFold))
-	}
 	if i.KeyHint != nil {
 		predicates = append(predicates, upstreamcredential.KeyHintEQ(*i.KeyHint))
 	}
@@ -11055,18 +12185,6 @@ func (i *UpstreamCredentialWhereInput) P() (predicate.UpstreamCredential, error)
 	if len(i.QuotaScopeIDNotIn) > 0 {
 		predicates = append(predicates, upstreamcredential.QuotaScopeIDNotIn(i.QuotaScopeIDNotIn...))
 	}
-	if i.QuotaScopeIDGT != nil {
-		predicates = append(predicates, upstreamcredential.QuotaScopeIDGT(*i.QuotaScopeIDGT))
-	}
-	if i.QuotaScopeIDGTE != nil {
-		predicates = append(predicates, upstreamcredential.QuotaScopeIDGTE(*i.QuotaScopeIDGTE))
-	}
-	if i.QuotaScopeIDLT != nil {
-		predicates = append(predicates, upstreamcredential.QuotaScopeIDLT(*i.QuotaScopeIDLT))
-	}
-	if i.QuotaScopeIDLTE != nil {
-		predicates = append(predicates, upstreamcredential.QuotaScopeIDLTE(*i.QuotaScopeIDLTE))
-	}
 	if i.QuotaScopeIDIsNil {
 		predicates = append(predicates, upstreamcredential.QuotaScopeIDIsNil())
 	}
@@ -11112,6 +12230,51 @@ func (i *UpstreamCredentialWhereInput) P() (predicate.UpstreamCredential, error)
 	if i.FingerprintContainsFold != nil {
 		predicates = append(predicates, upstreamcredential.FingerprintContainsFold(*i.FingerprintContainsFold))
 	}
+	if i.SecretFingerprint != nil {
+		predicates = append(predicates, upstreamcredential.SecretFingerprintEQ(*i.SecretFingerprint))
+	}
+	if i.SecretFingerprintNEQ != nil {
+		predicates = append(predicates, upstreamcredential.SecretFingerprintNEQ(*i.SecretFingerprintNEQ))
+	}
+	if len(i.SecretFingerprintIn) > 0 {
+		predicates = append(predicates, upstreamcredential.SecretFingerprintIn(i.SecretFingerprintIn...))
+	}
+	if len(i.SecretFingerprintNotIn) > 0 {
+		predicates = append(predicates, upstreamcredential.SecretFingerprintNotIn(i.SecretFingerprintNotIn...))
+	}
+	if i.SecretFingerprintGT != nil {
+		predicates = append(predicates, upstreamcredential.SecretFingerprintGT(*i.SecretFingerprintGT))
+	}
+	if i.SecretFingerprintGTE != nil {
+		predicates = append(predicates, upstreamcredential.SecretFingerprintGTE(*i.SecretFingerprintGTE))
+	}
+	if i.SecretFingerprintLT != nil {
+		predicates = append(predicates, upstreamcredential.SecretFingerprintLT(*i.SecretFingerprintLT))
+	}
+	if i.SecretFingerprintLTE != nil {
+		predicates = append(predicates, upstreamcredential.SecretFingerprintLTE(*i.SecretFingerprintLTE))
+	}
+	if i.SecretFingerprintContains != nil {
+		predicates = append(predicates, upstreamcredential.SecretFingerprintContains(*i.SecretFingerprintContains))
+	}
+	if i.SecretFingerprintHasPrefix != nil {
+		predicates = append(predicates, upstreamcredential.SecretFingerprintHasPrefix(*i.SecretFingerprintHasPrefix))
+	}
+	if i.SecretFingerprintHasSuffix != nil {
+		predicates = append(predicates, upstreamcredential.SecretFingerprintHasSuffix(*i.SecretFingerprintHasSuffix))
+	}
+	if i.SecretFingerprintIsNil {
+		predicates = append(predicates, upstreamcredential.SecretFingerprintIsNil())
+	}
+	if i.SecretFingerprintNotNil {
+		predicates = append(predicates, upstreamcredential.SecretFingerprintNotNil())
+	}
+	if i.SecretFingerprintEqualFold != nil {
+		predicates = append(predicates, upstreamcredential.SecretFingerprintEqualFold(*i.SecretFingerprintEqualFold))
+	}
+	if i.SecretFingerprintContainsFold != nil {
+		predicates = append(predicates, upstreamcredential.SecretFingerprintContainsFold(*i.SecretFingerprintContainsFold))
+	}
 	if i.Status != nil {
 		predicates = append(predicates, upstreamcredential.StatusEQ(*i.Status))
 	}
@@ -11123,30 +12286,6 @@ func (i *UpstreamCredentialWhereInput) P() (predicate.UpstreamCredential, error)
 	}
 	if len(i.StatusNotIn) > 0 {
 		predicates = append(predicates, upstreamcredential.StatusNotIn(i.StatusNotIn...))
-	}
-	if i.Weight != nil {
-		predicates = append(predicates, upstreamcredential.WeightEQ(*i.Weight))
-	}
-	if i.WeightNEQ != nil {
-		predicates = append(predicates, upstreamcredential.WeightNEQ(*i.WeightNEQ))
-	}
-	if len(i.WeightIn) > 0 {
-		predicates = append(predicates, upstreamcredential.WeightIn(i.WeightIn...))
-	}
-	if len(i.WeightNotIn) > 0 {
-		predicates = append(predicates, upstreamcredential.WeightNotIn(i.WeightNotIn...))
-	}
-	if i.WeightGT != nil {
-		predicates = append(predicates, upstreamcredential.WeightGT(*i.WeightGT))
-	}
-	if i.WeightGTE != nil {
-		predicates = append(predicates, upstreamcredential.WeightGTE(*i.WeightGTE))
-	}
-	if i.WeightLT != nil {
-		predicates = append(predicates, upstreamcredential.WeightLT(*i.WeightLT))
-	}
-	if i.WeightLTE != nil {
-		predicates = append(predicates, upstreamcredential.WeightLTE(*i.WeightLTE))
 	}
 	if i.QuotaStatus != nil {
 		predicates = append(predicates, upstreamcredential.QuotaStatusEQ(*i.QuotaStatus))
@@ -11356,6 +12495,24 @@ func (i *UpstreamCredentialWhereInput) P() (predicate.UpstreamCredential, error)
 		}
 		predicates = append(predicates, upstreamcredential.HasProviderQuotaStatusesWith(with...))
 	}
+	if i.HasQuotaScope != nil {
+		p := upstreamcredential.HasQuotaScope()
+		if !*i.HasQuotaScope {
+			p = upstreamcredential.Not(p)
+		}
+		predicates = append(predicates, p)
+	}
+	if len(i.HasQuotaScopeWith) > 0 {
+		with := make([]predicate.CredentialQuotaScope, 0, len(i.HasQuotaScopeWith))
+		for _, w := range i.HasQuotaScopeWith {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'HasQuotaScopeWith'", err)
+			}
+			with = append(with, p)
+		}
+		predicates = append(predicates, upstreamcredential.HasQuotaScopeWith(with...))
+	}
 	switch len(predicates) {
 	case 0:
 		return nil, ErrEmptyUpstreamCredentialWhereInput
@@ -11475,6 +12632,82 @@ type UsageLogWhereInput struct {
 	CredentialFingerprintEqualFold    *string  `json:"credentialFingerprintEqualFold,omitempty"`
 	CredentialFingerprintContainsFold *string  `json:"credentialFingerprintContainsFold,omitempty"`
 
+	// "secret_fingerprint" field predicates.
+	SecretFingerprint             *string  `json:"secretFingerprint,omitempty"`
+	SecretFingerprintNEQ          *string  `json:"secretFingerprintNEQ,omitempty"`
+	SecretFingerprintIn           []string `json:"secretFingerprintIn,omitempty"`
+	SecretFingerprintNotIn        []string `json:"secretFingerprintNotIn,omitempty"`
+	SecretFingerprintGT           *string  `json:"secretFingerprintGT,omitempty"`
+	SecretFingerprintGTE          *string  `json:"secretFingerprintGTE,omitempty"`
+	SecretFingerprintLT           *string  `json:"secretFingerprintLT,omitempty"`
+	SecretFingerprintLTE          *string  `json:"secretFingerprintLTE,omitempty"`
+	SecretFingerprintContains     *string  `json:"secretFingerprintContains,omitempty"`
+	SecretFingerprintHasPrefix    *string  `json:"secretFingerprintHasPrefix,omitempty"`
+	SecretFingerprintHasSuffix    *string  `json:"secretFingerprintHasSuffix,omitempty"`
+	SecretFingerprintIsNil        bool     `json:"secretFingerprintIsNil,omitempty"`
+	SecretFingerprintNotNil       bool     `json:"secretFingerprintNotNil,omitempty"`
+	SecretFingerprintEqualFold    *string  `json:"secretFingerprintEqualFold,omitempty"`
+	SecretFingerprintContainsFold *string  `json:"secretFingerprintContainsFold,omitempty"`
+
+	// "resource_scope_key" field predicates.
+	ResourceScopeKey             *string  `json:"resourceScopeKey,omitempty"`
+	ResourceScopeKeyNEQ          *string  `json:"resourceScopeKeyNEQ,omitempty"`
+	ResourceScopeKeyIn           []string `json:"resourceScopeKeyIn,omitempty"`
+	ResourceScopeKeyNotIn        []string `json:"resourceScopeKeyNotIn,omitempty"`
+	ResourceScopeKeyGT           *string  `json:"resourceScopeKeyGT,omitempty"`
+	ResourceScopeKeyGTE          *string  `json:"resourceScopeKeyGTE,omitempty"`
+	ResourceScopeKeyLT           *string  `json:"resourceScopeKeyLT,omitempty"`
+	ResourceScopeKeyLTE          *string  `json:"resourceScopeKeyLTE,omitempty"`
+	ResourceScopeKeyContains     *string  `json:"resourceScopeKeyContains,omitempty"`
+	ResourceScopeKeyHasPrefix    *string  `json:"resourceScopeKeyHasPrefix,omitempty"`
+	ResourceScopeKeyHasSuffix    *string  `json:"resourceScopeKeyHasSuffix,omitempty"`
+	ResourceScopeKeyIsNil        bool     `json:"resourceScopeKeyIsNil,omitempty"`
+	ResourceScopeKeyNotNil       bool     `json:"resourceScopeKeyNotNil,omitempty"`
+	ResourceScopeKeyEqualFold    *string  `json:"resourceScopeKeyEqualFold,omitempty"`
+	ResourceScopeKeyContainsFold *string  `json:"resourceScopeKeyContainsFold,omitempty"`
+
+	// "quota_scope_id" field predicates.
+	QuotaScopeID       *int  `json:"quotaScopeID,omitempty"`
+	QuotaScopeIDNEQ    *int  `json:"quotaScopeIDNEQ,omitempty"`
+	QuotaScopeIDIn     []int `json:"quotaScopeIDIn,omitempty"`
+	QuotaScopeIDNotIn  []int `json:"quotaScopeIDNotIn,omitempty"`
+	QuotaScopeIDIsNil  bool  `json:"quotaScopeIDIsNil,omitempty"`
+	QuotaScopeIDNotNil bool  `json:"quotaScopeIDNotNil,omitempty"`
+
+	// "quota_scope_name_snapshot" field predicates.
+	QuotaScopeNameSnapshot             *string  `json:"quotaScopeNameSnapshot,omitempty"`
+	QuotaScopeNameSnapshotNEQ          *string  `json:"quotaScopeNameSnapshotNEQ,omitempty"`
+	QuotaScopeNameSnapshotIn           []string `json:"quotaScopeNameSnapshotIn,omitempty"`
+	QuotaScopeNameSnapshotNotIn        []string `json:"quotaScopeNameSnapshotNotIn,omitempty"`
+	QuotaScopeNameSnapshotGT           *string  `json:"quotaScopeNameSnapshotGT,omitempty"`
+	QuotaScopeNameSnapshotGTE          *string  `json:"quotaScopeNameSnapshotGTE,omitempty"`
+	QuotaScopeNameSnapshotLT           *string  `json:"quotaScopeNameSnapshotLT,omitempty"`
+	QuotaScopeNameSnapshotLTE          *string  `json:"quotaScopeNameSnapshotLTE,omitempty"`
+	QuotaScopeNameSnapshotContains     *string  `json:"quotaScopeNameSnapshotContains,omitempty"`
+	QuotaScopeNameSnapshotHasPrefix    *string  `json:"quotaScopeNameSnapshotHasPrefix,omitempty"`
+	QuotaScopeNameSnapshotHasSuffix    *string  `json:"quotaScopeNameSnapshotHasSuffix,omitempty"`
+	QuotaScopeNameSnapshotIsNil        bool     `json:"quotaScopeNameSnapshotIsNil,omitempty"`
+	QuotaScopeNameSnapshotNotNil       bool     `json:"quotaScopeNameSnapshotNotNil,omitempty"`
+	QuotaScopeNameSnapshotEqualFold    *string  `json:"quotaScopeNameSnapshotEqualFold,omitempty"`
+	QuotaScopeNameSnapshotContainsFold *string  `json:"quotaScopeNameSnapshotContainsFold,omitempty"`
+
+	// "quota_scope_status_snapshot" field predicates.
+	QuotaScopeStatusSnapshot             *string  `json:"quotaScopeStatusSnapshot,omitempty"`
+	QuotaScopeStatusSnapshotNEQ          *string  `json:"quotaScopeStatusSnapshotNEQ,omitempty"`
+	QuotaScopeStatusSnapshotIn           []string `json:"quotaScopeStatusSnapshotIn,omitempty"`
+	QuotaScopeStatusSnapshotNotIn        []string `json:"quotaScopeStatusSnapshotNotIn,omitempty"`
+	QuotaScopeStatusSnapshotGT           *string  `json:"quotaScopeStatusSnapshotGT,omitempty"`
+	QuotaScopeStatusSnapshotGTE          *string  `json:"quotaScopeStatusSnapshotGTE,omitempty"`
+	QuotaScopeStatusSnapshotLT           *string  `json:"quotaScopeStatusSnapshotLT,omitempty"`
+	QuotaScopeStatusSnapshotLTE          *string  `json:"quotaScopeStatusSnapshotLTE,omitempty"`
+	QuotaScopeStatusSnapshotContains     *string  `json:"quotaScopeStatusSnapshotContains,omitempty"`
+	QuotaScopeStatusSnapshotHasPrefix    *string  `json:"quotaScopeStatusSnapshotHasPrefix,omitempty"`
+	QuotaScopeStatusSnapshotHasSuffix    *string  `json:"quotaScopeStatusSnapshotHasSuffix,omitempty"`
+	QuotaScopeStatusSnapshotIsNil        bool     `json:"quotaScopeStatusSnapshotIsNil,omitempty"`
+	QuotaScopeStatusSnapshotNotNil       bool     `json:"quotaScopeStatusSnapshotNotNil,omitempty"`
+	QuotaScopeStatusSnapshotEqualFold    *string  `json:"quotaScopeStatusSnapshotEqualFold,omitempty"`
+	QuotaScopeStatusSnapshotContainsFold *string  `json:"quotaScopeStatusSnapshotContainsFold,omitempty"`
+
 	// "credential_name_snapshot" field predicates.
 	CredentialNameSnapshot             *string  `json:"credentialNameSnapshot,omitempty"`
 	CredentialNameSnapshotNEQ          *string  `json:"credentialNameSnapshotNEQ,omitempty"`
@@ -11525,6 +12758,23 @@ type UsageLogWhereInput struct {
 	CredentialSourceNotNil       bool     `json:"credentialSourceNotNil,omitempty"`
 	CredentialSourceEqualFold    *string  `json:"credentialSourceEqualFold,omitempty"`
 	CredentialSourceContainsFold *string  `json:"credentialSourceContainsFold,omitempty"`
+
+	// "credential_quota_status_snapshot" field predicates.
+	CredentialQuotaStatusSnapshot             *string  `json:"credentialQuotaStatusSnapshot,omitempty"`
+	CredentialQuotaStatusSnapshotNEQ          *string  `json:"credentialQuotaStatusSnapshotNEQ,omitempty"`
+	CredentialQuotaStatusSnapshotIn           []string `json:"credentialQuotaStatusSnapshotIn,omitempty"`
+	CredentialQuotaStatusSnapshotNotIn        []string `json:"credentialQuotaStatusSnapshotNotIn,omitempty"`
+	CredentialQuotaStatusSnapshotGT           *string  `json:"credentialQuotaStatusSnapshotGT,omitempty"`
+	CredentialQuotaStatusSnapshotGTE          *string  `json:"credentialQuotaStatusSnapshotGTE,omitempty"`
+	CredentialQuotaStatusSnapshotLT           *string  `json:"credentialQuotaStatusSnapshotLT,omitempty"`
+	CredentialQuotaStatusSnapshotLTE          *string  `json:"credentialQuotaStatusSnapshotLTE,omitempty"`
+	CredentialQuotaStatusSnapshotContains     *string  `json:"credentialQuotaStatusSnapshotContains,omitempty"`
+	CredentialQuotaStatusSnapshotHasPrefix    *string  `json:"credentialQuotaStatusSnapshotHasPrefix,omitempty"`
+	CredentialQuotaStatusSnapshotHasSuffix    *string  `json:"credentialQuotaStatusSnapshotHasSuffix,omitempty"`
+	CredentialQuotaStatusSnapshotIsNil        bool     `json:"credentialQuotaStatusSnapshotIsNil,omitempty"`
+	CredentialQuotaStatusSnapshotNotNil       bool     `json:"credentialQuotaStatusSnapshotNotNil,omitempty"`
+	CredentialQuotaStatusSnapshotEqualFold    *string  `json:"credentialQuotaStatusSnapshotEqualFold,omitempty"`
+	CredentialQuotaStatusSnapshotContainsFold *string  `json:"credentialQuotaStatusSnapshotContainsFold,omitempty"`
 
 	// "prompt_tokens" field predicates.
 	PromptTokens      *int64  `json:"promptTokens,omitempty"`
@@ -11729,6 +12979,10 @@ type UsageLogWhereInput struct {
 	// "credential" edge predicates.
 	HasCredential     *bool                           `json:"hasCredential,omitempty"`
 	HasCredentialWith []*UpstreamCredentialWhereInput `json:"hasCredentialWith,omitempty"`
+
+	// "quota_scope" edge predicates.
+	HasQuotaScope     *bool                             `json:"hasQuotaScope,omitempty"`
+	HasQuotaScopeWith []*CredentialQuotaScopeWhereInput `json:"hasQuotaScopeWith,omitempty"`
 }
 
 // AddPredicates adds custom predicates to the where input to be used during the filtering phase.
@@ -12048,6 +13302,204 @@ func (i *UsageLogWhereInput) P() (predicate.UsageLog, error) {
 	if i.CredentialFingerprintContainsFold != nil {
 		predicates = append(predicates, usagelog.CredentialFingerprintContainsFold(*i.CredentialFingerprintContainsFold))
 	}
+	if i.SecretFingerprint != nil {
+		predicates = append(predicates, usagelog.SecretFingerprintEQ(*i.SecretFingerprint))
+	}
+	if i.SecretFingerprintNEQ != nil {
+		predicates = append(predicates, usagelog.SecretFingerprintNEQ(*i.SecretFingerprintNEQ))
+	}
+	if len(i.SecretFingerprintIn) > 0 {
+		predicates = append(predicates, usagelog.SecretFingerprintIn(i.SecretFingerprintIn...))
+	}
+	if len(i.SecretFingerprintNotIn) > 0 {
+		predicates = append(predicates, usagelog.SecretFingerprintNotIn(i.SecretFingerprintNotIn...))
+	}
+	if i.SecretFingerprintGT != nil {
+		predicates = append(predicates, usagelog.SecretFingerprintGT(*i.SecretFingerprintGT))
+	}
+	if i.SecretFingerprintGTE != nil {
+		predicates = append(predicates, usagelog.SecretFingerprintGTE(*i.SecretFingerprintGTE))
+	}
+	if i.SecretFingerprintLT != nil {
+		predicates = append(predicates, usagelog.SecretFingerprintLT(*i.SecretFingerprintLT))
+	}
+	if i.SecretFingerprintLTE != nil {
+		predicates = append(predicates, usagelog.SecretFingerprintLTE(*i.SecretFingerprintLTE))
+	}
+	if i.SecretFingerprintContains != nil {
+		predicates = append(predicates, usagelog.SecretFingerprintContains(*i.SecretFingerprintContains))
+	}
+	if i.SecretFingerprintHasPrefix != nil {
+		predicates = append(predicates, usagelog.SecretFingerprintHasPrefix(*i.SecretFingerprintHasPrefix))
+	}
+	if i.SecretFingerprintHasSuffix != nil {
+		predicates = append(predicates, usagelog.SecretFingerprintHasSuffix(*i.SecretFingerprintHasSuffix))
+	}
+	if i.SecretFingerprintIsNil {
+		predicates = append(predicates, usagelog.SecretFingerprintIsNil())
+	}
+	if i.SecretFingerprintNotNil {
+		predicates = append(predicates, usagelog.SecretFingerprintNotNil())
+	}
+	if i.SecretFingerprintEqualFold != nil {
+		predicates = append(predicates, usagelog.SecretFingerprintEqualFold(*i.SecretFingerprintEqualFold))
+	}
+	if i.SecretFingerprintContainsFold != nil {
+		predicates = append(predicates, usagelog.SecretFingerprintContainsFold(*i.SecretFingerprintContainsFold))
+	}
+	if i.ResourceScopeKey != nil {
+		predicates = append(predicates, usagelog.ResourceScopeKeyEQ(*i.ResourceScopeKey))
+	}
+	if i.ResourceScopeKeyNEQ != nil {
+		predicates = append(predicates, usagelog.ResourceScopeKeyNEQ(*i.ResourceScopeKeyNEQ))
+	}
+	if len(i.ResourceScopeKeyIn) > 0 {
+		predicates = append(predicates, usagelog.ResourceScopeKeyIn(i.ResourceScopeKeyIn...))
+	}
+	if len(i.ResourceScopeKeyNotIn) > 0 {
+		predicates = append(predicates, usagelog.ResourceScopeKeyNotIn(i.ResourceScopeKeyNotIn...))
+	}
+	if i.ResourceScopeKeyGT != nil {
+		predicates = append(predicates, usagelog.ResourceScopeKeyGT(*i.ResourceScopeKeyGT))
+	}
+	if i.ResourceScopeKeyGTE != nil {
+		predicates = append(predicates, usagelog.ResourceScopeKeyGTE(*i.ResourceScopeKeyGTE))
+	}
+	if i.ResourceScopeKeyLT != nil {
+		predicates = append(predicates, usagelog.ResourceScopeKeyLT(*i.ResourceScopeKeyLT))
+	}
+	if i.ResourceScopeKeyLTE != nil {
+		predicates = append(predicates, usagelog.ResourceScopeKeyLTE(*i.ResourceScopeKeyLTE))
+	}
+	if i.ResourceScopeKeyContains != nil {
+		predicates = append(predicates, usagelog.ResourceScopeKeyContains(*i.ResourceScopeKeyContains))
+	}
+	if i.ResourceScopeKeyHasPrefix != nil {
+		predicates = append(predicates, usagelog.ResourceScopeKeyHasPrefix(*i.ResourceScopeKeyHasPrefix))
+	}
+	if i.ResourceScopeKeyHasSuffix != nil {
+		predicates = append(predicates, usagelog.ResourceScopeKeyHasSuffix(*i.ResourceScopeKeyHasSuffix))
+	}
+	if i.ResourceScopeKeyIsNil {
+		predicates = append(predicates, usagelog.ResourceScopeKeyIsNil())
+	}
+	if i.ResourceScopeKeyNotNil {
+		predicates = append(predicates, usagelog.ResourceScopeKeyNotNil())
+	}
+	if i.ResourceScopeKeyEqualFold != nil {
+		predicates = append(predicates, usagelog.ResourceScopeKeyEqualFold(*i.ResourceScopeKeyEqualFold))
+	}
+	if i.ResourceScopeKeyContainsFold != nil {
+		predicates = append(predicates, usagelog.ResourceScopeKeyContainsFold(*i.ResourceScopeKeyContainsFold))
+	}
+	if i.QuotaScopeID != nil {
+		predicates = append(predicates, usagelog.QuotaScopeIDEQ(*i.QuotaScopeID))
+	}
+	if i.QuotaScopeIDNEQ != nil {
+		predicates = append(predicates, usagelog.QuotaScopeIDNEQ(*i.QuotaScopeIDNEQ))
+	}
+	if len(i.QuotaScopeIDIn) > 0 {
+		predicates = append(predicates, usagelog.QuotaScopeIDIn(i.QuotaScopeIDIn...))
+	}
+	if len(i.QuotaScopeIDNotIn) > 0 {
+		predicates = append(predicates, usagelog.QuotaScopeIDNotIn(i.QuotaScopeIDNotIn...))
+	}
+	if i.QuotaScopeIDIsNil {
+		predicates = append(predicates, usagelog.QuotaScopeIDIsNil())
+	}
+	if i.QuotaScopeIDNotNil {
+		predicates = append(predicates, usagelog.QuotaScopeIDNotNil())
+	}
+	if i.QuotaScopeNameSnapshot != nil {
+		predicates = append(predicates, usagelog.QuotaScopeNameSnapshotEQ(*i.QuotaScopeNameSnapshot))
+	}
+	if i.QuotaScopeNameSnapshotNEQ != nil {
+		predicates = append(predicates, usagelog.QuotaScopeNameSnapshotNEQ(*i.QuotaScopeNameSnapshotNEQ))
+	}
+	if len(i.QuotaScopeNameSnapshotIn) > 0 {
+		predicates = append(predicates, usagelog.QuotaScopeNameSnapshotIn(i.QuotaScopeNameSnapshotIn...))
+	}
+	if len(i.QuotaScopeNameSnapshotNotIn) > 0 {
+		predicates = append(predicates, usagelog.QuotaScopeNameSnapshotNotIn(i.QuotaScopeNameSnapshotNotIn...))
+	}
+	if i.QuotaScopeNameSnapshotGT != nil {
+		predicates = append(predicates, usagelog.QuotaScopeNameSnapshotGT(*i.QuotaScopeNameSnapshotGT))
+	}
+	if i.QuotaScopeNameSnapshotGTE != nil {
+		predicates = append(predicates, usagelog.QuotaScopeNameSnapshotGTE(*i.QuotaScopeNameSnapshotGTE))
+	}
+	if i.QuotaScopeNameSnapshotLT != nil {
+		predicates = append(predicates, usagelog.QuotaScopeNameSnapshotLT(*i.QuotaScopeNameSnapshotLT))
+	}
+	if i.QuotaScopeNameSnapshotLTE != nil {
+		predicates = append(predicates, usagelog.QuotaScopeNameSnapshotLTE(*i.QuotaScopeNameSnapshotLTE))
+	}
+	if i.QuotaScopeNameSnapshotContains != nil {
+		predicates = append(predicates, usagelog.QuotaScopeNameSnapshotContains(*i.QuotaScopeNameSnapshotContains))
+	}
+	if i.QuotaScopeNameSnapshotHasPrefix != nil {
+		predicates = append(predicates, usagelog.QuotaScopeNameSnapshotHasPrefix(*i.QuotaScopeNameSnapshotHasPrefix))
+	}
+	if i.QuotaScopeNameSnapshotHasSuffix != nil {
+		predicates = append(predicates, usagelog.QuotaScopeNameSnapshotHasSuffix(*i.QuotaScopeNameSnapshotHasSuffix))
+	}
+	if i.QuotaScopeNameSnapshotIsNil {
+		predicates = append(predicates, usagelog.QuotaScopeNameSnapshotIsNil())
+	}
+	if i.QuotaScopeNameSnapshotNotNil {
+		predicates = append(predicates, usagelog.QuotaScopeNameSnapshotNotNil())
+	}
+	if i.QuotaScopeNameSnapshotEqualFold != nil {
+		predicates = append(predicates, usagelog.QuotaScopeNameSnapshotEqualFold(*i.QuotaScopeNameSnapshotEqualFold))
+	}
+	if i.QuotaScopeNameSnapshotContainsFold != nil {
+		predicates = append(predicates, usagelog.QuotaScopeNameSnapshotContainsFold(*i.QuotaScopeNameSnapshotContainsFold))
+	}
+	if i.QuotaScopeStatusSnapshot != nil {
+		predicates = append(predicates, usagelog.QuotaScopeStatusSnapshotEQ(*i.QuotaScopeStatusSnapshot))
+	}
+	if i.QuotaScopeStatusSnapshotNEQ != nil {
+		predicates = append(predicates, usagelog.QuotaScopeStatusSnapshotNEQ(*i.QuotaScopeStatusSnapshotNEQ))
+	}
+	if len(i.QuotaScopeStatusSnapshotIn) > 0 {
+		predicates = append(predicates, usagelog.QuotaScopeStatusSnapshotIn(i.QuotaScopeStatusSnapshotIn...))
+	}
+	if len(i.QuotaScopeStatusSnapshotNotIn) > 0 {
+		predicates = append(predicates, usagelog.QuotaScopeStatusSnapshotNotIn(i.QuotaScopeStatusSnapshotNotIn...))
+	}
+	if i.QuotaScopeStatusSnapshotGT != nil {
+		predicates = append(predicates, usagelog.QuotaScopeStatusSnapshotGT(*i.QuotaScopeStatusSnapshotGT))
+	}
+	if i.QuotaScopeStatusSnapshotGTE != nil {
+		predicates = append(predicates, usagelog.QuotaScopeStatusSnapshotGTE(*i.QuotaScopeStatusSnapshotGTE))
+	}
+	if i.QuotaScopeStatusSnapshotLT != nil {
+		predicates = append(predicates, usagelog.QuotaScopeStatusSnapshotLT(*i.QuotaScopeStatusSnapshotLT))
+	}
+	if i.QuotaScopeStatusSnapshotLTE != nil {
+		predicates = append(predicates, usagelog.QuotaScopeStatusSnapshotLTE(*i.QuotaScopeStatusSnapshotLTE))
+	}
+	if i.QuotaScopeStatusSnapshotContains != nil {
+		predicates = append(predicates, usagelog.QuotaScopeStatusSnapshotContains(*i.QuotaScopeStatusSnapshotContains))
+	}
+	if i.QuotaScopeStatusSnapshotHasPrefix != nil {
+		predicates = append(predicates, usagelog.QuotaScopeStatusSnapshotHasPrefix(*i.QuotaScopeStatusSnapshotHasPrefix))
+	}
+	if i.QuotaScopeStatusSnapshotHasSuffix != nil {
+		predicates = append(predicates, usagelog.QuotaScopeStatusSnapshotHasSuffix(*i.QuotaScopeStatusSnapshotHasSuffix))
+	}
+	if i.QuotaScopeStatusSnapshotIsNil {
+		predicates = append(predicates, usagelog.QuotaScopeStatusSnapshotIsNil())
+	}
+	if i.QuotaScopeStatusSnapshotNotNil {
+		predicates = append(predicates, usagelog.QuotaScopeStatusSnapshotNotNil())
+	}
+	if i.QuotaScopeStatusSnapshotEqualFold != nil {
+		predicates = append(predicates, usagelog.QuotaScopeStatusSnapshotEqualFold(*i.QuotaScopeStatusSnapshotEqualFold))
+	}
+	if i.QuotaScopeStatusSnapshotContainsFold != nil {
+		predicates = append(predicates, usagelog.QuotaScopeStatusSnapshotContainsFold(*i.QuotaScopeStatusSnapshotContainsFold))
+	}
 	if i.CredentialNameSnapshot != nil {
 		predicates = append(predicates, usagelog.CredentialNameSnapshotEQ(*i.CredentialNameSnapshot))
 	}
@@ -12182,6 +13634,51 @@ func (i *UsageLogWhereInput) P() (predicate.UsageLog, error) {
 	}
 	if i.CredentialSourceContainsFold != nil {
 		predicates = append(predicates, usagelog.CredentialSourceContainsFold(*i.CredentialSourceContainsFold))
+	}
+	if i.CredentialQuotaStatusSnapshot != nil {
+		predicates = append(predicates, usagelog.CredentialQuotaStatusSnapshotEQ(*i.CredentialQuotaStatusSnapshot))
+	}
+	if i.CredentialQuotaStatusSnapshotNEQ != nil {
+		predicates = append(predicates, usagelog.CredentialQuotaStatusSnapshotNEQ(*i.CredentialQuotaStatusSnapshotNEQ))
+	}
+	if len(i.CredentialQuotaStatusSnapshotIn) > 0 {
+		predicates = append(predicates, usagelog.CredentialQuotaStatusSnapshotIn(i.CredentialQuotaStatusSnapshotIn...))
+	}
+	if len(i.CredentialQuotaStatusSnapshotNotIn) > 0 {
+		predicates = append(predicates, usagelog.CredentialQuotaStatusSnapshotNotIn(i.CredentialQuotaStatusSnapshotNotIn...))
+	}
+	if i.CredentialQuotaStatusSnapshotGT != nil {
+		predicates = append(predicates, usagelog.CredentialQuotaStatusSnapshotGT(*i.CredentialQuotaStatusSnapshotGT))
+	}
+	if i.CredentialQuotaStatusSnapshotGTE != nil {
+		predicates = append(predicates, usagelog.CredentialQuotaStatusSnapshotGTE(*i.CredentialQuotaStatusSnapshotGTE))
+	}
+	if i.CredentialQuotaStatusSnapshotLT != nil {
+		predicates = append(predicates, usagelog.CredentialQuotaStatusSnapshotLT(*i.CredentialQuotaStatusSnapshotLT))
+	}
+	if i.CredentialQuotaStatusSnapshotLTE != nil {
+		predicates = append(predicates, usagelog.CredentialQuotaStatusSnapshotLTE(*i.CredentialQuotaStatusSnapshotLTE))
+	}
+	if i.CredentialQuotaStatusSnapshotContains != nil {
+		predicates = append(predicates, usagelog.CredentialQuotaStatusSnapshotContains(*i.CredentialQuotaStatusSnapshotContains))
+	}
+	if i.CredentialQuotaStatusSnapshotHasPrefix != nil {
+		predicates = append(predicates, usagelog.CredentialQuotaStatusSnapshotHasPrefix(*i.CredentialQuotaStatusSnapshotHasPrefix))
+	}
+	if i.CredentialQuotaStatusSnapshotHasSuffix != nil {
+		predicates = append(predicates, usagelog.CredentialQuotaStatusSnapshotHasSuffix(*i.CredentialQuotaStatusSnapshotHasSuffix))
+	}
+	if i.CredentialQuotaStatusSnapshotIsNil {
+		predicates = append(predicates, usagelog.CredentialQuotaStatusSnapshotIsNil())
+	}
+	if i.CredentialQuotaStatusSnapshotNotNil {
+		predicates = append(predicates, usagelog.CredentialQuotaStatusSnapshotNotNil())
+	}
+	if i.CredentialQuotaStatusSnapshotEqualFold != nil {
+		predicates = append(predicates, usagelog.CredentialQuotaStatusSnapshotEqualFold(*i.CredentialQuotaStatusSnapshotEqualFold))
+	}
+	if i.CredentialQuotaStatusSnapshotContainsFold != nil {
+		predicates = append(predicates, usagelog.CredentialQuotaStatusSnapshotContainsFold(*i.CredentialQuotaStatusSnapshotContainsFold))
 	}
 	if i.PromptTokens != nil {
 		predicates = append(predicates, usagelog.PromptTokensEQ(*i.PromptTokens))
@@ -12723,6 +14220,24 @@ func (i *UsageLogWhereInput) P() (predicate.UsageLog, error) {
 			with = append(with, p)
 		}
 		predicates = append(predicates, usagelog.HasCredentialWith(with...))
+	}
+	if i.HasQuotaScope != nil {
+		p := usagelog.HasQuotaScope()
+		if !*i.HasQuotaScope {
+			p = usagelog.Not(p)
+		}
+		predicates = append(predicates, p)
+	}
+	if len(i.HasQuotaScopeWith) > 0 {
+		with := make([]predicate.CredentialQuotaScope, 0, len(i.HasQuotaScopeWith))
+		for _, w := range i.HasQuotaScopeWith {
+			p, err := w.P()
+			if err != nil {
+				return nil, fmt.Errorf("%w: field 'HasQuotaScopeWith'", err)
+			}
+			with = append(with, p)
+		}
+		predicates = append(predicates, usagelog.HasQuotaScopeWith(with...))
 	}
 	switch len(predicates) {
 	case 0:

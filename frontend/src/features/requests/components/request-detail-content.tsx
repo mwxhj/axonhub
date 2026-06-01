@@ -20,13 +20,23 @@ import { CurlPreviewDialog } from './curl-preview-dialog';
 import { getStatusColor } from './help';
 import { ResponseFlow } from './response-flow';
 import { parseResponse } from '../utils/response-parser';
-import { generateRequestCurl, generateExecutionCurl } from '../utils/curl-generator';
+import { generateRequestCurl, generateExecutionCurl, maskSensitiveBody, maskSensitiveHeaders } from '../utils/curl-generator';
 
 interface RequestDetailContentProps {
   requestId: string;
   projectId?: string | null;
   previewRequest?: Request | null;
   isPreviewStreaming?: boolean;
+}
+
+function shortSafeIdentity(value?: string | null) {
+  if (!value) {
+    return '';
+  }
+  if (value.length <= 32) {
+    return value;
+  }
+  return `${value.slice(0, 15)}...${value.slice(-9)}`;
 }
 
 export function RequestDetailContent({ requestId, projectId, previewRequest, isPreviewStreaming = false }: RequestDetailContentProps) {
@@ -298,6 +308,21 @@ export function RequestDetailContent({ requestId, projectId, previewRequest, isP
           const cacheHitRate = hasReadCache ? ((cachedTokens / promptTokens) * 100).toFixed(1) : '0.0';
           const writeCacheRate = hasWriteCache ? ((writeCachedTokens / promptTokens) * 100).toFixed(1) : '0.0';
           const cost = usage.totalCost ?? 0;
+          const usageCredentialName = usage.credentialNameSnapshot || usage.credential?.name || '';
+          const usageCredentialKeyHint = usage.credentialKeyHint || usage.credential?.keyHint || '';
+          const usageCredentialLabel =
+            usageCredentialName ||
+            usageCredentialKeyHint ||
+            shortSafeIdentity(usage.secretFingerprint || usage.credentialFingerprint) ||
+            t('requests.columns.unknown');
+          const usageCredentialMeta = [
+            usage.credentialSource,
+            usage.resourceScopeKey,
+            usage.quotaScopeNameSnapshot || usage.quotaScopeStatusSnapshot,
+            usage.credentialQuotaStatusSnapshot,
+          ].filter(Boolean);
+          const hasUsageCredential =
+            !!usageCredentialName || !!usageCredentialKeyHint || !!usage.secretFingerprint || !!usage.credentialFingerprint || usageCredentialMeta.length > 0;
 
           const promptCost = usage.costItems?.find((i: any) => i.itemCode === 'prompt_tokens')?.subtotal;
           const completionCost = usage.costItems?.find((i: any) => i.itemCode === 'completion_tokens')?.subtotal;
@@ -334,6 +359,23 @@ export function RequestDetailContent({ requestId, projectId, previewRequest, isP
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                {hasUsageCredential && (
+                  <div className='bg-muted/30 mb-3 flex flex-col gap-2 rounded-lg border px-3 py-2 sm:flex-row sm:items-center sm:justify-between'>
+                    <div className='flex min-w-0 items-center gap-2'>
+                      <Key className='text-primary h-3.5 w-3.5 shrink-0' />
+                      <span className='shrink-0 text-xs font-medium'>{t('requests.columns.credential')}</span>
+                      <span className='truncate font-mono text-xs'>{usageCredentialLabel}</span>
+                    </div>
+                    <div className='flex min-w-0 flex-col gap-0.5 sm:items-end'>
+                      {usageCredentialKeyHint && usageCredentialName && (
+                        <span className='text-muted-foreground truncate font-mono text-xs'>{usageCredentialKeyHint}</span>
+                      )}
+                      {usageCredentialMeta.length > 0 && (
+                        <span className='text-muted-foreground truncate text-xs'>{usageCredentialMeta.join(' · ')}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <div className='grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5'>
                   <div className='bg-muted/30 flex flex-col justify-center rounded-lg border px-2.5 py-2'>
                     <span className='text-muted-foreground text-xs font-medium'>{t('usageLogs.columns.inputLabel')}</span>
@@ -427,18 +469,18 @@ export function RequestDetailContent({ requestId, projectId, previewRequest, isP
                       {t('requests.columns.requestHeaders')}
                     </h4>
                     <div className='flex gap-2'>
-                      <Button variant='outline' size='sm' onClick={() => copyToClipboard(formatJson(request.requestHeaders))} className='hover:bg-primary hover:text-primary-foreground'>
+                      <Button variant='outline' size='sm' onClick={() => copyToClipboard(formatJson(maskSensitiveHeaders(request.requestHeaders)))} className='hover:bg-primary hover:text-primary-foreground'>
                         <Copy className='mr-2 h-4 w-4' />
                         {t('requests.dialogs.jsonViewer.copy')}
                       </Button>
-                      <Button variant='outline' size='sm' onClick={() => downloadFile(formatJson(request.requestHeaders), `request-headers-${request.id}.json`)} className='hover:bg-primary hover:text-primary-foreground'>
+                      <Button variant='outline' size='sm' onClick={() => downloadFile(formatJson(maskSensitiveHeaders(request.requestHeaders)), `request-headers-${request.id}.json`)} className='hover:bg-primary hover:text-primary-foreground'>
                         <Download className='mr-2 h-4 w-4' />
                         {t('requests.dialogs.jsonViewer.download')}
                       </Button>
                     </div>
                   </div>
                   <div className='bg-muted/20 h-[300px] w-full overflow-auto rounded-lg border p-4'>
-                    <JsonViewer data={request.requestHeaders} rootName='' defaultExpanded={true} expandDepth='all' hideArrayIndices={true} className='text-sm' />
+                    <JsonViewer data={maskSensitiveHeaders(request.requestHeaders)} rootName='' defaultExpanded={true} expandDepth='all' hideArrayIndices={true} className='text-sm' />
                   </div>
                 </div>
               )}
@@ -449,18 +491,18 @@ export function RequestDetailContent({ requestId, projectId, previewRequest, isP
                     {t('requests.columns.requestBody')}
                   </h4>
                   <div className='flex gap-2'>
-                    <Button variant='outline' size='sm' onClick={() => copyToClipboard(formatJson(request.requestBody))} className='hover:bg-primary hover:text-primary-foreground'>
+                    <Button variant='outline' size='sm' onClick={() => copyToClipboard(formatJson(maskSensitiveBody(request.requestBody)))} className='hover:bg-primary hover:text-primary-foreground'>
                       <Copy className='mr-2 h-4 w-4' />
                       {t('requests.dialogs.jsonViewer.copy')}
                     </Button>
-                    <Button variant='outline' size='sm' onClick={() => downloadFile(formatJson(request.requestBody), `request-body-${request.id}.json`)} className='hover:bg-primary hover:text-primary-foreground'>
+                    <Button variant='outline' size='sm' onClick={() => downloadFile(formatJson(maskSensitiveBody(request.requestBody)), `request-body-${request.id}.json`)} className='hover:bg-primary hover:text-primary-foreground'>
                       <Download className='mr-2 h-4 w-4' />
                       {t('requests.dialogs.jsonViewer.download')}
                     </Button>
                   </div>
                 </div>
                 <div className='bg-muted/20 h-[500px] w-full overflow-auto rounded-lg border p-4'>
-                  <JsonViewer data={request.requestBody} rootName='' defaultExpanded={true} expandDepth='all' hideArrayIndices={true} className='text-sm' />
+                  <JsonViewer data={maskSensitiveBody(request.requestBody)} rootName='' defaultExpanded={true} expandDepth='all' hideArrayIndices={true} className='text-sm' />
                 </div>
               </div>
             </TabsContent>
@@ -631,10 +673,25 @@ export function RequestDetailContent({ requestId, projectId, previewRequest, isP
                                 {t('requests.columns.credential')}
                               </span>
                               <p className='text-muted-foreground truncate font-mono text-sm'>
-                                {execution.credentialNameSnapshot || execution.credential?.name || execution.credentialKeyHint || t('requests.columns.unknown')}
+                                {execution.credentialNameSnapshot ||
+                                  execution.credential?.name ||
+                                  execution.credentialKeyHint ||
+                                  shortSafeIdentity(execution.secretFingerprint || execution.credentialFingerprint) ||
+                                  t('requests.columns.unknown')}
                               </p>
                               {execution.credentialKeyHint && (
                                 <p className='text-muted-foreground truncate font-mono text-xs'>{execution.credentialKeyHint}</p>
+                              )}
+                              {(execution.credentialSource || execution.resourceScopeKey || execution.quotaScopeNameSnapshot || execution.quotaScopeStatusSnapshot) && (
+                                <p className='text-muted-foreground truncate text-xs'>
+                                  {[
+                                    execution.credentialSource,
+                                    execution.resourceScopeKey,
+                                    execution.quotaScopeNameSnapshot || execution.quotaScopeStatusSnapshot,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' · ')}
+                                </p>
                               )}
                             </div>
                             <div className='bg-background space-y-2 rounded-lg border p-3'>
@@ -709,18 +766,18 @@ export function RequestDetailContent({ requestId, projectId, previewRequest, isP
                                   {t('requests.columns.requestHeaders')}
                                 </span>
                                 <div className='flex gap-2'>
-                                  <Button variant='outline' size='sm' onClick={() => copyToClipboard(formatJson(execution.requestHeaders))} className='hover:bg-primary hover:text-primary-foreground'>
+                                  <Button variant='outline' size='sm' onClick={() => copyToClipboard(formatJson(maskSensitiveHeaders(execution.requestHeaders)))} className='hover:bg-primary hover:text-primary-foreground'>
                                     <Copy className='mr-2 h-4 w-4' />
                                     {t('requests.dialogs.jsonViewer.copy')}
                                   </Button>
-                                  <Button variant='outline' size='sm' onClick={() => downloadFile(formatJson(execution.requestHeaders), `execution-${execution.id}-request-headers.json`)} className='hover:bg-primary hover:text-primary-foreground'>
+                                  <Button variant='outline' size='sm' onClick={() => downloadFile(formatJson(maskSensitiveHeaders(execution.requestHeaders)), `execution-${execution.id}-request-headers.json`)} className='hover:bg-primary hover:text-primary-foreground'>
                                     <Download className='mr-2 h-4 w-4' />
                                     {t('requests.dialogs.jsonViewer.download')}
                                   </Button>
                                 </div>
                               </div>
                               <div className='bg-background h-64 w-full overflow-auto rounded-lg border p-3'>
-                                <JsonViewer data={execution.requestHeaders} rootName='' defaultExpanded={false} hideArrayIndices={true} className='text-xs' />
+                                <JsonViewer data={maskSensitiveHeaders(execution.requestHeaders)} rootName='' defaultExpanded={false} hideArrayIndices={true} className='text-xs' />
                               </div>
                             </div>
                           )}
@@ -733,18 +790,18 @@ export function RequestDetailContent({ requestId, projectId, previewRequest, isP
                                   {t('requests.columns.requestBody')}
                                 </span>
                                 <div className='flex gap-2'>
-                                  <Button variant='outline' size='sm' onClick={() => copyToClipboard(formatJson(execution.requestBody))} className='hover:bg-primary hover:text-primary-foreground'>
+                                  <Button variant='outline' size='sm' onClick={() => copyToClipboard(formatJson(maskSensitiveBody(execution.requestBody)))} className='hover:bg-primary hover:text-primary-foreground'>
                                     <Copy className='mr-2 h-4 w-4' />
                                     {t('requests.dialogs.jsonViewer.copy')}
                                   </Button>
-                                  <Button variant='outline' size='sm' onClick={() => downloadFile(formatJson(execution.requestBody), `execution-${execution.id}-request-body.json`)} className='hover:bg-primary hover:text-primary-foreground'>
+                                  <Button variant='outline' size='sm' onClick={() => downloadFile(formatJson(maskSensitiveBody(execution.requestBody)), `execution-${execution.id}-request-body.json`)} className='hover:bg-primary hover:text-primary-foreground'>
                                     <Download className='mr-2 h-4 w-4' />
                                     {t('requests.dialogs.jsonViewer.download')}
                                   </Button>
                                 </div>
                               </div>
                               <div className='bg-background h-80 w-full overflow-auto rounded-lg border p-3'>
-                                <JsonViewer data={execution.requestBody} rootName='' defaultExpanded={false} hideArrayIndices={true} className='text-xs' />
+                                <JsonViewer data={maskSensitiveBody(execution.requestBody)} rootName='' defaultExpanded={false} hideArrayIndices={true} className='text-xs' />
                               </div>
                             </div>
                           )}

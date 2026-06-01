@@ -556,7 +556,7 @@ type Channel implements Node {
     """
     where: ChannelCredentialRefWhereInput
   ): ChannelCredentialRefConnection!
-  providerQuotaStatus: ProviderQuotaStatus @goField(forceResolver: true)
+  providerQuotaStatuses: [ProviderQuotaStatus!]
 }
 """
 A connection to a list of items.
@@ -582,10 +582,6 @@ type ChannelCredentialRef implements Node {
   channelID: ID!
   credentialID: ID!
   enabled: Boolean!
-  """
-  Optional per-channel selection weight. When absent, uses credential.weight.
-  """
-  weightOverride: Int
   channel: Channel! @goField(forceResolver: true)
   credential: UpstreamCredential! @goField(forceResolver: true)
 }
@@ -699,19 +695,6 @@ input ChannelCredentialRefWhereInput {
   """
   enabled: Boolean
   enabledNEQ: Boolean
-  """
-  weight_override field predicates
-  """
-  weightOverride: Int
-  weightOverrideNEQ: Int
-  weightOverrideIn: [Int!]
-  weightOverrideNotIn: [Int!]
-  weightOverrideGT: Int
-  weightOverrideGTE: Int
-  weightOverrideLT: Int
-  weightOverrideLTE: Int
-  weightOverrideIsNil: Boolean
-  weightOverrideNotNil: Boolean
   """
   channel edge predicates
   """
@@ -1694,10 +1677,10 @@ input ChannelWhereInput {
   hasCredentialRefs: Boolean
   hasCredentialRefsWith: [ChannelCredentialRefWhereInput!]
   """
-  provider_quota_status edge predicates
+  provider_quota_statuses edge predicates
   """
-  hasProviderQuotaStatus: Boolean
-  hasProviderQuotaStatusWith: [ProviderQuotaStatusWhereInput!]
+  hasProviderQuotaStatuses: Boolean
+  hasProviderQuotaStatusesWith: [ProviderQuotaStatusWhereInput!]
 }
 """
 CreateAPIKeyInput is used for create APIKey object.
@@ -2056,9 +2039,25 @@ input CreateUsageLogInput {
   """
   modelID: String!
   """
-  Safe upstream credential identity used for this request; never stores the raw secret
+  Legacy safe upstream credential identity used for this request; never stores the raw secret
   """
   credentialFingerprint: String
+  """
+  Safe secret-only identity used for this request; never stores the raw secret
+  """
+  secretFingerprint: String
+  """
+  Safe runtime resource scope for channel resource namespace plus secret fingerprint
+  """
+  resourceScopeKey: String
+  """
+  Quota scope display name captured when usage was logged
+  """
+  quotaScopeNameSnapshot: String
+  """
+  Quota scope status captured when usage was logged
+  """
+  quotaScopeStatusSnapshot: String
   """
   Credential display name captured when usage was logged
   """
@@ -2071,6 +2070,10 @@ input CreateUsageLogInput {
   Credential source used for this request: ref, legacy, or unknown
   """
   credentialSource: String
+  """
+  Credential quota/budget status captured when usage was logged
+  """
+  credentialQuotaStatusSnapshot: String
   """
   Number of tokens in the prompt
   """
@@ -2143,6 +2146,7 @@ input CreateUsageLogInput {
   projectID: ID!
   channelID: ID
   credentialID: ID
+  quotaScopeID: ID
 }
 """
 CreateUserInput is used for create User object.
@@ -2169,6 +2173,482 @@ input CreateUserInput {
   scopes: [String!]
   projectIDs: [ID!]
   roleIDs: [ID!]
+}
+type CredentialQuotaScope implements Node {
+  id: ID!
+  createdAt: Time!
+  updatedAt: Time!
+  name: String
+  status: CredentialQuotaScopeStatus!
+  unit: CredentialQuotaScopeUnit!
+  """
+  Configured quota limit stored as decimal text to avoid precision loss
+  """
+  limitAmount: String
+  """
+  Current quota usage stored as decimal text to avoid precision loss
+  """
+  usedAmount: String
+  """
+  Warning threshold percentage for local budget scopes
+  """
+  warningThresholdPercent: Int
+  resetPolicy: CredentialQuotaScopeResetPolicy!
+  resetAt: Time
+  windowStartedAt: Time
+  overLimitAction: CredentialQuotaScopeOverLimitAction!
+  pauseUntil: Time
+  source: CredentialQuotaScopeSource!
+  """
+  Latest quota error safe for operator display
+  """
+  lastError: String
+  remark: String
+  credentials(
+    """
+    Returns the elements in the list that come after the specified cursor.
+    """
+    after: Cursor
+
+    """
+    Returns the first _n_ elements from the list.
+    """
+    first: Int
+
+    """
+    Returns the elements in the list that come before the specified cursor.
+    """
+    before: Cursor
+
+    """
+    Returns the last _n_ elements from the list.
+    """
+    last: Int
+
+    """
+    Ordering options for UpstreamCredentials returned from the connection.
+    """
+    orderBy: UpstreamCredentialOrder
+
+    """
+    Filtering options for UpstreamCredentials returned from the connection.
+    """
+    where: UpstreamCredentialWhereInput
+  ): UpstreamCredentialConnection!
+  providerQuotaStatuses: [ProviderQuotaStatus!]
+  executions(
+    """
+    Returns the elements in the list that come after the specified cursor.
+    """
+    after: Cursor
+
+    """
+    Returns the first _n_ elements from the list.
+    """
+    first: Int
+
+    """
+    Returns the elements in the list that come before the specified cursor.
+    """
+    before: Cursor
+
+    """
+    Returns the last _n_ elements from the list.
+    """
+    last: Int
+
+    """
+    Ordering options for RequestExecutions returned from the connection.
+    """
+    orderBy: RequestExecutionOrder
+
+    """
+    Filtering options for RequestExecutions returned from the connection.
+    """
+    where: RequestExecutionWhereInput
+  ): RequestExecutionConnection!
+  usageLogs(
+    """
+    Returns the elements in the list that come after the specified cursor.
+    """
+    after: Cursor
+
+    """
+    Returns the first _n_ elements from the list.
+    """
+    first: Int
+
+    """
+    Returns the elements in the list that come before the specified cursor.
+    """
+    before: Cursor
+
+    """
+    Returns the last _n_ elements from the list.
+    """
+    last: Int
+
+    """
+    Ordering options for UsageLogs returned from the connection.
+    """
+    orderBy: UsageLogOrder
+
+    """
+    Filtering options for UsageLogs returned from the connection.
+    """
+    where: UsageLogWhereInput
+  ): UsageLogConnection!
+}
+"""
+A connection to a list of items.
+"""
+type CredentialQuotaScopeConnection {
+  """
+  A list of edges.
+  """
+  edges: [CredentialQuotaScopeEdge]
+  """
+  Information to aid in pagination.
+  """
+  pageInfo: PageInfo!
+  """
+  Identifies the total count of items in the connection.
+  """
+  totalCount: Int!
+}
+"""
+An edge in a connection.
+"""
+type CredentialQuotaScopeEdge {
+  """
+  The item at the end of the edge.
+  """
+  node: CredentialQuotaScope
+  """
+  A cursor for use in pagination.
+  """
+  cursor: Cursor!
+}
+"""
+Ordering options for CredentialQuotaScope connections
+"""
+input CredentialQuotaScopeOrder {
+  """
+  The ordering direction.
+  """
+  direction: OrderDirection! = ASC
+  """
+  The field by which to order CredentialQuotaScopes.
+  """
+  field: CredentialQuotaScopeOrderField!
+}
+"""
+Properties by which CredentialQuotaScope connections can be ordered.
+"""
+enum CredentialQuotaScopeOrderField {
+  CREATED_AT
+  UPDATED_AT
+  NAME
+  STATUS
+  UNIT
+  LIMIT_AMOUNT
+  USED_AMOUNT
+  RESET_POLICY
+  RESET_AT
+  WINDOW_STARTED_AT
+  OVER_LIMIT_ACTION
+  PAUSE_UNTIL
+  SOURCE
+}
+"""
+CredentialQuotaScopeOverLimitAction is enum for the field over_limit_action
+"""
+enum CredentialQuotaScopeOverLimitAction @goModel(model: "github.com/looplj/axonhub/internal/ent/credentialquotascope.OverLimitAction") {
+  warn
+  pause
+  disable
+}
+"""
+CredentialQuotaScopeResetPolicy is enum for the field reset_policy
+"""
+enum CredentialQuotaScopeResetPolicy @goModel(model: "github.com/looplj/axonhub/internal/ent/credentialquotascope.ResetPolicy") {
+  none
+  manual
+  daily
+  monthly
+  custom
+}
+"""
+CredentialQuotaScopeSource is enum for the field source
+"""
+enum CredentialQuotaScopeSource @goModel(model: "github.com/looplj/axonhub/internal/ent/credentialquotascope.Source") {
+  local_budget
+  provider_api
+  response_error
+  manual
+  inferred
+  unknown
+}
+"""
+CredentialQuotaScopeStatus is enum for the field status
+"""
+enum CredentialQuotaScopeStatus @goModel(model: "github.com/looplj/axonhub/internal/ent/credentialquotascope.Status") {
+  available
+  warning
+  exhausted
+  paused
+  disabled
+  unknown
+}
+"""
+CredentialQuotaScopeUnit is enum for the field unit
+"""
+enum CredentialQuotaScopeUnit @goModel(model: "github.com/looplj/axonhub/internal/ent/credentialquotascope.Unit") {
+  usd
+  token
+  request
+  credit
+  custom
+  unknown
+}
+"""
+CredentialQuotaScopeWhereInput is used for filtering CredentialQuotaScope objects.
+Input was generated by ent.
+"""
+input CredentialQuotaScopeWhereInput {
+  not: CredentialQuotaScopeWhereInput
+  and: [CredentialQuotaScopeWhereInput!]
+  or: [CredentialQuotaScopeWhereInput!]
+  """
+  id field predicates
+  """
+  id: ID
+  idNEQ: ID
+  idIn: [ID!]
+  idNotIn: [ID!]
+  idGT: ID
+  idGTE: ID
+  idLT: ID
+  idLTE: ID
+  """
+  created_at field predicates
+  """
+  createdAt: Time
+  createdAtNEQ: Time
+  createdAtIn: [Time!]
+  createdAtNotIn: [Time!]
+  createdAtGT: Time
+  createdAtGTE: Time
+  createdAtLT: Time
+  createdAtLTE: Time
+  """
+  updated_at field predicates
+  """
+  updatedAt: Time
+  updatedAtNEQ: Time
+  updatedAtIn: [Time!]
+  updatedAtNotIn: [Time!]
+  updatedAtGT: Time
+  updatedAtGTE: Time
+  updatedAtLT: Time
+  updatedAtLTE: Time
+  """
+  name field predicates
+  """
+  name: String
+  nameNEQ: String
+  nameIn: [String!]
+  nameNotIn: [String!]
+  nameGT: String
+  nameGTE: String
+  nameLT: String
+  nameLTE: String
+  nameContains: String
+  nameHasPrefix: String
+  nameHasSuffix: String
+  nameIsNil: Boolean
+  nameNotNil: Boolean
+  nameEqualFold: String
+  nameContainsFold: String
+  """
+  status field predicates
+  """
+  status: CredentialQuotaScopeStatus
+  statusNEQ: CredentialQuotaScopeStatus
+  statusIn: [CredentialQuotaScopeStatus!]
+  statusNotIn: [CredentialQuotaScopeStatus!]
+  """
+  unit field predicates
+  """
+  unit: CredentialQuotaScopeUnit
+  unitNEQ: CredentialQuotaScopeUnit
+  unitIn: [CredentialQuotaScopeUnit!]
+  unitNotIn: [CredentialQuotaScopeUnit!]
+  """
+  limit_amount field predicates
+  """
+  limitAmount: String
+  limitAmountNEQ: String
+  limitAmountIn: [String!]
+  limitAmountNotIn: [String!]
+  limitAmountGT: String
+  limitAmountGTE: String
+  limitAmountLT: String
+  limitAmountLTE: String
+  limitAmountContains: String
+  limitAmountHasPrefix: String
+  limitAmountHasSuffix: String
+  limitAmountIsNil: Boolean
+  limitAmountNotNil: Boolean
+  limitAmountEqualFold: String
+  limitAmountContainsFold: String
+  """
+  used_amount field predicates
+  """
+  usedAmount: String
+  usedAmountNEQ: String
+  usedAmountIn: [String!]
+  usedAmountNotIn: [String!]
+  usedAmountGT: String
+  usedAmountGTE: String
+  usedAmountLT: String
+  usedAmountLTE: String
+  usedAmountContains: String
+  usedAmountHasPrefix: String
+  usedAmountHasSuffix: String
+  usedAmountIsNil: Boolean
+  usedAmountNotNil: Boolean
+  usedAmountEqualFold: String
+  usedAmountContainsFold: String
+  """
+  warning_threshold_percent field predicates
+  """
+  warningThresholdPercent: Int
+  warningThresholdPercentNEQ: Int
+  warningThresholdPercentIn: [Int!]
+  warningThresholdPercentNotIn: [Int!]
+  warningThresholdPercentGT: Int
+  warningThresholdPercentGTE: Int
+  warningThresholdPercentLT: Int
+  warningThresholdPercentLTE: Int
+  warningThresholdPercentIsNil: Boolean
+  warningThresholdPercentNotNil: Boolean
+  """
+  reset_policy field predicates
+  """
+  resetPolicy: CredentialQuotaScopeResetPolicy
+  resetPolicyNEQ: CredentialQuotaScopeResetPolicy
+  resetPolicyIn: [CredentialQuotaScopeResetPolicy!]
+  resetPolicyNotIn: [CredentialQuotaScopeResetPolicy!]
+  """
+  reset_at field predicates
+  """
+  resetAt: Time
+  resetAtNEQ: Time
+  resetAtIn: [Time!]
+  resetAtNotIn: [Time!]
+  resetAtGT: Time
+  resetAtGTE: Time
+  resetAtLT: Time
+  resetAtLTE: Time
+  resetAtIsNil: Boolean
+  resetAtNotNil: Boolean
+  """
+  window_started_at field predicates
+  """
+  windowStartedAt: Time
+  windowStartedAtNEQ: Time
+  windowStartedAtIn: [Time!]
+  windowStartedAtNotIn: [Time!]
+  windowStartedAtGT: Time
+  windowStartedAtGTE: Time
+  windowStartedAtLT: Time
+  windowStartedAtLTE: Time
+  windowStartedAtIsNil: Boolean
+  windowStartedAtNotNil: Boolean
+  """
+  over_limit_action field predicates
+  """
+  overLimitAction: CredentialQuotaScopeOverLimitAction
+  overLimitActionNEQ: CredentialQuotaScopeOverLimitAction
+  overLimitActionIn: [CredentialQuotaScopeOverLimitAction!]
+  overLimitActionNotIn: [CredentialQuotaScopeOverLimitAction!]
+  """
+  pause_until field predicates
+  """
+  pauseUntil: Time
+  pauseUntilNEQ: Time
+  pauseUntilIn: [Time!]
+  pauseUntilNotIn: [Time!]
+  pauseUntilGT: Time
+  pauseUntilGTE: Time
+  pauseUntilLT: Time
+  pauseUntilLTE: Time
+  pauseUntilIsNil: Boolean
+  pauseUntilNotNil: Boolean
+  """
+  source field predicates
+  """
+  source: CredentialQuotaScopeSource
+  sourceNEQ: CredentialQuotaScopeSource
+  sourceIn: [CredentialQuotaScopeSource!]
+  sourceNotIn: [CredentialQuotaScopeSource!]
+  """
+  last_error field predicates
+  """
+  lastError: String
+  lastErrorNEQ: String
+  lastErrorIn: [String!]
+  lastErrorNotIn: [String!]
+  lastErrorGT: String
+  lastErrorGTE: String
+  lastErrorLT: String
+  lastErrorLTE: String
+  lastErrorContains: String
+  lastErrorHasPrefix: String
+  lastErrorHasSuffix: String
+  lastErrorIsNil: Boolean
+  lastErrorNotNil: Boolean
+  lastErrorEqualFold: String
+  lastErrorContainsFold: String
+  """
+  remark field predicates
+  """
+  remark: String
+  remarkNEQ: String
+  remarkIn: [String!]
+  remarkNotIn: [String!]
+  remarkGT: String
+  remarkGTE: String
+  remarkLT: String
+  remarkLTE: String
+  remarkContains: String
+  remarkHasPrefix: String
+  remarkHasSuffix: String
+  remarkIsNil: Boolean
+  remarkNotNil: Boolean
+  remarkEqualFold: String
+  remarkContainsFold: String
+  """
+  credentials edge predicates
+  """
+  hasCredentials: Boolean
+  hasCredentialsWith: [UpstreamCredentialWhereInput!]
+  """
+  provider_quota_statuses edge predicates
+  """
+  hasProviderQuotaStatuses: Boolean
+  hasProviderQuotaStatusesWith: [ProviderQuotaStatusWhereInput!]
+  """
+  executions edge predicates
+  """
+  hasExecutions: Boolean
+  hasExecutionsWith: [RequestExecutionWhereInput!]
+  """
+  usage_logs edge predicates
+  """
+  hasUsageLogs: Boolean
+  hasUsageLogsWith: [UsageLogWhereInput!]
 }
 """
 Define a Relay Cursor type:
@@ -3890,15 +4370,34 @@ type ProviderQuotaStatus implements Node {
   id: ID!
   createdAt: Time!
   updatedAt: Time!
-  channelID: ID!
+  """
+  Channel that observed or last updated this quota status; not part of provider quota identity
+  """
+  channelID: ID
+  """
+  Stable provider quota row identity, e.g. channel:<id>, credential/resource/quota scope
+  """
+  scopeKey: String!
   """
   Upstream credential represented by this quota status when known
   """
   credentialID: ID
   """
-  Safe upstream credential identity represented by this quota status when known
+  Legacy safe upstream credential identity represented by this quota status when known
   """
   credentialFingerprint: String
+  """
+  Safe secret-only identity represented by this quota status when known
+  """
+  secretFingerprint: String
+  """
+  Safe runtime resource scope represented by this quota status when known
+  """
+  resourceScopeKey: String
+  """
+  Credential quota scope represented by this quota status when known
+  """
+  quotaScopeID: ID
   providerType: ProviderQuotaStatusProviderType!
   """
   Overall status: available, warning, exhausted, unknown
@@ -3920,8 +4419,9 @@ type ProviderQuotaStatus implements Node {
   Timestamp for next scheduled quota check
   """
   nextCheckAt: Time!
-  channel: Channel!
+  channel: Channel
   credential: UpstreamCredential
+  quotaScope: CredentialQuotaScope
 }
 """
 Ordering options for ProviderQuotaStatus connections
@@ -4012,6 +4512,24 @@ input ProviderQuotaStatusWhereInput {
   channelIDNEQ: ID
   channelIDIn: [ID!]
   channelIDNotIn: [ID!]
+  channelIDIsNil: Boolean
+  channelIDNotNil: Boolean
+  """
+  scope_key field predicates
+  """
+  scopeKey: String
+  scopeKeyNEQ: String
+  scopeKeyIn: [String!]
+  scopeKeyNotIn: [String!]
+  scopeKeyGT: String
+  scopeKeyGTE: String
+  scopeKeyLT: String
+  scopeKeyLTE: String
+  scopeKeyContains: String
+  scopeKeyHasPrefix: String
+  scopeKeyHasSuffix: String
+  scopeKeyEqualFold: String
+  scopeKeyContainsFold: String
   """
   credential_id field predicates
   """
@@ -4039,6 +4557,51 @@ input ProviderQuotaStatusWhereInput {
   credentialFingerprintNotNil: Boolean
   credentialFingerprintEqualFold: String
   credentialFingerprintContainsFold: String
+  """
+  secret_fingerprint field predicates
+  """
+  secretFingerprint: String
+  secretFingerprintNEQ: String
+  secretFingerprintIn: [String!]
+  secretFingerprintNotIn: [String!]
+  secretFingerprintGT: String
+  secretFingerprintGTE: String
+  secretFingerprintLT: String
+  secretFingerprintLTE: String
+  secretFingerprintContains: String
+  secretFingerprintHasPrefix: String
+  secretFingerprintHasSuffix: String
+  secretFingerprintIsNil: Boolean
+  secretFingerprintNotNil: Boolean
+  secretFingerprintEqualFold: String
+  secretFingerprintContainsFold: String
+  """
+  resource_scope_key field predicates
+  """
+  resourceScopeKey: String
+  resourceScopeKeyNEQ: String
+  resourceScopeKeyIn: [String!]
+  resourceScopeKeyNotIn: [String!]
+  resourceScopeKeyGT: String
+  resourceScopeKeyGTE: String
+  resourceScopeKeyLT: String
+  resourceScopeKeyLTE: String
+  resourceScopeKeyContains: String
+  resourceScopeKeyHasPrefix: String
+  resourceScopeKeyHasSuffix: String
+  resourceScopeKeyIsNil: Boolean
+  resourceScopeKeyNotNil: Boolean
+  resourceScopeKeyEqualFold: String
+  resourceScopeKeyContainsFold: String
+  """
+  quota_scope_id field predicates
+  """
+  quotaScopeID: ID
+  quotaScopeIDNEQ: ID
+  quotaScopeIDIn: [ID!]
+  quotaScopeIDNotIn: [ID!]
+  quotaScopeIDIsNil: Boolean
+  quotaScopeIDNotNil: Boolean
   """
   provider_type field predicates
   """
@@ -4092,6 +4655,11 @@ input ProviderQuotaStatusWhereInput {
   """
   hasCredential: Boolean
   hasCredentialWith: [UpstreamCredentialWhereInput!]
+  """
+  quota_scope edge predicates
+  """
+  hasQuotaScope: Boolean
+  hasQuotaScopeWith: [CredentialQuotaScopeWhereInput!]
 }
 type Query {
   """
@@ -4267,6 +4835,37 @@ type Query {
     """
     where: ChannelOverrideTemplateWhereInput
   ): ChannelOverrideTemplateConnection!
+  credentialQuotaScopes(
+    """
+    Returns the elements in the list that come after the specified cursor.
+    """
+    after: Cursor
+
+    """
+    Returns the first _n_ elements from the list.
+    """
+    first: Int
+
+    """
+    Returns the elements in the list that come before the specified cursor.
+    """
+    before: Cursor
+
+    """
+    Returns the last _n_ elements from the list.
+    """
+    last: Int
+
+    """
+    Ordering options for CredentialQuotaScopes returned from the connection.
+    """
+    orderBy: CredentialQuotaScopeOrder
+
+    """
+    Filtering options for CredentialQuotaScopes returned from the connection.
+    """
+    where: CredentialQuotaScopeWhereInput
+  ): CredentialQuotaScopeConnection!
   dataStorages(
     """
     Returns the elements in the list that come after the specified cursor.
@@ -4879,9 +5478,29 @@ type RequestExecution implements Node {
   externalID: String
   modelID: String!
   """
-  Safe upstream credential identity used for this execution; never stores the raw secret
+  Legacy safe upstream credential identity used for this execution; never stores the raw secret
   """
   credentialFingerprint: String
+  """
+  Safe secret-only identity used for this execution; never stores the raw secret
+  """
+  secretFingerprint: String
+  """
+  Safe runtime resource scope for channel resource namespace plus secret fingerprint
+  """
+  resourceScopeKey: String
+  """
+  Credential quota scope used for this execution when known
+  """
+  quotaScopeID: ID
+  """
+  Quota scope display name captured at execution time
+  """
+  quotaScopeNameSnapshot: String
+  """
+  Quota scope status captured at execution time
+  """
+  quotaScopeStatusSnapshot: String
   """
   Credential display name captured at execution time
   """
@@ -4922,6 +5541,7 @@ type RequestExecution implements Node {
   request: Request!
   channel: Channel @goField(forceResolver: true)
   credential: UpstreamCredential @goField(forceResolver: true)
+  quotaScope: CredentialQuotaScope @goField(forceResolver: true)
   dataStorage: DataStorage
 }
 """
@@ -5123,6 +5743,87 @@ input RequestExecutionWhereInput {
   credentialFingerprintEqualFold: String
   credentialFingerprintContainsFold: String
   """
+  secret_fingerprint field predicates
+  """
+  secretFingerprint: String
+  secretFingerprintNEQ: String
+  secretFingerprintIn: [String!]
+  secretFingerprintNotIn: [String!]
+  secretFingerprintGT: String
+  secretFingerprintGTE: String
+  secretFingerprintLT: String
+  secretFingerprintLTE: String
+  secretFingerprintContains: String
+  secretFingerprintHasPrefix: String
+  secretFingerprintHasSuffix: String
+  secretFingerprintIsNil: Boolean
+  secretFingerprintNotNil: Boolean
+  secretFingerprintEqualFold: String
+  secretFingerprintContainsFold: String
+  """
+  resource_scope_key field predicates
+  """
+  resourceScopeKey: String
+  resourceScopeKeyNEQ: String
+  resourceScopeKeyIn: [String!]
+  resourceScopeKeyNotIn: [String!]
+  resourceScopeKeyGT: String
+  resourceScopeKeyGTE: String
+  resourceScopeKeyLT: String
+  resourceScopeKeyLTE: String
+  resourceScopeKeyContains: String
+  resourceScopeKeyHasPrefix: String
+  resourceScopeKeyHasSuffix: String
+  resourceScopeKeyIsNil: Boolean
+  resourceScopeKeyNotNil: Boolean
+  resourceScopeKeyEqualFold: String
+  resourceScopeKeyContainsFold: String
+  """
+  quota_scope_id field predicates
+  """
+  quotaScopeID: ID
+  quotaScopeIDNEQ: ID
+  quotaScopeIDIn: [ID!]
+  quotaScopeIDNotIn: [ID!]
+  quotaScopeIDIsNil: Boolean
+  quotaScopeIDNotNil: Boolean
+  """
+  quota_scope_name_snapshot field predicates
+  """
+  quotaScopeNameSnapshot: String
+  quotaScopeNameSnapshotNEQ: String
+  quotaScopeNameSnapshotIn: [String!]
+  quotaScopeNameSnapshotNotIn: [String!]
+  quotaScopeNameSnapshotGT: String
+  quotaScopeNameSnapshotGTE: String
+  quotaScopeNameSnapshotLT: String
+  quotaScopeNameSnapshotLTE: String
+  quotaScopeNameSnapshotContains: String
+  quotaScopeNameSnapshotHasPrefix: String
+  quotaScopeNameSnapshotHasSuffix: String
+  quotaScopeNameSnapshotIsNil: Boolean
+  quotaScopeNameSnapshotNotNil: Boolean
+  quotaScopeNameSnapshotEqualFold: String
+  quotaScopeNameSnapshotContainsFold: String
+  """
+  quota_scope_status_snapshot field predicates
+  """
+  quotaScopeStatusSnapshot: String
+  quotaScopeStatusSnapshotNEQ: String
+  quotaScopeStatusSnapshotIn: [String!]
+  quotaScopeStatusSnapshotNotIn: [String!]
+  quotaScopeStatusSnapshotGT: String
+  quotaScopeStatusSnapshotGTE: String
+  quotaScopeStatusSnapshotLT: String
+  quotaScopeStatusSnapshotLTE: String
+  quotaScopeStatusSnapshotContains: String
+  quotaScopeStatusSnapshotHasPrefix: String
+  quotaScopeStatusSnapshotHasSuffix: String
+  quotaScopeStatusSnapshotIsNil: Boolean
+  quotaScopeStatusSnapshotNotNil: Boolean
+  quotaScopeStatusSnapshotEqualFold: String
+  quotaScopeStatusSnapshotContainsFold: String
+  """
   credential_name_snapshot field predicates
   """
   credentialNameSnapshot: String
@@ -5307,6 +6008,11 @@ input RequestExecutionWhereInput {
   """
   hasCredential: Boolean
   hasCredentialWith: [UpstreamCredentialWhereInput!]
+  """
+  quota_scope edge predicates
+  """
+  hasQuotaScope: Boolean
+  hasQuotaScopeWith: [CredentialQuotaScopeWhereInput!]
   """
   data_storage edge predicates
   """
@@ -6837,39 +7543,22 @@ type UpstreamCredential implements Node {
   updatedAt: Time!
   name: String
   """
-  Provider or channel type scope used to identify the upstream credential
-  """
-  providerType: String!
-  """
-  Normalized upstream base URL scope for this credential
-  """
-  baseURL: String
-  authKind: UpstreamCredentialAuthKind!
-  """
-  Internal secret kind for the upstream account asset; not a channel/API-format setting
-  """
-  secretKind: UpstreamCredentialSecretKind!
-  """
-  Coarse upstream issuer namespace used for credential identity; not the channel base URL
-  """
-  issuerScope: String
-  """
   Safe display hint for the secret; never contains the full secret
   """
   keyHint: String
   """
   Optional shared quota/billing scope for credentials that belong to one upstream account pool
   """
-  quotaScopeID: Int
+  quotaScopeID: ID
   """
-  Safe upstream credential identity; never contains raw secret material
+  Legacy safe upstream credential identity; never contains raw secret material
   """
   fingerprint: String!
+  """
+  Safe secret-only identity for deduping the same raw secret across channels/resources
+  """
+  secretFingerprint: String
   status: UpstreamCredentialStatus!
-  """
-  Default credential selection weight inside eligible channel refs
-  """
-  weight: Int!
   """
   Latest credential-scoped quota or budget status summary
   """
@@ -6973,16 +7662,7 @@ type UpstreamCredential implements Node {
     where: UsageLogWhereInput
   ): UsageLogConnection!
   providerQuotaStatuses: [ProviderQuotaStatus!]
-}
-"""
-UpstreamCredentialAuthKind is enum for the field auth_kind
-"""
-enum UpstreamCredentialAuthKind @goModel(model: "github.com/looplj/axonhub/internal/ent/upstreamcredential.AuthKind") {
-  api_key
-  oauth
-  azure
-  gcp
-  other
+  quotaScope: CredentialQuotaScope @goField(forceResolver: true)
 }
 """
 A connection to a list of items.
@@ -7034,27 +7714,12 @@ enum UpstreamCredentialOrderField {
   CREATED_AT
   UPDATED_AT
   NAME
-  PROVIDER_TYPE
-  BASE_URL
-  AUTH_KIND
-  SECRET_KIND
-  ISSUER_SCOPE
   KEY_HINT
   QUOTA_SCOPE_ID
   FINGERPRINT
+  SECRET_FINGERPRINT
   STATUS
-  WEIGHT
   QUOTA_STATUS
-}
-"""
-UpstreamCredentialSecretKind is enum for the field secret_kind
-"""
-enum UpstreamCredentialSecretKind @goModel(model: "github.com/looplj/axonhub/internal/ent/upstreamcredential.SecretKind") {
-  api_key
-  oauth
-  azure
-  gcp
-  other
 }
 """
 UpstreamCredentialStatus is enum for the field status
@@ -7124,72 +7789,6 @@ input UpstreamCredentialWhereInput {
   nameEqualFold: String
   nameContainsFold: String
   """
-  provider_type field predicates
-  """
-  providerType: String
-  providerTypeNEQ: String
-  providerTypeIn: [String!]
-  providerTypeNotIn: [String!]
-  providerTypeGT: String
-  providerTypeGTE: String
-  providerTypeLT: String
-  providerTypeLTE: String
-  providerTypeContains: String
-  providerTypeHasPrefix: String
-  providerTypeHasSuffix: String
-  providerTypeEqualFold: String
-  providerTypeContainsFold: String
-  """
-  base_url field predicates
-  """
-  baseURL: String
-  baseURLNEQ: String
-  baseURLIn: [String!]
-  baseURLNotIn: [String!]
-  baseURLGT: String
-  baseURLGTE: String
-  baseURLLT: String
-  baseURLLTE: String
-  baseURLContains: String
-  baseURLHasPrefix: String
-  baseURLHasSuffix: String
-  baseURLIsNil: Boolean
-  baseURLNotNil: Boolean
-  baseURLEqualFold: String
-  baseURLContainsFold: String
-  """
-  auth_kind field predicates
-  """
-  authKind: UpstreamCredentialAuthKind
-  authKindNEQ: UpstreamCredentialAuthKind
-  authKindIn: [UpstreamCredentialAuthKind!]
-  authKindNotIn: [UpstreamCredentialAuthKind!]
-  """
-  secret_kind field predicates
-  """
-  secretKind: UpstreamCredentialSecretKind
-  secretKindNEQ: UpstreamCredentialSecretKind
-  secretKindIn: [UpstreamCredentialSecretKind!]
-  secretKindNotIn: [UpstreamCredentialSecretKind!]
-  """
-  issuer_scope field predicates
-  """
-  issuerScope: String
-  issuerScopeNEQ: String
-  issuerScopeIn: [String!]
-  issuerScopeNotIn: [String!]
-  issuerScopeGT: String
-  issuerScopeGTE: String
-  issuerScopeLT: String
-  issuerScopeLTE: String
-  issuerScopeContains: String
-  issuerScopeHasPrefix: String
-  issuerScopeHasSuffix: String
-  issuerScopeIsNil: Boolean
-  issuerScopeNotNil: Boolean
-  issuerScopeEqualFold: String
-  issuerScopeContainsFold: String
-  """
   key_hint field predicates
   """
   keyHint: String
@@ -7210,14 +7809,10 @@ input UpstreamCredentialWhereInput {
   """
   quota_scope_id field predicates
   """
-  quotaScopeID: Int
-  quotaScopeIDNEQ: Int
-  quotaScopeIDIn: [Int!]
-  quotaScopeIDNotIn: [Int!]
-  quotaScopeIDGT: Int
-  quotaScopeIDGTE: Int
-  quotaScopeIDLT: Int
-  quotaScopeIDLTE: Int
+  quotaScopeID: ID
+  quotaScopeIDNEQ: ID
+  quotaScopeIDIn: [ID!]
+  quotaScopeIDNotIn: [ID!]
   quotaScopeIDIsNil: Boolean
   quotaScopeIDNotNil: Boolean
   """
@@ -7237,23 +7832,30 @@ input UpstreamCredentialWhereInput {
   fingerprintEqualFold: String
   fingerprintContainsFold: String
   """
+  secret_fingerprint field predicates
+  """
+  secretFingerprint: String
+  secretFingerprintNEQ: String
+  secretFingerprintIn: [String!]
+  secretFingerprintNotIn: [String!]
+  secretFingerprintGT: String
+  secretFingerprintGTE: String
+  secretFingerprintLT: String
+  secretFingerprintLTE: String
+  secretFingerprintContains: String
+  secretFingerprintHasPrefix: String
+  secretFingerprintHasSuffix: String
+  secretFingerprintIsNil: Boolean
+  secretFingerprintNotNil: Boolean
+  secretFingerprintEqualFold: String
+  secretFingerprintContainsFold: String
+  """
   status field predicates
   """
   status: UpstreamCredentialStatus
   statusNEQ: UpstreamCredentialStatus
   statusIn: [UpstreamCredentialStatus!]
   statusNotIn: [UpstreamCredentialStatus!]
-  """
-  weight field predicates
-  """
-  weight: Int
-  weightNEQ: Int
-  weightIn: [Int!]
-  weightNotIn: [Int!]
-  weightGT: Int
-  weightGTE: Int
-  weightLT: Int
-  weightLTE: Int
   """
   quota_status field predicates
   """
@@ -7328,6 +7930,11 @@ input UpstreamCredentialWhereInput {
   """
   hasProviderQuotaStatuses: Boolean
   hasProviderQuotaStatusesWith: [ProviderQuotaStatusWhereInput!]
+  """
+  quota_scope edge predicates
+  """
+  hasQuotaScope: Boolean
+  hasQuotaScopeWith: [CredentialQuotaScopeWhereInput!]
 }
 type UsageLog implements Node {
   id: ID!
@@ -7355,9 +7962,29 @@ type UsageLog implements Node {
   """
   modelID: String!
   """
-  Safe upstream credential identity used for this request; never stores the raw secret
+  Legacy safe upstream credential identity used for this request; never stores the raw secret
   """
   credentialFingerprint: String
+  """
+  Safe secret-only identity used for this request; never stores the raw secret
+  """
+  secretFingerprint: String
+  """
+  Safe runtime resource scope for channel resource namespace plus secret fingerprint
+  """
+  resourceScopeKey: String
+  """
+  Credential quota scope used for this request when known
+  """
+  quotaScopeID: ID
+  """
+  Quota scope display name captured when usage was logged
+  """
+  quotaScopeNameSnapshot: String
+  """
+  Quota scope status captured when usage was logged
+  """
+  quotaScopeStatusSnapshot: String
   """
   Credential display name captured when usage was logged
   """
@@ -7370,6 +7997,10 @@ type UsageLog implements Node {
   Credential source used for this request: ref, legacy, or unknown
   """
   credentialSource: String
+  """
+  Credential quota/budget status captured when usage was logged
+  """
+  credentialQuotaStatusSnapshot: String
   """
   Number of tokens in the prompt
   """
@@ -7442,6 +8073,7 @@ type UsageLog implements Node {
   project: Project!
   channel: Channel @goField(forceResolver: true)
   credential: UpstreamCredential @goField(forceResolver: true)
+  quotaScope: CredentialQuotaScope @goField(forceResolver: true)
 }
 """
 A connection to a list of items.
@@ -7622,6 +8254,87 @@ input UsageLogWhereInput {
   credentialFingerprintEqualFold: String
   credentialFingerprintContainsFold: String
   """
+  secret_fingerprint field predicates
+  """
+  secretFingerprint: String
+  secretFingerprintNEQ: String
+  secretFingerprintIn: [String!]
+  secretFingerprintNotIn: [String!]
+  secretFingerprintGT: String
+  secretFingerprintGTE: String
+  secretFingerprintLT: String
+  secretFingerprintLTE: String
+  secretFingerprintContains: String
+  secretFingerprintHasPrefix: String
+  secretFingerprintHasSuffix: String
+  secretFingerprintIsNil: Boolean
+  secretFingerprintNotNil: Boolean
+  secretFingerprintEqualFold: String
+  secretFingerprintContainsFold: String
+  """
+  resource_scope_key field predicates
+  """
+  resourceScopeKey: String
+  resourceScopeKeyNEQ: String
+  resourceScopeKeyIn: [String!]
+  resourceScopeKeyNotIn: [String!]
+  resourceScopeKeyGT: String
+  resourceScopeKeyGTE: String
+  resourceScopeKeyLT: String
+  resourceScopeKeyLTE: String
+  resourceScopeKeyContains: String
+  resourceScopeKeyHasPrefix: String
+  resourceScopeKeyHasSuffix: String
+  resourceScopeKeyIsNil: Boolean
+  resourceScopeKeyNotNil: Boolean
+  resourceScopeKeyEqualFold: String
+  resourceScopeKeyContainsFold: String
+  """
+  quota_scope_id field predicates
+  """
+  quotaScopeID: ID
+  quotaScopeIDNEQ: ID
+  quotaScopeIDIn: [ID!]
+  quotaScopeIDNotIn: [ID!]
+  quotaScopeIDIsNil: Boolean
+  quotaScopeIDNotNil: Boolean
+  """
+  quota_scope_name_snapshot field predicates
+  """
+  quotaScopeNameSnapshot: String
+  quotaScopeNameSnapshotNEQ: String
+  quotaScopeNameSnapshotIn: [String!]
+  quotaScopeNameSnapshotNotIn: [String!]
+  quotaScopeNameSnapshotGT: String
+  quotaScopeNameSnapshotGTE: String
+  quotaScopeNameSnapshotLT: String
+  quotaScopeNameSnapshotLTE: String
+  quotaScopeNameSnapshotContains: String
+  quotaScopeNameSnapshotHasPrefix: String
+  quotaScopeNameSnapshotHasSuffix: String
+  quotaScopeNameSnapshotIsNil: Boolean
+  quotaScopeNameSnapshotNotNil: Boolean
+  quotaScopeNameSnapshotEqualFold: String
+  quotaScopeNameSnapshotContainsFold: String
+  """
+  quota_scope_status_snapshot field predicates
+  """
+  quotaScopeStatusSnapshot: String
+  quotaScopeStatusSnapshotNEQ: String
+  quotaScopeStatusSnapshotIn: [String!]
+  quotaScopeStatusSnapshotNotIn: [String!]
+  quotaScopeStatusSnapshotGT: String
+  quotaScopeStatusSnapshotGTE: String
+  quotaScopeStatusSnapshotLT: String
+  quotaScopeStatusSnapshotLTE: String
+  quotaScopeStatusSnapshotContains: String
+  quotaScopeStatusSnapshotHasPrefix: String
+  quotaScopeStatusSnapshotHasSuffix: String
+  quotaScopeStatusSnapshotIsNil: Boolean
+  quotaScopeStatusSnapshotNotNil: Boolean
+  quotaScopeStatusSnapshotEqualFold: String
+  quotaScopeStatusSnapshotContainsFold: String
+  """
   credential_name_snapshot field predicates
   """
   credentialNameSnapshot: String
@@ -7675,6 +8388,24 @@ input UsageLogWhereInput {
   credentialSourceNotNil: Boolean
   credentialSourceEqualFold: String
   credentialSourceContainsFold: String
+  """
+  credential_quota_status_snapshot field predicates
+  """
+  credentialQuotaStatusSnapshot: String
+  credentialQuotaStatusSnapshotNEQ: String
+  credentialQuotaStatusSnapshotIn: [String!]
+  credentialQuotaStatusSnapshotNotIn: [String!]
+  credentialQuotaStatusSnapshotGT: String
+  credentialQuotaStatusSnapshotGTE: String
+  credentialQuotaStatusSnapshotLT: String
+  credentialQuotaStatusSnapshotLTE: String
+  credentialQuotaStatusSnapshotContains: String
+  credentialQuotaStatusSnapshotHasPrefix: String
+  credentialQuotaStatusSnapshotHasSuffix: String
+  credentialQuotaStatusSnapshotIsNil: Boolean
+  credentialQuotaStatusSnapshotNotNil: Boolean
+  credentialQuotaStatusSnapshotEqualFold: String
+  credentialQuotaStatusSnapshotContainsFold: String
   """
   prompt_tokens field predicates
   """
@@ -7899,6 +8630,11 @@ input UsageLogWhereInput {
   """
   hasCredential: Boolean
   hasCredentialWith: [UpstreamCredentialWhereInput!]
+  """
+  quota_scope edge predicates
+  """
+  hasQuotaScope: Boolean
+  hasQuotaScopeWith: [CredentialQuotaScopeWhereInput!]
 }
 type User implements Node {
   id: ID!

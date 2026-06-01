@@ -27,25 +27,26 @@ import (
 // ChannelQuery is the builder for querying Channel entities.
 type ChannelQuery struct {
 	config
-	ctx                         *QueryContext
-	order                       []channel.OrderOption
-	inters                      []Interceptor
-	predicates                  []predicate.Channel
-	withRequests                *RequestQuery
-	withExecutions              *RequestExecutionQuery
-	withUsageLogs               *UsageLogQuery
-	withChannelProbes           *ChannelProbeQuery
-	withChannelModelPrices      *ChannelModelPriceQuery
-	withCredentialRefs          *ChannelCredentialRefQuery
-	withProviderQuotaStatus     *ProviderQuotaStatusQuery
-	loadTotal                   []func(context.Context, []*Channel) error
-	modifiers                   []func(*sql.Selector)
-	withNamedRequests           map[string]*RequestQuery
-	withNamedExecutions         map[string]*RequestExecutionQuery
-	withNamedUsageLogs          map[string]*UsageLogQuery
-	withNamedChannelProbes      map[string]*ChannelProbeQuery
-	withNamedChannelModelPrices map[string]*ChannelModelPriceQuery
-	withNamedCredentialRefs     map[string]*ChannelCredentialRefQuery
+	ctx                            *QueryContext
+	order                          []channel.OrderOption
+	inters                         []Interceptor
+	predicates                     []predicate.Channel
+	withRequests                   *RequestQuery
+	withExecutions                 *RequestExecutionQuery
+	withUsageLogs                  *UsageLogQuery
+	withChannelProbes              *ChannelProbeQuery
+	withChannelModelPrices         *ChannelModelPriceQuery
+	withCredentialRefs             *ChannelCredentialRefQuery
+	withProviderQuotaStatuses      *ProviderQuotaStatusQuery
+	loadTotal                      []func(context.Context, []*Channel) error
+	modifiers                      []func(*sql.Selector)
+	withNamedRequests              map[string]*RequestQuery
+	withNamedExecutions            map[string]*RequestExecutionQuery
+	withNamedUsageLogs             map[string]*UsageLogQuery
+	withNamedChannelProbes         map[string]*ChannelProbeQuery
+	withNamedChannelModelPrices    map[string]*ChannelModelPriceQuery
+	withNamedCredentialRefs        map[string]*ChannelCredentialRefQuery
+	withNamedProviderQuotaStatuses map[string]*ProviderQuotaStatusQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -214,8 +215,8 @@ func (_q *ChannelQuery) QueryCredentialRefs() *ChannelCredentialRefQuery {
 	return query
 }
 
-// QueryProviderQuotaStatus chains the current query on the "provider_quota_status" edge.
-func (_q *ChannelQuery) QueryProviderQuotaStatus() *ProviderQuotaStatusQuery {
+// QueryProviderQuotaStatuses chains the current query on the "provider_quota_statuses" edge.
+func (_q *ChannelQuery) QueryProviderQuotaStatuses() *ProviderQuotaStatusQuery {
 	query := (&ProviderQuotaStatusClient{config: _q.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := _q.prepareQuery(ctx); err != nil {
@@ -228,7 +229,7 @@ func (_q *ChannelQuery) QueryProviderQuotaStatus() *ProviderQuotaStatusQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(channel.Table, channel.FieldID, selector),
 			sqlgraph.To(providerquotastatus.Table, providerquotastatus.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, false, channel.ProviderQuotaStatusTable, channel.ProviderQuotaStatusColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, channel.ProviderQuotaStatusesTable, channel.ProviderQuotaStatusesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -423,18 +424,18 @@ func (_q *ChannelQuery) Clone() *ChannelQuery {
 		return nil
 	}
 	return &ChannelQuery{
-		config:                  _q.config,
-		ctx:                     _q.ctx.Clone(),
-		order:                   append([]channel.OrderOption{}, _q.order...),
-		inters:                  append([]Interceptor{}, _q.inters...),
-		predicates:              append([]predicate.Channel{}, _q.predicates...),
-		withRequests:            _q.withRequests.Clone(),
-		withExecutions:          _q.withExecutions.Clone(),
-		withUsageLogs:           _q.withUsageLogs.Clone(),
-		withChannelProbes:       _q.withChannelProbes.Clone(),
-		withChannelModelPrices:  _q.withChannelModelPrices.Clone(),
-		withCredentialRefs:      _q.withCredentialRefs.Clone(),
-		withProviderQuotaStatus: _q.withProviderQuotaStatus.Clone(),
+		config:                    _q.config,
+		ctx:                       _q.ctx.Clone(),
+		order:                     append([]channel.OrderOption{}, _q.order...),
+		inters:                    append([]Interceptor{}, _q.inters...),
+		predicates:                append([]predicate.Channel{}, _q.predicates...),
+		withRequests:              _q.withRequests.Clone(),
+		withExecutions:            _q.withExecutions.Clone(),
+		withUsageLogs:             _q.withUsageLogs.Clone(),
+		withChannelProbes:         _q.withChannelProbes.Clone(),
+		withChannelModelPrices:    _q.withChannelModelPrices.Clone(),
+		withCredentialRefs:        _q.withCredentialRefs.Clone(),
+		withProviderQuotaStatuses: _q.withProviderQuotaStatuses.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -508,14 +509,14 @@ func (_q *ChannelQuery) WithCredentialRefs(opts ...func(*ChannelCredentialRefQue
 	return _q
 }
 
-// WithProviderQuotaStatus tells the query-builder to eager-load the nodes that are connected to
-// the "provider_quota_status" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *ChannelQuery) WithProviderQuotaStatus(opts ...func(*ProviderQuotaStatusQuery)) *ChannelQuery {
+// WithProviderQuotaStatuses tells the query-builder to eager-load the nodes that are connected to
+// the "provider_quota_statuses" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ChannelQuery) WithProviderQuotaStatuses(opts ...func(*ProviderQuotaStatusQuery)) *ChannelQuery {
 	query := (&ProviderQuotaStatusClient{config: _q.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	_q.withProviderQuotaStatus = query
+	_q.withProviderQuotaStatuses = query
 	return _q
 }
 
@@ -610,7 +611,7 @@ func (_q *ChannelQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Chan
 			_q.withChannelProbes != nil,
 			_q.withChannelModelPrices != nil,
 			_q.withCredentialRefs != nil,
-			_q.withProviderQuotaStatus != nil,
+			_q.withProviderQuotaStatuses != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -678,9 +679,12 @@ func (_q *ChannelQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Chan
 			return nil, err
 		}
 	}
-	if query := _q.withProviderQuotaStatus; query != nil {
-		if err := _q.loadProviderQuotaStatus(ctx, query, nodes, nil,
-			func(n *Channel, e *ProviderQuotaStatus) { n.Edges.ProviderQuotaStatus = e }); err != nil {
+	if query := _q.withProviderQuotaStatuses; query != nil {
+		if err := _q.loadProviderQuotaStatuses(ctx, query, nodes,
+			func(n *Channel) { n.Edges.ProviderQuotaStatuses = []*ProviderQuotaStatus{} },
+			func(n *Channel, e *ProviderQuotaStatus) {
+				n.Edges.ProviderQuotaStatuses = append(n.Edges.ProviderQuotaStatuses, e)
+			}); err != nil {
 			return nil, err
 		}
 	}
@@ -723,6 +727,13 @@ func (_q *ChannelQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Chan
 		if err := _q.loadCredentialRefs(ctx, query, nodes,
 			func(n *Channel) { n.appendNamedCredentialRefs(name) },
 			func(n *Channel, e *ChannelCredentialRef) { n.appendNamedCredentialRefs(name, e) }); err != nil {
+			return nil, err
+		}
+	}
+	for name, query := range _q.withNamedProviderQuotaStatuses {
+		if err := _q.loadProviderQuotaStatuses(ctx, query, nodes,
+			func(n *Channel) { n.appendNamedProviderQuotaStatuses(name) },
+			func(n *Channel, e *ProviderQuotaStatus) { n.appendNamedProviderQuotaStatuses(name, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -914,18 +925,21 @@ func (_q *ChannelQuery) loadCredentialRefs(ctx context.Context, query *ChannelCr
 	}
 	return nil
 }
-func (_q *ChannelQuery) loadProviderQuotaStatus(ctx context.Context, query *ProviderQuotaStatusQuery, nodes []*Channel, init func(*Channel), assign func(*Channel, *ProviderQuotaStatus)) error {
+func (_q *ChannelQuery) loadProviderQuotaStatuses(ctx context.Context, query *ProviderQuotaStatusQuery, nodes []*Channel, init func(*Channel), assign func(*Channel, *ProviderQuotaStatus)) error {
 	fks := make([]driver.Value, 0, len(nodes))
 	nodeids := make(map[int]*Channel)
 	for i := range nodes {
 		fks = append(fks, nodes[i].ID)
 		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
 	}
 	if len(query.ctx.Fields) > 0 {
 		query.ctx.AppendFieldOnce(providerquotastatus.FieldChannelID)
 	}
 	query.Where(predicate.ProviderQuotaStatus(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(channel.ProviderQuotaStatusColumn), fks...))
+		s.Where(sql.InValues(s.C(channel.ProviderQuotaStatusesColumn), fks...))
 	}))
 	neighbors, err := query.All(ctx)
 	if err != nil {
@@ -1116,6 +1130,20 @@ func (_q *ChannelQuery) WithNamedCredentialRefs(name string, opts ...func(*Chann
 		_q.withNamedCredentialRefs = make(map[string]*ChannelCredentialRefQuery)
 	}
 	_q.withNamedCredentialRefs[name] = query
+	return _q
+}
+
+// WithNamedProviderQuotaStatuses tells the query-builder to eager-load the nodes that are connected to the "provider_quota_statuses"
+// edge with the given name. The optional arguments are used to configure the query builder of the edge.
+func (_q *ChannelQuery) WithNamedProviderQuotaStatuses(name string, opts ...func(*ProviderQuotaStatusQuery)) *ChannelQuery {
+	query := (&ProviderQuotaStatusClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	if _q.withNamedProviderQuotaStatuses == nil {
+		_q.withNamedProviderQuotaStatuses = make(map[string]*ProviderQuotaStatusQuery)
+	}
+	_q.withNamedProviderQuotaStatuses[name] = query
 	return _q
 }
 

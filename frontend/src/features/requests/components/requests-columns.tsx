@@ -24,6 +24,16 @@ interface UseRequestsColumnsOptions {
   onViewDetail?: (requestId: string) => void;
 }
 
+function shortSafeIdentity(value?: string | null) {
+  if (!value) {
+    return '';
+  }
+  if (value.length <= 28) {
+    return value;
+  }
+  return `${value.slice(0, 14)}...${value.slice(-8)}`;
+}
+
 export function useRequestsColumns(options?: UseRequestsColumnsOptions): ColumnDef<Request>[] {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'zh' ? zhCN : enUS;
@@ -294,7 +304,10 @@ export function useRequestsColumns(options?: UseRequestsColumnsOptions): ColumnD
               const latest = executions[0];
               const credentialName = latest?.credentialNameSnapshot || latest?.credential?.name || '';
               const keyHint = latest?.credentialKeyHint || latest?.credential?.keyHint || '';
-              const label = credentialName || keyHint || latest?.credentialFingerprint || '-';
+              const source = latest?.credentialSource;
+              const resourceScope = latest?.resourceScopeKey;
+              const quotaScope = latest?.quotaScopeNameSnapshot || latest?.quotaScopeStatusSnapshot;
+              const label = credentialName || keyHint || shortSafeIdentity(latest?.secretFingerprint || latest?.credentialFingerprint) || '-';
 
               if (executions.length > 1) {
                 return (
@@ -313,6 +326,7 @@ export function useRequestsColumns(options?: UseRequestsColumnsOptions): ColumnD
                         {executions.map((exe, idx) => {
                           const name = exe.credentialNameSnapshot || exe.credential?.name || '';
                           const hint = exe.credentialKeyHint || exe.credential?.keyHint || '';
+                          const identity = shortSafeIdentity(exe.secretFingerprint || exe.credentialFingerprint);
                           return (
                             <div key={exe.id || idx} className='hover:bg-muted/50 flex items-center gap-2 rounded-md px-2 py-1.5'>
                               <Badge className={`${getStatusColor(exe.status || '')} h-5 shrink-0 px-1.5 text-[10px] font-bold uppercase`}>
@@ -320,9 +334,14 @@ export function useRequestsColumns(options?: UseRequestsColumnsOptions): ColumnD
                               </Badge>
                               <div className='flex min-w-0 flex-col'>
                                 <span className='text-foreground truncate text-xs font-semibold'>
-                                  {name || hint || t('requests.columns.unknown')}
+                                  {name || hint || identity || t('requests.columns.unknown')}
                                 </span>
                                 {hint && <span className='text-muted-foreground truncate font-mono text-[10px]'>{hint}</span>}
+                                {(exe.credentialSource || exe.resourceScopeKey || exe.quotaScopeNameSnapshot) && (
+                                  <span className='text-muted-foreground truncate text-[10px]'>
+                                    {[exe.credentialSource, exe.resourceScopeKey, exe.quotaScopeNameSnapshot].filter(Boolean).join(' · ')}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           );
@@ -337,6 +356,9 @@ export function useRequestsColumns(options?: UseRequestsColumnsOptions): ColumnD
                 <div className='max-w-[180px] px-2'>
                   <div className='truncate font-mono text-xs'>{label}</div>
                   {keyHint && credentialName && <div className='text-muted-foreground truncate font-mono text-[10px]'>{keyHint}</div>}
+                  {(source || resourceScope || quotaScope) && (
+                    <div className='text-muted-foreground truncate text-[10px]'>{[source, resourceScope, quotaScope].filter(Boolean).join(' · ')}</div>
+                  )}
                 </div>
               );
             },

@@ -16,6 +16,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/channelmodelpriceversion"
 	"github.com/looplj/axonhub/internal/ent/channeloverridetemplate"
 	"github.com/looplj/axonhub/internal/ent/channelprobe"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/datastorage"
 	"github.com/looplj/axonhub/internal/ent/model"
 	"github.com/looplj/axonhub/internal/ent/oidcidentity"
@@ -307,6 +308,33 @@ func (f TraverseChannelProbe) Traverse(ctx context.Context, q ent.Query) error {
 		return f(ctx, q)
 	}
 	return fmt.Errorf("unexpected query type %T. expect *ent.ChannelProbeQuery", q)
+}
+
+// The CredentialQuotaScopeFunc type is an adapter to allow the use of ordinary function as a Querier.
+type CredentialQuotaScopeFunc func(context.Context, *ent.CredentialQuotaScopeQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f CredentialQuotaScopeFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.CredentialQuotaScopeQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.CredentialQuotaScopeQuery", q)
+}
+
+// The TraverseCredentialQuotaScope type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseCredentialQuotaScope func(context.Context, *ent.CredentialQuotaScopeQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseCredentialQuotaScope) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseCredentialQuotaScope) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.CredentialQuotaScopeQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.CredentialQuotaScopeQuery", q)
 }
 
 // The DataStorageFunc type is an adapter to allow the use of ordinary function as a Querier.
@@ -814,6 +842,8 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.ChannelOverrideTemplateQuery, predicate.ChannelOverrideTemplate, channeloverridetemplate.OrderOption]{typ: ent.TypeChannelOverrideTemplate, tq: q}, nil
 	case *ent.ChannelProbeQuery:
 		return &query[*ent.ChannelProbeQuery, predicate.ChannelProbe, channelprobe.OrderOption]{typ: ent.TypeChannelProbe, tq: q}, nil
+	case *ent.CredentialQuotaScopeQuery:
+		return &query[*ent.CredentialQuotaScopeQuery, predicate.CredentialQuotaScope, credentialquotascope.OrderOption]{typ: ent.TypeCredentialQuotaScope, tq: q}, nil
 	case *ent.DataStorageQuery:
 		return &query[*ent.DataStorageQuery, predicate.DataStorage, datastorage.OrderOption]{typ: ent.TypeDataStorage, tq: q}, nil
 	case *ent.ModelQuery:

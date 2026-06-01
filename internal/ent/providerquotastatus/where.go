@@ -75,6 +75,11 @@ func ChannelID(v int) predicate.ProviderQuotaStatus {
 	return predicate.ProviderQuotaStatus(sql.FieldEQ(FieldChannelID, v))
 }
 
+// ScopeKey applies equality check predicate on the "scope_key" field. It's identical to ScopeKeyEQ.
+func ScopeKey(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldEQ(FieldScopeKey, v))
+}
+
 // CredentialID applies equality check predicate on the "credential_id" field. It's identical to CredentialIDEQ.
 func CredentialID(v int) predicate.ProviderQuotaStatus {
 	return predicate.ProviderQuotaStatus(sql.FieldEQ(FieldCredentialID, v))
@@ -83,6 +88,21 @@ func CredentialID(v int) predicate.ProviderQuotaStatus {
 // CredentialFingerprint applies equality check predicate on the "credential_fingerprint" field. It's identical to CredentialFingerprintEQ.
 func CredentialFingerprint(v string) predicate.ProviderQuotaStatus {
 	return predicate.ProviderQuotaStatus(sql.FieldEQ(FieldCredentialFingerprint, v))
+}
+
+// SecretFingerprint applies equality check predicate on the "secret_fingerprint" field. It's identical to SecretFingerprintEQ.
+func SecretFingerprint(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldEQ(FieldSecretFingerprint, v))
+}
+
+// ResourceScopeKey applies equality check predicate on the "resource_scope_key" field. It's identical to ResourceScopeKeyEQ.
+func ResourceScopeKey(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldEQ(FieldResourceScopeKey, v))
+}
+
+// QuotaScopeID applies equality check predicate on the "quota_scope_id" field. It's identical to QuotaScopeIDEQ.
+func QuotaScopeID(v int) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldEQ(FieldQuotaScopeID, v))
 }
 
 // NextResetAt applies equality check predicate on the "next_reset_at" field. It's identical to NextResetAtEQ.
@@ -240,6 +260,81 @@ func ChannelIDNotIn(vs ...int) predicate.ProviderQuotaStatus {
 	return predicate.ProviderQuotaStatus(sql.FieldNotIn(FieldChannelID, vs...))
 }
 
+// ChannelIDIsNil applies the IsNil predicate on the "channel_id" field.
+func ChannelIDIsNil() predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldIsNull(FieldChannelID))
+}
+
+// ChannelIDNotNil applies the NotNil predicate on the "channel_id" field.
+func ChannelIDNotNil() predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldNotNull(FieldChannelID))
+}
+
+// ScopeKeyEQ applies the EQ predicate on the "scope_key" field.
+func ScopeKeyEQ(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldEQ(FieldScopeKey, v))
+}
+
+// ScopeKeyNEQ applies the NEQ predicate on the "scope_key" field.
+func ScopeKeyNEQ(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldNEQ(FieldScopeKey, v))
+}
+
+// ScopeKeyIn applies the In predicate on the "scope_key" field.
+func ScopeKeyIn(vs ...string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldIn(FieldScopeKey, vs...))
+}
+
+// ScopeKeyNotIn applies the NotIn predicate on the "scope_key" field.
+func ScopeKeyNotIn(vs ...string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldNotIn(FieldScopeKey, vs...))
+}
+
+// ScopeKeyGT applies the GT predicate on the "scope_key" field.
+func ScopeKeyGT(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldGT(FieldScopeKey, v))
+}
+
+// ScopeKeyGTE applies the GTE predicate on the "scope_key" field.
+func ScopeKeyGTE(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldGTE(FieldScopeKey, v))
+}
+
+// ScopeKeyLT applies the LT predicate on the "scope_key" field.
+func ScopeKeyLT(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldLT(FieldScopeKey, v))
+}
+
+// ScopeKeyLTE applies the LTE predicate on the "scope_key" field.
+func ScopeKeyLTE(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldLTE(FieldScopeKey, v))
+}
+
+// ScopeKeyContains applies the Contains predicate on the "scope_key" field.
+func ScopeKeyContains(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldContains(FieldScopeKey, v))
+}
+
+// ScopeKeyHasPrefix applies the HasPrefix predicate on the "scope_key" field.
+func ScopeKeyHasPrefix(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldHasPrefix(FieldScopeKey, v))
+}
+
+// ScopeKeyHasSuffix applies the HasSuffix predicate on the "scope_key" field.
+func ScopeKeyHasSuffix(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldHasSuffix(FieldScopeKey, v))
+}
+
+// ScopeKeyEqualFold applies the EqualFold predicate on the "scope_key" field.
+func ScopeKeyEqualFold(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldEqualFold(FieldScopeKey, v))
+}
+
+// ScopeKeyContainsFold applies the ContainsFold predicate on the "scope_key" field.
+func ScopeKeyContainsFold(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldContainsFold(FieldScopeKey, v))
+}
+
 // CredentialIDEQ applies the EQ predicate on the "credential_id" field.
 func CredentialIDEQ(v int) predicate.ProviderQuotaStatus {
 	return predicate.ProviderQuotaStatus(sql.FieldEQ(FieldCredentialID, v))
@@ -343,6 +438,186 @@ func CredentialFingerprintEqualFold(v string) predicate.ProviderQuotaStatus {
 // CredentialFingerprintContainsFold applies the ContainsFold predicate on the "credential_fingerprint" field.
 func CredentialFingerprintContainsFold(v string) predicate.ProviderQuotaStatus {
 	return predicate.ProviderQuotaStatus(sql.FieldContainsFold(FieldCredentialFingerprint, v))
+}
+
+// SecretFingerprintEQ applies the EQ predicate on the "secret_fingerprint" field.
+func SecretFingerprintEQ(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldEQ(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintNEQ applies the NEQ predicate on the "secret_fingerprint" field.
+func SecretFingerprintNEQ(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldNEQ(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintIn applies the In predicate on the "secret_fingerprint" field.
+func SecretFingerprintIn(vs ...string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldIn(FieldSecretFingerprint, vs...))
+}
+
+// SecretFingerprintNotIn applies the NotIn predicate on the "secret_fingerprint" field.
+func SecretFingerprintNotIn(vs ...string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldNotIn(FieldSecretFingerprint, vs...))
+}
+
+// SecretFingerprintGT applies the GT predicate on the "secret_fingerprint" field.
+func SecretFingerprintGT(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldGT(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintGTE applies the GTE predicate on the "secret_fingerprint" field.
+func SecretFingerprintGTE(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldGTE(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintLT applies the LT predicate on the "secret_fingerprint" field.
+func SecretFingerprintLT(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldLT(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintLTE applies the LTE predicate on the "secret_fingerprint" field.
+func SecretFingerprintLTE(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldLTE(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintContains applies the Contains predicate on the "secret_fingerprint" field.
+func SecretFingerprintContains(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldContains(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintHasPrefix applies the HasPrefix predicate on the "secret_fingerprint" field.
+func SecretFingerprintHasPrefix(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldHasPrefix(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintHasSuffix applies the HasSuffix predicate on the "secret_fingerprint" field.
+func SecretFingerprintHasSuffix(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldHasSuffix(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintIsNil applies the IsNil predicate on the "secret_fingerprint" field.
+func SecretFingerprintIsNil() predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldIsNull(FieldSecretFingerprint))
+}
+
+// SecretFingerprintNotNil applies the NotNil predicate on the "secret_fingerprint" field.
+func SecretFingerprintNotNil() predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldNotNull(FieldSecretFingerprint))
+}
+
+// SecretFingerprintEqualFold applies the EqualFold predicate on the "secret_fingerprint" field.
+func SecretFingerprintEqualFold(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldEqualFold(FieldSecretFingerprint, v))
+}
+
+// SecretFingerprintContainsFold applies the ContainsFold predicate on the "secret_fingerprint" field.
+func SecretFingerprintContainsFold(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldContainsFold(FieldSecretFingerprint, v))
+}
+
+// ResourceScopeKeyEQ applies the EQ predicate on the "resource_scope_key" field.
+func ResourceScopeKeyEQ(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldEQ(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyNEQ applies the NEQ predicate on the "resource_scope_key" field.
+func ResourceScopeKeyNEQ(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldNEQ(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyIn applies the In predicate on the "resource_scope_key" field.
+func ResourceScopeKeyIn(vs ...string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldIn(FieldResourceScopeKey, vs...))
+}
+
+// ResourceScopeKeyNotIn applies the NotIn predicate on the "resource_scope_key" field.
+func ResourceScopeKeyNotIn(vs ...string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldNotIn(FieldResourceScopeKey, vs...))
+}
+
+// ResourceScopeKeyGT applies the GT predicate on the "resource_scope_key" field.
+func ResourceScopeKeyGT(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldGT(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyGTE applies the GTE predicate on the "resource_scope_key" field.
+func ResourceScopeKeyGTE(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldGTE(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyLT applies the LT predicate on the "resource_scope_key" field.
+func ResourceScopeKeyLT(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldLT(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyLTE applies the LTE predicate on the "resource_scope_key" field.
+func ResourceScopeKeyLTE(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldLTE(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyContains applies the Contains predicate on the "resource_scope_key" field.
+func ResourceScopeKeyContains(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldContains(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyHasPrefix applies the HasPrefix predicate on the "resource_scope_key" field.
+func ResourceScopeKeyHasPrefix(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldHasPrefix(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyHasSuffix applies the HasSuffix predicate on the "resource_scope_key" field.
+func ResourceScopeKeyHasSuffix(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldHasSuffix(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyIsNil applies the IsNil predicate on the "resource_scope_key" field.
+func ResourceScopeKeyIsNil() predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldIsNull(FieldResourceScopeKey))
+}
+
+// ResourceScopeKeyNotNil applies the NotNil predicate on the "resource_scope_key" field.
+func ResourceScopeKeyNotNil() predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldNotNull(FieldResourceScopeKey))
+}
+
+// ResourceScopeKeyEqualFold applies the EqualFold predicate on the "resource_scope_key" field.
+func ResourceScopeKeyEqualFold(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldEqualFold(FieldResourceScopeKey, v))
+}
+
+// ResourceScopeKeyContainsFold applies the ContainsFold predicate on the "resource_scope_key" field.
+func ResourceScopeKeyContainsFold(v string) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldContainsFold(FieldResourceScopeKey, v))
+}
+
+// QuotaScopeIDEQ applies the EQ predicate on the "quota_scope_id" field.
+func QuotaScopeIDEQ(v int) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldEQ(FieldQuotaScopeID, v))
+}
+
+// QuotaScopeIDNEQ applies the NEQ predicate on the "quota_scope_id" field.
+func QuotaScopeIDNEQ(v int) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldNEQ(FieldQuotaScopeID, v))
+}
+
+// QuotaScopeIDIn applies the In predicate on the "quota_scope_id" field.
+func QuotaScopeIDIn(vs ...int) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldIn(FieldQuotaScopeID, vs...))
+}
+
+// QuotaScopeIDNotIn applies the NotIn predicate on the "quota_scope_id" field.
+func QuotaScopeIDNotIn(vs ...int) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldNotIn(FieldQuotaScopeID, vs...))
+}
+
+// QuotaScopeIDIsNil applies the IsNil predicate on the "quota_scope_id" field.
+func QuotaScopeIDIsNil() predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldIsNull(FieldQuotaScopeID))
+}
+
+// QuotaScopeIDNotNil applies the NotNil predicate on the "quota_scope_id" field.
+func QuotaScopeIDNotNil() predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(sql.FieldNotNull(FieldQuotaScopeID))
 }
 
 // ProviderTypeEQ applies the EQ predicate on the "provider_type" field.
@@ -490,7 +765,7 @@ func HasChannel() predicate.ProviderQuotaStatus {
 	return predicate.ProviderQuotaStatus(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, ChannelTable, ChannelColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, ChannelTable, ChannelColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
@@ -523,6 +798,29 @@ func HasCredential() predicate.ProviderQuotaStatus {
 func HasCredentialWith(preds ...predicate.UpstreamCredential) predicate.ProviderQuotaStatus {
 	return predicate.ProviderQuotaStatus(func(s *sql.Selector) {
 		step := newCredentialStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasQuotaScope applies the HasEdge predicate on the "quota_scope" edge.
+func HasQuotaScope() predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, QuotaScopeTable, QuotaScopeColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasQuotaScopeWith applies the HasEdge predicate on the "quota_scope" edge with a given conditions (other predicates).
+func HasQuotaScopeWith(preds ...predicate.CredentialQuotaScope) predicate.ProviderQuotaStatus {
+	return predicate.ProviderQuotaStatus(func(s *sql.Selector) {
+		step := newQuotaScopeStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

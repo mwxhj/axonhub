@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/predicate"
 	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
@@ -26,6 +27,7 @@ type ProviderQuotaStatusQuery struct {
 	predicates     []predicate.ProviderQuotaStatus
 	withChannel    *ChannelQuery
 	withCredential *UpstreamCredentialQuery
+	withQuotaScope *CredentialQuotaScopeQuery
 	loadTotal      []func(context.Context, []*ProviderQuotaStatus) error
 	modifiers      []func(*sql.Selector)
 	// intermediate query (i.e. traversal path).
@@ -78,7 +80,7 @@ func (_q *ProviderQuotaStatusQuery) QueryChannel() *ChannelQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(providerquotastatus.Table, providerquotastatus.FieldID, selector),
 			sqlgraph.To(channel.Table, channel.FieldID),
-			sqlgraph.Edge(sqlgraph.O2O, true, providerquotastatus.ChannelTable, providerquotastatus.ChannelColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, providerquotastatus.ChannelTable, providerquotastatus.ChannelColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -101,6 +103,28 @@ func (_q *ProviderQuotaStatusQuery) QueryCredential() *UpstreamCredentialQuery {
 			sqlgraph.From(providerquotastatus.Table, providerquotastatus.FieldID, selector),
 			sqlgraph.To(upstreamcredential.Table, upstreamcredential.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, providerquotastatus.CredentialTable, providerquotastatus.CredentialColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryQuotaScope chains the current query on the "quota_scope" edge.
+func (_q *ProviderQuotaStatusQuery) QueryQuotaScope() *CredentialQuotaScopeQuery {
+	query := (&CredentialQuotaScopeClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(providerquotastatus.Table, providerquotastatus.FieldID, selector),
+			sqlgraph.To(credentialquotascope.Table, credentialquotascope.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, providerquotastatus.QuotaScopeTable, providerquotastatus.QuotaScopeColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -302,6 +326,7 @@ func (_q *ProviderQuotaStatusQuery) Clone() *ProviderQuotaStatusQuery {
 		predicates:     append([]predicate.ProviderQuotaStatus{}, _q.predicates...),
 		withChannel:    _q.withChannel.Clone(),
 		withCredential: _q.withCredential.Clone(),
+		withQuotaScope: _q.withQuotaScope.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -328,6 +353,17 @@ func (_q *ProviderQuotaStatusQuery) WithCredential(opts ...func(*UpstreamCredent
 		opt(query)
 	}
 	_q.withCredential = query
+	return _q
+}
+
+// WithQuotaScope tells the query-builder to eager-load the nodes that are connected to
+// the "quota_scope" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *ProviderQuotaStatusQuery) WithQuotaScope(opts ...func(*CredentialQuotaScopeQuery)) *ProviderQuotaStatusQuery {
+	query := (&CredentialQuotaScopeClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withQuotaScope = query
 	return _q
 }
 
@@ -409,9 +445,10 @@ func (_q *ProviderQuotaStatusQuery) sqlAll(ctx context.Context, hooks ...queryHo
 	var (
 		nodes       = []*ProviderQuotaStatus{}
 		_spec       = _q.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			_q.withChannel != nil,
 			_q.withCredential != nil,
+			_q.withQuotaScope != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -444,6 +481,12 @@ func (_q *ProviderQuotaStatusQuery) sqlAll(ctx context.Context, hooks ...queryHo
 	if query := _q.withCredential; query != nil {
 		if err := _q.loadCredential(ctx, query, nodes, nil,
 			func(n *ProviderQuotaStatus, e *UpstreamCredential) { n.Edges.Credential = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withQuotaScope; query != nil {
+		if err := _q.loadQuotaScope(ctx, query, nodes, nil,
+			func(n *ProviderQuotaStatus, e *CredentialQuotaScope) { n.Edges.QuotaScope = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -513,6 +556,35 @@ func (_q *ProviderQuotaStatusQuery) loadCredential(ctx context.Context, query *U
 	}
 	return nil
 }
+func (_q *ProviderQuotaStatusQuery) loadQuotaScope(ctx context.Context, query *CredentialQuotaScopeQuery, nodes []*ProviderQuotaStatus, init func(*ProviderQuotaStatus), assign func(*ProviderQuotaStatus, *CredentialQuotaScope)) error {
+	ids := make([]int, 0, len(nodes))
+	nodeids := make(map[int][]*ProviderQuotaStatus)
+	for i := range nodes {
+		fk := nodes[i].QuotaScopeID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(credentialquotascope.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "quota_scope_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
 
 func (_q *ProviderQuotaStatusQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
@@ -547,6 +619,9 @@ func (_q *ProviderQuotaStatusQuery) querySpec() *sqlgraph.QuerySpec {
 		}
 		if _q.withCredential != nil {
 			_spec.Node.AddColumnOnce(providerquotastatus.FieldCredentialID)
+		}
+		if _q.withQuotaScope != nil {
+			_spec.Node.AddColumnOnce(providerquotastatus.FieldQuotaScopeID)
 		}
 	}
 	if ps := _q.predicates; len(ps) > 0 {

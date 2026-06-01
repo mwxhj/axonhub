@@ -36,6 +36,15 @@ interface ChannelsBulkImportDialogProps {
   onClose: () => void;
 }
 
+function maskCredentialSecret(value: string) {
+  const trimmed = value.trim();
+  if (trimmed.length <= 8) {
+    return '****';
+  }
+
+  return `${trimmed.slice(0, 4)}****${trimmed.slice(-4)}`;
+}
+
 export function ChannelsBulkImportDialog({ isOpen, onClose }: ChannelsBulkImportDialogProps) {
   const { t } = useTranslation();
   const [parsedChannels, setParsedChannels] = useState<BulkImportChannelItem[]>([]);
@@ -387,7 +396,7 @@ deepseek_anthropic,DeepSeek Anthropic,https://api.deepseek.com/anthropic,sk-xxx,
                                     {t('channels.dialogs.bulkImport.fieldLabels.apiKey')}
                                   </div>
                                   <div className='font-mono text-xs text-purple-600 dark:text-purple-400'>
-                                    {channel.apiKey.substring(0, 16)}...
+                                    {maskCredentialSecret(channel.apiKey)}
                                   </div>
                                 </div>
                               </div>

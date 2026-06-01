@@ -303,6 +303,12 @@ models:
   UpdateUpstreamCredentialInput:
     model:
       - github.com/looplj/axonhub/internal/server/biz.UpdateUpstreamCredentialInput
+  CreateCredentialQuotaScopeInput:
+    model:
+      - github.com/looplj/axonhub/internal/server/biz.CreateCredentialQuotaScopeInput
+  UpdateCredentialQuotaScopeInput:
+    model:
+      - github.com/looplj/axonhub/internal/server/biz.UpdateCredentialQuotaScopeInput
   RotateUpstreamCredentialSecretInput:
     model:
       - github.com/looplj/axonhub/internal/server/biz.RotateUpstreamCredentialSecretInput

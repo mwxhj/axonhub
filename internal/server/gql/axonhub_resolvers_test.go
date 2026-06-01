@@ -11,6 +11,7 @@ import (
 	"github.com/looplj/axonhub/internal/contexts"
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/enttest"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/objects"
@@ -166,6 +167,72 @@ func TestQueryResolver_UpstreamCredentialsIncludesChannelRefs(t *testing.T) {
 	refConn, err := resolver.ChannelCredentialRefs(ctx, nil, &first, nil, nil, nil, &ent.ChannelCredentialRefWhereInput{})
 	require.NoError(t, err)
 	require.Equal(t, 1, refConn.TotalCount)
+}
+
+func TestQueryResolver_CredentialQuotaScopeResolvers(t *testing.T) {
+	resolver, ctx, client := setupTestQueryResolver(t)
+	defer client.Close()
+
+	scope, err := client.CredentialQuotaScope.Create().
+		SetName("shared quota").
+		SetStatus(credentialquotascope.StatusAvailable).
+		SetUnit(credentialquotascope.UnitToken).
+		Save(ctx)
+	require.NoError(t, err)
+
+	first := 10
+	conn, err := resolver.CredentialQuotaScopes(ctx, nil, &first, nil, nil, nil, &ent.CredentialQuotaScopeWhereInput{})
+	require.NoError(t, err)
+	require.Equal(t, 1, conn.TotalCount)
+	require.Len(t, conn.Edges, 1)
+	require.Equal(t, scope.ID, conn.Edges[0].Node.ID)
+
+	scopeResolver := &credentialQuotaScopeResolver{resolver.Resolver}
+	scopeGUID, err := scopeResolver.ID(ctx, scope)
+	require.NoError(t, err)
+	require.Equal(t, ent.TypeCredentialQuotaScope, scopeGUID.Type)
+	require.Equal(t, scope.ID, scopeGUID.ID)
+
+	fetchedScope, err := resolver.Node(ctx, objects.GUID{Type: ent.TypeCredentialQuotaScope, ID: scope.ID})
+	require.NoError(t, err)
+	require.Equal(t, scope.ID, fetchedScope.(*ent.CredentialQuotaScope).ID)
+
+	scopeID := scope.ID
+	credentialResolver := &upstreamCredentialResolver{resolver.Resolver}
+	credentialScopeGUID, err := credentialResolver.QuotaScopeID(ctx, &ent.UpstreamCredential{QuotaScopeID: &scopeID})
+	require.NoError(t, err)
+	require.Equal(t, ent.TypeCredentialQuotaScope, credentialScopeGUID.Type)
+	require.Equal(t, scope.ID, credentialScopeGUID.ID)
+
+	credentialScope, err := credentialResolver.QuotaScope(ctx, &ent.UpstreamCredential{QuotaScopeID: &scopeID})
+	require.NoError(t, err)
+	require.Equal(t, scope.ID, credentialScope.ID)
+
+	executionResolver := &requestExecutionResolver{resolver.Resolver}
+	executionScopeGUID, err := executionResolver.QuotaScopeID(ctx, &ent.RequestExecution{QuotaScopeID: scope.ID})
+	require.NoError(t, err)
+	require.Equal(t, ent.TypeCredentialQuotaScope, executionScopeGUID.Type)
+	require.Equal(t, scope.ID, executionScopeGUID.ID)
+
+	executionScope, err := executionResolver.QuotaScope(ctx, &ent.RequestExecution{QuotaScopeID: scope.ID})
+	require.NoError(t, err)
+	require.Equal(t, scope.ID, executionScope.ID)
+
+	usageResolver := &usageLogResolver{resolver.Resolver}
+	usageScopeGUID, err := usageResolver.QuotaScopeID(ctx, &ent.UsageLog{QuotaScopeID: scope.ID})
+	require.NoError(t, err)
+	require.Equal(t, ent.TypeCredentialQuotaScope, usageScopeGUID.Type)
+	require.Equal(t, scope.ID, usageScopeGUID.ID)
+
+	usageScope, err := usageResolver.QuotaScope(ctx, &ent.UsageLog{QuotaScopeID: scope.ID})
+	require.NoError(t, err)
+	require.Equal(t, scope.ID, usageScope.ID)
+
+	providerQuotaResolver := &providerQuotaStatusResolver{resolver.Resolver}
+	providerQuotaScopeGUID, err := providerQuotaResolver.QuotaScopeID(ctx, &ent.ProviderQuotaStatus{QuotaScopeID: scope.ID})
+	require.NoError(t, err)
+	require.Equal(t, ent.TypeCredentialQuotaScope, providerQuotaScopeGUID.Type)
+	require.Equal(t, scope.ID, providerQuotaScopeGUID.ID)
 }
 
 func TestQueryResolver_AllChannelTags_ProjectProfileFiltersVisibleTags(t *testing.T) {

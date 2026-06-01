@@ -155,3 +155,114 @@ Rules:
 - For chat/completions without a session ID, build a root-session fingerprint from API key/profile scope, model scope, client format, system/developer prompt, tool schema, and early stable user context.
 - Do not hash the latest user message or the entire conversation history. That drifts every turn and destroys cache locality.
 - Do not expose `stickyKey` in API responses, logs at unsafe verbosity, or client-visible errors.
+
+---
+
+## Credential / Quota Execution Observability
+
+### 1. Scope / Trigger
+
+Read this section before changing:
+
+- Channel credential resolution, legacy credential adapters, or upstream API-key providers.
+- `RequestExecution`, `UsageLog`, provider quota status, credential quota scope, or request log UI fields.
+- Any route that can retry/fallback across multiple channels or credentials.
+
+The execution target is `channel + credential + resource scope + model`. Request records must show the safe credential identity used by each attempt, while quota status must be tracked at credential/resource/quota-scope granularity instead of only at channel granularity.
+
+### 2. Signatures
+
+Required request execution / usage log snapshot fields:
+
+```text
+credential_id
+credential_fingerprint
+secret_fingerprint
+resource_scope_key
+quota_scope_id
+quota_scope_name_snapshot
+quota_scope_status_snapshot
+credential_name_snapshot
+credential_key_hint
+credential_source
+credential_quota_status_snapshot
+```
+
+Required provider quota target metadata:
+
+```text
+scope_key
+channel_id
+credential_id
+credential_fingerprint
+secret_fingerprint
+resource_scope_key
+quota_scope_id
+status
+ready
+quota_data
+```
+
+### 3. Contracts
+
+- `credential_key_hint`, fingerprints, and resource scope are safe operator identifiers. Raw upstream secrets must never be stored in request records, GraphQL responses, logs, tooltips, or exports.
+- Runtime credential selection must write context values before `CreateRequestExecution`, so every retry attempt records the credential actually used by that attempt.
+- Request list UI may show the latest execution credential, but request detail must show the credential for every execution attempt.
+- Provider quota checks for multiple API keys must update credential-level cache/status for each checked key and store per-key summaries in aggregate quota data.
+- Provider quota row identity is `provider_type + scope_key`; `channel_id` is last-observed metadata. Startup migrations must backfill legacy `scope_key="channel"` rows with a channel ID to `channel:<id>` before loading provider quota cache.
+- Provider quota cache loads must be deterministic when old duplicate rows exist: read rows in ascending `updated_at`/ID order so the newest provider/scope observation overwrites older cache entries.
+- Provider quota status should update `UpstreamCredential.quota_status` and, when a quota scope is known, `CredentialQuotaScope.status/source/last_error/reset_at`.
+- `CredentialQuotaScope` is the shared budget pool. Multiple credentials may point to the same `quota_scope_id`; quota accounting and routing availability must respect that shared status.
+- Candidate quota filtering must narrow the executable credential views before outbound selection. A channel must not remain eligible because one key is available while the API-key provider can still select another exhausted key.
+- When outbound transformers hold API-key providers from the original channel snapshot, routing must pass a candidate-scoped credential allow-list through context so the provider can only choose credentials kept by the current candidate/quota decision.
+- In de-prioritize mode, channel ordering may keep exhausted channels in the candidate set, but if a channel has both exhausted and available credentials, the provider should still avoid the exhausted credential when an available credential exists.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required Behavior |
+|-----------|-------------------|
+| Credential selected from first-class ref | Persist credential ID, safe name, key hint, source `ref`, fingerprint, secret fingerprint, resource scope, and quota scope snapshots. |
+| Credential selected from legacy inline channel key | Persist safe key hint/fingerprint/resource scope and source `legacy`; never persist the raw key. |
+| Request retries across credentials | Create one `RequestExecution` per attempt and snapshot that attempt's credential, not only the final channel. |
+| Credential/quota scope is renamed or archived later | Old request records remain readable from snapshots. |
+| Provider quota check fails for one key | Mark that credential observation unknown/unready, retain safe error, and do not overwrite unrelated credential status. |
+| Shared quota scope is exhausted/paused/disabled | Only credentials/resources attached to that scope become unavailable; unrelated credentials remain eligible. |
+
+### 5. Good / Base / Bad Cases
+
+- Good: channel A uses credential K1, retry falls back to channel B using K2, and request detail shows K1 on attempt 1 and K2 on attempt 2.
+- Good: a provider checker sees K1 exhausted and K2 available on the same channel; K1 is skipped while K2 remains eligible.
+- Base: no selected credential is known; request execution fields stay empty and normal channel observability still works.
+- Bad: request list shows a channel API key raw value or any unmasked bearer token.
+- Bad: provider quota writes only `channel_id -> exhausted`, disabling every credential on that channel even when only one upstream key is exhausted.
+
+### 6. Tests Required
+
+When changing credential/quota observability, add or update tests for:
+
+- `CreateRequestExecution` stores credential/resource/quota snapshots from context.
+- `UsageLog` stores the same safe credential/resource/quota identity and increments the selected quota scope.
+- Provider quota status updates credential/quota scope observations and cache entries for the selected target.
+- Provider quota startup migration rewrites legacy `scope_key="channel"` rows with channel IDs to `channel:<id>` before cache load.
+- Provider quota cache load keeps the latest row when duplicate provider/scope rows exist.
+- Provider quota aggregate rows clear stale credential target metadata when the row returns to channel-level aggregate status.
+- Same-channel multi-key routing where K1 is exhausted and K2 is available keeps the channel eligible but constrains the API-key provider to K2.
+- Same-channel all-key-exhausted routing filters the channel in exhausted-only mode and reports quota exhaustion when no executable candidates remain.
+- Frontend request list/detail queries include the snapshot fields used by the UI.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```text
+provider quota check -> update channel status only -> request UI shows channel/api key
+```
+
+#### Correct
+
+```text
+credential resolver -> context safe credential target
+-> request execution / usage log snapshot
+-> provider quota updates credential/resource/quota scope
+-> request UI displays credential name + key hint + source + resource/quota scope
+```

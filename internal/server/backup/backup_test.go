@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 
@@ -14,9 +15,11 @@ import (
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/channel"
 	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/enttest"
 	"github.com/looplj/axonhub/internal/ent/model"
 	"github.com/looplj/axonhub/internal/ent/request"
+	"github.com/looplj/axonhub/internal/ent/requestexecution"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
 	"github.com/looplj/axonhub/internal/objects"
@@ -174,7 +177,7 @@ func createBackupTestAPIKey(t *testing.T, client *ent.Client, ctx context.Contex
 	return ak
 }
 
-func createBackupTestUsage(t *testing.T, client *ent.Client, ctx context.Context, project *ent.Project, ch *ent.Channel, ak *ent.APIKey) (*ent.Request, *ent.UsageLog) {
+func createBackupTestUsage(t *testing.T, client *ent.Client, ctx context.Context, project *ent.Project, ch *ent.Channel, ak *ent.APIKey) (*ent.Request, *ent.RequestExecution, *ent.UsageLog) {
 	req, err := client.Request.Create().
 		SetProjectID(project.ID).
 		SetAPIKeyID(ak.ID).
@@ -189,12 +192,39 @@ func createBackupTestUsage(t *testing.T, client *ent.Client, ctx context.Context
 		Save(ctx)
 	require.NoError(t, err)
 
+	exec, err := client.RequestExecution.Create().
+		SetRequestID(req.ID).
+		SetProjectID(project.ID).
+		SetChannelID(ch.ID).
+		SetModelID("gpt-4").
+		SetFormat("openai/chat_completions").
+		SetRequestBody(objects.JSONRawMessage(`{"model":"gpt-4"}`)).
+		SetResponseBody(objects.JSONRawMessage(`{"id":"resp_backup"}`)).
+		SetStatus(requestexecution.StatusCompleted).
+		SetStream(false).
+		SetCredentialFingerprint("cred:v1:backup").
+		SetSecretFingerprint("secret:v1:backup").
+		SetResourceScopeKey("openai:secret:v1:backup").
+		SetCredentialNameSnapshot("backup credential").
+		SetCredentialKeyHint("sk-...-backup").
+		SetCredentialSource(biz.ChannelCredentialSourceRef).
+		SetCredentialQuotaStatusSnapshot("available").
+		Save(ctx)
+	require.NoError(t, err)
+
 	cost := 0.42
 	usage, err := client.UsageLog.Create().
 		SetRequestID(req.ID).
 		SetAPIKeyID(ak.ID).
 		SetProjectID(project.ID).
 		SetChannelID(ch.ID).
+		SetCredentialFingerprint("cred:v1:backup").
+		SetSecretFingerprint("secret:v1:backup").
+		SetResourceScopeKey("openai:secret:v1:backup").
+		SetCredentialNameSnapshot("backup credential").
+		SetCredentialKeyHint("sk-...-backup").
+		SetCredentialSource(biz.ChannelCredentialSourceRef).
+		SetCredentialQuotaStatusSnapshot("available").
 		SetModelID("gpt-4").
 		SetPromptTokens(100).
 		SetCompletionTokens(50).
@@ -207,7 +237,7 @@ func createBackupTestUsage(t *testing.T, client *ent.Client, ctx context.Context
 		Save(ctx)
 	require.NoError(t, err)
 
-	return req, usage
+	return req, exec, usage
 }
 
 func TestBackupService_Backup(t *testing.T) {
@@ -330,7 +360,7 @@ func TestBackupService_Backup_WithUsageStats(t *testing.T) {
 	proj := createBackupTestProject(t, client, ctx, "Project1", "Test Project")
 	ch := createBackupTestChannel(t, client, ctx, "Channel 1", channel.TypeOpenai)
 	ak := createBackupTestAPIKey(t, client, ctx, user, proj, "API Key 1", "sk-test-key-1")
-	req, usage := createBackupTestUsage(t, client, ctx, proj, ch, ak)
+	req, exec, usage := createBackupTestUsage(t, client, ctx, proj, ch, ak)
 
 	data, err := service.Backup(ctx, BackupOptions{
 		IncludeUsageStats: true,
@@ -345,14 +375,29 @@ func TestBackupService_Backup_WithUsageStats(t *testing.T) {
 
 	require.Equal(t, BackupVersion, backupData.Version)
 	require.Len(t, backupData.UsageRequests, 1)
+	require.Len(t, backupData.RequestExecutions, 1)
 	require.Len(t, backupData.UsageLogs, 1)
 	require.Equal(t, req.ID, backupData.UsageRequests[0].ID)
 	require.Equal(t, "Project1", backupData.UsageRequests[0].ProjectName)
 	require.Equal(t, "Channel 1", backupData.UsageRequests[0].ChannelName)
 	require.Empty(t, backupData.UsageRequests[0].APIKeyKey)
+	require.Equal(t, exec.RequestID, backupData.RequestExecutions[0].RequestID)
+	require.Equal(t, "cred:v1:backup", backupData.RequestExecutions[0].CredentialFingerprint)
+	require.Equal(t, "secret:v1:backup", backupData.RequestExecutions[0].SecretFingerprint)
+	require.Equal(t, "openai:secret:v1:backup", backupData.RequestExecutions[0].ResourceScopeKey)
+	require.Equal(t, "backup credential", backupData.RequestExecutions[0].CredentialNameSnapshot)
+	require.Equal(t, "sk-...-backup", backupData.RequestExecutions[0].CredentialKeyHint)
+	require.Equal(t, biz.ChannelCredentialSourceRef, backupData.RequestExecutions[0].CredentialSource)
 	require.Equal(t, usage.RequestID, backupData.UsageLogs[0].RequestID)
 	require.Equal(t, int64(150), backupData.UsageLogs[0].TotalTokens)
 	require.Equal(t, "price-ref", backupData.UsageLogs[0].CostPriceReferenceID)
+	require.Equal(t, "cred:v1:backup", backupData.UsageLogs[0].CredentialFingerprint)
+	require.Equal(t, "secret:v1:backup", backupData.UsageLogs[0].SecretFingerprint)
+	require.Equal(t, "openai:secret:v1:backup", backupData.UsageLogs[0].ResourceScopeKey)
+	require.Equal(t, "backup credential", backupData.UsageLogs[0].CredentialNameSnapshot)
+	require.Equal(t, "sk-...-backup", backupData.UsageLogs[0].CredentialKeyHint)
+	require.Equal(t, biz.ChannelCredentialSourceRef, backupData.UsageLogs[0].CredentialSource)
+	require.Equal(t, "available", backupData.UsageLogs[0].CredentialQuotaStatusSnapshot)
 
 	data, err = service.Backup(ctx, BackupOptions{
 		IncludeAPIKeys:    true,
@@ -365,12 +410,61 @@ func TestBackupService_Backup_WithUsageStats(t *testing.T) {
 	require.Equal(t, "sk-test-key-1", backupData.UsageRequests[0].APIKeyKey)
 }
 
+func TestBackupService_Restore_PreservesRequestExecutionCredentialSnapshots(t *testing.T) {
+	sourceClient, sourceService, sourceCtx := setupBackupTest(t)
+	defer sourceClient.Close()
+
+	user, _ := sourceClient.User.Query().First(sourceCtx)
+	proj := createBackupTestProject(t, sourceClient, sourceCtx, "Project1", "Test Project")
+	ch := createBackupTestChannel(t, sourceClient, sourceCtx, "Channel 1", channel.TypeOpenai)
+	ak := createBackupTestAPIKey(t, sourceClient, sourceCtx, user, proj, "API Key 1", "sk-test-key-1")
+	_, _, _ = createBackupTestUsage(t, sourceClient, sourceCtx, proj, ch, ak)
+
+	data, err := sourceService.Backup(sourceCtx, BackupOptions{
+		IncludeProjects:   true,
+		IncludeChannels:   true,
+		IncludeUsageStats: true,
+	})
+	require.NoError(t, err)
+
+	targetClient, targetService, targetCtx := setupBackupTest(t)
+	defer targetClient.Close()
+
+	err = targetService.Restore(targetCtx, data, RestoreOptions{
+		IncludeProjects:         true,
+		IncludeChannels:         true,
+		IncludeUsageStats:       true,
+		ProjectConflictStrategy: ConflictStrategyOverwrite,
+		ChannelConflictStrategy: ConflictStrategyOverwrite,
+	})
+	require.NoError(t, err)
+
+	execs, err := targetClient.RequestExecution.Query().All(targetCtx)
+	require.NoError(t, err)
+	require.Len(t, execs, 1)
+	require.Equal(t, "cred:v1:backup", execs[0].CredentialFingerprint)
+	require.Equal(t, "secret:v1:backup", execs[0].SecretFingerprint)
+	require.Equal(t, "openai:secret:v1:backup", execs[0].ResourceScopeKey)
+	require.Equal(t, "backup credential", execs[0].CredentialNameSnapshot)
+	require.Equal(t, "sk-...-backup", execs[0].CredentialKeyHint)
+	require.Equal(t, biz.ChannelCredentialSourceRef, execs[0].CredentialSource)
+	require.Equal(t, "available", execs[0].CredentialQuotaStatusSnapshot)
+}
+
 func TestBackupService_Backup_IncludesUpstreamCredentialsAndRefs(t *testing.T) {
 	client, service, ctx := setupBackupTest(t)
 	defer client.Close()
 
 	ch := createBackupTestChannel(t, client, ctx, "Credential Channel", channel.TypeOpenai)
 	fingerprint := biz.ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), ch.BaseURL, "credential-key")
+	secretFingerprint := biz.CredentialSecretFingerprintForSecret("api_key", objects.UpstreamCredentialSecretFromAPIKey("credential-key"))
+	quotaScope, err := client.CredentialQuotaScope.Create().
+		SetName("credential budget").
+		SetStatus(credentialquotascope.StatusAvailable).
+		SetUnit(credentialquotascope.UnitUsd).
+		SetLimitAmount("10").
+		Save(ctx)
+	require.NoError(t, err)
 	credential, err := client.UpstreamCredential.Create().
 		SetName("credential one").
 		SetProviderType(channel.TypeOpenai.String()).
@@ -378,6 +472,8 @@ func TestBackupService_Backup_IncludesUpstreamCredentialsAndRefs(t *testing.T) {
 		SetAuthKind(upstreamcredential.AuthKindAPIKey).
 		SetSecretPayload(objects.UpstreamCredentialSecretFromAPIKey("credential-key")).
 		SetFingerprint(fingerprint).
+		SetSecretFingerprint(secretFingerprint).
+		SetQuotaScopeID(quotaScope.ID).
 		Save(ctx)
 	require.NoError(t, err)
 	_, err = client.ChannelCredentialRef.Create().
@@ -393,8 +489,14 @@ func TestBackupService_Backup_IncludesUpstreamCredentialsAndRefs(t *testing.T) {
 	var backupData BackupData
 	require.NoError(t, json.Unmarshal(data, &backupData))
 	require.Len(t, backupData.UpstreamCredentials, 1)
+	require.Len(t, backupData.CredentialQuotaScopes, 1)
 	require.Len(t, backupData.ChannelCredentialRefs, 1)
+	require.Equal(t, quotaScope.Name, backupData.CredentialQuotaScopes[0].Name)
 	require.Equal(t, fingerprint, backupData.UpstreamCredentials[0].Fingerprint)
+	require.NotNil(t, backupData.UpstreamCredentials[0].SecretFingerprint)
+	require.Equal(t, secretFingerprint, *backupData.UpstreamCredentials[0].SecretFingerprint)
+	require.NotNil(t, backupData.UpstreamCredentials[0].QuotaScopeID)
+	require.Equal(t, quotaScope.ID, *backupData.UpstreamCredentials[0].QuotaScopeID)
 	require.Equal(t, "credential-key", backupData.UpstreamCredentials[0].SecretPayload.APIKey)
 	require.Equal(t, ch.Name, backupData.ChannelCredentialRefs[0].ChannelName)
 	require.Equal(t, fingerprint, backupData.ChannelCredentialRefs[0].CredentialFingerprint)
@@ -443,6 +545,7 @@ func TestBackupService_Restore_FirstClassCredentialRefs(t *testing.T) {
 	defer client.Close()
 
 	fingerprint := biz.ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://api.openai.com/v1", "restored-key")
+	secretFingerprint := biz.CredentialSecretFingerprintForSecret("api_key", objects.UpstreamCredentialSecretFromAPIKey("restored-key"))
 	backupData := BackupData{
 		Version: BackupVersion,
 		Channels: []*BackupChannel{
@@ -459,17 +562,30 @@ func TestBackupService_Restore_FirstClassCredentialRefs(t *testing.T) {
 				Credentials: objects.ChannelCredentials{},
 			},
 		},
+		CredentialQuotaScopes: []*BackupCredentialQuotaScope{
+			{
+				CredentialQuotaScope: ent.CredentialQuotaScope{
+					ID:          99,
+					Name:        "restored budget",
+					Status:      credentialquotascope.StatusAvailable,
+					Unit:        credentialquotascope.UnitToken,
+					LimitAmount: "1000",
+				},
+			},
+		},
 		UpstreamCredentials: []*BackupUpstreamCredential{
 			{
 				UpstreamCredential: ent.UpstreamCredential{
-					ID:           7,
-					Name:         "restored credential",
-					ProviderType: channel.TypeOpenai.String(),
-					BaseURL:      "https://api.openai.com/v1",
-					AuthKind:     upstreamcredential.AuthKindAPIKey,
-					Fingerprint:  fingerprint,
-					Status:       upstreamcredential.StatusEnabled,
-					Weight:       100,
+					ID:                7,
+					Name:              "restored credential",
+					ProviderType:      channel.TypeOpenai.String(),
+					BaseURL:           "https://api.openai.com/v1",
+					AuthKind:          upstreamcredential.AuthKindAPIKey,
+					Fingerprint:       fingerprint,
+					SecretFingerprint: &secretFingerprint,
+					QuotaScopeID:      lo.ToPtr(99),
+					Status:            upstreamcredential.StatusEnabled,
+					Weight:            100,
 				},
 				SecretPayload: objects.UpstreamCredentialSecretFromAPIKey("restored-key"),
 			},
@@ -500,4 +616,16 @@ func TestBackupService_Restore_FirstClassCredentialRefs(t *testing.T) {
 		Exist(ctx)
 	require.NoError(t, err)
 	require.True(t, refExists)
+
+	restoredCredential, err := client.UpstreamCredential.Query().
+		Where(upstreamcredential.Fingerprint(fingerprint)).
+		Only(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, restoredCredential.SecretFingerprint)
+	require.Equal(t, secretFingerprint, *restoredCredential.SecretFingerprint)
+	require.NotNil(t, restoredCredential.QuotaScopeID)
+
+	restoredScope, err := client.CredentialQuotaScope.Get(ctx, *restoredCredential.QuotaScopeID)
+	require.NoError(t, err)
+	require.Equal(t, "restored budget", restoredScope.Name)
 }

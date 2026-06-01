@@ -29,7 +29,7 @@ type ChannelCredentialRef struct {
 	CredentialID int `json:"credential_id,omitempty"`
 	// Enabled holds the value of the "enabled" field.
 	Enabled bool `json:"enabled,omitempty"`
-	// Optional per-channel selection weight. When absent, uses credential.weight.
+	// Internal optional per-channel selection weight. When absent, uses credential.weight.
 	WeightOverride *int `json:"weight_override,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ChannelCredentialRefQuery when eager-loading is set.

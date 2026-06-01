@@ -3,11 +3,13 @@ package biz
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/samber/lo"
 
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/objects"
 )
@@ -91,41 +93,49 @@ func (svc *ChannelService) BulkCreateChannels(ctx context.Context, input BulkCre
 		tagsToUse = []string{input.Name} // Use base name as tag (backward compatible)
 	}
 
-	for _, apiKey := range input.APIKeys {
-		// Generate unique channel name with numbering
-		channelName := fmt.Sprintf("%s - (%d)", input.Name, counter)
-		// Find next available counter
-		for existingNames[channelName] {
+	if err := svc.RunInTransaction(ctx, func(ctx context.Context) error {
+		for _, apiKey := range input.APIKeys {
+			// Generate unique channel name with numbering
+			channelName := fmt.Sprintf("%s - (%d)", input.Name, counter)
+			// Find next available counter
+			for existingNames[channelName] {
+				counter++
+				channelName = fmt.Sprintf("%s - (%d)", input.Name, counter)
+			}
+
 			counter++
-			channelName = fmt.Sprintf("%s - (%d)", input.Name, counter)
+			existingNames[channelName] = true
+
+			createInput := ent.CreateChannelInput{
+				Type:                    input.Type,
+				BaseURL:                 input.BaseURL,
+				Name:                    channelName,
+				Credentials:             objects.ChannelCredentials{},
+				SupportedModels:         input.SupportedModels,
+				AutoSyncSupportedModels: input.AutoSyncSupportedModels,
+				Tags:                    tagsToUse,
+				DefaultTestModel:        input.DefaultTestModel,
+				Policies:                input.Policies,
+				Settings:                input.Settings,
+				OrderingWeight:          input.OrderingWeight,
+				Remark:                  input.Remark,
+			}
+
+			ch, err := svc.createChannel(ctx, createInput)
+			if err != nil {
+				return fmt.Errorf("failed to create channel '%s': %w", channelName, err)
+			}
+
+			if err := svc.attachBulkAPIKeyCredential(ctx, ch.ID, channelName, apiKey); err != nil {
+				return fmt.Errorf("failed to attach credential for channel '%s': %w", channelName, err)
+			}
+
+			createdChannels = append(createdChannels, ch)
 		}
 
-		counter++
-		existingNames[channelName] = true
-
-		// Create channel input
-		createInput := ent.CreateChannelInput{
-			Type:                    input.Type,
-			BaseURL:                 input.BaseURL,
-			Name:                    channelName,
-			Credentials:             objects.ChannelCredentials{APIKeys: []string{apiKey}},
-			SupportedModels:         input.SupportedModels,
-			AutoSyncSupportedModels: input.AutoSyncSupportedModels,
-			Tags:                    tagsToUse,
-			DefaultTestModel:        input.DefaultTestModel,
-			Policies:                input.Policies,
-			Settings:                input.Settings,
-			OrderingWeight:          input.OrderingWeight,
-			Remark:                  input.Remark,
-		}
-
-		// Create the channel without reload
-		ch, err := svc.createChannel(ctx, createInput)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create channel '%s': %w", channelName, err)
-		}
-
-		createdChannels = append(createdChannels, ch)
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	// Reload channels once after all successful creations
@@ -211,6 +221,68 @@ func (svc *ChannelService) BulkDeleteChannels(ctx context.Context, ids []int) er
 	return nil
 }
 
+func (svc *ChannelService) attachBulkAPIKeyCredential(ctx context.Context, channelID int, channelName string, apiKey string) error {
+	credential, err := svc.findOrCreateBulkAPIKeyCredential(ctx, channelName, apiKey)
+	if err != nil {
+		return err
+	}
+
+	if _, err := svc.entFromContext(ctx).ChannelCredentialRef.Create().
+		SetChannelID(channelID).
+		SetCredentialID(credential.ID).
+		SetEnabled(true).
+		Save(ctx); err != nil {
+		return fmt.Errorf("failed to create channel credential ref: %w", err)
+	}
+
+	return nil
+}
+
+func (svc *ChannelService) findOrCreateBulkAPIKeyCredential(ctx context.Context, channelName string, apiKey string) (*ent.UpstreamCredential, error) {
+	secret := objects.UpstreamCredentialSecretFromAPIKey(apiKey)
+	secretKind := upstreamcredential.SecretKindAPIKey
+	issuerScope := resolveCredentialIssuerScope(nil, nil, nil, secret)
+	fingerprint := CredentialFingerprintForSecret(issuerScope, secretKind.String(), secret)
+	secretFingerprint := CredentialSecretFingerprintForSecret(secretKind.String(), secret)
+	if strings.TrimSpace(fingerprint) == "" || strings.TrimSpace(secretFingerprint) == "" {
+		return nil, fmt.Errorf("credential secret is empty or unsupported")
+	}
+
+	existing, err := svc.entFromContext(ctx).UpstreamCredential.Query().
+		Where(upstreamcredential.Or(
+			upstreamcredential.SecretFingerprintEQ(secretFingerprint),
+			upstreamcredential.Fingerprint(fingerprint),
+		)).
+		First(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		return nil, fmt.Errorf("failed to check credential fingerprint: %w", err)
+	}
+	if existing != nil {
+		return existing, nil
+	}
+
+	name := strings.TrimSpace(channelName)
+	if name != "" {
+		name += " API key"
+	}
+
+	credential, err := svc.entFromContext(ctx).UpstreamCredential.Create().
+		SetName(name).
+		SetAuthKind(upstreamcredential.AuthKindAPIKey).
+		SetSecretKind(secretKind).
+		SetIssuerScope(issuerScope).
+		SetKeyHint(CredentialKeyHintForSecret(secretKind.String(), secret)).
+		SetSecretPayload(secret).
+		SetFingerprint(fingerprint).
+		SetSecretFingerprint(secretFingerprint).
+		Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create upstream credential: %w", err)
+	}
+
+	return credential, nil
+}
+
 // BulkImportChannelItem represents a single channel to be imported.
 type BulkImportChannelItem struct {
 	Type             string
@@ -265,21 +337,28 @@ func (svc *ChannelService) BulkImportChannels(ctx context.Context, items []*Bulk
 			continue
 		}
 
-		// Prepare credentials (API key is now required)
-		credentials := objects.ChannelCredentials{
-			APIKey: *item.APIKey,
-		}
+		var ch *ent.Channel
+		err := svc.RunInTransaction(ctx, func(ctx context.Context) error {
+			channelBuilder := svc.entFromContext(ctx).Channel.Create().
+				SetType(channelType).
+				SetName(item.Name).
+				SetBaseURL(*item.BaseURL).
+				SetCredentials(objects.ChannelCredentials{}).
+				SetSupportedModels(item.SupportedModels).
+				SetDefaultTestModel(item.DefaultTestModel)
 
-		// Create the channel (baseURL is now required)
-		channelBuilder := svc.entFromContext(ctx).Channel.Create().
-			SetType(channelType).
-			SetName(item.Name).
-			SetBaseURL(*item.BaseURL).
-			SetCredentials(credentials).
-			SetSupportedModels(item.SupportedModels).
-			SetDefaultTestModel(item.DefaultTestModel)
+			var err error
+			ch, err = channelBuilder.Save(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to create channel: %w", err)
+			}
 
-		ch, err := channelBuilder.Save(ctx)
+			if err := svc.attachBulkAPIKeyCredential(ctx, ch.ID, item.Name, *item.APIKey); err != nil {
+				return err
+			}
+
+			return nil
+		})
 		if err != nil {
 			errors = append(errors, fmt.Sprintf("Row %d (%s): %s", i+1, item.Name, err.Error()))
 			failed++

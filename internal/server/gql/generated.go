@@ -21,6 +21,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/apikey"
 	"github.com/looplj/axonhub/internal/ent/channel"
 	"github.com/looplj/axonhub/internal/ent/channelmodelpriceversion"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/datastorage"
 	"github.com/looplj/axonhub/internal/ent/model"
 	"github.com/looplj/axonhub/internal/ent/project"
@@ -74,6 +75,7 @@ type ResolverRoot interface {
 	ChannelProbe() ChannelProbeResolver
 	ChannelProbeData() ChannelProbeDataResolver
 	ChannelSettings() ChannelSettingsResolver
+	CredentialQuotaScope() CredentialQuotaScopeResolver
 	DataStorage() DataStorageResolver
 	Model() ModelResolver
 	Mutation() MutationResolver
@@ -315,6 +317,7 @@ type ComplexityRoot struct {
 		OrderingWeight          func(childComplexity int) int
 		Policies                func(childComplexity int) int
 		ProviderQuotaStatus     func(childComplexity int) int
+		ProviderQuotaStatuses   func(childComplexity int) int
 		Remark                  func(childComplexity int) int
 		Requests                func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.RequestOrder, where *ent.RequestWhereInput) int
 		Settings                func(childComplexity int) int
@@ -333,15 +336,14 @@ type ComplexityRoot struct {
 	}
 
 	ChannelCredentialRef struct {
-		Channel        func(childComplexity int) int
-		ChannelID      func(childComplexity int) int
-		CreatedAt      func(childComplexity int) int
-		Credential     func(childComplexity int) int
-		CredentialID   func(childComplexity int) int
-		Enabled        func(childComplexity int) int
-		ID             func(childComplexity int) int
-		UpdatedAt      func(childComplexity int) int
-		WeightOverride func(childComplexity int) int
+		Channel      func(childComplexity int) int
+		ChannelID    func(childComplexity int) int
+		CreatedAt    func(childComplexity int) int
+		Credential   func(childComplexity int) int
+		CredentialID func(childComplexity int) int
+		Enabled      func(childComplexity int) int
+		ID           func(childComplexity int) int
+		UpdatedAt    func(childComplexity int) int
 	}
 
 	ChannelCredentialRefConnection struct {
@@ -607,6 +609,41 @@ type ComplexityRoot struct {
 	CostStatsByModel struct {
 		Cost    func(childComplexity int) int
 		ModelID func(childComplexity int) int
+	}
+
+	CredentialQuotaScope struct {
+		CreatedAt               func(childComplexity int) int
+		Credentials             func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.UpstreamCredentialOrder, where *ent.UpstreamCredentialWhereInput) int
+		Executions              func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.RequestExecutionOrder, where *ent.RequestExecutionWhereInput) int
+		ID                      func(childComplexity int) int
+		LastError               func(childComplexity int) int
+		LimitAmount             func(childComplexity int) int
+		Name                    func(childComplexity int) int
+		OverLimitAction         func(childComplexity int) int
+		PauseUntil              func(childComplexity int) int
+		ProviderQuotaStatuses   func(childComplexity int) int
+		Remark                  func(childComplexity int) int
+		ResetAt                 func(childComplexity int) int
+		ResetPolicy             func(childComplexity int) int
+		Source                  func(childComplexity int) int
+		Status                  func(childComplexity int) int
+		Unit                    func(childComplexity int) int
+		UpdatedAt               func(childComplexity int) int
+		UsageLogs               func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.UsageLogOrder, where *ent.UsageLogWhereInput) int
+		UsedAmount              func(childComplexity int) int
+		WarningThresholdPercent func(childComplexity int) int
+		WindowStartedAt         func(childComplexity int) int
+	}
+
+	CredentialQuotaScopeConnection struct {
+		Edges      func(childComplexity int) int
+		PageInfo   func(childComplexity int) int
+		TotalCount func(childComplexity int) int
+	}
+
+	CredentialQuotaScopeEdge struct {
+		Cursor func(childComplexity int) int
+		Node   func(childComplexity int) int
 	}
 
 	DailyRequestStats struct {
@@ -936,6 +973,7 @@ type ComplexityRoot struct {
 		CreateAPIKeyProfileTemplate          func(childComplexity int, input ent.CreateAPIKeyProfileTemplateInput, profile objects.APIKeyProfile) int
 		CreateChannel                        func(childComplexity int, input ent.CreateChannelInput) int
 		CreateChannelOverrideTemplate        func(childComplexity int, input ent.CreateChannelOverrideTemplateInput) int
+		CreateCredentialQuotaScope           func(childComplexity int, input biz.CreateCredentialQuotaScopeInput) int
 		CreateDataStorage                    func(childComplexity int, input ent.CreateDataStorageInput) int
 		CreateModel                          func(childComplexity int, input ent.CreateModelInput) int
 		CreateProject                        func(childComplexity int, input ent.CreateProjectInput) int
@@ -986,6 +1024,7 @@ type ComplexityRoot struct {
 		UpdateChannelCredentialRef           func(childComplexity int, id objects.GUID, input biz.UpdateChannelCredentialRefInput) int
 		UpdateChannelOverrideTemplate        func(childComplexity int, id objects.GUID, input ent.UpdateChannelOverrideTemplateInput) int
 		UpdateChannelStatus                  func(childComplexity int, id objects.GUID, status channel.Status) int
+		UpdateCredentialQuotaScope           func(childComplexity int, id objects.GUID, input biz.UpdateCredentialQuotaScopeInput) int
 		UpdateDataStorage                    func(childComplexity int, id objects.GUID, input ent.UpdateDataStorageInput) int
 		UpdateDefaultDataStorage             func(childComplexity int, input UpdateDefaultDataStorageInput) int
 		UpdateMe                             func(childComplexity int, input UpdateMeInput) int
@@ -1238,7 +1277,12 @@ type ComplexityRoot struct {
 		NextResetAt           func(childComplexity int) int
 		ProviderType          func(childComplexity int) int
 		QuotaData             func(childComplexity int) int
+		QuotaScope            func(childComplexity int) int
+		QuotaScopeID          func(childComplexity int) int
 		Ready                 func(childComplexity int) int
+		ResourceScopeKey      func(childComplexity int) int
+		ScopeKey              func(childComplexity int) int
+		SecretFingerprint     func(childComplexity int) int
 		Status                func(childComplexity int) int
 		UpdatedAt             func(childComplexity int) int
 	}
@@ -1278,6 +1322,7 @@ type ComplexityRoot struct {
 		CostStatsByChannel           func(childComplexity int, timeWindow *string) int
 		CostStatsByModel             func(childComplexity int, timeWindow *string) int
 		CountChannelsByType          func(childComplexity int, input CountChannelsByTypeInput) int
+		CredentialQuotaScopes        func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.CredentialQuotaScopeOrder, where *ent.CredentialQuotaScopeWhereInput) int
 		DailyRequestStats            func(childComplexity int) int
 		DashboardOverview            func(childComplexity int) int
 		DataStorages                 func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.DataStorageOrder, where *ent.DataStorageWhereInput) int
@@ -1414,13 +1459,19 @@ type ComplexityRoot struct {
 		MetricsReasoningDurationMs    func(childComplexity int) int
 		ModelID                       func(childComplexity int) int
 		ProjectID                     func(childComplexity int) int
+		QuotaScope                    func(childComplexity int) int
+		QuotaScopeID                  func(childComplexity int) int
+		QuotaScopeNameSnapshot        func(childComplexity int) int
+		QuotaScopeStatusSnapshot      func(childComplexity int) int
 		Request                       func(childComplexity int) int
 		RequestBody                   func(childComplexity int) int
 		RequestHeaders                func(childComplexity int) int
 		RequestID                     func(childComplexity int) int
+		ResourceScopeKey              func(childComplexity int) int
 		ResponseBody                  func(childComplexity int) int
 		ResponseChunks                func(childComplexity int) int
 		ResponseStatusCode            func(childComplexity int) int
+		SecretFingerprint             func(childComplexity int) int
 		Status                        func(childComplexity int) int
 		Stream                        func(childComplexity int) int
 		UpdatedAt                     func(childComplexity int) int
@@ -1820,27 +1871,23 @@ type ComplexityRoot struct {
 	}
 
 	UpstreamCredential struct {
-		AuthKind              func(childComplexity int) int
-		BaseURL               func(childComplexity int) int
 		ChannelRefs           func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.ChannelCredentialRefOrder, where *ent.ChannelCredentialRefWhereInput) int
 		CreatedAt             func(childComplexity int) int
 		Executions            func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.RequestExecutionOrder, where *ent.RequestExecutionWhereInput) int
 		Fingerprint           func(childComplexity int) int
 		ID                    func(childComplexity int) int
-		IssuerScope           func(childComplexity int) int
 		KeyHint               func(childComplexity int) int
 		LastError             func(childComplexity int) int
 		Name                  func(childComplexity int) int
 		ProviderQuotaStatuses func(childComplexity int) int
-		ProviderType          func(childComplexity int) int
+		QuotaScope            func(childComplexity int) int
 		QuotaScopeID          func(childComplexity int) int
 		QuotaStatus           func(childComplexity int) int
 		Remark                func(childComplexity int) int
-		SecretKind            func(childComplexity int) int
+		SecretFingerprint     func(childComplexity int) int
 		Status                func(childComplexity int) int
 		UpdatedAt             func(childComplexity int) int
 		UsageLogs             func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.UsageLogOrder, where *ent.UsageLogWhereInput) int
-		Weight                func(childComplexity int) int
 	}
 
 	UpstreamCredentialConnection struct {
@@ -1876,6 +1923,7 @@ type ComplexityRoot struct {
 		CredentialID                       func(childComplexity int) int
 		CredentialKeyHint                  func(childComplexity int) int
 		CredentialNameSnapshot             func(childComplexity int) int
+		CredentialQuotaStatusSnapshot      func(childComplexity int) int
 		CredentialSource                   func(childComplexity int) int
 		Format                             func(childComplexity int) int
 		ID                                 func(childComplexity int) int
@@ -1888,8 +1936,14 @@ type ComplexityRoot struct {
 		PromptWriteCachedTokens            func(childComplexity int) int
 		PromptWriteCachedTokens1h          func(childComplexity int) int
 		PromptWriteCachedTokens5m          func(childComplexity int) int
+		QuotaScope                         func(childComplexity int) int
+		QuotaScopeID                       func(childComplexity int) int
+		QuotaScopeNameSnapshot             func(childComplexity int) int
+		QuotaScopeStatusSnapshot           func(childComplexity int) int
 		Request                            func(childComplexity int) int
 		RequestID                          func(childComplexity int) int
+		ResourceScopeKey                   func(childComplexity int) int
+		SecretFingerprint                  func(childComplexity int) int
 		Source                             func(childComplexity int) int
 		TotalCost                          func(childComplexity int) int
 		TotalTokens                        func(childComplexity int) int
@@ -2057,11 +2111,11 @@ type ChannelResolver interface {
 
 	Policies(ctx context.Context, obj *ent.Channel) (*objects.ChannelPolicies, error)
 
-	ProviderQuotaStatus(ctx context.Context, obj *ent.Channel) (*ent.ProviderQuotaStatus, error)
 	DefaultEndpoints(ctx context.Context, obj *ent.Channel) ([]*objects.ChannelEndpoint, error)
 	AllModelEntries(ctx context.Context, obj *ent.Channel) ([]*biz.ChannelModelEntry, error)
 	Credentials(ctx context.Context, obj *ent.Channel) (*objects.ChannelCredentials, error)
 	DisabledAPIKeys(ctx context.Context, obj *ent.Channel) ([]*objects.DisabledAPIKey, error)
+	ProviderQuotaStatus(ctx context.Context, obj *ent.Channel) (*ent.ProviderQuotaStatus, error)
 	LiveLimiterStats(ctx context.Context, obj *ent.Channel) (*ChannelLimiterStats, error)
 }
 type ChannelCredentialRefResolver interface {
@@ -2103,6 +2157,9 @@ type ChannelSettingsResolver interface {
 	HeaderOverrideOperations(ctx context.Context, obj *objects.ChannelSettings) ([]*objects.OverrideOperation, error)
 	BodyOverrideOperations(ctx context.Context, obj *objects.ChannelSettings) ([]*objects.OverrideOperation, error)
 }
+type CredentialQuotaScopeResolver interface {
+	ID(ctx context.Context, obj *ent.CredentialQuotaScope) (*objects.GUID, error)
+}
 type DataStorageResolver interface {
 	ID(ctx context.Context, obj *ent.DataStorage) (*objects.GUID, error)
 }
@@ -2134,6 +2191,8 @@ type MutationResolver interface {
 	DeleteDisabledChannelAPIKeys(ctx context.Context, channelID objects.GUID, keys []string) (*biz.DeleteDisabledAPIKeysResult, error)
 	CreateUpstreamCredential(ctx context.Context, input biz.CreateUpstreamCredentialInput) (*ent.UpstreamCredential, error)
 	UpdateUpstreamCredential(ctx context.Context, id objects.GUID, input biz.UpdateUpstreamCredentialInput) (*ent.UpstreamCredential, error)
+	CreateCredentialQuotaScope(ctx context.Context, input biz.CreateCredentialQuotaScopeInput) (*ent.CredentialQuotaScope, error)
+	UpdateCredentialQuotaScope(ctx context.Context, id objects.GUID, input biz.UpdateCredentialQuotaScopeInput) (*ent.CredentialQuotaScope, error)
 	RotateUpstreamCredentialSecret(ctx context.Context, id objects.GUID, input biz.RotateUpstreamCredentialSecretInput) (*ent.UpstreamCredential, error)
 	UpdateUpstreamCredentialStatus(ctx context.Context, id objects.GUID, status upstreamcredential.Status) (*ent.UpstreamCredential, error)
 	AttachCredentialToChannel(ctx context.Context, input biz.AttachCredentialToChannelInput) (*ent.ChannelCredentialRef, error)
@@ -2249,7 +2308,10 @@ type ProviderQuotaStatusResolver interface {
 	ID(ctx context.Context, obj *ent.ProviderQuotaStatus) (*objects.GUID, error)
 
 	ChannelID(ctx context.Context, obj *ent.ProviderQuotaStatus) (*objects.GUID, error)
+
 	CredentialID(ctx context.Context, obj *ent.ProviderQuotaStatus) (*objects.GUID, error)
+
+	QuotaScopeID(ctx context.Context, obj *ent.ProviderQuotaStatus) (*objects.GUID, error)
 }
 type QueryResolver interface {
 	Node(ctx context.Context, id objects.GUID) (ent.Noder, error)
@@ -2259,6 +2321,7 @@ type QueryResolver interface {
 	Channels(ctx context.Context, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.ChannelOrder, where *ent.ChannelWhereInput) (*ent.ChannelConnection, error)
 	ChannelCredentialRefs(ctx context.Context, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.ChannelCredentialRefOrder, where *ent.ChannelCredentialRefWhereInput) (*ent.ChannelCredentialRefConnection, error)
 	ChannelOverrideTemplates(ctx context.Context, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.ChannelOverrideTemplateOrder, where *ent.ChannelOverrideTemplateWhereInput) (*ent.ChannelOverrideTemplateConnection, error)
+	CredentialQuotaScopes(ctx context.Context, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.CredentialQuotaScopeOrder, where *ent.CredentialQuotaScopeWhereInput) (*ent.CredentialQuotaScopeConnection, error)
 	DataStorages(ctx context.Context, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.DataStorageOrder, where *ent.DataStorageWhereInput) (*ent.DataStorageConnection, error)
 	Models(ctx context.Context, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.ModelOrder, where *ent.ModelWhereInput) (*ent.ModelConnection, error)
 	OidcIdentities(ctx context.Context, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.OIDCIdentityOrder, where *ent.OIDCIdentityWhereInput) (*ent.OIDCIdentityConnection, error)
@@ -2350,12 +2413,15 @@ type RequestExecutionResolver interface {
 	CredentialID(ctx context.Context, obj *ent.RequestExecution) (*objects.GUID, error)
 	DataStorageID(ctx context.Context, obj *ent.RequestExecution) (*objects.GUID, error)
 
+	QuotaScopeID(ctx context.Context, obj *ent.RequestExecution) (*objects.GUID, error)
+
 	RequestBody(ctx context.Context, obj *ent.RequestExecution) (objects.JSONRawMessage, error)
 	ResponseBody(ctx context.Context, obj *ent.RequestExecution) (objects.JSONRawMessage, error)
 	ResponseChunks(ctx context.Context, obj *ent.RequestExecution) ([]objects.JSONRawMessage, error)
 
 	Channel(ctx context.Context, obj *ent.RequestExecution) (*ent.Channel, error)
 	Credential(ctx context.Context, obj *ent.RequestExecution) (*ent.UpstreamCredential, error)
+	QuotaScope(ctx context.Context, obj *ent.RequestExecution) (*ent.CredentialQuotaScope, error)
 }
 type RoleResolver interface {
 	ID(ctx context.Context, obj *ent.Role) (*objects.GUID, error)
@@ -2394,6 +2460,10 @@ type TraceResolver interface {
 }
 type UpstreamCredentialResolver interface {
 	ID(ctx context.Context, obj *ent.UpstreamCredential) (*objects.GUID, error)
+
+	QuotaScopeID(ctx context.Context, obj *ent.UpstreamCredential) (*objects.GUID, error)
+
+	QuotaScope(ctx context.Context, obj *ent.UpstreamCredential) (*ent.CredentialQuotaScope, error)
 }
 type UsageLogResolver interface {
 	ID(ctx context.Context, obj *ent.UsageLog) (*objects.GUID, error)
@@ -2404,8 +2474,11 @@ type UsageLogResolver interface {
 	ChannelID(ctx context.Context, obj *ent.UsageLog) (*objects.GUID, error)
 	CredentialID(ctx context.Context, obj *ent.UsageLog) (*objects.GUID, error)
 
+	QuotaScopeID(ctx context.Context, obj *ent.UsageLog) (*objects.GUID, error)
+
 	Channel(ctx context.Context, obj *ent.UsageLog) (*ent.Channel, error)
 	Credential(ctx context.Context, obj *ent.UsageLog) (*ent.UpstreamCredential, error)
+	QuotaScope(ctx context.Context, obj *ent.UsageLog) (*ent.CredentialQuotaScope, error)
 }
 type UserResolver interface {
 	ID(ctx context.Context, obj *ent.User) (*objects.GUID, error)
@@ -3258,6 +3331,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Channel.ProviderQuotaStatus(childComplexity), true
+	case "Channel.providerQuotaStatuses":
+		if e.complexity.Channel.ProviderQuotaStatuses == nil {
+			break
+		}
+
+		return e.complexity.Channel.ProviderQuotaStatuses(childComplexity), true
 	case "Channel.remark":
 		if e.complexity.Channel.Remark == nil {
 			break
@@ -3390,12 +3469,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ChannelCredentialRef.UpdatedAt(childComplexity), true
-	case "ChannelCredentialRef.weightOverride":
-		if e.complexity.ChannelCredentialRef.WeightOverride == nil {
-			break
-		}
-
-		return e.complexity.ChannelCredentialRef.WeightOverride(childComplexity), true
 
 	case "ChannelCredentialRefConnection.edges":
 		if e.complexity.ChannelCredentialRefConnection.Edges == nil {
@@ -4340,6 +4413,180 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.CostStatsByModel.ModelID(childComplexity), true
+
+	case "CredentialQuotaScope.createdAt":
+		if e.complexity.CredentialQuotaScope.CreatedAt == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScope.CreatedAt(childComplexity), true
+	case "CredentialQuotaScope.credentials":
+		if e.complexity.CredentialQuotaScope.Credentials == nil {
+			break
+		}
+
+		args, err := ec.field_CredentialQuotaScope_credentials_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.CredentialQuotaScope.Credentials(childComplexity, args["after"].(*entgql.Cursor[int]), args["first"].(*int), args["before"].(*entgql.Cursor[int]), args["last"].(*int), args["orderBy"].(*ent.UpstreamCredentialOrder), args["where"].(*ent.UpstreamCredentialWhereInput)), true
+	case "CredentialQuotaScope.executions":
+		if e.complexity.CredentialQuotaScope.Executions == nil {
+			break
+		}
+
+		args, err := ec.field_CredentialQuotaScope_executions_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.CredentialQuotaScope.Executions(childComplexity, args["after"].(*entgql.Cursor[int]), args["first"].(*int), args["before"].(*entgql.Cursor[int]), args["last"].(*int), args["orderBy"].(*ent.RequestExecutionOrder), args["where"].(*ent.RequestExecutionWhereInput)), true
+	case "CredentialQuotaScope.id":
+		if e.complexity.CredentialQuotaScope.ID == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScope.ID(childComplexity), true
+	case "CredentialQuotaScope.lastError":
+		if e.complexity.CredentialQuotaScope.LastError == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScope.LastError(childComplexity), true
+	case "CredentialQuotaScope.limitAmount":
+		if e.complexity.CredentialQuotaScope.LimitAmount == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScope.LimitAmount(childComplexity), true
+	case "CredentialQuotaScope.name":
+		if e.complexity.CredentialQuotaScope.Name == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScope.Name(childComplexity), true
+	case "CredentialQuotaScope.overLimitAction":
+		if e.complexity.CredentialQuotaScope.OverLimitAction == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScope.OverLimitAction(childComplexity), true
+	case "CredentialQuotaScope.pauseUntil":
+		if e.complexity.CredentialQuotaScope.PauseUntil == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScope.PauseUntil(childComplexity), true
+	case "CredentialQuotaScope.providerQuotaStatuses":
+		if e.complexity.CredentialQuotaScope.ProviderQuotaStatuses == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScope.ProviderQuotaStatuses(childComplexity), true
+	case "CredentialQuotaScope.remark":
+		if e.complexity.CredentialQuotaScope.Remark == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScope.Remark(childComplexity), true
+	case "CredentialQuotaScope.resetAt":
+		if e.complexity.CredentialQuotaScope.ResetAt == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScope.ResetAt(childComplexity), true
+	case "CredentialQuotaScope.resetPolicy":
+		if e.complexity.CredentialQuotaScope.ResetPolicy == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScope.ResetPolicy(childComplexity), true
+	case "CredentialQuotaScope.source":
+		if e.complexity.CredentialQuotaScope.Source == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScope.Source(childComplexity), true
+	case "CredentialQuotaScope.status":
+		if e.complexity.CredentialQuotaScope.Status == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScope.Status(childComplexity), true
+	case "CredentialQuotaScope.unit":
+		if e.complexity.CredentialQuotaScope.Unit == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScope.Unit(childComplexity), true
+	case "CredentialQuotaScope.updatedAt":
+		if e.complexity.CredentialQuotaScope.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScope.UpdatedAt(childComplexity), true
+	case "CredentialQuotaScope.usageLogs":
+		if e.complexity.CredentialQuotaScope.UsageLogs == nil {
+			break
+		}
+
+		args, err := ec.field_CredentialQuotaScope_usageLogs_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.CredentialQuotaScope.UsageLogs(childComplexity, args["after"].(*entgql.Cursor[int]), args["first"].(*int), args["before"].(*entgql.Cursor[int]), args["last"].(*int), args["orderBy"].(*ent.UsageLogOrder), args["where"].(*ent.UsageLogWhereInput)), true
+	case "CredentialQuotaScope.usedAmount":
+		if e.complexity.CredentialQuotaScope.UsedAmount == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScope.UsedAmount(childComplexity), true
+	case "CredentialQuotaScope.warningThresholdPercent":
+		if e.complexity.CredentialQuotaScope.WarningThresholdPercent == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScope.WarningThresholdPercent(childComplexity), true
+	case "CredentialQuotaScope.windowStartedAt":
+		if e.complexity.CredentialQuotaScope.WindowStartedAt == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScope.WindowStartedAt(childComplexity), true
+
+	case "CredentialQuotaScopeConnection.edges":
+		if e.complexity.CredentialQuotaScopeConnection.Edges == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScopeConnection.Edges(childComplexity), true
+	case "CredentialQuotaScopeConnection.pageInfo":
+		if e.complexity.CredentialQuotaScopeConnection.PageInfo == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScopeConnection.PageInfo(childComplexity), true
+	case "CredentialQuotaScopeConnection.totalCount":
+		if e.complexity.CredentialQuotaScopeConnection.TotalCount == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScopeConnection.TotalCount(childComplexity), true
+
+	case "CredentialQuotaScopeEdge.cursor":
+		if e.complexity.CredentialQuotaScopeEdge.Cursor == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScopeEdge.Cursor(childComplexity), true
+	case "CredentialQuotaScopeEdge.node":
+		if e.complexity.CredentialQuotaScopeEdge.Node == nil {
+			break
+		}
+
+		return e.complexity.CredentialQuotaScopeEdge.Node(childComplexity), true
 
 	case "DailyRequestStats.cost":
 		if e.complexity.DailyRequestStats.Cost == nil {
@@ -5773,6 +6020,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.CreateChannelOverrideTemplate(childComplexity, args["input"].(ent.CreateChannelOverrideTemplateInput)), true
+	case "Mutation.createCredentialQuotaScope":
+		if e.complexity.Mutation.CreateCredentialQuotaScope == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createCredentialQuotaScope_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateCredentialQuotaScope(childComplexity, args["input"].(biz.CreateCredentialQuotaScopeInput)), true
 	case "Mutation.createDataStorage":
 		if e.complexity.Mutation.CreateDataStorage == nil {
 			break
@@ -6313,6 +6571,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.UpdateChannelStatus(childComplexity, args["id"].(objects.GUID), args["status"].(channel.Status)), true
+	case "Mutation.updateCredentialQuotaScope":
+		if e.complexity.Mutation.UpdateCredentialQuotaScope == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateCredentialQuotaScope_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateCredentialQuotaScope(childComplexity, args["id"].(objects.GUID), args["input"].(biz.UpdateCredentialQuotaScopeInput)), true
 	case "Mutation.updateDataStorage":
 		if e.complexity.Mutation.UpdateDataStorage == nil {
 			break
@@ -7510,12 +7779,42 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ProviderQuotaStatus.QuotaData(childComplexity), true
+	case "ProviderQuotaStatus.quotaScope":
+		if e.complexity.ProviderQuotaStatus.QuotaScope == nil {
+			break
+		}
+
+		return e.complexity.ProviderQuotaStatus.QuotaScope(childComplexity), true
+	case "ProviderQuotaStatus.quotaScopeID":
+		if e.complexity.ProviderQuotaStatus.QuotaScopeID == nil {
+			break
+		}
+
+		return e.complexity.ProviderQuotaStatus.QuotaScopeID(childComplexity), true
 	case "ProviderQuotaStatus.ready":
 		if e.complexity.ProviderQuotaStatus.Ready == nil {
 			break
 		}
 
 		return e.complexity.ProviderQuotaStatus.Ready(childComplexity), true
+	case "ProviderQuotaStatus.resourceScopeKey":
+		if e.complexity.ProviderQuotaStatus.ResourceScopeKey == nil {
+			break
+		}
+
+		return e.complexity.ProviderQuotaStatus.ResourceScopeKey(childComplexity), true
+	case "ProviderQuotaStatus.scopeKey":
+		if e.complexity.ProviderQuotaStatus.ScopeKey == nil {
+			break
+		}
+
+		return e.complexity.ProviderQuotaStatus.ScopeKey(childComplexity), true
+	case "ProviderQuotaStatus.secretFingerprint":
+		if e.complexity.ProviderQuotaStatus.SecretFingerprint == nil {
+			break
+		}
+
+		return e.complexity.ProviderQuotaStatus.SecretFingerprint(childComplexity), true
 	case "ProviderQuotaStatus.status":
 		if e.complexity.ProviderQuotaStatus.Status == nil {
 			break
@@ -7774,6 +8073,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.CountChannelsByType(childComplexity, args["input"].(CountChannelsByTypeInput)), true
+	case "Query.credentialQuotaScopes":
+		if e.complexity.Query.CredentialQuotaScopes == nil {
+			break
+		}
+
+		args, err := ec.field_Query_credentialQuotaScopes_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.CredentialQuotaScopes(childComplexity, args["after"].(*entgql.Cursor[int]), args["first"].(*int), args["before"].(*entgql.Cursor[int]), args["last"].(*int), args["orderBy"].(*ent.CredentialQuotaScopeOrder), args["where"].(*ent.CredentialQuotaScopeWhereInput)), true
 	case "Query.dailyRequestStats":
 		if e.complexity.Query.DailyRequestStats == nil {
 			break
@@ -8648,6 +8958,30 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.RequestExecution.ProjectID(childComplexity), true
+	case "RequestExecution.quotaScope":
+		if e.complexity.RequestExecution.QuotaScope == nil {
+			break
+		}
+
+		return e.complexity.RequestExecution.QuotaScope(childComplexity), true
+	case "RequestExecution.quotaScopeID":
+		if e.complexity.RequestExecution.QuotaScopeID == nil {
+			break
+		}
+
+		return e.complexity.RequestExecution.QuotaScopeID(childComplexity), true
+	case "RequestExecution.quotaScopeNameSnapshot":
+		if e.complexity.RequestExecution.QuotaScopeNameSnapshot == nil {
+			break
+		}
+
+		return e.complexity.RequestExecution.QuotaScopeNameSnapshot(childComplexity), true
+	case "RequestExecution.quotaScopeStatusSnapshot":
+		if e.complexity.RequestExecution.QuotaScopeStatusSnapshot == nil {
+			break
+		}
+
+		return e.complexity.RequestExecution.QuotaScopeStatusSnapshot(childComplexity), true
 	case "RequestExecution.request":
 		if e.complexity.RequestExecution.Request == nil {
 			break
@@ -8672,6 +9006,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.RequestExecution.RequestID(childComplexity), true
+	case "RequestExecution.resourceScopeKey":
+		if e.complexity.RequestExecution.ResourceScopeKey == nil {
+			break
+		}
+
+		return e.complexity.RequestExecution.ResourceScopeKey(childComplexity), true
 	case "RequestExecution.responseBody":
 		if e.complexity.RequestExecution.ResponseBody == nil {
 			break
@@ -8690,6 +9030,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.RequestExecution.ResponseStatusCode(childComplexity), true
+	case "RequestExecution.secretFingerprint":
+		if e.complexity.RequestExecution.SecretFingerprint == nil {
+			break
+		}
+
+		return e.complexity.RequestExecution.SecretFingerprint(childComplexity), true
 	case "RequestExecution.status":
 		if e.complexity.RequestExecution.Status == nil {
 			break
@@ -10113,18 +10459,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.UnassociatedChannel.Models(childComplexity), true
 
-	case "UpstreamCredential.authKind":
-		if e.complexity.UpstreamCredential.AuthKind == nil {
-			break
-		}
-
-		return e.complexity.UpstreamCredential.AuthKind(childComplexity), true
-	case "UpstreamCredential.baseURL":
-		if e.complexity.UpstreamCredential.BaseURL == nil {
-			break
-		}
-
-		return e.complexity.UpstreamCredential.BaseURL(childComplexity), true
 	case "UpstreamCredential.channelRefs":
 		if e.complexity.UpstreamCredential.ChannelRefs == nil {
 			break
@@ -10165,12 +10499,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.UpstreamCredential.ID(childComplexity), true
-	case "UpstreamCredential.issuerScope":
-		if e.complexity.UpstreamCredential.IssuerScope == nil {
-			break
-		}
-
-		return e.complexity.UpstreamCredential.IssuerScope(childComplexity), true
 	case "UpstreamCredential.keyHint":
 		if e.complexity.UpstreamCredential.KeyHint == nil {
 			break
@@ -10195,12 +10523,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.UpstreamCredential.ProviderQuotaStatuses(childComplexity), true
-	case "UpstreamCredential.providerType":
-		if e.complexity.UpstreamCredential.ProviderType == nil {
+	case "UpstreamCredential.quotaScope":
+		if e.complexity.UpstreamCredential.QuotaScope == nil {
 			break
 		}
 
-		return e.complexity.UpstreamCredential.ProviderType(childComplexity), true
+		return e.complexity.UpstreamCredential.QuotaScope(childComplexity), true
 	case "UpstreamCredential.quotaScopeID":
 		if e.complexity.UpstreamCredential.QuotaScopeID == nil {
 			break
@@ -10219,12 +10547,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.UpstreamCredential.Remark(childComplexity), true
-	case "UpstreamCredential.secretKind":
-		if e.complexity.UpstreamCredential.SecretKind == nil {
+	case "UpstreamCredential.secretFingerprint":
+		if e.complexity.UpstreamCredential.SecretFingerprint == nil {
 			break
 		}
 
-		return e.complexity.UpstreamCredential.SecretKind(childComplexity), true
+		return e.complexity.UpstreamCredential.SecretFingerprint(childComplexity), true
 	case "UpstreamCredential.status":
 		if e.complexity.UpstreamCredential.Status == nil {
 			break
@@ -10248,12 +10576,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.UpstreamCredential.UsageLogs(childComplexity, args["after"].(*entgql.Cursor[int]), args["first"].(*int), args["before"].(*entgql.Cursor[int]), args["last"].(*int), args["orderBy"].(*ent.UsageLogOrder), args["where"].(*ent.UsageLogWhereInput)), true
-	case "UpstreamCredential.weight":
-		if e.complexity.UpstreamCredential.Weight == nil {
-			break
-		}
-
-		return e.complexity.UpstreamCredential.Weight(childComplexity), true
 
 	case "UpstreamCredentialConnection.edges":
 		if e.complexity.UpstreamCredentialConnection.Edges == nil {
@@ -10396,6 +10718,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.UsageLog.CredentialNameSnapshot(childComplexity), true
+	case "UsageLog.credentialQuotaStatusSnapshot":
+		if e.complexity.UsageLog.CredentialQuotaStatusSnapshot == nil {
+			break
+		}
+
+		return e.complexity.UsageLog.CredentialQuotaStatusSnapshot(childComplexity), true
 	case "UsageLog.credentialSource":
 		if e.complexity.UsageLog.CredentialSource == nil {
 			break
@@ -10468,6 +10796,30 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.UsageLog.PromptWriteCachedTokens5m(childComplexity), true
+	case "UsageLog.quotaScope":
+		if e.complexity.UsageLog.QuotaScope == nil {
+			break
+		}
+
+		return e.complexity.UsageLog.QuotaScope(childComplexity), true
+	case "UsageLog.quotaScopeID":
+		if e.complexity.UsageLog.QuotaScopeID == nil {
+			break
+		}
+
+		return e.complexity.UsageLog.QuotaScopeID(childComplexity), true
+	case "UsageLog.quotaScopeNameSnapshot":
+		if e.complexity.UsageLog.QuotaScopeNameSnapshot == nil {
+			break
+		}
+
+		return e.complexity.UsageLog.QuotaScopeNameSnapshot(childComplexity), true
+	case "UsageLog.quotaScopeStatusSnapshot":
+		if e.complexity.UsageLog.QuotaScopeStatusSnapshot == nil {
+			break
+		}
+
+		return e.complexity.UsageLog.QuotaScopeStatusSnapshot(childComplexity), true
 	case "UsageLog.request":
 		if e.complexity.UsageLog.Request == nil {
 			break
@@ -10480,6 +10832,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.UsageLog.RequestID(childComplexity), true
+	case "UsageLog.resourceScopeKey":
+		if e.complexity.UsageLog.ResourceScopeKey == nil {
+			break
+		}
+
+		return e.complexity.UsageLog.ResourceScopeKey(childComplexity), true
+	case "UsageLog.secretFingerprint":
+		if e.complexity.UsageLog.SecretFingerprint == nil {
+			break
+		}
+
+		return e.complexity.UsageLog.SecretFingerprint(childComplexity), true
 	case "UsageLog.source":
 		if e.complexity.UsageLog.Source == nil {
 			break
@@ -11155,6 +11519,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCreateAPIKeyProfileTemplateInput,
 		ec.unmarshalInputCreateChannelInput,
 		ec.unmarshalInputCreateChannelOverrideTemplateInput,
+		ec.unmarshalInputCreateCredentialQuotaScopeInput,
 		ec.unmarshalInputCreateDataStorageInput,
 		ec.unmarshalInputCreateModelInput,
 		ec.unmarshalInputCreateOIDCIdentityInput,
@@ -11169,6 +11534,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputCreateUpstreamCredentialInput,
 		ec.unmarshalInputCreateUsageLogInput,
 		ec.unmarshalInputCreateUserInput,
+		ec.unmarshalInputCredentialQuotaScopeOrder,
+		ec.unmarshalInputCredentialQuotaScopeWhereInput,
 		ec.unmarshalInputDataStorageOrder,
 		ec.unmarshalInputDataStorageSettingsInput,
 		ec.unmarshalInputDataStorageWhereInput,
@@ -11260,6 +11627,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputUpdateChannelModelAutoSyncSettingInput,
 		ec.unmarshalInputUpdateChannelOverrideTemplateInput,
 		ec.unmarshalInputUpdateChannelProbeSettingInput,
+		ec.unmarshalInputUpdateCredentialQuotaScopeInput,
 		ec.unmarshalInputUpdateDataStorageInput,
 		ec.unmarshalInputUpdateDefaultDataStorageInput,
 		ec.unmarshalInputUpdateMeInput,
@@ -11578,6 +11946,114 @@ func (ec *executionContext) field_Channel_requests_args(ctx context.Context, raw
 }
 
 func (ec *executionContext) field_Channel_usageLogs_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "after", ec.unmarshalOCursor2ᚖentgoᚗioᚋcontribᚋentgqlᚐCursor)
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "first", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["first"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "before", ec.unmarshalOCursor2ᚖentgoᚗioᚋcontribᚋentgqlᚐCursor)
+	if err != nil {
+		return nil, err
+	}
+	args["before"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "last", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["last"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "orderBy", ec.unmarshalOUsageLogOrder2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUsageLogOrder)
+	if err != nil {
+		return nil, err
+	}
+	args["orderBy"] = arg4
+	arg5, err := graphql.ProcessArgField(ctx, rawArgs, "where", ec.unmarshalOUsageLogWhereInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUsageLogWhereInput)
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg5
+	return args, nil
+}
+
+func (ec *executionContext) field_CredentialQuotaScope_credentials_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "after", ec.unmarshalOCursor2ᚖentgoᚗioᚋcontribᚋentgqlᚐCursor)
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "first", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["first"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "before", ec.unmarshalOCursor2ᚖentgoᚗioᚋcontribᚋentgqlᚐCursor)
+	if err != nil {
+		return nil, err
+	}
+	args["before"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "last", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["last"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "orderBy", ec.unmarshalOUpstreamCredentialOrder2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUpstreamCredentialOrder)
+	if err != nil {
+		return nil, err
+	}
+	args["orderBy"] = arg4
+	arg5, err := graphql.ProcessArgField(ctx, rawArgs, "where", ec.unmarshalOUpstreamCredentialWhereInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUpstreamCredentialWhereInput)
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg5
+	return args, nil
+}
+
+func (ec *executionContext) field_CredentialQuotaScope_executions_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "after", ec.unmarshalOCursor2ᚖentgoᚗioᚋcontribᚋentgqlᚐCursor)
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "first", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["first"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "before", ec.unmarshalOCursor2ᚖentgoᚗioᚋcontribᚋentgqlᚐCursor)
+	if err != nil {
+		return nil, err
+	}
+	args["before"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "last", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["last"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "orderBy", ec.unmarshalORequestExecutionOrder2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐRequestExecutionOrder)
+	if err != nil {
+		return nil, err
+	}
+	args["orderBy"] = arg4
+	arg5, err := graphql.ProcessArgField(ctx, rawArgs, "where", ec.unmarshalORequestExecutionWhereInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐRequestExecutionWhereInput)
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg5
+	return args, nil
+}
+
+func (ec *executionContext) field_CredentialQuotaScope_usageLogs_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "after", ec.unmarshalOCursor2ᚖentgoᚗioᚋcontribᚋentgqlᚐCursor)
@@ -12079,6 +12555,17 @@ func (ec *executionContext) field_Mutation_createChannel_args(ctx context.Contex
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNCreateChannelInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCreateChannelInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createCredentialQuotaScope_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNCreateCredentialQuotaScopeInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐCreateCredentialQuotaScopeInput)
 	if err != nil {
 		return nil, err
 	}
@@ -12702,6 +13189,22 @@ func (ec *executionContext) field_Mutation_updateChannel_args(ctx context.Contex
 	}
 	args["id"] = arg0
 	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNUpdateChannelInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUpdateChannelInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateCredentialQuotaScope_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNID2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNUpdateCredentialQuotaScopeInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐUpdateCredentialQuotaScopeInput)
 	if err != nil {
 		return nil, err
 	}
@@ -13766,6 +14269,42 @@ func (ec *executionContext) field_Query_countChannelsByType_args(ctx context.Con
 		return nil, err
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_credentialQuotaScopes_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "after", ec.unmarshalOCursor2ᚖentgoᚗioᚋcontribᚋentgqlᚐCursor)
+	if err != nil {
+		return nil, err
+	}
+	args["after"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "first", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["first"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "before", ec.unmarshalOCursor2ᚖentgoᚗioᚋcontribᚋentgqlᚐCursor)
+	if err != nil {
+		return nil, err
+	}
+	args["before"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "last", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["last"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "orderBy", ec.unmarshalOCredentialQuotaScopeOrder2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeOrder)
+	if err != nil {
+		return nil, err
+	}
+	args["orderBy"] = arg4
+	arg5, err := graphql.ProcessArgField(ctx, rawArgs, "where", ec.unmarshalOCredentialQuotaScopeWhereInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeWhereInput)
+	if err != nil {
+		return nil, err
+	}
+	args["where"] = arg5
 	return args, nil
 }
 
@@ -17366,8 +17905,8 @@ func (ec *executionContext) fieldContext_ApplyChannelOverrideTemplatePayload_cha
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -17376,6 +17915,8 @@ func (ec *executionContext) fieldContext_ApplyChannelOverrideTemplatePayload_cha
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -18399,8 +18940,8 @@ func (ec *executionContext) fieldContext_BulkImportChannelsResult_channels(_ con
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -18409,6 +18950,8 @@ func (ec *executionContext) fieldContext_BulkImportChannelsResult_channels(_ con
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -18550,8 +19093,8 @@ func (ec *executionContext) fieldContext_BulkUpdateChannelOrderingResult_channel
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -18560,6 +19103,8 @@ func (ec *executionContext) fieldContext_BulkUpdateChannelOrderingResult_channel
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -19454,28 +19999,28 @@ func (ec *executionContext) fieldContext_Channel_credentialRefs(ctx context.Cont
 	return fc, nil
 }
 
-func (ec *executionContext) _Channel_providerQuotaStatus(ctx context.Context, field graphql.CollectedField, obj *ent.Channel) (ret graphql.Marshaler) {
+func (ec *executionContext) _Channel_providerQuotaStatuses(ctx context.Context, field graphql.CollectedField, obj *ent.Channel) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_Channel_providerQuotaStatus,
+		ec.fieldContext_Channel_providerQuotaStatuses,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Channel().ProviderQuotaStatus(ctx, obj)
+			return obj.ProviderQuotaStatuses(ctx)
 		},
 		nil,
-		ec.marshalOProviderQuotaStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatus,
+		ec.marshalOProviderQuotaStatus2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusᚄ,
 		true,
 		false,
 	)
 }
 
-func (ec *executionContext) fieldContext_Channel_providerQuotaStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Channel_providerQuotaStatuses(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Channel",
 		Field:      field,
 		IsMethod:   true,
-		IsResolver: true,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
@@ -19486,10 +20031,18 @@ func (ec *executionContext) fieldContext_Channel_providerQuotaStatus(_ context.C
 				return ec.fieldContext_ProviderQuotaStatus_updatedAt(ctx, field)
 			case "channelID":
 				return ec.fieldContext_ProviderQuotaStatus_channelID(ctx, field)
+			case "scopeKey":
+				return ec.fieldContext_ProviderQuotaStatus_scopeKey(ctx, field)
 			case "credentialID":
 				return ec.fieldContext_ProviderQuotaStatus_credentialID(ctx, field)
 			case "credentialFingerprint":
 				return ec.fieldContext_ProviderQuotaStatus_credentialFingerprint(ctx, field)
+			case "secretFingerprint":
+				return ec.fieldContext_ProviderQuotaStatus_secretFingerprint(ctx, field)
+			case "resourceScopeKey":
+				return ec.fieldContext_ProviderQuotaStatus_resourceScopeKey(ctx, field)
+			case "quotaScopeID":
+				return ec.fieldContext_ProviderQuotaStatus_quotaScopeID(ctx, field)
 			case "providerType":
 				return ec.fieldContext_ProviderQuotaStatus_providerType(ctx, field)
 			case "status":
@@ -19506,6 +20059,8 @@ func (ec *executionContext) fieldContext_Channel_providerQuotaStatus(_ context.C
 				return ec.fieldContext_ProviderQuotaStatus_channel(ctx, field)
 			case "credential":
 				return ec.fieldContext_ProviderQuotaStatus_credential(ctx, field)
+			case "quotaScope":
+				return ec.fieldContext_ProviderQuotaStatus_quotaScope(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ProviderQuotaStatus", field.Name)
 		},
@@ -19664,6 +20219,75 @@ func (ec *executionContext) fieldContext_Channel_disabledAPIKeys(_ context.Conte
 				return ec.fieldContext_DisabledAPIKey_reason(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type DisabledAPIKey", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Channel_providerQuotaStatus(ctx context.Context, field graphql.CollectedField, obj *ent.Channel) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Channel_providerQuotaStatus,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Channel().ProviderQuotaStatus(ctx, obj)
+		},
+		nil,
+		ec.marshalOProviderQuotaStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatus,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Channel_providerQuotaStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Channel",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ProviderQuotaStatus_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_ProviderQuotaStatus_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_ProviderQuotaStatus_updatedAt(ctx, field)
+			case "channelID":
+				return ec.fieldContext_ProviderQuotaStatus_channelID(ctx, field)
+			case "scopeKey":
+				return ec.fieldContext_ProviderQuotaStatus_scopeKey(ctx, field)
+			case "credentialID":
+				return ec.fieldContext_ProviderQuotaStatus_credentialID(ctx, field)
+			case "credentialFingerprint":
+				return ec.fieldContext_ProviderQuotaStatus_credentialFingerprint(ctx, field)
+			case "secretFingerprint":
+				return ec.fieldContext_ProviderQuotaStatus_secretFingerprint(ctx, field)
+			case "resourceScopeKey":
+				return ec.fieldContext_ProviderQuotaStatus_resourceScopeKey(ctx, field)
+			case "quotaScopeID":
+				return ec.fieldContext_ProviderQuotaStatus_quotaScopeID(ctx, field)
+			case "providerType":
+				return ec.fieldContext_ProviderQuotaStatus_providerType(ctx, field)
+			case "status":
+				return ec.fieldContext_ProviderQuotaStatus_status(ctx, field)
+			case "quotaData":
+				return ec.fieldContext_ProviderQuotaStatus_quotaData(ctx, field)
+			case "nextResetAt":
+				return ec.fieldContext_ProviderQuotaStatus_nextResetAt(ctx, field)
+			case "ready":
+				return ec.fieldContext_ProviderQuotaStatus_ready(ctx, field)
+			case "nextCheckAt":
+				return ec.fieldContext_ProviderQuotaStatus_nextCheckAt(ctx, field)
+			case "channel":
+				return ec.fieldContext_ProviderQuotaStatus_channel(ctx, field)
+			case "credential":
+				return ec.fieldContext_ProviderQuotaStatus_credential(ctx, field)
+			case "quotaScope":
+				return ec.fieldContext_ProviderQuotaStatus_quotaScope(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ProviderQuotaStatus", field.Name)
 		},
 	}
 	return fc, nil
@@ -19985,35 +20609,6 @@ func (ec *executionContext) fieldContext_ChannelCredentialRef_enabled(_ context.
 	return fc, nil
 }
 
-func (ec *executionContext) _ChannelCredentialRef_weightOverride(ctx context.Context, field graphql.CollectedField, obj *ent.ChannelCredentialRef) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ChannelCredentialRef_weightOverride,
-		func(ctx context.Context) (any, error) {
-			return obj.WeightOverride, nil
-		},
-		nil,
-		ec.marshalOInt2ᚖint,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_ChannelCredentialRef_weightOverride(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ChannelCredentialRef",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _ChannelCredentialRef_channel(ctx context.Context, field graphql.CollectedField, obj *ent.ChannelCredentialRef) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -20088,8 +20683,8 @@ func (ec *executionContext) fieldContext_ChannelCredentialRef_channel(_ context.
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -20098,6 +20693,8 @@ func (ec *executionContext) fieldContext_ChannelCredentialRef_channel(_ context.
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -20139,26 +20736,16 @@ func (ec *executionContext) fieldContext_ChannelCredentialRef_credential(_ conte
 				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
 			case "name":
 				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "providerType":
-				return ec.fieldContext_UpstreamCredential_providerType(ctx, field)
-			case "baseURL":
-				return ec.fieldContext_UpstreamCredential_baseURL(ctx, field)
-			case "authKind":
-				return ec.fieldContext_UpstreamCredential_authKind(ctx, field)
-			case "secretKind":
-				return ec.fieldContext_UpstreamCredential_secretKind(ctx, field)
-			case "issuerScope":
-				return ec.fieldContext_UpstreamCredential_issuerScope(ctx, field)
 			case "keyHint":
 				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
 			case "fingerprint":
 				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
+			case "secretFingerprint":
+				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
 			case "status":
 				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "weight":
-				return ec.fieldContext_UpstreamCredential_weight(ctx, field)
 			case "quotaStatus":
 				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
 			case "lastError":
@@ -20173,6 +20760,8 @@ func (ec *executionContext) fieldContext_ChannelCredentialRef_credential(_ conte
 				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
 			case "providerQuotaStatuses":
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
+			case "quotaScope":
+				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
 		},
@@ -20319,8 +20908,6 @@ func (ec *executionContext) fieldContext_ChannelCredentialRefEdge_node(_ context
 				return ec.fieldContext_ChannelCredentialRef_credentialID(ctx, field)
 			case "enabled":
 				return ec.fieldContext_ChannelCredentialRef_enabled(ctx, field)
-			case "weightOverride":
-				return ec.fieldContext_ChannelCredentialRef_weightOverride(ctx, field)
 			case "channel":
 				return ec.fieldContext_ChannelCredentialRef_channel(ctx, field)
 			case "credential":
@@ -20606,8 +21193,8 @@ func (ec *executionContext) fieldContext_ChannelEdge_node(_ context.Context, fie
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -20616,6 +21203,8 @@ func (ec *executionContext) fieldContext_ChannelEdge_node(_ context.Context, fie
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -21341,8 +21930,8 @@ func (ec *executionContext) fieldContext_ChannelModelPrice_channel(_ context.Con
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -21351,6 +21940,8 @@ func (ec *executionContext) fieldContext_ChannelModelPrice_channel(_ context.Con
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -23219,8 +23810,8 @@ func (ec *executionContext) fieldContext_ChannelProbe_channel(_ context.Context,
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -23229,6 +23820,8 @@ func (ec *executionContext) fieldContext_ChannelProbe_channel(_ context.Context,
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -24875,8 +25468,8 @@ func (ec *executionContext) fieldContext_ClearChannelOverrideTemplatesPayload_ch
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -24885,6 +25478,8 @@ func (ec *executionContext) fieldContext_ClearChannelOverrideTemplatesPayload_ch
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -25216,6 +25811,920 @@ func (ec *executionContext) fieldContext_CostStatsByModel_cost(_ context.Context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Float does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_id(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_id,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.CredentialQuotaScope().ID(ctx, obj)
+		},
+		nil,
+		ec.marshalNID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_createdAt(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_createdAt,
+		func(ctx context.Context) (any, error) {
+			return obj.CreatedAt, nil
+		},
+		nil,
+		ec.marshalNTime2timeᚐTime,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_updatedAt(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_updatedAt,
+		func(ctx context.Context) (any, error) {
+			return obj.UpdatedAt, nil
+		},
+		nil,
+		ec.marshalNTime2timeᚐTime,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_name(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_name,
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_status(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_status,
+		func(ctx context.Context) (any, error) {
+			return obj.Status, nil
+		},
+		nil,
+		ec.marshalNCredentialQuotaScopeStatus2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐStatus,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type CredentialQuotaScopeStatus does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_unit(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_unit,
+		func(ctx context.Context) (any, error) {
+			return obj.Unit, nil
+		},
+		nil,
+		ec.marshalNCredentialQuotaScopeUnit2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐUnit,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_unit(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type CredentialQuotaScopeUnit does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_limitAmount(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_limitAmount,
+		func(ctx context.Context) (any, error) {
+			return obj.LimitAmount, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_limitAmount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_usedAmount(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_usedAmount,
+		func(ctx context.Context) (any, error) {
+			return obj.UsedAmount, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_usedAmount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_warningThresholdPercent(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_warningThresholdPercent,
+		func(ctx context.Context) (any, error) {
+			return obj.WarningThresholdPercent, nil
+		},
+		nil,
+		ec.marshalOInt2ᚖint,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_warningThresholdPercent(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_resetPolicy(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_resetPolicy,
+		func(ctx context.Context) (any, error) {
+			return obj.ResetPolicy, nil
+		},
+		nil,
+		ec.marshalNCredentialQuotaScopeResetPolicy2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐResetPolicy,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_resetPolicy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type CredentialQuotaScopeResetPolicy does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_resetAt(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_resetAt,
+		func(ctx context.Context) (any, error) {
+			return obj.ResetAt, nil
+		},
+		nil,
+		ec.marshalOTime2ᚖtimeᚐTime,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_resetAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_windowStartedAt(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_windowStartedAt,
+		func(ctx context.Context) (any, error) {
+			return obj.WindowStartedAt, nil
+		},
+		nil,
+		ec.marshalOTime2ᚖtimeᚐTime,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_windowStartedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_overLimitAction(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_overLimitAction,
+		func(ctx context.Context) (any, error) {
+			return obj.OverLimitAction, nil
+		},
+		nil,
+		ec.marshalNCredentialQuotaScopeOverLimitAction2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐOverLimitAction,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_overLimitAction(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type CredentialQuotaScopeOverLimitAction does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_pauseUntil(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_pauseUntil,
+		func(ctx context.Context) (any, error) {
+			return obj.PauseUntil, nil
+		},
+		nil,
+		ec.marshalOTime2ᚖtimeᚐTime,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_pauseUntil(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_source(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_source,
+		func(ctx context.Context) (any, error) {
+			return obj.Source, nil
+		},
+		nil,
+		ec.marshalNCredentialQuotaScopeSource2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐSource,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_source(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type CredentialQuotaScopeSource does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_lastError(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_lastError,
+		func(ctx context.Context) (any, error) {
+			return obj.LastError, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_lastError(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_remark(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_remark,
+		func(ctx context.Context) (any, error) {
+			return obj.Remark, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_remark(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_credentials(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_credentials,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return obj.Credentials(ctx, fc.Args["after"].(*entgql.Cursor[int]), fc.Args["first"].(*int), fc.Args["before"].(*entgql.Cursor[int]), fc.Args["last"].(*int), fc.Args["orderBy"].(*ent.UpstreamCredentialOrder), fc.Args["where"].(*ent.UpstreamCredentialWhereInput))
+		},
+		nil,
+		ec.marshalNUpstreamCredentialConnection2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUpstreamCredentialConnection,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_credentials(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "edges":
+				return ec.fieldContext_UpstreamCredentialConnection_edges(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_UpstreamCredentialConnection_pageInfo(ctx, field)
+			case "totalCount":
+				return ec.fieldContext_UpstreamCredentialConnection_totalCount(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredentialConnection", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_CredentialQuotaScope_credentials_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_providerQuotaStatuses(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_providerQuotaStatuses,
+		func(ctx context.Context) (any, error) {
+			return obj.ProviderQuotaStatuses(ctx)
+		},
+		nil,
+		ec.marshalOProviderQuotaStatus2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusᚄ,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_providerQuotaStatuses(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_ProviderQuotaStatus_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_ProviderQuotaStatus_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_ProviderQuotaStatus_updatedAt(ctx, field)
+			case "channelID":
+				return ec.fieldContext_ProviderQuotaStatus_channelID(ctx, field)
+			case "scopeKey":
+				return ec.fieldContext_ProviderQuotaStatus_scopeKey(ctx, field)
+			case "credentialID":
+				return ec.fieldContext_ProviderQuotaStatus_credentialID(ctx, field)
+			case "credentialFingerprint":
+				return ec.fieldContext_ProviderQuotaStatus_credentialFingerprint(ctx, field)
+			case "secretFingerprint":
+				return ec.fieldContext_ProviderQuotaStatus_secretFingerprint(ctx, field)
+			case "resourceScopeKey":
+				return ec.fieldContext_ProviderQuotaStatus_resourceScopeKey(ctx, field)
+			case "quotaScopeID":
+				return ec.fieldContext_ProviderQuotaStatus_quotaScopeID(ctx, field)
+			case "providerType":
+				return ec.fieldContext_ProviderQuotaStatus_providerType(ctx, field)
+			case "status":
+				return ec.fieldContext_ProviderQuotaStatus_status(ctx, field)
+			case "quotaData":
+				return ec.fieldContext_ProviderQuotaStatus_quotaData(ctx, field)
+			case "nextResetAt":
+				return ec.fieldContext_ProviderQuotaStatus_nextResetAt(ctx, field)
+			case "ready":
+				return ec.fieldContext_ProviderQuotaStatus_ready(ctx, field)
+			case "nextCheckAt":
+				return ec.fieldContext_ProviderQuotaStatus_nextCheckAt(ctx, field)
+			case "channel":
+				return ec.fieldContext_ProviderQuotaStatus_channel(ctx, field)
+			case "credential":
+				return ec.fieldContext_ProviderQuotaStatus_credential(ctx, field)
+			case "quotaScope":
+				return ec.fieldContext_ProviderQuotaStatus_quotaScope(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ProviderQuotaStatus", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_executions(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_executions,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return obj.Executions(ctx, fc.Args["after"].(*entgql.Cursor[int]), fc.Args["first"].(*int), fc.Args["before"].(*entgql.Cursor[int]), fc.Args["last"].(*int), fc.Args["orderBy"].(*ent.RequestExecutionOrder), fc.Args["where"].(*ent.RequestExecutionWhereInput))
+		},
+		nil,
+		ec.marshalNRequestExecutionConnection2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐRequestExecutionConnection,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_executions(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "edges":
+				return ec.fieldContext_RequestExecutionConnection_edges(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_RequestExecutionConnection_pageInfo(ctx, field)
+			case "totalCount":
+				return ec.fieldContext_RequestExecutionConnection_totalCount(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type RequestExecutionConnection", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_CredentialQuotaScope_executions_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScope_usageLogs(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScope_usageLogs,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return obj.UsageLogs(ctx, fc.Args["after"].(*entgql.Cursor[int]), fc.Args["first"].(*int), fc.Args["before"].(*entgql.Cursor[int]), fc.Args["last"].(*int), fc.Args["orderBy"].(*ent.UsageLogOrder), fc.Args["where"].(*ent.UsageLogWhereInput))
+		},
+		nil,
+		ec.marshalNUsageLogConnection2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUsageLogConnection,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScope_usageLogs(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScope",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "edges":
+				return ec.fieldContext_UsageLogConnection_edges(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_UsageLogConnection_pageInfo(ctx, field)
+			case "totalCount":
+				return ec.fieldContext_UsageLogConnection_totalCount(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type UsageLogConnection", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_CredentialQuotaScope_usageLogs_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScopeConnection_edges(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScopeConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScopeConnection_edges,
+		func(ctx context.Context) (any, error) {
+			return obj.Edges, nil
+		},
+		nil,
+		ec.marshalOCredentialQuotaScopeEdge2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeEdge,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScopeConnection_edges(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScopeConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "node":
+				return ec.fieldContext_CredentialQuotaScopeEdge_node(ctx, field)
+			case "cursor":
+				return ec.fieldContext_CredentialQuotaScopeEdge_cursor(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CredentialQuotaScopeEdge", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScopeConnection_pageInfo(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScopeConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScopeConnection_pageInfo,
+		func(ctx context.Context) (any, error) {
+			return obj.PageInfo, nil
+		},
+		nil,
+		ec.marshalNPageInfo2entgoᚗioᚋcontribᚋentgqlᚐPageInfo,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScopeConnection_pageInfo(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScopeConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "hasNextPage":
+				return ec.fieldContext_PageInfo_hasNextPage(ctx, field)
+			case "hasPreviousPage":
+				return ec.fieldContext_PageInfo_hasPreviousPage(ctx, field)
+			case "startCursor":
+				return ec.fieldContext_PageInfo_startCursor(ctx, field)
+			case "endCursor":
+				return ec.fieldContext_PageInfo_endCursor(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScopeConnection_totalCount(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScopeConnection) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScopeConnection_totalCount,
+		func(ctx context.Context) (any, error) {
+			return obj.TotalCount, nil
+		},
+		nil,
+		ec.marshalNInt2int,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScopeConnection_totalCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScopeConnection",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScopeEdge_node(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScopeEdge) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScopeEdge_node,
+		func(ctx context.Context) (any, error) {
+			return obj.Node, nil
+		},
+		nil,
+		ec.marshalOCredentialQuotaScope2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScope,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScopeEdge_node(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScopeEdge",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_CredentialQuotaScope_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_CredentialQuotaScope_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_CredentialQuotaScope_updatedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_CredentialQuotaScope_name(ctx, field)
+			case "status":
+				return ec.fieldContext_CredentialQuotaScope_status(ctx, field)
+			case "unit":
+				return ec.fieldContext_CredentialQuotaScope_unit(ctx, field)
+			case "limitAmount":
+				return ec.fieldContext_CredentialQuotaScope_limitAmount(ctx, field)
+			case "usedAmount":
+				return ec.fieldContext_CredentialQuotaScope_usedAmount(ctx, field)
+			case "warningThresholdPercent":
+				return ec.fieldContext_CredentialQuotaScope_warningThresholdPercent(ctx, field)
+			case "resetPolicy":
+				return ec.fieldContext_CredentialQuotaScope_resetPolicy(ctx, field)
+			case "resetAt":
+				return ec.fieldContext_CredentialQuotaScope_resetAt(ctx, field)
+			case "windowStartedAt":
+				return ec.fieldContext_CredentialQuotaScope_windowStartedAt(ctx, field)
+			case "overLimitAction":
+				return ec.fieldContext_CredentialQuotaScope_overLimitAction(ctx, field)
+			case "pauseUntil":
+				return ec.fieldContext_CredentialQuotaScope_pauseUntil(ctx, field)
+			case "source":
+				return ec.fieldContext_CredentialQuotaScope_source(ctx, field)
+			case "lastError":
+				return ec.fieldContext_CredentialQuotaScope_lastError(ctx, field)
+			case "remark":
+				return ec.fieldContext_CredentialQuotaScope_remark(ctx, field)
+			case "credentials":
+				return ec.fieldContext_CredentialQuotaScope_credentials(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_CredentialQuotaScope_providerQuotaStatuses(ctx, field)
+			case "executions":
+				return ec.fieldContext_CredentialQuotaScope_executions(ctx, field)
+			case "usageLogs":
+				return ec.fieldContext_CredentialQuotaScope_usageLogs(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CredentialQuotaScope", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _CredentialQuotaScopeEdge_cursor(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScopeEdge) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_CredentialQuotaScopeEdge_cursor,
+		func(ctx context.Context) (any, error) {
+			return obj.Cursor, nil
+		},
+		nil,
+		ec.marshalNCursor2entgoᚗioᚋcontribᚋentgqlᚐCursor,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_CredentialQuotaScopeEdge_cursor(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CredentialQuotaScopeEdge",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Cursor does not have child fields")
 		},
 	}
 	return fc, nil
@@ -29441,8 +30950,8 @@ func (ec *executionContext) fieldContext_ModelChannelConnection_channel(_ contex
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -29451,6 +30960,8 @@ func (ec *executionContext) fieldContext_ModelChannelConnection_channel(_ contex
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -30513,8 +32024,8 @@ func (ec *executionContext) fieldContext_Mutation_createChannel(ctx context.Cont
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -30523,6 +32034,8 @@ func (ec *executionContext) fieldContext_Mutation_createChannel(ctx context.Cont
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -30618,8 +32131,8 @@ func (ec *executionContext) fieldContext_Mutation_bulkCreateChannels(ctx context
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -30628,6 +32141,8 @@ func (ec *executionContext) fieldContext_Mutation_bulkCreateChannels(ctx context
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -30723,8 +32238,8 @@ func (ec *executionContext) fieldContext_Mutation_updateChannel(ctx context.Cont
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -30733,6 +32248,8 @@ func (ec *executionContext) fieldContext_Mutation_updateChannel(ctx context.Cont
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -30828,8 +32345,8 @@ func (ec *executionContext) fieldContext_Mutation_saveChannelEndpoints(ctx conte
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -30838,6 +32355,8 @@ func (ec *executionContext) fieldContext_Mutation_saveChannelEndpoints(ctx conte
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -30933,8 +32452,8 @@ func (ec *executionContext) fieldContext_Mutation_updateChannelStatus(ctx contex
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -30943,6 +32462,8 @@ func (ec *executionContext) fieldContext_Mutation_updateChannelStatus(ctx contex
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -31659,26 +33180,16 @@ func (ec *executionContext) fieldContext_Mutation_createUpstreamCredential(ctx c
 				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
 			case "name":
 				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "providerType":
-				return ec.fieldContext_UpstreamCredential_providerType(ctx, field)
-			case "baseURL":
-				return ec.fieldContext_UpstreamCredential_baseURL(ctx, field)
-			case "authKind":
-				return ec.fieldContext_UpstreamCredential_authKind(ctx, field)
-			case "secretKind":
-				return ec.fieldContext_UpstreamCredential_secretKind(ctx, field)
-			case "issuerScope":
-				return ec.fieldContext_UpstreamCredential_issuerScope(ctx, field)
 			case "keyHint":
 				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
 			case "fingerprint":
 				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
+			case "secretFingerprint":
+				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
 			case "status":
 				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "weight":
-				return ec.fieldContext_UpstreamCredential_weight(ctx, field)
 			case "quotaStatus":
 				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
 			case "lastError":
@@ -31693,6 +33204,8 @@ func (ec *executionContext) fieldContext_Mutation_createUpstreamCredential(ctx c
 				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
 			case "providerQuotaStatuses":
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
+			case "quotaScope":
+				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
 		},
@@ -31744,26 +33257,16 @@ func (ec *executionContext) fieldContext_Mutation_updateUpstreamCredential(ctx c
 				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
 			case "name":
 				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "providerType":
-				return ec.fieldContext_UpstreamCredential_providerType(ctx, field)
-			case "baseURL":
-				return ec.fieldContext_UpstreamCredential_baseURL(ctx, field)
-			case "authKind":
-				return ec.fieldContext_UpstreamCredential_authKind(ctx, field)
-			case "secretKind":
-				return ec.fieldContext_UpstreamCredential_secretKind(ctx, field)
-			case "issuerScope":
-				return ec.fieldContext_UpstreamCredential_issuerScope(ctx, field)
 			case "keyHint":
 				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
 			case "fingerprint":
 				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
+			case "secretFingerprint":
+				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
 			case "status":
 				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "weight":
-				return ec.fieldContext_UpstreamCredential_weight(ctx, field)
 			case "quotaStatus":
 				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
 			case "lastError":
@@ -31778,6 +33281,8 @@ func (ec *executionContext) fieldContext_Mutation_updateUpstreamCredential(ctx c
 				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
 			case "providerQuotaStatuses":
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
+			case "quotaScope":
+				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
 		},
@@ -31790,6 +33295,176 @@ func (ec *executionContext) fieldContext_Mutation_updateUpstreamCredential(ctx c
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_updateUpstreamCredential_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_createCredentialQuotaScope(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_createCredentialQuotaScope,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().CreateCredentialQuotaScope(ctx, fc.Args["input"].(biz.CreateCredentialQuotaScopeInput))
+		},
+		nil,
+		ec.marshalNCredentialQuotaScope2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScope,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_createCredentialQuotaScope(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_CredentialQuotaScope_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_CredentialQuotaScope_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_CredentialQuotaScope_updatedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_CredentialQuotaScope_name(ctx, field)
+			case "status":
+				return ec.fieldContext_CredentialQuotaScope_status(ctx, field)
+			case "unit":
+				return ec.fieldContext_CredentialQuotaScope_unit(ctx, field)
+			case "limitAmount":
+				return ec.fieldContext_CredentialQuotaScope_limitAmount(ctx, field)
+			case "usedAmount":
+				return ec.fieldContext_CredentialQuotaScope_usedAmount(ctx, field)
+			case "warningThresholdPercent":
+				return ec.fieldContext_CredentialQuotaScope_warningThresholdPercent(ctx, field)
+			case "resetPolicy":
+				return ec.fieldContext_CredentialQuotaScope_resetPolicy(ctx, field)
+			case "resetAt":
+				return ec.fieldContext_CredentialQuotaScope_resetAt(ctx, field)
+			case "windowStartedAt":
+				return ec.fieldContext_CredentialQuotaScope_windowStartedAt(ctx, field)
+			case "overLimitAction":
+				return ec.fieldContext_CredentialQuotaScope_overLimitAction(ctx, field)
+			case "pauseUntil":
+				return ec.fieldContext_CredentialQuotaScope_pauseUntil(ctx, field)
+			case "source":
+				return ec.fieldContext_CredentialQuotaScope_source(ctx, field)
+			case "lastError":
+				return ec.fieldContext_CredentialQuotaScope_lastError(ctx, field)
+			case "remark":
+				return ec.fieldContext_CredentialQuotaScope_remark(ctx, field)
+			case "credentials":
+				return ec.fieldContext_CredentialQuotaScope_credentials(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_CredentialQuotaScope_providerQuotaStatuses(ctx, field)
+			case "executions":
+				return ec.fieldContext_CredentialQuotaScope_executions(ctx, field)
+			case "usageLogs":
+				return ec.fieldContext_CredentialQuotaScope_usageLogs(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CredentialQuotaScope", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createCredentialQuotaScope_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateCredentialQuotaScope(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_updateCredentialQuotaScope,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().UpdateCredentialQuotaScope(ctx, fc.Args["id"].(objects.GUID), fc.Args["input"].(biz.UpdateCredentialQuotaScopeInput))
+		},
+		nil,
+		ec.marshalNCredentialQuotaScope2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScope,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateCredentialQuotaScope(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_CredentialQuotaScope_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_CredentialQuotaScope_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_CredentialQuotaScope_updatedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_CredentialQuotaScope_name(ctx, field)
+			case "status":
+				return ec.fieldContext_CredentialQuotaScope_status(ctx, field)
+			case "unit":
+				return ec.fieldContext_CredentialQuotaScope_unit(ctx, field)
+			case "limitAmount":
+				return ec.fieldContext_CredentialQuotaScope_limitAmount(ctx, field)
+			case "usedAmount":
+				return ec.fieldContext_CredentialQuotaScope_usedAmount(ctx, field)
+			case "warningThresholdPercent":
+				return ec.fieldContext_CredentialQuotaScope_warningThresholdPercent(ctx, field)
+			case "resetPolicy":
+				return ec.fieldContext_CredentialQuotaScope_resetPolicy(ctx, field)
+			case "resetAt":
+				return ec.fieldContext_CredentialQuotaScope_resetAt(ctx, field)
+			case "windowStartedAt":
+				return ec.fieldContext_CredentialQuotaScope_windowStartedAt(ctx, field)
+			case "overLimitAction":
+				return ec.fieldContext_CredentialQuotaScope_overLimitAction(ctx, field)
+			case "pauseUntil":
+				return ec.fieldContext_CredentialQuotaScope_pauseUntil(ctx, field)
+			case "source":
+				return ec.fieldContext_CredentialQuotaScope_source(ctx, field)
+			case "lastError":
+				return ec.fieldContext_CredentialQuotaScope_lastError(ctx, field)
+			case "remark":
+				return ec.fieldContext_CredentialQuotaScope_remark(ctx, field)
+			case "credentials":
+				return ec.fieldContext_CredentialQuotaScope_credentials(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_CredentialQuotaScope_providerQuotaStatuses(ctx, field)
+			case "executions":
+				return ec.fieldContext_CredentialQuotaScope_executions(ctx, field)
+			case "usageLogs":
+				return ec.fieldContext_CredentialQuotaScope_usageLogs(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CredentialQuotaScope", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateCredentialQuotaScope_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -31829,26 +33504,16 @@ func (ec *executionContext) fieldContext_Mutation_rotateUpstreamCredentialSecret
 				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
 			case "name":
 				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "providerType":
-				return ec.fieldContext_UpstreamCredential_providerType(ctx, field)
-			case "baseURL":
-				return ec.fieldContext_UpstreamCredential_baseURL(ctx, field)
-			case "authKind":
-				return ec.fieldContext_UpstreamCredential_authKind(ctx, field)
-			case "secretKind":
-				return ec.fieldContext_UpstreamCredential_secretKind(ctx, field)
-			case "issuerScope":
-				return ec.fieldContext_UpstreamCredential_issuerScope(ctx, field)
 			case "keyHint":
 				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
 			case "fingerprint":
 				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
+			case "secretFingerprint":
+				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
 			case "status":
 				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "weight":
-				return ec.fieldContext_UpstreamCredential_weight(ctx, field)
 			case "quotaStatus":
 				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
 			case "lastError":
@@ -31863,6 +33528,8 @@ func (ec *executionContext) fieldContext_Mutation_rotateUpstreamCredentialSecret
 				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
 			case "providerQuotaStatuses":
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
+			case "quotaScope":
+				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
 		},
@@ -31914,26 +33581,16 @@ func (ec *executionContext) fieldContext_Mutation_updateUpstreamCredentialStatus
 				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
 			case "name":
 				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "providerType":
-				return ec.fieldContext_UpstreamCredential_providerType(ctx, field)
-			case "baseURL":
-				return ec.fieldContext_UpstreamCredential_baseURL(ctx, field)
-			case "authKind":
-				return ec.fieldContext_UpstreamCredential_authKind(ctx, field)
-			case "secretKind":
-				return ec.fieldContext_UpstreamCredential_secretKind(ctx, field)
-			case "issuerScope":
-				return ec.fieldContext_UpstreamCredential_issuerScope(ctx, field)
 			case "keyHint":
 				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
 			case "fingerprint":
 				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
+			case "secretFingerprint":
+				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
 			case "status":
 				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "weight":
-				return ec.fieldContext_UpstreamCredential_weight(ctx, field)
 			case "quotaStatus":
 				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
 			case "lastError":
@@ -31948,6 +33605,8 @@ func (ec *executionContext) fieldContext_Mutation_updateUpstreamCredentialStatus
 				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
 			case "providerQuotaStatuses":
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
+			case "quotaScope":
+				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
 		},
@@ -32003,8 +33662,6 @@ func (ec *executionContext) fieldContext_Mutation_attachCredentialToChannel(ctx 
 				return ec.fieldContext_ChannelCredentialRef_credentialID(ctx, field)
 			case "enabled":
 				return ec.fieldContext_ChannelCredentialRef_enabled(ctx, field)
-			case "weightOverride":
-				return ec.fieldContext_ChannelCredentialRef_weightOverride(ctx, field)
 			case "channel":
 				return ec.fieldContext_ChannelCredentialRef_channel(ctx, field)
 			case "credential":
@@ -32064,8 +33721,6 @@ func (ec *executionContext) fieldContext_Mutation_updateChannelCredentialRef(ctx
 				return ec.fieldContext_ChannelCredentialRef_credentialID(ctx, field)
 			case "enabled":
 				return ec.fieldContext_ChannelCredentialRef_enabled(ctx, field)
-			case "weightOverride":
-				return ec.fieldContext_ChannelCredentialRef_weightOverride(ctx, field)
 			case "channel":
 				return ec.fieldContext_ChannelCredentialRef_channel(ctx, field)
 			case "credential":
@@ -40849,9 +42504,9 @@ func (ec *executionContext) _ProviderQuotaStatus_channelID(ctx context.Context, 
 			return ec.resolvers.ProviderQuotaStatus().ChannelID(ctx, obj)
 		},
 		nil,
-		ec.marshalNID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID,
+		ec.marshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID,
 		true,
-		true,
+		false,
 	)
 }
 
@@ -40863,6 +42518,35 @@ func (ec *executionContext) fieldContext_ProviderQuotaStatus_channelID(_ context
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProviderQuotaStatus_scopeKey(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ProviderQuotaStatus_scopeKey,
+		func(ctx context.Context) (any, error) {
+			return obj.ScopeKey, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ProviderQuotaStatus_scopeKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProviderQuotaStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -40921,6 +42605,93 @@ func (ec *executionContext) fieldContext_ProviderQuotaStatus_credentialFingerpri
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProviderQuotaStatus_secretFingerprint(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ProviderQuotaStatus_secretFingerprint,
+		func(ctx context.Context) (any, error) {
+			return obj.SecretFingerprint, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_ProviderQuotaStatus_secretFingerprint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProviderQuotaStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProviderQuotaStatus_resourceScopeKey(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ProviderQuotaStatus_resourceScopeKey,
+		func(ctx context.Context) (any, error) {
+			return obj.ResourceScopeKey, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_ProviderQuotaStatus_resourceScopeKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProviderQuotaStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProviderQuotaStatus_quotaScopeID(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ProviderQuotaStatus_quotaScopeID,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.ProviderQuotaStatus().QuotaScopeID(ctx, obj)
+		},
+		nil,
+		ec.marshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_ProviderQuotaStatus_quotaScopeID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProviderQuotaStatus",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -41110,9 +42881,9 @@ func (ec *executionContext) _ProviderQuotaStatus_channel(ctx context.Context, fi
 			return obj.Channel(ctx)
 		},
 		nil,
-		ec.marshalNChannel2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐChannel,
+		ec.marshalOChannel2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐChannel,
 		true,
-		true,
+		false,
 	)
 }
 
@@ -41174,8 +42945,8 @@ func (ec *executionContext) fieldContext_ProviderQuotaStatus_channel(_ context.C
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -41184,6 +42955,8 @@ func (ec *executionContext) fieldContext_ProviderQuotaStatus_channel(_ context.C
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -41225,26 +42998,16 @@ func (ec *executionContext) fieldContext_ProviderQuotaStatus_credential(_ contex
 				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
 			case "name":
 				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "providerType":
-				return ec.fieldContext_UpstreamCredential_providerType(ctx, field)
-			case "baseURL":
-				return ec.fieldContext_UpstreamCredential_baseURL(ctx, field)
-			case "authKind":
-				return ec.fieldContext_UpstreamCredential_authKind(ctx, field)
-			case "secretKind":
-				return ec.fieldContext_UpstreamCredential_secretKind(ctx, field)
-			case "issuerScope":
-				return ec.fieldContext_UpstreamCredential_issuerScope(ctx, field)
 			case "keyHint":
 				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
 			case "fingerprint":
 				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
+			case "secretFingerprint":
+				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
 			case "status":
 				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "weight":
-				return ec.fieldContext_UpstreamCredential_weight(ctx, field)
 			case "quotaStatus":
 				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
 			case "lastError":
@@ -41259,8 +43022,83 @@ func (ec *executionContext) fieldContext_ProviderQuotaStatus_credential(_ contex
 				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
 			case "providerQuotaStatuses":
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
+			case "quotaScope":
+				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ProviderQuotaStatus_quotaScope(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ProviderQuotaStatus_quotaScope,
+		func(ctx context.Context) (any, error) {
+			return obj.QuotaScope(ctx)
+		},
+		nil,
+		ec.marshalOCredentialQuotaScope2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScope,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_ProviderQuotaStatus_quotaScope(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ProviderQuotaStatus",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_CredentialQuotaScope_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_CredentialQuotaScope_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_CredentialQuotaScope_updatedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_CredentialQuotaScope_name(ctx, field)
+			case "status":
+				return ec.fieldContext_CredentialQuotaScope_status(ctx, field)
+			case "unit":
+				return ec.fieldContext_CredentialQuotaScope_unit(ctx, field)
+			case "limitAmount":
+				return ec.fieldContext_CredentialQuotaScope_limitAmount(ctx, field)
+			case "usedAmount":
+				return ec.fieldContext_CredentialQuotaScope_usedAmount(ctx, field)
+			case "warningThresholdPercent":
+				return ec.fieldContext_CredentialQuotaScope_warningThresholdPercent(ctx, field)
+			case "resetPolicy":
+				return ec.fieldContext_CredentialQuotaScope_resetPolicy(ctx, field)
+			case "resetAt":
+				return ec.fieldContext_CredentialQuotaScope_resetAt(ctx, field)
+			case "windowStartedAt":
+				return ec.fieldContext_CredentialQuotaScope_windowStartedAt(ctx, field)
+			case "overLimitAction":
+				return ec.fieldContext_CredentialQuotaScope_overLimitAction(ctx, field)
+			case "pauseUntil":
+				return ec.fieldContext_CredentialQuotaScope_pauseUntil(ctx, field)
+			case "source":
+				return ec.fieldContext_CredentialQuotaScope_source(ctx, field)
+			case "lastError":
+				return ec.fieldContext_CredentialQuotaScope_lastError(ctx, field)
+			case "remark":
+				return ec.fieldContext_CredentialQuotaScope_remark(ctx, field)
+			case "credentials":
+				return ec.fieldContext_CredentialQuotaScope_credentials(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_CredentialQuotaScope_providerQuotaStatuses(ctx, field)
+			case "executions":
+				return ec.fieldContext_CredentialQuotaScope_executions(ctx, field)
+			case "usageLogs":
+				return ec.fieldContext_CredentialQuotaScope_usageLogs(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CredentialQuotaScope", field.Name)
 		},
 	}
 	return fc, nil
@@ -41819,6 +43657,55 @@ func (ec *executionContext) fieldContext_Query_channelOverrideTemplates(ctx cont
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_channelOverrideTemplates_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_credentialQuotaScopes(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_credentialQuotaScopes,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().CredentialQuotaScopes(ctx, fc.Args["after"].(*entgql.Cursor[int]), fc.Args["first"].(*int), fc.Args["before"].(*entgql.Cursor[int]), fc.Args["last"].(*int), fc.Args["orderBy"].(*ent.CredentialQuotaScopeOrder), fc.Args["where"].(*ent.CredentialQuotaScopeWhereInput))
+		},
+		nil,
+		ec.marshalNCredentialQuotaScopeConnection2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeConnection,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_credentialQuotaScopes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "edges":
+				return ec.fieldContext_CredentialQuotaScopeConnection_edges(ctx, field)
+			case "pageInfo":
+				return ec.fieldContext_CredentialQuotaScopeConnection_pageInfo(ctx, field)
+			case "totalCount":
+				return ec.fieldContext_CredentialQuotaScopeConnection_totalCount(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CredentialQuotaScopeConnection", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_credentialQuotaScopes_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -42586,8 +44473,8 @@ func (ec *executionContext) fieldContext_Query_allChannelSummarys(ctx context.Co
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -42596,6 +44483,8 @@ func (ec *executionContext) fieldContext_Query_allChannelSummarys(ctx context.Co
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -46330,8 +48219,8 @@ func (ec *executionContext) fieldContext_Request_channel(_ context.Context, fiel
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -46340,6 +48229,8 @@ func (ec *executionContext) fieldContext_Request_channel(_ context.Context, fiel
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -46936,6 +48827,151 @@ func (ec *executionContext) _RequestExecution_credentialFingerprint(ctx context.
 }
 
 func (ec *executionContext) fieldContext_RequestExecution_credentialFingerprint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RequestExecution",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RequestExecution_secretFingerprint(ctx context.Context, field graphql.CollectedField, obj *ent.RequestExecution) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RequestExecution_secretFingerprint,
+		func(ctx context.Context) (any, error) {
+			return obj.SecretFingerprint, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_RequestExecution_secretFingerprint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RequestExecution",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RequestExecution_resourceScopeKey(ctx context.Context, field graphql.CollectedField, obj *ent.RequestExecution) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RequestExecution_resourceScopeKey,
+		func(ctx context.Context) (any, error) {
+			return obj.ResourceScopeKey, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_RequestExecution_resourceScopeKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RequestExecution",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RequestExecution_quotaScopeID(ctx context.Context, field graphql.CollectedField, obj *ent.RequestExecution) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RequestExecution_quotaScopeID,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.RequestExecution().QuotaScopeID(ctx, obj)
+		},
+		nil,
+		ec.marshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_RequestExecution_quotaScopeID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RequestExecution",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RequestExecution_quotaScopeNameSnapshot(ctx context.Context, field graphql.CollectedField, obj *ent.RequestExecution) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RequestExecution_quotaScopeNameSnapshot,
+		func(ctx context.Context) (any, error) {
+			return obj.QuotaScopeNameSnapshot, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_RequestExecution_quotaScopeNameSnapshot(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RequestExecution",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RequestExecution_quotaScopeStatusSnapshot(ctx context.Context, field graphql.CollectedField, obj *ent.RequestExecution) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RequestExecution_quotaScopeStatusSnapshot,
+		func(ctx context.Context) (any, error) {
+			return obj.QuotaScopeStatusSnapshot, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_RequestExecution_quotaScopeStatusSnapshot(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "RequestExecution",
 		Field:      field,
@@ -47585,8 +49621,8 @@ func (ec *executionContext) fieldContext_RequestExecution_channel(_ context.Cont
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -47595,6 +49631,8 @@ func (ec *executionContext) fieldContext_RequestExecution_channel(_ context.Cont
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -47636,26 +49674,16 @@ func (ec *executionContext) fieldContext_RequestExecution_credential(_ context.C
 				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
 			case "name":
 				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "providerType":
-				return ec.fieldContext_UpstreamCredential_providerType(ctx, field)
-			case "baseURL":
-				return ec.fieldContext_UpstreamCredential_baseURL(ctx, field)
-			case "authKind":
-				return ec.fieldContext_UpstreamCredential_authKind(ctx, field)
-			case "secretKind":
-				return ec.fieldContext_UpstreamCredential_secretKind(ctx, field)
-			case "issuerScope":
-				return ec.fieldContext_UpstreamCredential_issuerScope(ctx, field)
 			case "keyHint":
 				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
 			case "fingerprint":
 				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
+			case "secretFingerprint":
+				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
 			case "status":
 				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "weight":
-				return ec.fieldContext_UpstreamCredential_weight(ctx, field)
 			case "quotaStatus":
 				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
 			case "lastError":
@@ -47670,8 +49698,83 @@ func (ec *executionContext) fieldContext_RequestExecution_credential(_ context.C
 				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
 			case "providerQuotaStatuses":
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
+			case "quotaScope":
+				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RequestExecution_quotaScope(ctx context.Context, field graphql.CollectedField, obj *ent.RequestExecution) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RequestExecution_quotaScope,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.RequestExecution().QuotaScope(ctx, obj)
+		},
+		nil,
+		ec.marshalOCredentialQuotaScope2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScope,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_RequestExecution_quotaScope(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RequestExecution",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_CredentialQuotaScope_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_CredentialQuotaScope_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_CredentialQuotaScope_updatedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_CredentialQuotaScope_name(ctx, field)
+			case "status":
+				return ec.fieldContext_CredentialQuotaScope_status(ctx, field)
+			case "unit":
+				return ec.fieldContext_CredentialQuotaScope_unit(ctx, field)
+			case "limitAmount":
+				return ec.fieldContext_CredentialQuotaScope_limitAmount(ctx, field)
+			case "usedAmount":
+				return ec.fieldContext_CredentialQuotaScope_usedAmount(ctx, field)
+			case "warningThresholdPercent":
+				return ec.fieldContext_CredentialQuotaScope_warningThresholdPercent(ctx, field)
+			case "resetPolicy":
+				return ec.fieldContext_CredentialQuotaScope_resetPolicy(ctx, field)
+			case "resetAt":
+				return ec.fieldContext_CredentialQuotaScope_resetAt(ctx, field)
+			case "windowStartedAt":
+				return ec.fieldContext_CredentialQuotaScope_windowStartedAt(ctx, field)
+			case "overLimitAction":
+				return ec.fieldContext_CredentialQuotaScope_overLimitAction(ctx, field)
+			case "pauseUntil":
+				return ec.fieldContext_CredentialQuotaScope_pauseUntil(ctx, field)
+			case "source":
+				return ec.fieldContext_CredentialQuotaScope_source(ctx, field)
+			case "lastError":
+				return ec.fieldContext_CredentialQuotaScope_lastError(ctx, field)
+			case "remark":
+				return ec.fieldContext_CredentialQuotaScope_remark(ctx, field)
+			case "credentials":
+				return ec.fieldContext_CredentialQuotaScope_credentials(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_CredentialQuotaScope_providerQuotaStatuses(ctx, field)
+			case "executions":
+				return ec.fieldContext_CredentialQuotaScope_executions(ctx, field)
+			case "usageLogs":
+				return ec.fieldContext_CredentialQuotaScope_usageLogs(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CredentialQuotaScope", field.Name)
 		},
 	}
 	return fc, nil
@@ -47879,6 +49982,16 @@ func (ec *executionContext) fieldContext_RequestExecutionEdge_node(_ context.Con
 				return ec.fieldContext_RequestExecution_modelID(ctx, field)
 			case "credentialFingerprint":
 				return ec.fieldContext_RequestExecution_credentialFingerprint(ctx, field)
+			case "secretFingerprint":
+				return ec.fieldContext_RequestExecution_secretFingerprint(ctx, field)
+			case "resourceScopeKey":
+				return ec.fieldContext_RequestExecution_resourceScopeKey(ctx, field)
+			case "quotaScopeID":
+				return ec.fieldContext_RequestExecution_quotaScopeID(ctx, field)
+			case "quotaScopeNameSnapshot":
+				return ec.fieldContext_RequestExecution_quotaScopeNameSnapshot(ctx, field)
+			case "quotaScopeStatusSnapshot":
+				return ec.fieldContext_RequestExecution_quotaScopeStatusSnapshot(ctx, field)
 			case "credentialNameSnapshot":
 				return ec.fieldContext_RequestExecution_credentialNameSnapshot(ctx, field)
 			case "credentialKeyHint":
@@ -47917,6 +50030,8 @@ func (ec *executionContext) fieldContext_RequestExecutionEdge_node(_ context.Con
 				return ec.fieldContext_RequestExecution_channel(ctx, field)
 			case "credential":
 				return ec.fieldContext_RequestExecution_credential(ctx, field)
+			case "quotaScope":
+				return ec.fieldContext_RequestExecution_quotaScope(ctx, field)
 			case "dataStorage":
 				return ec.fieldContext_RequestExecution_dataStorage(ctx, field)
 			}
@@ -54874,8 +56989,8 @@ func (ec *executionContext) fieldContext_UnassociatedChannel_channel(_ context.C
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -54884,6 +56999,8 @@ func (ec *executionContext) fieldContext_UnassociatedChannel_channel(_ context.C
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -55038,151 +57155,6 @@ func (ec *executionContext) fieldContext_UpstreamCredential_name(_ context.Conte
 	return fc, nil
 }
 
-func (ec *executionContext) _UpstreamCredential_providerType(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredential) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_UpstreamCredential_providerType,
-		func(ctx context.Context) (any, error) {
-			return obj.ProviderType, nil
-		},
-		nil,
-		ec.marshalNString2string,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_UpstreamCredential_providerType(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UpstreamCredential",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _UpstreamCredential_baseURL(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredential) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_UpstreamCredential_baseURL,
-		func(ctx context.Context) (any, error) {
-			return obj.BaseURL, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_UpstreamCredential_baseURL(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UpstreamCredential",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _UpstreamCredential_authKind(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredential) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_UpstreamCredential_authKind,
-		func(ctx context.Context) (any, error) {
-			return obj.AuthKind, nil
-		},
-		nil,
-		ec.marshalNUpstreamCredentialAuthKind2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐAuthKind,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_UpstreamCredential_authKind(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UpstreamCredential",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type UpstreamCredentialAuthKind does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _UpstreamCredential_secretKind(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredential) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_UpstreamCredential_secretKind,
-		func(ctx context.Context) (any, error) {
-			return obj.SecretKind, nil
-		},
-		nil,
-		ec.marshalNUpstreamCredentialSecretKind2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐSecretKind,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_UpstreamCredential_secretKind(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UpstreamCredential",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type UpstreamCredentialSecretKind does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _UpstreamCredential_issuerScope(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredential) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_UpstreamCredential_issuerScope,
-		func(ctx context.Context) (any, error) {
-			return obj.IssuerScope, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_UpstreamCredential_issuerScope(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UpstreamCredential",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _UpstreamCredential_keyHint(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredential) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -55219,10 +57191,10 @@ func (ec *executionContext) _UpstreamCredential_quotaScopeID(ctx context.Context
 		field,
 		ec.fieldContext_UpstreamCredential_quotaScopeID,
 		func(ctx context.Context) (any, error) {
-			return obj.QuotaScopeID, nil
+			return ec.resolvers.UpstreamCredential().QuotaScopeID(ctx, obj)
 		},
 		nil,
-		ec.marshalOInt2ᚖint,
+		ec.marshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID,
 		true,
 		false,
 	)
@@ -55232,10 +57204,10 @@ func (ec *executionContext) fieldContext_UpstreamCredential_quotaScopeID(_ conte
 	fc = &graphql.FieldContext{
 		Object:     "UpstreamCredential",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
+			return nil, errors.New("field of type ID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -55258,6 +57230,35 @@ func (ec *executionContext) _UpstreamCredential_fingerprint(ctx context.Context,
 }
 
 func (ec *executionContext) fieldContext_UpstreamCredential_fingerprint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UpstreamCredential",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UpstreamCredential_secretFingerprint(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredential) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UpstreamCredential_secretFingerprint,
+		func(ctx context.Context) (any, error) {
+			return obj.SecretFingerprint, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_UpstreamCredential_secretFingerprint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "UpstreamCredential",
 		Field:      field,
@@ -55294,35 +57295,6 @@ func (ec *executionContext) fieldContext_UpstreamCredential_status(_ context.Con
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type UpstreamCredentialStatus does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _UpstreamCredential_weight(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredential) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_UpstreamCredential_weight,
-		func(ctx context.Context) (any, error) {
-			return obj.Weight, nil
-		},
-		nil,
-		ec.marshalNInt2int,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_UpstreamCredential_weight(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UpstreamCredential",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -55594,10 +57566,18 @@ func (ec *executionContext) fieldContext_UpstreamCredential_providerQuotaStatuse
 				return ec.fieldContext_ProviderQuotaStatus_updatedAt(ctx, field)
 			case "channelID":
 				return ec.fieldContext_ProviderQuotaStatus_channelID(ctx, field)
+			case "scopeKey":
+				return ec.fieldContext_ProviderQuotaStatus_scopeKey(ctx, field)
 			case "credentialID":
 				return ec.fieldContext_ProviderQuotaStatus_credentialID(ctx, field)
 			case "credentialFingerprint":
 				return ec.fieldContext_ProviderQuotaStatus_credentialFingerprint(ctx, field)
+			case "secretFingerprint":
+				return ec.fieldContext_ProviderQuotaStatus_secretFingerprint(ctx, field)
+			case "resourceScopeKey":
+				return ec.fieldContext_ProviderQuotaStatus_resourceScopeKey(ctx, field)
+			case "quotaScopeID":
+				return ec.fieldContext_ProviderQuotaStatus_quotaScopeID(ctx, field)
 			case "providerType":
 				return ec.fieldContext_ProviderQuotaStatus_providerType(ctx, field)
 			case "status":
@@ -55614,8 +57594,83 @@ func (ec *executionContext) fieldContext_UpstreamCredential_providerQuotaStatuse
 				return ec.fieldContext_ProviderQuotaStatus_channel(ctx, field)
 			case "credential":
 				return ec.fieldContext_ProviderQuotaStatus_credential(ctx, field)
+			case "quotaScope":
+				return ec.fieldContext_ProviderQuotaStatus_quotaScope(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ProviderQuotaStatus", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UpstreamCredential_quotaScope(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredential) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UpstreamCredential_quotaScope,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.UpstreamCredential().QuotaScope(ctx, obj)
+		},
+		nil,
+		ec.marshalOCredentialQuotaScope2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScope,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_UpstreamCredential_quotaScope(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UpstreamCredential",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_CredentialQuotaScope_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_CredentialQuotaScope_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_CredentialQuotaScope_updatedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_CredentialQuotaScope_name(ctx, field)
+			case "status":
+				return ec.fieldContext_CredentialQuotaScope_status(ctx, field)
+			case "unit":
+				return ec.fieldContext_CredentialQuotaScope_unit(ctx, field)
+			case "limitAmount":
+				return ec.fieldContext_CredentialQuotaScope_limitAmount(ctx, field)
+			case "usedAmount":
+				return ec.fieldContext_CredentialQuotaScope_usedAmount(ctx, field)
+			case "warningThresholdPercent":
+				return ec.fieldContext_CredentialQuotaScope_warningThresholdPercent(ctx, field)
+			case "resetPolicy":
+				return ec.fieldContext_CredentialQuotaScope_resetPolicy(ctx, field)
+			case "resetAt":
+				return ec.fieldContext_CredentialQuotaScope_resetAt(ctx, field)
+			case "windowStartedAt":
+				return ec.fieldContext_CredentialQuotaScope_windowStartedAt(ctx, field)
+			case "overLimitAction":
+				return ec.fieldContext_CredentialQuotaScope_overLimitAction(ctx, field)
+			case "pauseUntil":
+				return ec.fieldContext_CredentialQuotaScope_pauseUntil(ctx, field)
+			case "source":
+				return ec.fieldContext_CredentialQuotaScope_source(ctx, field)
+			case "lastError":
+				return ec.fieldContext_CredentialQuotaScope_lastError(ctx, field)
+			case "remark":
+				return ec.fieldContext_CredentialQuotaScope_remark(ctx, field)
+			case "credentials":
+				return ec.fieldContext_CredentialQuotaScope_credentials(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_CredentialQuotaScope_providerQuotaStatuses(ctx, field)
+			case "executions":
+				return ec.fieldContext_CredentialQuotaScope_executions(ctx, field)
+			case "usageLogs":
+				return ec.fieldContext_CredentialQuotaScope_usageLogs(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CredentialQuotaScope", field.Name)
 		},
 	}
 	return fc, nil
@@ -55756,26 +57811,16 @@ func (ec *executionContext) fieldContext_UpstreamCredentialEdge_node(_ context.C
 				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
 			case "name":
 				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "providerType":
-				return ec.fieldContext_UpstreamCredential_providerType(ctx, field)
-			case "baseURL":
-				return ec.fieldContext_UpstreamCredential_baseURL(ctx, field)
-			case "authKind":
-				return ec.fieldContext_UpstreamCredential_authKind(ctx, field)
-			case "secretKind":
-				return ec.fieldContext_UpstreamCredential_secretKind(ctx, field)
-			case "issuerScope":
-				return ec.fieldContext_UpstreamCredential_issuerScope(ctx, field)
 			case "keyHint":
 				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
 			case "fingerprint":
 				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
+			case "secretFingerprint":
+				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
 			case "status":
 				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "weight":
-				return ec.fieldContext_UpstreamCredential_weight(ctx, field)
 			case "quotaStatus":
 				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
 			case "lastError":
@@ -55790,6 +57835,8 @@ func (ec *executionContext) fieldContext_UpstreamCredentialEdge_node(_ context.C
 				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
 			case "providerQuotaStatuses":
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
+			case "quotaScope":
+				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
 		},
@@ -56174,6 +58221,151 @@ func (ec *executionContext) fieldContext_UsageLog_credentialFingerprint(_ contex
 	return fc, nil
 }
 
+func (ec *executionContext) _UsageLog_secretFingerprint(ctx context.Context, field graphql.CollectedField, obj *ent.UsageLog) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UsageLog_secretFingerprint,
+		func(ctx context.Context) (any, error) {
+			return obj.SecretFingerprint, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_UsageLog_secretFingerprint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UsageLog",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UsageLog_resourceScopeKey(ctx context.Context, field graphql.CollectedField, obj *ent.UsageLog) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UsageLog_resourceScopeKey,
+		func(ctx context.Context) (any, error) {
+			return obj.ResourceScopeKey, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_UsageLog_resourceScopeKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UsageLog",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UsageLog_quotaScopeID(ctx context.Context, field graphql.CollectedField, obj *ent.UsageLog) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UsageLog_quotaScopeID,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.UsageLog().QuotaScopeID(ctx, obj)
+		},
+		nil,
+		ec.marshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_UsageLog_quotaScopeID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UsageLog",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UsageLog_quotaScopeNameSnapshot(ctx context.Context, field graphql.CollectedField, obj *ent.UsageLog) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UsageLog_quotaScopeNameSnapshot,
+		func(ctx context.Context) (any, error) {
+			return obj.QuotaScopeNameSnapshot, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_UsageLog_quotaScopeNameSnapshot(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UsageLog",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UsageLog_quotaScopeStatusSnapshot(ctx context.Context, field graphql.CollectedField, obj *ent.UsageLog) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UsageLog_quotaScopeStatusSnapshot,
+		func(ctx context.Context) (any, error) {
+			return obj.QuotaScopeStatusSnapshot, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_UsageLog_quotaScopeStatusSnapshot(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UsageLog",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _UsageLog_credentialNameSnapshot(ctx context.Context, field graphql.CollectedField, obj *ent.UsageLog) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -56249,6 +58441,35 @@ func (ec *executionContext) _UsageLog_credentialSource(ctx context.Context, fiel
 }
 
 func (ec *executionContext) fieldContext_UsageLog_credentialSource(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UsageLog",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UsageLog_credentialQuotaStatusSnapshot(ctx context.Context, field graphql.CollectedField, obj *ent.UsageLog) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UsageLog_credentialQuotaStatusSnapshot,
+		func(ctx context.Context) (any, error) {
+			return obj.CredentialQuotaStatusSnapshot, nil
+		},
+		nil,
+		ec.marshalOString2string,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_UsageLog_credentialQuotaStatusSnapshot(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "UsageLog",
 		Field:      field,
@@ -57002,8 +59223,8 @@ func (ec *executionContext) fieldContext_UsageLog_channel(_ context.Context, fie
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
@@ -57012,6 +59233,8 @@ func (ec *executionContext) fieldContext_UsageLog_channel(_ context.Context, fie
 				return ec.fieldContext_Channel_credentials(ctx, field)
 			case "disabledAPIKeys":
 				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
+			case "providerQuotaStatus":
+				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -57053,26 +59276,16 @@ func (ec *executionContext) fieldContext_UsageLog_credential(_ context.Context, 
 				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
 			case "name":
 				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "providerType":
-				return ec.fieldContext_UpstreamCredential_providerType(ctx, field)
-			case "baseURL":
-				return ec.fieldContext_UpstreamCredential_baseURL(ctx, field)
-			case "authKind":
-				return ec.fieldContext_UpstreamCredential_authKind(ctx, field)
-			case "secretKind":
-				return ec.fieldContext_UpstreamCredential_secretKind(ctx, field)
-			case "issuerScope":
-				return ec.fieldContext_UpstreamCredential_issuerScope(ctx, field)
 			case "keyHint":
 				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
 			case "fingerprint":
 				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
+			case "secretFingerprint":
+				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
 			case "status":
 				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "weight":
-				return ec.fieldContext_UpstreamCredential_weight(ctx, field)
 			case "quotaStatus":
 				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
 			case "lastError":
@@ -57087,8 +59300,83 @@ func (ec *executionContext) fieldContext_UsageLog_credential(_ context.Context, 
 				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
 			case "providerQuotaStatuses":
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
+			case "quotaScope":
+				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UsageLog_quotaScope(ctx context.Context, field graphql.CollectedField, obj *ent.UsageLog) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UsageLog_quotaScope,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.UsageLog().QuotaScope(ctx, obj)
+		},
+		nil,
+		ec.marshalOCredentialQuotaScope2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScope,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_UsageLog_quotaScope(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UsageLog",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_CredentialQuotaScope_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_CredentialQuotaScope_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_CredentialQuotaScope_updatedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_CredentialQuotaScope_name(ctx, field)
+			case "status":
+				return ec.fieldContext_CredentialQuotaScope_status(ctx, field)
+			case "unit":
+				return ec.fieldContext_CredentialQuotaScope_unit(ctx, field)
+			case "limitAmount":
+				return ec.fieldContext_CredentialQuotaScope_limitAmount(ctx, field)
+			case "usedAmount":
+				return ec.fieldContext_CredentialQuotaScope_usedAmount(ctx, field)
+			case "warningThresholdPercent":
+				return ec.fieldContext_CredentialQuotaScope_warningThresholdPercent(ctx, field)
+			case "resetPolicy":
+				return ec.fieldContext_CredentialQuotaScope_resetPolicy(ctx, field)
+			case "resetAt":
+				return ec.fieldContext_CredentialQuotaScope_resetAt(ctx, field)
+			case "windowStartedAt":
+				return ec.fieldContext_CredentialQuotaScope_windowStartedAt(ctx, field)
+			case "overLimitAction":
+				return ec.fieldContext_CredentialQuotaScope_overLimitAction(ctx, field)
+			case "pauseUntil":
+				return ec.fieldContext_CredentialQuotaScope_pauseUntil(ctx, field)
+			case "source":
+				return ec.fieldContext_CredentialQuotaScope_source(ctx, field)
+			case "lastError":
+				return ec.fieldContext_CredentialQuotaScope_lastError(ctx, field)
+			case "remark":
+				return ec.fieldContext_CredentialQuotaScope_remark(ctx, field)
+			case "credentials":
+				return ec.fieldContext_CredentialQuotaScope_credentials(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_CredentialQuotaScope_providerQuotaStatuses(ctx, field)
+			case "executions":
+				return ec.fieldContext_CredentialQuotaScope_executions(ctx, field)
+			case "usageLogs":
+				return ec.fieldContext_CredentialQuotaScope_usageLogs(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type CredentialQuotaScope", field.Name)
 		},
 	}
 	return fc, nil
@@ -57241,12 +59529,24 @@ func (ec *executionContext) fieldContext_UsageLogEdge_node(_ context.Context, fi
 				return ec.fieldContext_UsageLog_modelID(ctx, field)
 			case "credentialFingerprint":
 				return ec.fieldContext_UsageLog_credentialFingerprint(ctx, field)
+			case "secretFingerprint":
+				return ec.fieldContext_UsageLog_secretFingerprint(ctx, field)
+			case "resourceScopeKey":
+				return ec.fieldContext_UsageLog_resourceScopeKey(ctx, field)
+			case "quotaScopeID":
+				return ec.fieldContext_UsageLog_quotaScopeID(ctx, field)
+			case "quotaScopeNameSnapshot":
+				return ec.fieldContext_UsageLog_quotaScopeNameSnapshot(ctx, field)
+			case "quotaScopeStatusSnapshot":
+				return ec.fieldContext_UsageLog_quotaScopeStatusSnapshot(ctx, field)
 			case "credentialNameSnapshot":
 				return ec.fieldContext_UsageLog_credentialNameSnapshot(ctx, field)
 			case "credentialKeyHint":
 				return ec.fieldContext_UsageLog_credentialKeyHint(ctx, field)
 			case "credentialSource":
 				return ec.fieldContext_UsageLog_credentialSource(ctx, field)
+			case "credentialQuotaStatusSnapshot":
+				return ec.fieldContext_UsageLog_credentialQuotaStatusSnapshot(ctx, field)
 			case "promptTokens":
 				return ec.fieldContext_UsageLog_promptTokens(ctx, field)
 			case "completionTokens":
@@ -57289,6 +59589,8 @@ func (ec *executionContext) fieldContext_UsageLogEdge_node(_ context.Context, fi
 				return ec.fieldContext_UsageLog_channel(ctx, field)
 			case "credential":
 				return ec.fieldContext_UsageLog_credential(ctx, field)
+			case "quotaScope":
+				return ec.fieldContext_UsageLog_quotaScope(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UsageLog", field.Name)
 		},
@@ -63207,7 +65509,7 @@ func (ec *executionContext) unmarshalInputAttachCredentialToChannelInput(ctx con
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"channelID", "credentialID", "enabled", "weightOverride"}
+	fieldsInOrder := [...]string{"channelID", "credentialID", "enabled"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -63235,13 +65537,6 @@ func (ec *executionContext) unmarshalInputAttachCredentialToChannelInput(ctx con
 				return it, err
 			}
 			it.Enabled = data
-		case "weightOverride":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightOverride"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightOverride = data
 		}
 	}
 
@@ -63670,7 +65965,7 @@ func (ec *executionContext) unmarshalInputChannelCredentialRefWhereInput(ctx con
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "channelID", "channelIDNEQ", "channelIDIn", "channelIDNotIn", "credentialID", "credentialIDNEQ", "credentialIDIn", "credentialIDNotIn", "enabled", "enabledNEQ", "weightOverride", "weightOverrideNEQ", "weightOverrideIn", "weightOverrideNotIn", "weightOverrideGT", "weightOverrideGTE", "weightOverrideLT", "weightOverrideLTE", "weightOverrideIsNil", "weightOverrideNotNil", "hasChannel", "hasChannelWith", "hasCredential", "hasCredentialWith"}
+	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "channelID", "channelIDNEQ", "channelIDIn", "channelIDNotIn", "credentialID", "credentialIDNEQ", "credentialIDIn", "credentialIDNotIn", "enabled", "enabledNEQ", "hasChannel", "hasChannelWith", "hasCredential", "hasCredentialWith"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -64000,76 +66295,6 @@ func (ec *executionContext) unmarshalInputChannelCredentialRefWhereInput(ctx con
 				return it, err
 			}
 			it.EnabledNEQ = data
-		case "weightOverride":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightOverride"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightOverride = data
-		case "weightOverrideNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightOverrideNEQ"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightOverrideNEQ = data
-		case "weightOverrideIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightOverrideIn"))
-			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightOverrideIn = data
-		case "weightOverrideNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightOverrideNotIn"))
-			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightOverrideNotIn = data
-		case "weightOverrideGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightOverrideGT"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightOverrideGT = data
-		case "weightOverrideGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightOverrideGTE"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightOverrideGTE = data
-		case "weightOverrideLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightOverrideLT"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightOverrideLT = data
-		case "weightOverrideLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightOverrideLTE"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightOverrideLTE = data
-		case "weightOverrideIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightOverrideIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightOverrideIsNil = data
-		case "weightOverrideNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightOverrideNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightOverrideNotNil = data
 		case "hasChannel":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasChannel"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
@@ -67014,7 +69239,7 @@ func (ec *executionContext) unmarshalInputChannelWhereInput(ctx context.Context,
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "type", "typeNEQ", "typeIn", "typeNotIn", "baseURL", "baseURLNEQ", "baseURLIn", "baseURLNotIn", "baseURLGT", "baseURLGTE", "baseURLLT", "baseURLLTE", "baseURLContains", "baseURLHasPrefix", "baseURLHasSuffix", "baseURLIsNil", "baseURLNotNil", "baseURLEqualFold", "baseURLContainsFold", "name", "nameNEQ", "nameIn", "nameNotIn", "nameGT", "nameGTE", "nameLT", "nameLTE", "nameContains", "nameHasPrefix", "nameHasSuffix", "nameEqualFold", "nameContainsFold", "status", "statusNEQ", "statusIn", "statusNotIn", "autoSyncSupportedModels", "autoSyncSupportedModelsNEQ", "autoSyncModelPattern", "autoSyncModelPatternNEQ", "autoSyncModelPatternIn", "autoSyncModelPatternNotIn", "autoSyncModelPatternGT", "autoSyncModelPatternGTE", "autoSyncModelPatternLT", "autoSyncModelPatternLTE", "autoSyncModelPatternContains", "autoSyncModelPatternHasPrefix", "autoSyncModelPatternHasSuffix", "autoSyncModelPatternIsNil", "autoSyncModelPatternNotNil", "autoSyncModelPatternEqualFold", "autoSyncModelPatternContainsFold", "defaultTestModel", "defaultTestModelNEQ", "defaultTestModelIn", "defaultTestModelNotIn", "defaultTestModelGT", "defaultTestModelGTE", "defaultTestModelLT", "defaultTestModelLTE", "defaultTestModelContains", "defaultTestModelHasPrefix", "defaultTestModelHasSuffix", "defaultTestModelEqualFold", "defaultTestModelContainsFold", "orderingWeight", "orderingWeightNEQ", "orderingWeightIn", "orderingWeightNotIn", "orderingWeightGT", "orderingWeightGTE", "orderingWeightLT", "orderingWeightLTE", "errorMessage", "errorMessageNEQ", "errorMessageIn", "errorMessageNotIn", "errorMessageGT", "errorMessageGTE", "errorMessageLT", "errorMessageLTE", "errorMessageContains", "errorMessageHasPrefix", "errorMessageHasSuffix", "errorMessageIsNil", "errorMessageNotNil", "errorMessageEqualFold", "errorMessageContainsFold", "remark", "remarkNEQ", "remarkIn", "remarkNotIn", "remarkGT", "remarkGTE", "remarkLT", "remarkLTE", "remarkContains", "remarkHasPrefix", "remarkHasSuffix", "remarkIsNil", "remarkNotNil", "remarkEqualFold", "remarkContainsFold", "hasRequests", "hasRequestsWith", "hasExecutions", "hasExecutionsWith", "hasUsageLogs", "hasUsageLogsWith", "hasChannelProbes", "hasChannelProbesWith", "hasChannelModelPrices", "hasChannelModelPricesWith", "hasCredentialRefs", "hasCredentialRefsWith", "hasProviderQuotaStatus", "hasProviderQuotaStatusWith"}
+	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "type", "typeNEQ", "typeIn", "typeNotIn", "baseURL", "baseURLNEQ", "baseURLIn", "baseURLNotIn", "baseURLGT", "baseURLGTE", "baseURLLT", "baseURLLTE", "baseURLContains", "baseURLHasPrefix", "baseURLHasSuffix", "baseURLIsNil", "baseURLNotNil", "baseURLEqualFold", "baseURLContainsFold", "name", "nameNEQ", "nameIn", "nameNotIn", "nameGT", "nameGTE", "nameLT", "nameLTE", "nameContains", "nameHasPrefix", "nameHasSuffix", "nameEqualFold", "nameContainsFold", "status", "statusNEQ", "statusIn", "statusNotIn", "autoSyncSupportedModels", "autoSyncSupportedModelsNEQ", "autoSyncModelPattern", "autoSyncModelPatternNEQ", "autoSyncModelPatternIn", "autoSyncModelPatternNotIn", "autoSyncModelPatternGT", "autoSyncModelPatternGTE", "autoSyncModelPatternLT", "autoSyncModelPatternLTE", "autoSyncModelPatternContains", "autoSyncModelPatternHasPrefix", "autoSyncModelPatternHasSuffix", "autoSyncModelPatternIsNil", "autoSyncModelPatternNotNil", "autoSyncModelPatternEqualFold", "autoSyncModelPatternContainsFold", "defaultTestModel", "defaultTestModelNEQ", "defaultTestModelIn", "defaultTestModelNotIn", "defaultTestModelGT", "defaultTestModelGTE", "defaultTestModelLT", "defaultTestModelLTE", "defaultTestModelContains", "defaultTestModelHasPrefix", "defaultTestModelHasSuffix", "defaultTestModelEqualFold", "defaultTestModelContainsFold", "orderingWeight", "orderingWeightNEQ", "orderingWeightIn", "orderingWeightNotIn", "orderingWeightGT", "orderingWeightGTE", "orderingWeightLT", "orderingWeightLTE", "errorMessage", "errorMessageNEQ", "errorMessageIn", "errorMessageNotIn", "errorMessageGT", "errorMessageGTE", "errorMessageLT", "errorMessageLTE", "errorMessageContains", "errorMessageHasPrefix", "errorMessageHasSuffix", "errorMessageIsNil", "errorMessageNotNil", "errorMessageEqualFold", "errorMessageContainsFold", "remark", "remarkNEQ", "remarkIn", "remarkNotIn", "remarkGT", "remarkGTE", "remarkLT", "remarkLTE", "remarkContains", "remarkHasPrefix", "remarkHasSuffix", "remarkIsNil", "remarkNotNil", "remarkEqualFold", "remarkContainsFold", "hasRequests", "hasRequestsWith", "hasExecutions", "hasExecutionsWith", "hasUsageLogs", "hasUsageLogsWith", "hasChannelProbes", "hasChannelProbesWith", "hasChannelModelPrices", "hasChannelModelPricesWith", "hasCredentialRefs", "hasCredentialRefsWith", "hasProviderQuotaStatuses", "hasProviderQuotaStatusesWith"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -68054,20 +70279,20 @@ func (ec *executionContext) unmarshalInputChannelWhereInput(ctx context.Context,
 				return it, err
 			}
 			it.HasCredentialRefsWith = data
-		case "hasProviderQuotaStatus":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasProviderQuotaStatus"))
+		case "hasProviderQuotaStatuses":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasProviderQuotaStatuses"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.HasProviderQuotaStatus = data
-		case "hasProviderQuotaStatusWith":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasProviderQuotaStatusWith"))
+			it.HasProviderQuotaStatuses = data
+		case "hasProviderQuotaStatusesWith":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasProviderQuotaStatusesWith"))
 			data, err := ec.unmarshalOProviderQuotaStatusWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusWhereInputᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.HasProviderQuotaStatusWith = data
+			it.HasProviderQuotaStatusesWith = data
 		}
 	}
 
@@ -68589,6 +70814,124 @@ func (ec *executionContext) unmarshalInputCreateChannelOverrideTemplateInput(ctx
 				return it, err
 			}
 			it.BodyOverrideOperations = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputCreateCredentialQuotaScopeInput(ctx context.Context, obj any) (biz.CreateCredentialQuotaScopeInput, error) {
+	var it biz.CreateCredentialQuotaScopeInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "status", "unit", "limitAmount", "usedAmount", "warningThresholdPercent", "resetPolicy", "resetAt", "windowStartedAt", "overLimitAction", "pauseUntil", "source", "lastError", "remark"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "status":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
+			data, err := ec.unmarshalOCredentialQuotaScopeStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐStatus(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Status = data
+		case "unit":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("unit"))
+			data, err := ec.unmarshalOCredentialQuotaScopeUnit2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐUnit(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Unit = data
+		case "limitAmount":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limitAmount"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LimitAmount = data
+		case "usedAmount":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("usedAmount"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UsedAmount = data
+		case "warningThresholdPercent":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("warningThresholdPercent"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WarningThresholdPercent = data
+		case "resetPolicy":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resetPolicy"))
+			data, err := ec.unmarshalOCredentialQuotaScopeResetPolicy2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐResetPolicy(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResetPolicy = data
+		case "resetAt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resetAt"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResetAt = data
+		case "windowStartedAt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("windowStartedAt"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WindowStartedAt = data
+		case "overLimitAction":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("overLimitAction"))
+			data, err := ec.unmarshalOCredentialQuotaScopeOverLimitAction2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐOverLimitAction(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.OverLimitAction = data
+		case "pauseUntil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pauseUntil"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PauseUntil = data
+		case "source":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("source"))
+			data, err := ec.unmarshalOCredentialQuotaScopeSource2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐSource(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Source = data
+		case "lastError":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastError"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LastError = data
+		case "remark":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remark"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Remark = data
 		}
 	}
 
@@ -69367,7 +71710,7 @@ func (ec *executionContext) unmarshalInputCreateUpstreamCredentialInput(ctx cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "providerType", "baseURL", "authKind", "secretKind", "issuerScope", "secret", "status", "weight", "remark"}
+	fieldsInOrder := [...]string{"name", "secret", "status", "quotaScopeID", "quota", "remark"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -69381,41 +71724,6 @@ func (ec *executionContext) unmarshalInputCreateUpstreamCredentialInput(ctx cont
 				return it, err
 			}
 			it.Name = data
-		case "providerType":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerType"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ProviderType = data
-		case "baseURL":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURL"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.BaseURL = data
-		case "authKind":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("authKind"))
-			data, err := ec.unmarshalOUpstreamCredentialAuthKind2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐAuthKind(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.AuthKind = data
-		case "secretKind":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretKind"))
-			data, err := ec.unmarshalOUpstreamCredentialSecretKind2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐSecretKind(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretKind = data
-		case "issuerScope":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issuerScope"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.IssuerScope = data
 		case "secret":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secret"))
 			data, err := ec.unmarshalNUpstreamCredentialSecretInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐUpstreamCredentialSecret(ctx, v)
@@ -69430,13 +71738,20 @@ func (ec *executionContext) unmarshalInputCreateUpstreamCredentialInput(ctx cont
 				return it, err
 			}
 			it.Status = data
-		case "weight":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weight"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+		case "quotaScopeID":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeID"))
+			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.Weight = data
+			it.QuotaScopeID = data
+		case "quota":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quota"))
+			data, err := ec.unmarshalOCreateCredentialQuotaScopeInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐCreateCredentialQuotaScopeInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Quota = data
 		case "remark":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remark"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -69457,7 +71772,7 @@ func (ec *executionContext) unmarshalInputCreateUsageLogInput(ctx context.Contex
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"apiKeyID", "modelID", "credentialFingerprint", "credentialNameSnapshot", "credentialKeyHint", "credentialSource", "promptTokens", "completionTokens", "totalTokens", "promptAudioTokens", "promptCachedTokens", "promptWriteCachedTokens", "promptWriteCachedTokens5m", "promptWriteCachedTokens1h", "completionAudioTokens", "completionReasoningTokens", "completionAcceptedPredictionTokens", "completionRejectedPredictionTokens", "source", "format", "totalCost", "costItems", "costPriceReferenceID", "requestID", "projectID", "channelID", "credentialID"}
+	fieldsInOrder := [...]string{"apiKeyID", "modelID", "credentialFingerprint", "secretFingerprint", "resourceScopeKey", "quotaScopeNameSnapshot", "quotaScopeStatusSnapshot", "credentialNameSnapshot", "credentialKeyHint", "credentialSource", "credentialQuotaStatusSnapshot", "promptTokens", "completionTokens", "totalTokens", "promptAudioTokens", "promptCachedTokens", "promptWriteCachedTokens", "promptWriteCachedTokens5m", "promptWriteCachedTokens1h", "completionAudioTokens", "completionReasoningTokens", "completionAcceptedPredictionTokens", "completionRejectedPredictionTokens", "source", "format", "totalCost", "costItems", "costPriceReferenceID", "requestID", "projectID", "channelID", "credentialID", "quotaScopeID"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -69485,6 +71800,34 @@ func (ec *executionContext) unmarshalInputCreateUsageLogInput(ctx context.Contex
 				return it, err
 			}
 			it.CredentialFingerprint = data
+		case "secretFingerprint":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprint"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprint = data
+		case "resourceScopeKey":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKey"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKey = data
+		case "quotaScopeNameSnapshot":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshot"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshot = data
+		case "quotaScopeStatusSnapshot":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshot"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshot = data
 		case "credentialNameSnapshot":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialNameSnapshot"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -69506,6 +71849,13 @@ func (ec *executionContext) unmarshalInputCreateUsageLogInput(ctx context.Contex
 				return it, err
 			}
 			it.CredentialSource = data
+		case "credentialQuotaStatusSnapshot":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshot"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CredentialQuotaStatusSnapshot = data
 		case "promptTokens":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("promptTokens"))
 			data, err := ec.unmarshalOInt2ᚖint64(ctx, v)
@@ -69669,6 +72019,17 @@ func (ec *executionContext) unmarshalInputCreateUsageLogInput(ctx context.Contex
 				return it, graphql.ErrorOnPath(ctx, err)
 			}
 			it.CredentialID = converted
+		case "quotaScopeID":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeID"))
+			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.QuotaScopeID = converted
 		}
 	}
 
@@ -69774,6 +72135,1286 @@ func (ec *executionContext) unmarshalInputCreateUserInput(ctx context.Context, o
 				return it, graphql.ErrorOnPath(ctx, err)
 			}
 			it.RoleIDs = converted
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputCredentialQuotaScopeOrder(ctx context.Context, obj any) (ent.CredentialQuotaScopeOrder, error) {
+	var it ent.CredentialQuotaScopeOrder
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	if _, present := asMap["direction"]; !present {
+		asMap["direction"] = "ASC"
+	}
+
+	fieldsInOrder := [...]string{"direction", "field"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "direction":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
+			data, err := ec.unmarshalNOrderDirection2entgoᚗioᚋcontribᚋentgqlᚐOrderDirection(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Direction = data
+		case "field":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			data, err := ec.unmarshalNCredentialQuotaScopeOrderField2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeOrderField(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Field = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputCredentialQuotaScopeWhereInput(ctx context.Context, obj any) (ent.CredentialQuotaScopeWhereInput, error) {
+	var it ent.CredentialQuotaScopeWhereInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "name", "nameNEQ", "nameIn", "nameNotIn", "nameGT", "nameGTE", "nameLT", "nameLTE", "nameContains", "nameHasPrefix", "nameHasSuffix", "nameIsNil", "nameNotNil", "nameEqualFold", "nameContainsFold", "status", "statusNEQ", "statusIn", "statusNotIn", "unit", "unitNEQ", "unitIn", "unitNotIn", "limitAmount", "limitAmountNEQ", "limitAmountIn", "limitAmountNotIn", "limitAmountGT", "limitAmountGTE", "limitAmountLT", "limitAmountLTE", "limitAmountContains", "limitAmountHasPrefix", "limitAmountHasSuffix", "limitAmountIsNil", "limitAmountNotNil", "limitAmountEqualFold", "limitAmountContainsFold", "usedAmount", "usedAmountNEQ", "usedAmountIn", "usedAmountNotIn", "usedAmountGT", "usedAmountGTE", "usedAmountLT", "usedAmountLTE", "usedAmountContains", "usedAmountHasPrefix", "usedAmountHasSuffix", "usedAmountIsNil", "usedAmountNotNil", "usedAmountEqualFold", "usedAmountContainsFold", "warningThresholdPercent", "warningThresholdPercentNEQ", "warningThresholdPercentIn", "warningThresholdPercentNotIn", "warningThresholdPercentGT", "warningThresholdPercentGTE", "warningThresholdPercentLT", "warningThresholdPercentLTE", "warningThresholdPercentIsNil", "warningThresholdPercentNotNil", "resetPolicy", "resetPolicyNEQ", "resetPolicyIn", "resetPolicyNotIn", "resetAt", "resetAtNEQ", "resetAtIn", "resetAtNotIn", "resetAtGT", "resetAtGTE", "resetAtLT", "resetAtLTE", "resetAtIsNil", "resetAtNotNil", "windowStartedAt", "windowStartedAtNEQ", "windowStartedAtIn", "windowStartedAtNotIn", "windowStartedAtGT", "windowStartedAtGTE", "windowStartedAtLT", "windowStartedAtLTE", "windowStartedAtIsNil", "windowStartedAtNotNil", "overLimitAction", "overLimitActionNEQ", "overLimitActionIn", "overLimitActionNotIn", "pauseUntil", "pauseUntilNEQ", "pauseUntilIn", "pauseUntilNotIn", "pauseUntilGT", "pauseUntilGTE", "pauseUntilLT", "pauseUntilLTE", "pauseUntilIsNil", "pauseUntilNotNil", "source", "sourceNEQ", "sourceIn", "sourceNotIn", "lastError", "lastErrorNEQ", "lastErrorIn", "lastErrorNotIn", "lastErrorGT", "lastErrorGTE", "lastErrorLT", "lastErrorLTE", "lastErrorContains", "lastErrorHasPrefix", "lastErrorHasSuffix", "lastErrorIsNil", "lastErrorNotNil", "lastErrorEqualFold", "lastErrorContainsFold", "remark", "remarkNEQ", "remarkIn", "remarkNotIn", "remarkGT", "remarkGTE", "remarkLT", "remarkLTE", "remarkContains", "remarkHasPrefix", "remarkHasSuffix", "remarkIsNil", "remarkNotNil", "remarkEqualFold", "remarkContainsFold", "hasCredentials", "hasCredentialsWith", "hasProviderQuotaStatuses", "hasProviderQuotaStatusesWith", "hasExecutions", "hasExecutionsWith", "hasUsageLogs", "hasUsageLogsWith"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "not":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("not"))
+			data, err := ec.unmarshalOCredentialQuotaScopeWhereInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeWhereInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Not = data
+		case "and":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("and"))
+			data, err := ec.unmarshalOCredentialQuotaScopeWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeWhereInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.And = data
+		case "or":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("or"))
+			data, err := ec.unmarshalOCredentialQuotaScopeWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeWhereInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Or = data
+		case "id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.ID = converted
+		case "idNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("idNEQ"))
+			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.IDNEQ = converted
+		case "idIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("idIn"))
+			data, err := ec.unmarshalOID2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUIDᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrsToInts(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.IDIn = converted
+		case "idNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("idNotIn"))
+			data, err := ec.unmarshalOID2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUIDᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrsToInts(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.IDNotIn = converted
+		case "idGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("idGT"))
+			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.IDGT = converted
+		case "idGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("idGTE"))
+			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.IDGTE = converted
+		case "idLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("idLT"))
+			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.IDLT = converted
+		case "idLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("idLTE"))
+			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.IDLTE = converted
+		case "createdAt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAt"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CreatedAt = data
+		case "createdAtNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAtNEQ"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CreatedAtNEQ = data
+		case "createdAtIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAtIn"))
+			data, err := ec.unmarshalOTime2ᚕtimeᚐTimeᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CreatedAtIn = data
+		case "createdAtNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAtNotIn"))
+			data, err := ec.unmarshalOTime2ᚕtimeᚐTimeᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CreatedAtNotIn = data
+		case "createdAtGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAtGT"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CreatedAtGT = data
+		case "createdAtGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAtGTE"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CreatedAtGTE = data
+		case "createdAtLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAtLT"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CreatedAtLT = data
+		case "createdAtLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAtLTE"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CreatedAtLTE = data
+		case "updatedAt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAt"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UpdatedAt = data
+		case "updatedAtNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAtNEQ"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UpdatedAtNEQ = data
+		case "updatedAtIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAtIn"))
+			data, err := ec.unmarshalOTime2ᚕtimeᚐTimeᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UpdatedAtIn = data
+		case "updatedAtNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAtNotIn"))
+			data, err := ec.unmarshalOTime2ᚕtimeᚐTimeᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UpdatedAtNotIn = data
+		case "updatedAtGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAtGT"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UpdatedAtGT = data
+		case "updatedAtGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAtGTE"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UpdatedAtGTE = data
+		case "updatedAtLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAtLT"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UpdatedAtLT = data
+		case "updatedAtLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAtLTE"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UpdatedAtLTE = data
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "nameNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nameNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.NameNEQ = data
+		case "nameIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nameIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.NameIn = data
+		case "nameNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nameNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.NameNotIn = data
+		case "nameGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nameGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.NameGT = data
+		case "nameGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nameGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.NameGTE = data
+		case "nameLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nameLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.NameLT = data
+		case "nameLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nameLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.NameLTE = data
+		case "nameContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nameContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.NameContains = data
+		case "nameHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nameHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.NameHasPrefix = data
+		case "nameHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nameHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.NameHasSuffix = data
+		case "nameIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nameIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.NameIsNil = data
+		case "nameNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nameNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.NameNotNil = data
+		case "nameEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nameEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.NameEqualFold = data
+		case "nameContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nameContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.NameContainsFold = data
+		case "status":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
+			data, err := ec.unmarshalOCredentialQuotaScopeStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐStatus(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Status = data
+		case "statusNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("statusNEQ"))
+			data, err := ec.unmarshalOCredentialQuotaScopeStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐStatus(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.StatusNEQ = data
+		case "statusIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("statusIn"))
+			data, err := ec.unmarshalOCredentialQuotaScopeStatus2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐStatusᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.StatusIn = data
+		case "statusNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("statusNotIn"))
+			data, err := ec.unmarshalOCredentialQuotaScopeStatus2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐStatusᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.StatusNotIn = data
+		case "unit":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("unit"))
+			data, err := ec.unmarshalOCredentialQuotaScopeUnit2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐUnit(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Unit = data
+		case "unitNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("unitNEQ"))
+			data, err := ec.unmarshalOCredentialQuotaScopeUnit2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐUnit(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UnitNEQ = data
+		case "unitIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("unitIn"))
+			data, err := ec.unmarshalOCredentialQuotaScopeUnit2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐUnitᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UnitIn = data
+		case "unitNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("unitNotIn"))
+			data, err := ec.unmarshalOCredentialQuotaScopeUnit2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐUnitᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UnitNotIn = data
+		case "limitAmount":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limitAmount"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LimitAmount = data
+		case "limitAmountNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limitAmountNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LimitAmountNEQ = data
+		case "limitAmountIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limitAmountIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LimitAmountIn = data
+		case "limitAmountNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limitAmountNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LimitAmountNotIn = data
+		case "limitAmountGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limitAmountGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LimitAmountGT = data
+		case "limitAmountGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limitAmountGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LimitAmountGTE = data
+		case "limitAmountLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limitAmountLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LimitAmountLT = data
+		case "limitAmountLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limitAmountLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LimitAmountLTE = data
+		case "limitAmountContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limitAmountContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LimitAmountContains = data
+		case "limitAmountHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limitAmountHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LimitAmountHasPrefix = data
+		case "limitAmountHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limitAmountHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LimitAmountHasSuffix = data
+		case "limitAmountIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limitAmountIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LimitAmountIsNil = data
+		case "limitAmountNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limitAmountNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LimitAmountNotNil = data
+		case "limitAmountEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limitAmountEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LimitAmountEqualFold = data
+		case "limitAmountContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limitAmountContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LimitAmountContainsFold = data
+		case "usedAmount":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("usedAmount"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UsedAmount = data
+		case "usedAmountNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("usedAmountNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UsedAmountNEQ = data
+		case "usedAmountIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("usedAmountIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UsedAmountIn = data
+		case "usedAmountNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("usedAmountNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UsedAmountNotIn = data
+		case "usedAmountGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("usedAmountGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UsedAmountGT = data
+		case "usedAmountGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("usedAmountGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UsedAmountGTE = data
+		case "usedAmountLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("usedAmountLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UsedAmountLT = data
+		case "usedAmountLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("usedAmountLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UsedAmountLTE = data
+		case "usedAmountContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("usedAmountContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UsedAmountContains = data
+		case "usedAmountHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("usedAmountHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UsedAmountHasPrefix = data
+		case "usedAmountHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("usedAmountHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UsedAmountHasSuffix = data
+		case "usedAmountIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("usedAmountIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UsedAmountIsNil = data
+		case "usedAmountNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("usedAmountNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UsedAmountNotNil = data
+		case "usedAmountEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("usedAmountEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UsedAmountEqualFold = data
+		case "usedAmountContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("usedAmountContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UsedAmountContainsFold = data
+		case "warningThresholdPercent":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("warningThresholdPercent"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WarningThresholdPercent = data
+		case "warningThresholdPercentNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("warningThresholdPercentNEQ"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WarningThresholdPercentNEQ = data
+		case "warningThresholdPercentIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("warningThresholdPercentIn"))
+			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WarningThresholdPercentIn = data
+		case "warningThresholdPercentNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("warningThresholdPercentNotIn"))
+			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WarningThresholdPercentNotIn = data
+		case "warningThresholdPercentGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("warningThresholdPercentGT"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WarningThresholdPercentGT = data
+		case "warningThresholdPercentGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("warningThresholdPercentGTE"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WarningThresholdPercentGTE = data
+		case "warningThresholdPercentLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("warningThresholdPercentLT"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WarningThresholdPercentLT = data
+		case "warningThresholdPercentLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("warningThresholdPercentLTE"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WarningThresholdPercentLTE = data
+		case "warningThresholdPercentIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("warningThresholdPercentIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WarningThresholdPercentIsNil = data
+		case "warningThresholdPercentNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("warningThresholdPercentNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WarningThresholdPercentNotNil = data
+		case "resetPolicy":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resetPolicy"))
+			data, err := ec.unmarshalOCredentialQuotaScopeResetPolicy2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐResetPolicy(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResetPolicy = data
+		case "resetPolicyNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resetPolicyNEQ"))
+			data, err := ec.unmarshalOCredentialQuotaScopeResetPolicy2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐResetPolicy(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResetPolicyNEQ = data
+		case "resetPolicyIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resetPolicyIn"))
+			data, err := ec.unmarshalOCredentialQuotaScopeResetPolicy2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐResetPolicyᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResetPolicyIn = data
+		case "resetPolicyNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resetPolicyNotIn"))
+			data, err := ec.unmarshalOCredentialQuotaScopeResetPolicy2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐResetPolicyᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResetPolicyNotIn = data
+		case "resetAt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resetAt"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResetAt = data
+		case "resetAtNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resetAtNEQ"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResetAtNEQ = data
+		case "resetAtIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resetAtIn"))
+			data, err := ec.unmarshalOTime2ᚕtimeᚐTimeᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResetAtIn = data
+		case "resetAtNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resetAtNotIn"))
+			data, err := ec.unmarshalOTime2ᚕtimeᚐTimeᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResetAtNotIn = data
+		case "resetAtGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resetAtGT"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResetAtGT = data
+		case "resetAtGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resetAtGTE"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResetAtGTE = data
+		case "resetAtLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resetAtLT"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResetAtLT = data
+		case "resetAtLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resetAtLTE"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResetAtLTE = data
+		case "resetAtIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resetAtIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResetAtIsNil = data
+		case "resetAtNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resetAtNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResetAtNotNil = data
+		case "windowStartedAt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("windowStartedAt"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WindowStartedAt = data
+		case "windowStartedAtNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("windowStartedAtNEQ"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WindowStartedAtNEQ = data
+		case "windowStartedAtIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("windowStartedAtIn"))
+			data, err := ec.unmarshalOTime2ᚕtimeᚐTimeᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WindowStartedAtIn = data
+		case "windowStartedAtNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("windowStartedAtNotIn"))
+			data, err := ec.unmarshalOTime2ᚕtimeᚐTimeᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WindowStartedAtNotIn = data
+		case "windowStartedAtGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("windowStartedAtGT"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WindowStartedAtGT = data
+		case "windowStartedAtGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("windowStartedAtGTE"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WindowStartedAtGTE = data
+		case "windowStartedAtLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("windowStartedAtLT"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WindowStartedAtLT = data
+		case "windowStartedAtLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("windowStartedAtLTE"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WindowStartedAtLTE = data
+		case "windowStartedAtIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("windowStartedAtIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WindowStartedAtIsNil = data
+		case "windowStartedAtNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("windowStartedAtNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WindowStartedAtNotNil = data
+		case "overLimitAction":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("overLimitAction"))
+			data, err := ec.unmarshalOCredentialQuotaScopeOverLimitAction2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐOverLimitAction(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.OverLimitAction = data
+		case "overLimitActionNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("overLimitActionNEQ"))
+			data, err := ec.unmarshalOCredentialQuotaScopeOverLimitAction2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐOverLimitAction(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.OverLimitActionNEQ = data
+		case "overLimitActionIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("overLimitActionIn"))
+			data, err := ec.unmarshalOCredentialQuotaScopeOverLimitAction2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐOverLimitActionᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.OverLimitActionIn = data
+		case "overLimitActionNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("overLimitActionNotIn"))
+			data, err := ec.unmarshalOCredentialQuotaScopeOverLimitAction2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐOverLimitActionᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.OverLimitActionNotIn = data
+		case "pauseUntil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pauseUntil"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PauseUntil = data
+		case "pauseUntilNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pauseUntilNEQ"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PauseUntilNEQ = data
+		case "pauseUntilIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pauseUntilIn"))
+			data, err := ec.unmarshalOTime2ᚕtimeᚐTimeᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PauseUntilIn = data
+		case "pauseUntilNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pauseUntilNotIn"))
+			data, err := ec.unmarshalOTime2ᚕtimeᚐTimeᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PauseUntilNotIn = data
+		case "pauseUntilGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pauseUntilGT"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PauseUntilGT = data
+		case "pauseUntilGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pauseUntilGTE"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PauseUntilGTE = data
+		case "pauseUntilLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pauseUntilLT"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PauseUntilLT = data
+		case "pauseUntilLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pauseUntilLTE"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PauseUntilLTE = data
+		case "pauseUntilIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pauseUntilIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PauseUntilIsNil = data
+		case "pauseUntilNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pauseUntilNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PauseUntilNotNil = data
+		case "source":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("source"))
+			data, err := ec.unmarshalOCredentialQuotaScopeSource2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐSource(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Source = data
+		case "sourceNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sourceNEQ"))
+			data, err := ec.unmarshalOCredentialQuotaScopeSource2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐSource(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SourceNEQ = data
+		case "sourceIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sourceIn"))
+			data, err := ec.unmarshalOCredentialQuotaScopeSource2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐSourceᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SourceIn = data
+		case "sourceNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("sourceNotIn"))
+			data, err := ec.unmarshalOCredentialQuotaScopeSource2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐSourceᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SourceNotIn = data
+		case "lastError":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastError"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LastError = data
+		case "lastErrorNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastErrorNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LastErrorNEQ = data
+		case "lastErrorIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastErrorIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LastErrorIn = data
+		case "lastErrorNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastErrorNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LastErrorNotIn = data
+		case "lastErrorGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastErrorGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LastErrorGT = data
+		case "lastErrorGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastErrorGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LastErrorGTE = data
+		case "lastErrorLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastErrorLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LastErrorLT = data
+		case "lastErrorLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastErrorLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LastErrorLTE = data
+		case "lastErrorContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastErrorContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LastErrorContains = data
+		case "lastErrorHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastErrorHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LastErrorHasPrefix = data
+		case "lastErrorHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastErrorHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LastErrorHasSuffix = data
+		case "lastErrorIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastErrorIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LastErrorIsNil = data
+		case "lastErrorNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastErrorNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LastErrorNotNil = data
+		case "lastErrorEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastErrorEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LastErrorEqualFold = data
+		case "lastErrorContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastErrorContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LastErrorContainsFold = data
+		case "remark":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remark"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Remark = data
+		case "remarkNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remarkNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RemarkNEQ = data
+		case "remarkIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remarkIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RemarkIn = data
+		case "remarkNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remarkNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RemarkNotIn = data
+		case "remarkGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remarkGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RemarkGT = data
+		case "remarkGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remarkGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RemarkGTE = data
+		case "remarkLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remarkLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RemarkLT = data
+		case "remarkLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remarkLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RemarkLTE = data
+		case "remarkContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remarkContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RemarkContains = data
+		case "remarkHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remarkHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RemarkHasPrefix = data
+		case "remarkHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remarkHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RemarkHasSuffix = data
+		case "remarkIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remarkIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RemarkIsNil = data
+		case "remarkNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remarkNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RemarkNotNil = data
+		case "remarkEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remarkEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RemarkEqualFold = data
+		case "remarkContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remarkContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.RemarkContainsFold = data
+		case "hasCredentials":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasCredentials"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.HasCredentials = data
+		case "hasCredentialsWith":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasCredentialsWith"))
+			data, err := ec.unmarshalOUpstreamCredentialWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUpstreamCredentialWhereInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.HasCredentialsWith = data
+		case "hasProviderQuotaStatuses":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasProviderQuotaStatuses"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.HasProviderQuotaStatuses = data
+		case "hasProviderQuotaStatusesWith":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasProviderQuotaStatusesWith"))
+			data, err := ec.unmarshalOProviderQuotaStatusWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusWhereInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.HasProviderQuotaStatusesWith = data
+		case "hasExecutions":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasExecutions"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.HasExecutions = data
+		case "hasExecutionsWith":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasExecutionsWith"))
+			data, err := ec.unmarshalORequestExecutionWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐRequestExecutionWhereInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.HasExecutionsWith = data
+		case "hasUsageLogs":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasUsageLogs"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.HasUsageLogs = data
+		case "hasUsageLogsWith":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasUsageLogsWith"))
+			data, err := ec.unmarshalOUsageLogWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUsageLogWhereInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.HasUsageLogsWith = data
 		}
 	}
 
@@ -75676,7 +79317,7 @@ func (ec *executionContext) unmarshalInputProviderQuotaStatusWhereInput(ctx cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "channelID", "channelIDNEQ", "channelIDIn", "channelIDNotIn", "credentialID", "credentialIDNEQ", "credentialIDIn", "credentialIDNotIn", "credentialIDIsNil", "credentialIDNotNil", "credentialFingerprint", "credentialFingerprintNEQ", "credentialFingerprintIn", "credentialFingerprintNotIn", "credentialFingerprintGT", "credentialFingerprintGTE", "credentialFingerprintLT", "credentialFingerprintLTE", "credentialFingerprintContains", "credentialFingerprintHasPrefix", "credentialFingerprintHasSuffix", "credentialFingerprintIsNil", "credentialFingerprintNotNil", "credentialFingerprintEqualFold", "credentialFingerprintContainsFold", "providerType", "providerTypeNEQ", "providerTypeIn", "providerTypeNotIn", "status", "statusNEQ", "statusIn", "statusNotIn", "nextResetAt", "nextResetAtNEQ", "nextResetAtIn", "nextResetAtNotIn", "nextResetAtGT", "nextResetAtGTE", "nextResetAtLT", "nextResetAtLTE", "nextResetAtIsNil", "nextResetAtNotNil", "ready", "readyNEQ", "nextCheckAt", "nextCheckAtNEQ", "nextCheckAtIn", "nextCheckAtNotIn", "nextCheckAtGT", "nextCheckAtGTE", "nextCheckAtLT", "nextCheckAtLTE", "hasChannel", "hasChannelWith", "hasCredential", "hasCredentialWith"}
+	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "channelID", "channelIDNEQ", "channelIDIn", "channelIDNotIn", "channelIDIsNil", "channelIDNotNil", "scopeKey", "scopeKeyNEQ", "scopeKeyIn", "scopeKeyNotIn", "scopeKeyGT", "scopeKeyGTE", "scopeKeyLT", "scopeKeyLTE", "scopeKeyContains", "scopeKeyHasPrefix", "scopeKeyHasSuffix", "scopeKeyEqualFold", "scopeKeyContainsFold", "credentialID", "credentialIDNEQ", "credentialIDIn", "credentialIDNotIn", "credentialIDIsNil", "credentialIDNotNil", "credentialFingerprint", "credentialFingerprintNEQ", "credentialFingerprintIn", "credentialFingerprintNotIn", "credentialFingerprintGT", "credentialFingerprintGTE", "credentialFingerprintLT", "credentialFingerprintLTE", "credentialFingerprintContains", "credentialFingerprintHasPrefix", "credentialFingerprintHasSuffix", "credentialFingerprintIsNil", "credentialFingerprintNotNil", "credentialFingerprintEqualFold", "credentialFingerprintContainsFold", "secretFingerprint", "secretFingerprintNEQ", "secretFingerprintIn", "secretFingerprintNotIn", "secretFingerprintGT", "secretFingerprintGTE", "secretFingerprintLT", "secretFingerprintLTE", "secretFingerprintContains", "secretFingerprintHasPrefix", "secretFingerprintHasSuffix", "secretFingerprintIsNil", "secretFingerprintNotNil", "secretFingerprintEqualFold", "secretFingerprintContainsFold", "resourceScopeKey", "resourceScopeKeyNEQ", "resourceScopeKeyIn", "resourceScopeKeyNotIn", "resourceScopeKeyGT", "resourceScopeKeyGTE", "resourceScopeKeyLT", "resourceScopeKeyLTE", "resourceScopeKeyContains", "resourceScopeKeyHasPrefix", "resourceScopeKeyHasSuffix", "resourceScopeKeyIsNil", "resourceScopeKeyNotNil", "resourceScopeKeyEqualFold", "resourceScopeKeyContainsFold", "quotaScopeID", "quotaScopeIDNEQ", "quotaScopeIDIn", "quotaScopeIDNotIn", "quotaScopeIDIsNil", "quotaScopeIDNotNil", "providerType", "providerTypeNEQ", "providerTypeIn", "providerTypeNotIn", "status", "statusNEQ", "statusIn", "statusNotIn", "nextResetAt", "nextResetAtNEQ", "nextResetAtIn", "nextResetAtNotIn", "nextResetAtGT", "nextResetAtGTE", "nextResetAtLT", "nextResetAtLTE", "nextResetAtIsNil", "nextResetAtNotNil", "ready", "readyNEQ", "nextCheckAt", "nextCheckAtNEQ", "nextCheckAtIn", "nextCheckAtNotIn", "nextCheckAtGT", "nextCheckAtGTE", "nextCheckAtLT", "nextCheckAtLTE", "hasChannel", "hasChannelWith", "hasCredential", "hasCredentialWith", "hasQuotaScope", "hasQuotaScopeWith"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -75948,6 +79589,111 @@ func (ec *executionContext) unmarshalInputProviderQuotaStatusWhereInput(ctx cont
 				return it, graphql.ErrorOnPath(ctx, err)
 			}
 			it.ChannelIDNotIn = converted
+		case "channelIDIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("channelIDIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ChannelIDIsNil = data
+		case "channelIDNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("channelIDNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ChannelIDNotNil = data
+		case "scopeKey":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKey"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ScopeKey = data
+		case "scopeKeyNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ScopeKeyNEQ = data
+		case "scopeKeyIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ScopeKeyIn = data
+		case "scopeKeyNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ScopeKeyNotIn = data
+		case "scopeKeyGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ScopeKeyGT = data
+		case "scopeKeyGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ScopeKeyGTE = data
+		case "scopeKeyLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ScopeKeyLT = data
+		case "scopeKeyLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ScopeKeyLTE = data
+		case "scopeKeyContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ScopeKeyContains = data
+		case "scopeKeyHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ScopeKeyHasPrefix = data
+		case "scopeKeyHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ScopeKeyHasSuffix = data
+		case "scopeKeyEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ScopeKeyEqualFold = data
+		case "scopeKeyContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ScopeKeyContainsFold = data
 		case "credentialID":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialID"))
 			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
@@ -76111,6 +79857,274 @@ func (ec *executionContext) unmarshalInputProviderQuotaStatusWhereInput(ctx cont
 				return it, err
 			}
 			it.CredentialFingerprintContainsFold = data
+		case "secretFingerprint":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprint"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprint = data
+		case "secretFingerprintNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintNEQ = data
+		case "secretFingerprintIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintIn = data
+		case "secretFingerprintNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintNotIn = data
+		case "secretFingerprintGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintGT = data
+		case "secretFingerprintGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintGTE = data
+		case "secretFingerprintLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintLT = data
+		case "secretFingerprintLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintLTE = data
+		case "secretFingerprintContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintContains = data
+		case "secretFingerprintHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintHasPrefix = data
+		case "secretFingerprintHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintHasSuffix = data
+		case "secretFingerprintIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintIsNil = data
+		case "secretFingerprintNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintNotNil = data
+		case "secretFingerprintEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintEqualFold = data
+		case "secretFingerprintContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintContainsFold = data
+		case "resourceScopeKey":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKey"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKey = data
+		case "resourceScopeKeyNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyNEQ = data
+		case "resourceScopeKeyIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyIn = data
+		case "resourceScopeKeyNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyNotIn = data
+		case "resourceScopeKeyGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyGT = data
+		case "resourceScopeKeyGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyGTE = data
+		case "resourceScopeKeyLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyLT = data
+		case "resourceScopeKeyLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyLTE = data
+		case "resourceScopeKeyContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyContains = data
+		case "resourceScopeKeyHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyHasPrefix = data
+		case "resourceScopeKeyHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyHasSuffix = data
+		case "resourceScopeKeyIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyIsNil = data
+		case "resourceScopeKeyNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyNotNil = data
+		case "resourceScopeKeyEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyEqualFold = data
+		case "resourceScopeKeyContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyContainsFold = data
+		case "quotaScopeID":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeID"))
+			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.QuotaScopeID = converted
+		case "quotaScopeIDNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDNEQ"))
+			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.QuotaScopeIDNEQ = converted
+		case "quotaScopeIDIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDIn"))
+			data, err := ec.unmarshalOID2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUIDᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrsToInts(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.QuotaScopeIDIn = converted
+		case "quotaScopeIDNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDNotIn"))
+			data, err := ec.unmarshalOID2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUIDᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrsToInts(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.QuotaScopeIDNotIn = converted
+		case "quotaScopeIDIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeIDIsNil = data
+		case "quotaScopeIDNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeIDNotNil = data
 		case "providerType":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerType"))
 			data, err := ec.unmarshalOProviderQuotaStatusProviderType2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐProviderType(ctx, v)
@@ -76335,6 +80349,20 @@ func (ec *executionContext) unmarshalInputProviderQuotaStatusWhereInput(ctx cont
 				return it, err
 			}
 			it.HasCredentialWith = data
+		case "hasQuotaScope":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasQuotaScope"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.HasQuotaScope = data
+		case "hasQuotaScopeWith":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasQuotaScopeWith"))
+			data, err := ec.unmarshalOCredentialQuotaScopeWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeWhereInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.HasQuotaScopeWith = data
 		}
 	}
 
@@ -76626,7 +80654,7 @@ func (ec *executionContext) unmarshalInputRequestExecutionWhereInput(ctx context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "projectID", "projectIDNEQ", "projectIDIn", "projectIDNotIn", "projectIDGT", "projectIDGTE", "projectIDLT", "projectIDLTE", "requestID", "requestIDNEQ", "requestIDIn", "requestIDNotIn", "channelID", "channelIDNEQ", "channelIDIn", "channelIDNotIn", "channelIDIsNil", "channelIDNotNil", "credentialID", "credentialIDNEQ", "credentialIDIn", "credentialIDNotIn", "credentialIDIsNil", "credentialIDNotNil", "dataStorageID", "dataStorageIDNEQ", "dataStorageIDIn", "dataStorageIDNotIn", "dataStorageIDIsNil", "dataStorageIDNotNil", "externalID", "externalIDNEQ", "externalIDIn", "externalIDNotIn", "externalIDGT", "externalIDGTE", "externalIDLT", "externalIDLTE", "externalIDContains", "externalIDHasPrefix", "externalIDHasSuffix", "externalIDIsNil", "externalIDNotNil", "externalIDEqualFold", "externalIDContainsFold", "modelID", "modelIDNEQ", "modelIDIn", "modelIDNotIn", "modelIDGT", "modelIDGTE", "modelIDLT", "modelIDLTE", "modelIDContains", "modelIDHasPrefix", "modelIDHasSuffix", "modelIDEqualFold", "modelIDContainsFold", "credentialFingerprint", "credentialFingerprintNEQ", "credentialFingerprintIn", "credentialFingerprintNotIn", "credentialFingerprintGT", "credentialFingerprintGTE", "credentialFingerprintLT", "credentialFingerprintLTE", "credentialFingerprintContains", "credentialFingerprintHasPrefix", "credentialFingerprintHasSuffix", "credentialFingerprintIsNil", "credentialFingerprintNotNil", "credentialFingerprintEqualFold", "credentialFingerprintContainsFold", "credentialNameSnapshot", "credentialNameSnapshotNEQ", "credentialNameSnapshotIn", "credentialNameSnapshotNotIn", "credentialNameSnapshotGT", "credentialNameSnapshotGTE", "credentialNameSnapshotLT", "credentialNameSnapshotLTE", "credentialNameSnapshotContains", "credentialNameSnapshotHasPrefix", "credentialNameSnapshotHasSuffix", "credentialNameSnapshotIsNil", "credentialNameSnapshotNotNil", "credentialNameSnapshotEqualFold", "credentialNameSnapshotContainsFold", "credentialKeyHint", "credentialKeyHintNEQ", "credentialKeyHintIn", "credentialKeyHintNotIn", "credentialKeyHintGT", "credentialKeyHintGTE", "credentialKeyHintLT", "credentialKeyHintLTE", "credentialKeyHintContains", "credentialKeyHintHasPrefix", "credentialKeyHintHasSuffix", "credentialKeyHintIsNil", "credentialKeyHintNotNil", "credentialKeyHintEqualFold", "credentialKeyHintContainsFold", "credentialSource", "credentialSourceNEQ", "credentialSourceIn", "credentialSourceNotIn", "credentialSourceGT", "credentialSourceGTE", "credentialSourceLT", "credentialSourceLTE", "credentialSourceContains", "credentialSourceHasPrefix", "credentialSourceHasSuffix", "credentialSourceIsNil", "credentialSourceNotNil", "credentialSourceEqualFold", "credentialSourceContainsFold", "credentialQuotaStatusSnapshot", "credentialQuotaStatusSnapshotNEQ", "credentialQuotaStatusSnapshotIn", "credentialQuotaStatusSnapshotNotIn", "credentialQuotaStatusSnapshotGT", "credentialQuotaStatusSnapshotGTE", "credentialQuotaStatusSnapshotLT", "credentialQuotaStatusSnapshotLTE", "credentialQuotaStatusSnapshotContains", "credentialQuotaStatusSnapshotHasPrefix", "credentialQuotaStatusSnapshotHasSuffix", "credentialQuotaStatusSnapshotIsNil", "credentialQuotaStatusSnapshotNotNil", "credentialQuotaStatusSnapshotEqualFold", "credentialQuotaStatusSnapshotContainsFold", "format", "formatNEQ", "formatIn", "formatNotIn", "formatGT", "formatGTE", "formatLT", "formatLTE", "formatContains", "formatHasPrefix", "formatHasSuffix", "formatEqualFold", "formatContainsFold", "errorMessage", "errorMessageNEQ", "errorMessageIn", "errorMessageNotIn", "errorMessageGT", "errorMessageGTE", "errorMessageLT", "errorMessageLTE", "errorMessageContains", "errorMessageHasPrefix", "errorMessageHasSuffix", "errorMessageIsNil", "errorMessageNotNil", "errorMessageEqualFold", "errorMessageContainsFold", "responseStatusCode", "responseStatusCodeNEQ", "responseStatusCodeIn", "responseStatusCodeNotIn", "responseStatusCodeGT", "responseStatusCodeGTE", "responseStatusCodeLT", "responseStatusCodeLTE", "responseStatusCodeIsNil", "responseStatusCodeNotNil", "status", "statusNEQ", "statusIn", "statusNotIn", "stream", "streamNEQ", "metricsLatencyMs", "metricsLatencyMsNEQ", "metricsLatencyMsIn", "metricsLatencyMsNotIn", "metricsLatencyMsGT", "metricsLatencyMsGTE", "metricsLatencyMsLT", "metricsLatencyMsLTE", "metricsLatencyMsIsNil", "metricsLatencyMsNotNil", "metricsFirstTokenLatencyMs", "metricsFirstTokenLatencyMsNEQ", "metricsFirstTokenLatencyMsIn", "metricsFirstTokenLatencyMsNotIn", "metricsFirstTokenLatencyMsGT", "metricsFirstTokenLatencyMsGTE", "metricsFirstTokenLatencyMsLT", "metricsFirstTokenLatencyMsLTE", "metricsFirstTokenLatencyMsIsNil", "metricsFirstTokenLatencyMsNotNil", "metricsReasoningDurationMs", "metricsReasoningDurationMsNEQ", "metricsReasoningDurationMsIn", "metricsReasoningDurationMsNotIn", "metricsReasoningDurationMsGT", "metricsReasoningDurationMsGTE", "metricsReasoningDurationMsLT", "metricsReasoningDurationMsLTE", "metricsReasoningDurationMsIsNil", "metricsReasoningDurationMsNotNil", "hasRequest", "hasRequestWith", "hasChannel", "hasChannelWith", "hasCredential", "hasCredentialWith", "hasDataStorage", "hasDataStorageWith"}
+	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "projectID", "projectIDNEQ", "projectIDIn", "projectIDNotIn", "projectIDGT", "projectIDGTE", "projectIDLT", "projectIDLTE", "requestID", "requestIDNEQ", "requestIDIn", "requestIDNotIn", "channelID", "channelIDNEQ", "channelIDIn", "channelIDNotIn", "channelIDIsNil", "channelIDNotNil", "credentialID", "credentialIDNEQ", "credentialIDIn", "credentialIDNotIn", "credentialIDIsNil", "credentialIDNotNil", "dataStorageID", "dataStorageIDNEQ", "dataStorageIDIn", "dataStorageIDNotIn", "dataStorageIDIsNil", "dataStorageIDNotNil", "externalID", "externalIDNEQ", "externalIDIn", "externalIDNotIn", "externalIDGT", "externalIDGTE", "externalIDLT", "externalIDLTE", "externalIDContains", "externalIDHasPrefix", "externalIDHasSuffix", "externalIDIsNil", "externalIDNotNil", "externalIDEqualFold", "externalIDContainsFold", "modelID", "modelIDNEQ", "modelIDIn", "modelIDNotIn", "modelIDGT", "modelIDGTE", "modelIDLT", "modelIDLTE", "modelIDContains", "modelIDHasPrefix", "modelIDHasSuffix", "modelIDEqualFold", "modelIDContainsFold", "credentialFingerprint", "credentialFingerprintNEQ", "credentialFingerprintIn", "credentialFingerprintNotIn", "credentialFingerprintGT", "credentialFingerprintGTE", "credentialFingerprintLT", "credentialFingerprintLTE", "credentialFingerprintContains", "credentialFingerprintHasPrefix", "credentialFingerprintHasSuffix", "credentialFingerprintIsNil", "credentialFingerprintNotNil", "credentialFingerprintEqualFold", "credentialFingerprintContainsFold", "secretFingerprint", "secretFingerprintNEQ", "secretFingerprintIn", "secretFingerprintNotIn", "secretFingerprintGT", "secretFingerprintGTE", "secretFingerprintLT", "secretFingerprintLTE", "secretFingerprintContains", "secretFingerprintHasPrefix", "secretFingerprintHasSuffix", "secretFingerprintIsNil", "secretFingerprintNotNil", "secretFingerprintEqualFold", "secretFingerprintContainsFold", "resourceScopeKey", "resourceScopeKeyNEQ", "resourceScopeKeyIn", "resourceScopeKeyNotIn", "resourceScopeKeyGT", "resourceScopeKeyGTE", "resourceScopeKeyLT", "resourceScopeKeyLTE", "resourceScopeKeyContains", "resourceScopeKeyHasPrefix", "resourceScopeKeyHasSuffix", "resourceScopeKeyIsNil", "resourceScopeKeyNotNil", "resourceScopeKeyEqualFold", "resourceScopeKeyContainsFold", "quotaScopeID", "quotaScopeIDNEQ", "quotaScopeIDIn", "quotaScopeIDNotIn", "quotaScopeIDIsNil", "quotaScopeIDNotNil", "quotaScopeNameSnapshot", "quotaScopeNameSnapshotNEQ", "quotaScopeNameSnapshotIn", "quotaScopeNameSnapshotNotIn", "quotaScopeNameSnapshotGT", "quotaScopeNameSnapshotGTE", "quotaScopeNameSnapshotLT", "quotaScopeNameSnapshotLTE", "quotaScopeNameSnapshotContains", "quotaScopeNameSnapshotHasPrefix", "quotaScopeNameSnapshotHasSuffix", "quotaScopeNameSnapshotIsNil", "quotaScopeNameSnapshotNotNil", "quotaScopeNameSnapshotEqualFold", "quotaScopeNameSnapshotContainsFold", "quotaScopeStatusSnapshot", "quotaScopeStatusSnapshotNEQ", "quotaScopeStatusSnapshotIn", "quotaScopeStatusSnapshotNotIn", "quotaScopeStatusSnapshotGT", "quotaScopeStatusSnapshotGTE", "quotaScopeStatusSnapshotLT", "quotaScopeStatusSnapshotLTE", "quotaScopeStatusSnapshotContains", "quotaScopeStatusSnapshotHasPrefix", "quotaScopeStatusSnapshotHasSuffix", "quotaScopeStatusSnapshotIsNil", "quotaScopeStatusSnapshotNotNil", "quotaScopeStatusSnapshotEqualFold", "quotaScopeStatusSnapshotContainsFold", "credentialNameSnapshot", "credentialNameSnapshotNEQ", "credentialNameSnapshotIn", "credentialNameSnapshotNotIn", "credentialNameSnapshotGT", "credentialNameSnapshotGTE", "credentialNameSnapshotLT", "credentialNameSnapshotLTE", "credentialNameSnapshotContains", "credentialNameSnapshotHasPrefix", "credentialNameSnapshotHasSuffix", "credentialNameSnapshotIsNil", "credentialNameSnapshotNotNil", "credentialNameSnapshotEqualFold", "credentialNameSnapshotContainsFold", "credentialKeyHint", "credentialKeyHintNEQ", "credentialKeyHintIn", "credentialKeyHintNotIn", "credentialKeyHintGT", "credentialKeyHintGTE", "credentialKeyHintLT", "credentialKeyHintLTE", "credentialKeyHintContains", "credentialKeyHintHasPrefix", "credentialKeyHintHasSuffix", "credentialKeyHintIsNil", "credentialKeyHintNotNil", "credentialKeyHintEqualFold", "credentialKeyHintContainsFold", "credentialSource", "credentialSourceNEQ", "credentialSourceIn", "credentialSourceNotIn", "credentialSourceGT", "credentialSourceGTE", "credentialSourceLT", "credentialSourceLTE", "credentialSourceContains", "credentialSourceHasPrefix", "credentialSourceHasSuffix", "credentialSourceIsNil", "credentialSourceNotNil", "credentialSourceEqualFold", "credentialSourceContainsFold", "credentialQuotaStatusSnapshot", "credentialQuotaStatusSnapshotNEQ", "credentialQuotaStatusSnapshotIn", "credentialQuotaStatusSnapshotNotIn", "credentialQuotaStatusSnapshotGT", "credentialQuotaStatusSnapshotGTE", "credentialQuotaStatusSnapshotLT", "credentialQuotaStatusSnapshotLTE", "credentialQuotaStatusSnapshotContains", "credentialQuotaStatusSnapshotHasPrefix", "credentialQuotaStatusSnapshotHasSuffix", "credentialQuotaStatusSnapshotIsNil", "credentialQuotaStatusSnapshotNotNil", "credentialQuotaStatusSnapshotEqualFold", "credentialQuotaStatusSnapshotContainsFold", "format", "formatNEQ", "formatIn", "formatNotIn", "formatGT", "formatGTE", "formatLT", "formatLTE", "formatContains", "formatHasPrefix", "formatHasSuffix", "formatEqualFold", "formatContainsFold", "errorMessage", "errorMessageNEQ", "errorMessageIn", "errorMessageNotIn", "errorMessageGT", "errorMessageGTE", "errorMessageLT", "errorMessageLTE", "errorMessageContains", "errorMessageHasPrefix", "errorMessageHasSuffix", "errorMessageIsNil", "errorMessageNotNil", "errorMessageEqualFold", "errorMessageContainsFold", "responseStatusCode", "responseStatusCodeNEQ", "responseStatusCodeIn", "responseStatusCodeNotIn", "responseStatusCodeGT", "responseStatusCodeGTE", "responseStatusCodeLT", "responseStatusCodeLTE", "responseStatusCodeIsNil", "responseStatusCodeNotNil", "status", "statusNEQ", "statusIn", "statusNotIn", "stream", "streamNEQ", "metricsLatencyMs", "metricsLatencyMsNEQ", "metricsLatencyMsIn", "metricsLatencyMsNotIn", "metricsLatencyMsGT", "metricsLatencyMsGTE", "metricsLatencyMsLT", "metricsLatencyMsLTE", "metricsLatencyMsIsNil", "metricsLatencyMsNotNil", "metricsFirstTokenLatencyMs", "metricsFirstTokenLatencyMsNEQ", "metricsFirstTokenLatencyMsIn", "metricsFirstTokenLatencyMsNotIn", "metricsFirstTokenLatencyMsGT", "metricsFirstTokenLatencyMsGTE", "metricsFirstTokenLatencyMsLT", "metricsFirstTokenLatencyMsLTE", "metricsFirstTokenLatencyMsIsNil", "metricsFirstTokenLatencyMsNotNil", "metricsReasoningDurationMs", "metricsReasoningDurationMsNEQ", "metricsReasoningDurationMsIn", "metricsReasoningDurationMsNotIn", "metricsReasoningDurationMsGT", "metricsReasoningDurationMsGTE", "metricsReasoningDurationMsLT", "metricsReasoningDurationMsLTE", "metricsReasoningDurationMsIsNil", "metricsReasoningDurationMsNotNil", "hasRequest", "hasRequestWith", "hasChannel", "hasChannelWith", "hasCredential", "hasCredentialWith", "hasQuotaScope", "hasQuotaScopeWith", "hasDataStorage", "hasDataStorageWith"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -77429,6 +81457,484 @@ func (ec *executionContext) unmarshalInputRequestExecutionWhereInput(ctx context
 				return it, err
 			}
 			it.CredentialFingerprintContainsFold = data
+		case "secretFingerprint":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprint"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprint = data
+		case "secretFingerprintNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintNEQ = data
+		case "secretFingerprintIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintIn = data
+		case "secretFingerprintNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintNotIn = data
+		case "secretFingerprintGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintGT = data
+		case "secretFingerprintGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintGTE = data
+		case "secretFingerprintLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintLT = data
+		case "secretFingerprintLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintLTE = data
+		case "secretFingerprintContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintContains = data
+		case "secretFingerprintHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintHasPrefix = data
+		case "secretFingerprintHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintHasSuffix = data
+		case "secretFingerprintIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintIsNil = data
+		case "secretFingerprintNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintNotNil = data
+		case "secretFingerprintEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintEqualFold = data
+		case "secretFingerprintContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintContainsFold = data
+		case "resourceScopeKey":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKey"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKey = data
+		case "resourceScopeKeyNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyNEQ = data
+		case "resourceScopeKeyIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyIn = data
+		case "resourceScopeKeyNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyNotIn = data
+		case "resourceScopeKeyGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyGT = data
+		case "resourceScopeKeyGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyGTE = data
+		case "resourceScopeKeyLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyLT = data
+		case "resourceScopeKeyLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyLTE = data
+		case "resourceScopeKeyContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyContains = data
+		case "resourceScopeKeyHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyHasPrefix = data
+		case "resourceScopeKeyHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyHasSuffix = data
+		case "resourceScopeKeyIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyIsNil = data
+		case "resourceScopeKeyNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyNotNil = data
+		case "resourceScopeKeyEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyEqualFold = data
+		case "resourceScopeKeyContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyContainsFold = data
+		case "quotaScopeID":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeID"))
+			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.QuotaScopeID = converted
+		case "quotaScopeIDNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDNEQ"))
+			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.QuotaScopeIDNEQ = converted
+		case "quotaScopeIDIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDIn"))
+			data, err := ec.unmarshalOID2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUIDᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrsToInts(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.QuotaScopeIDIn = converted
+		case "quotaScopeIDNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDNotIn"))
+			data, err := ec.unmarshalOID2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUIDᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrsToInts(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.QuotaScopeIDNotIn = converted
+		case "quotaScopeIDIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeIDIsNil = data
+		case "quotaScopeIDNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeIDNotNil = data
+		case "quotaScopeNameSnapshot":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshot"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshot = data
+		case "quotaScopeNameSnapshotNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotNEQ = data
+		case "quotaScopeNameSnapshotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotIn = data
+		case "quotaScopeNameSnapshotNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotNotIn = data
+		case "quotaScopeNameSnapshotGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotGT = data
+		case "quotaScopeNameSnapshotGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotGTE = data
+		case "quotaScopeNameSnapshotLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotLT = data
+		case "quotaScopeNameSnapshotLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotLTE = data
+		case "quotaScopeNameSnapshotContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotContains = data
+		case "quotaScopeNameSnapshotHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotHasPrefix = data
+		case "quotaScopeNameSnapshotHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotHasSuffix = data
+		case "quotaScopeNameSnapshotIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotIsNil = data
+		case "quotaScopeNameSnapshotNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotNotNil = data
+		case "quotaScopeNameSnapshotEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotEqualFold = data
+		case "quotaScopeNameSnapshotContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotContainsFold = data
+		case "quotaScopeStatusSnapshot":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshot"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshot = data
+		case "quotaScopeStatusSnapshotNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotNEQ = data
+		case "quotaScopeStatusSnapshotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotIn = data
+		case "quotaScopeStatusSnapshotNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotNotIn = data
+		case "quotaScopeStatusSnapshotGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotGT = data
+		case "quotaScopeStatusSnapshotGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotGTE = data
+		case "quotaScopeStatusSnapshotLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotLT = data
+		case "quotaScopeStatusSnapshotLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotLTE = data
+		case "quotaScopeStatusSnapshotContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotContains = data
+		case "quotaScopeStatusSnapshotHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotHasPrefix = data
+		case "quotaScopeStatusSnapshotHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotHasSuffix = data
+		case "quotaScopeStatusSnapshotIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotIsNil = data
+		case "quotaScopeStatusSnapshotNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotNotNil = data
+		case "quotaScopeStatusSnapshotEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotEqualFold = data
+		case "quotaScopeStatusSnapshotContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotContainsFold = data
 		case "credentialNameSnapshot":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialNameSnapshot"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -78409,6 +82915,20 @@ func (ec *executionContext) unmarshalInputRequestExecutionWhereInput(ctx context
 				return it, err
 			}
 			it.HasCredentialWith = data
+		case "hasQuotaScope":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasQuotaScope"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.HasQuotaScope = data
+		case "hasQuotaScopeWith":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasQuotaScopeWith"))
+			data, err := ec.unmarshalOCredentialQuotaScopeWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeWhereInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.HasQuotaScopeWith = data
 		case "hasDataStorage":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasDataStorage"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
@@ -82806,7 +87326,7 @@ func (ec *executionContext) unmarshalInputUpdateChannelCredentialRefInput(ctx co
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"enabled", "weightOverride", "clearWeightOverride"}
+	fieldsInOrder := [...]string{"enabled"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -82820,20 +87340,6 @@ func (ec *executionContext) unmarshalInputUpdateChannelCredentialRefInput(ctx co
 				return it, err
 			}
 			it.Enabled = data
-		case "weightOverride":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightOverride"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightOverride = data
-		case "clearWeightOverride":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("clearWeightOverride"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ClearWeightOverride = data
 		}
 	}
 
@@ -83208,6 +87714,152 @@ func (ec *executionContext) unmarshalInputUpdateChannelProbeSettingInput(ctx con
 				return it, err
 			}
 			it.Frequency = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputUpdateCredentialQuotaScopeInput(ctx context.Context, obj any) (biz.UpdateCredentialQuotaScopeInput, error) {
+	var it biz.UpdateCredentialQuotaScopeInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "status", "unit", "limitAmount", "usedAmount", "warningThresholdPercent", "clearWarningThreshold", "resetPolicy", "resetAt", "clearResetAt", "windowStartedAt", "clearWindowStartedAt", "overLimitAction", "pauseUntil", "clearPauseUntil", "source", "lastError", "remark"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "status":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
+			data, err := ec.unmarshalOCredentialQuotaScopeStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐStatus(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Status = data
+		case "unit":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("unit"))
+			data, err := ec.unmarshalOCredentialQuotaScopeUnit2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐUnit(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Unit = data
+		case "limitAmount":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("limitAmount"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LimitAmount = data
+		case "usedAmount":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("usedAmount"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.UsedAmount = data
+		case "warningThresholdPercent":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("warningThresholdPercent"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WarningThresholdPercent = data
+		case "clearWarningThreshold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("clearWarningThreshold"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ClearWarningThreshold = data
+		case "resetPolicy":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resetPolicy"))
+			data, err := ec.unmarshalOCredentialQuotaScopeResetPolicy2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐResetPolicy(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResetPolicy = data
+		case "resetAt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resetAt"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResetAt = data
+		case "clearResetAt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("clearResetAt"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ClearResetAt = data
+		case "windowStartedAt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("windowStartedAt"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.WindowStartedAt = data
+		case "clearWindowStartedAt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("clearWindowStartedAt"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ClearWindowStartedAt = data
+		case "overLimitAction":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("overLimitAction"))
+			data, err := ec.unmarshalOCredentialQuotaScopeOverLimitAction2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐOverLimitAction(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.OverLimitAction = data
+		case "pauseUntil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pauseUntil"))
+			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PauseUntil = data
+		case "clearPauseUntil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("clearPauseUntil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ClearPauseUntil = data
+		case "source":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("source"))
+			data, err := ec.unmarshalOCredentialQuotaScopeSource2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐSource(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Source = data
+		case "lastError":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastError"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.LastError = data
+		case "remark":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remark"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Remark = data
 		}
 	}
 
@@ -84588,7 +89240,7 @@ func (ec *executionContext) unmarshalInputUpdateUpstreamCredentialInput(ctx cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "status", "weight", "remark"}
+	fieldsInOrder := [...]string{"name", "status", "quotaScopeID", "clearQuotaScope", "quota", "remark"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -84609,13 +89261,27 @@ func (ec *executionContext) unmarshalInputUpdateUpstreamCredentialInput(ctx cont
 				return it, err
 			}
 			it.Status = data
-		case "weight":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weight"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+		case "quotaScopeID":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeID"))
+			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.Weight = data
+			it.QuotaScopeID = data
+		case "clearQuotaScope":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("clearQuotaScope"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ClearQuotaScope = data
+		case "quota":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quota"))
+			data, err := ec.unmarshalOUpdateCredentialQuotaScopeInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐUpdateCredentialQuotaScopeInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Quota = data
 		case "remark":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remark"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -85175,7 +89841,7 @@ func (ec *executionContext) unmarshalInputUpstreamCredentialWhereInput(ctx conte
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "name", "nameNEQ", "nameIn", "nameNotIn", "nameGT", "nameGTE", "nameLT", "nameLTE", "nameContains", "nameHasPrefix", "nameHasSuffix", "nameIsNil", "nameNotNil", "nameEqualFold", "nameContainsFold", "providerType", "providerTypeNEQ", "providerTypeIn", "providerTypeNotIn", "providerTypeGT", "providerTypeGTE", "providerTypeLT", "providerTypeLTE", "providerTypeContains", "providerTypeHasPrefix", "providerTypeHasSuffix", "providerTypeEqualFold", "providerTypeContainsFold", "baseURL", "baseURLNEQ", "baseURLIn", "baseURLNotIn", "baseURLGT", "baseURLGTE", "baseURLLT", "baseURLLTE", "baseURLContains", "baseURLHasPrefix", "baseURLHasSuffix", "baseURLIsNil", "baseURLNotNil", "baseURLEqualFold", "baseURLContainsFold", "authKind", "authKindNEQ", "authKindIn", "authKindNotIn", "secretKind", "secretKindNEQ", "secretKindIn", "secretKindNotIn", "issuerScope", "issuerScopeNEQ", "issuerScopeIn", "issuerScopeNotIn", "issuerScopeGT", "issuerScopeGTE", "issuerScopeLT", "issuerScopeLTE", "issuerScopeContains", "issuerScopeHasPrefix", "issuerScopeHasSuffix", "issuerScopeIsNil", "issuerScopeNotNil", "issuerScopeEqualFold", "issuerScopeContainsFold", "keyHint", "keyHintNEQ", "keyHintIn", "keyHintNotIn", "keyHintGT", "keyHintGTE", "keyHintLT", "keyHintLTE", "keyHintContains", "keyHintHasPrefix", "keyHintHasSuffix", "keyHintIsNil", "keyHintNotNil", "keyHintEqualFold", "keyHintContainsFold", "quotaScopeID", "quotaScopeIDNEQ", "quotaScopeIDIn", "quotaScopeIDNotIn", "quotaScopeIDGT", "quotaScopeIDGTE", "quotaScopeIDLT", "quotaScopeIDLTE", "quotaScopeIDIsNil", "quotaScopeIDNotNil", "fingerprint", "fingerprintNEQ", "fingerprintIn", "fingerprintNotIn", "fingerprintGT", "fingerprintGTE", "fingerprintLT", "fingerprintLTE", "fingerprintContains", "fingerprintHasPrefix", "fingerprintHasSuffix", "fingerprintEqualFold", "fingerprintContainsFold", "status", "statusNEQ", "statusIn", "statusNotIn", "weight", "weightNEQ", "weightIn", "weightNotIn", "weightGT", "weightGTE", "weightLT", "weightLTE", "quotaStatus", "quotaStatusNEQ", "quotaStatusIn", "quotaStatusNotIn", "quotaStatusGT", "quotaStatusGTE", "quotaStatusLT", "quotaStatusLTE", "quotaStatusContains", "quotaStatusHasPrefix", "quotaStatusHasSuffix", "quotaStatusIsNil", "quotaStatusNotNil", "quotaStatusEqualFold", "quotaStatusContainsFold", "lastError", "lastErrorNEQ", "lastErrorIn", "lastErrorNotIn", "lastErrorGT", "lastErrorGTE", "lastErrorLT", "lastErrorLTE", "lastErrorContains", "lastErrorHasPrefix", "lastErrorHasSuffix", "lastErrorIsNil", "lastErrorNotNil", "lastErrorEqualFold", "lastErrorContainsFold", "remark", "remarkNEQ", "remarkIn", "remarkNotIn", "remarkGT", "remarkGTE", "remarkLT", "remarkLTE", "remarkContains", "remarkHasPrefix", "remarkHasSuffix", "remarkIsNil", "remarkNotNil", "remarkEqualFold", "remarkContainsFold", "hasChannelRefs", "hasChannelRefsWith", "hasExecutions", "hasExecutionsWith", "hasUsageLogs", "hasUsageLogsWith", "hasProviderQuotaStatuses", "hasProviderQuotaStatusesWith"}
+	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "name", "nameNEQ", "nameIn", "nameNotIn", "nameGT", "nameGTE", "nameLT", "nameLTE", "nameContains", "nameHasPrefix", "nameHasSuffix", "nameIsNil", "nameNotNil", "nameEqualFold", "nameContainsFold", "keyHint", "keyHintNEQ", "keyHintIn", "keyHintNotIn", "keyHintGT", "keyHintGTE", "keyHintLT", "keyHintLTE", "keyHintContains", "keyHintHasPrefix", "keyHintHasSuffix", "keyHintIsNil", "keyHintNotNil", "keyHintEqualFold", "keyHintContainsFold", "quotaScopeID", "quotaScopeIDNEQ", "quotaScopeIDIn", "quotaScopeIDNotIn", "quotaScopeIDIsNil", "quotaScopeIDNotNil", "fingerprint", "fingerprintNEQ", "fingerprintIn", "fingerprintNotIn", "fingerprintGT", "fingerprintGTE", "fingerprintLT", "fingerprintLTE", "fingerprintContains", "fingerprintHasPrefix", "fingerprintHasSuffix", "fingerprintEqualFold", "fingerprintContainsFold", "secretFingerprint", "secretFingerprintNEQ", "secretFingerprintIn", "secretFingerprintNotIn", "secretFingerprintGT", "secretFingerprintGTE", "secretFingerprintLT", "secretFingerprintLTE", "secretFingerprintContains", "secretFingerprintHasPrefix", "secretFingerprintHasSuffix", "secretFingerprintIsNil", "secretFingerprintNotNil", "secretFingerprintEqualFold", "secretFingerprintContainsFold", "status", "statusNEQ", "statusIn", "statusNotIn", "quotaStatus", "quotaStatusNEQ", "quotaStatusIn", "quotaStatusNotIn", "quotaStatusGT", "quotaStatusGTE", "quotaStatusLT", "quotaStatusLTE", "quotaStatusContains", "quotaStatusHasPrefix", "quotaStatusHasSuffix", "quotaStatusIsNil", "quotaStatusNotNil", "quotaStatusEqualFold", "quotaStatusContainsFold", "lastError", "lastErrorNEQ", "lastErrorIn", "lastErrorNotIn", "lastErrorGT", "lastErrorGTE", "lastErrorLT", "lastErrorLTE", "lastErrorContains", "lastErrorHasPrefix", "lastErrorHasSuffix", "lastErrorIsNil", "lastErrorNotNil", "lastErrorEqualFold", "lastErrorContainsFold", "remark", "remarkNEQ", "remarkIn", "remarkNotIn", "remarkGT", "remarkGTE", "remarkLT", "remarkLTE", "remarkContains", "remarkHasPrefix", "remarkHasSuffix", "remarkIsNil", "remarkNotNil", "remarkEqualFold", "remarkContainsFold", "hasChannelRefs", "hasChannelRefsWith", "hasExecutions", "hasExecutionsWith", "hasUsageLogs", "hasUsageLogsWith", "hasProviderQuotaStatuses", "hasProviderQuotaStatusesWith", "hasQuotaScope", "hasQuotaScopeWith"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -85508,363 +90174,6 @@ func (ec *executionContext) unmarshalInputUpstreamCredentialWhereInput(ctx conte
 				return it, err
 			}
 			it.NameContainsFold = data
-		case "providerType":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerType"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ProviderType = data
-		case "providerTypeNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerTypeNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ProviderTypeNEQ = data
-		case "providerTypeIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerTypeIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ProviderTypeIn = data
-		case "providerTypeNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerTypeNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ProviderTypeNotIn = data
-		case "providerTypeGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerTypeGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ProviderTypeGT = data
-		case "providerTypeGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerTypeGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ProviderTypeGTE = data
-		case "providerTypeLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerTypeLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ProviderTypeLT = data
-		case "providerTypeLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerTypeLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ProviderTypeLTE = data
-		case "providerTypeContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerTypeContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ProviderTypeContains = data
-		case "providerTypeHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerTypeHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ProviderTypeHasPrefix = data
-		case "providerTypeHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerTypeHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ProviderTypeHasSuffix = data
-		case "providerTypeEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerTypeEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ProviderTypeEqualFold = data
-		case "providerTypeContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerTypeContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ProviderTypeContainsFold = data
-		case "baseURL":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURL"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.BaseURL = data
-		case "baseURLNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURLNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.BaseURLNEQ = data
-		case "baseURLIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURLIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.BaseURLIn = data
-		case "baseURLNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURLNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.BaseURLNotIn = data
-		case "baseURLGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURLGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.BaseURLGT = data
-		case "baseURLGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURLGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.BaseURLGTE = data
-		case "baseURLLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURLLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.BaseURLLT = data
-		case "baseURLLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURLLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.BaseURLLTE = data
-		case "baseURLContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURLContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.BaseURLContains = data
-		case "baseURLHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURLHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.BaseURLHasPrefix = data
-		case "baseURLHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURLHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.BaseURLHasSuffix = data
-		case "baseURLIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURLIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.BaseURLIsNil = data
-		case "baseURLNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURLNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.BaseURLNotNil = data
-		case "baseURLEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURLEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.BaseURLEqualFold = data
-		case "baseURLContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURLContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.BaseURLContainsFold = data
-		case "authKind":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("authKind"))
-			data, err := ec.unmarshalOUpstreamCredentialAuthKind2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐAuthKind(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.AuthKind = data
-		case "authKindNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("authKindNEQ"))
-			data, err := ec.unmarshalOUpstreamCredentialAuthKind2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐAuthKind(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.AuthKindNEQ = data
-		case "authKindIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("authKindIn"))
-			data, err := ec.unmarshalOUpstreamCredentialAuthKind2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐAuthKindᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.AuthKindIn = data
-		case "authKindNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("authKindNotIn"))
-			data, err := ec.unmarshalOUpstreamCredentialAuthKind2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐAuthKindᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.AuthKindNotIn = data
-		case "secretKind":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretKind"))
-			data, err := ec.unmarshalOUpstreamCredentialSecretKind2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐSecretKind(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretKind = data
-		case "secretKindNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretKindNEQ"))
-			data, err := ec.unmarshalOUpstreamCredentialSecretKind2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐSecretKind(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretKindNEQ = data
-		case "secretKindIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretKindIn"))
-			data, err := ec.unmarshalOUpstreamCredentialSecretKind2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐSecretKindᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretKindIn = data
-		case "secretKindNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretKindNotIn"))
-			data, err := ec.unmarshalOUpstreamCredentialSecretKind2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐSecretKindᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretKindNotIn = data
-		case "issuerScope":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issuerScope"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.IssuerScope = data
-		case "issuerScopeNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issuerScopeNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.IssuerScopeNEQ = data
-		case "issuerScopeIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issuerScopeIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.IssuerScopeIn = data
-		case "issuerScopeNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issuerScopeNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.IssuerScopeNotIn = data
-		case "issuerScopeGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issuerScopeGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.IssuerScopeGT = data
-		case "issuerScopeGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issuerScopeGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.IssuerScopeGTE = data
-		case "issuerScopeLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issuerScopeLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.IssuerScopeLT = data
-		case "issuerScopeLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issuerScopeLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.IssuerScopeLTE = data
-		case "issuerScopeContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issuerScopeContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.IssuerScopeContains = data
-		case "issuerScopeHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issuerScopeHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.IssuerScopeHasPrefix = data
-		case "issuerScopeHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issuerScopeHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.IssuerScopeHasSuffix = data
-		case "issuerScopeIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issuerScopeIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.IssuerScopeIsNil = data
-		case "issuerScopeNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issuerScopeNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.IssuerScopeNotNil = data
-		case "issuerScopeEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issuerScopeEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.IssuerScopeEqualFold = data
-		case "issuerScopeContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issuerScopeContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.IssuerScopeContainsFold = data
 		case "keyHint":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyHint"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -85972,60 +90281,48 @@ func (ec *executionContext) unmarshalInputUpstreamCredentialWhereInput(ctx conte
 			it.KeyHintContainsFold = data
 		case "quotaScopeID":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeID"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.QuotaScopeID = data
+			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.QuotaScopeID = converted
 		case "quotaScopeIDNEQ":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDNEQ"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.QuotaScopeIDNEQ = data
+			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.QuotaScopeIDNEQ = converted
 		case "quotaScopeIDIn":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDIn"))
-			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
+			data, err := ec.unmarshalOID2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUIDᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.QuotaScopeIDIn = data
+			converted, err := objects.ConvertGUIDPtrsToInts(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.QuotaScopeIDIn = converted
 		case "quotaScopeIDNotIn":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDNotIn"))
-			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
+			data, err := ec.unmarshalOID2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUIDᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.QuotaScopeIDNotIn = data
-		case "quotaScopeIDGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDGT"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			converted, err := objects.ConvertGUIDPtrsToInts(data)
 			if err != nil {
-				return it, err
+				return it, graphql.ErrorOnPath(ctx, err)
 			}
-			it.QuotaScopeIDGT = data
-		case "quotaScopeIDGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDGTE"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaScopeIDGTE = data
-		case "quotaScopeIDLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDLT"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaScopeIDLT = data
-		case "quotaScopeIDLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDLTE"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaScopeIDLTE = data
+			it.QuotaScopeIDNotIn = converted
 		case "quotaScopeIDIsNil":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDIsNil"))
 			data, err := ec.unmarshalOBoolean2bool(ctx, v)
@@ -86131,6 +90428,111 @@ func (ec *executionContext) unmarshalInputUpstreamCredentialWhereInput(ctx conte
 				return it, err
 			}
 			it.FingerprintContainsFold = data
+		case "secretFingerprint":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprint"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprint = data
+		case "secretFingerprintNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintNEQ = data
+		case "secretFingerprintIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintIn = data
+		case "secretFingerprintNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintNotIn = data
+		case "secretFingerprintGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintGT = data
+		case "secretFingerprintGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintGTE = data
+		case "secretFingerprintLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintLT = data
+		case "secretFingerprintLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintLTE = data
+		case "secretFingerprintContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintContains = data
+		case "secretFingerprintHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintHasPrefix = data
+		case "secretFingerprintHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintHasSuffix = data
+		case "secretFingerprintIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintIsNil = data
+		case "secretFingerprintNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintNotNil = data
+		case "secretFingerprintEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintEqualFold = data
+		case "secretFingerprintContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintContainsFold = data
 		case "status":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
 			data, err := ec.unmarshalOUpstreamCredentialStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐStatus(ctx, v)
@@ -86159,62 +90561,6 @@ func (ec *executionContext) unmarshalInputUpstreamCredentialWhereInput(ctx conte
 				return it, err
 			}
 			it.StatusNotIn = data
-		case "weight":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weight"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Weight = data
-		case "weightNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightNEQ"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightNEQ = data
-		case "weightIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightIn"))
-			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightIn = data
-		case "weightNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightNotIn"))
-			data, err := ec.unmarshalOInt2ᚕintᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightNotIn = data
-		case "weightGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightGT"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightGT = data
-		case "weightGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightGTE"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightGTE = data
-		case "weightLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightLT"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightLT = data
-		case "weightLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("weightLTE"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.WeightLTE = data
 		case "quotaStatus":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaStatus"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -86586,6 +90932,20 @@ func (ec *executionContext) unmarshalInputUpstreamCredentialWhereInput(ctx conte
 				return it, err
 			}
 			it.HasProviderQuotaStatusesWith = data
+		case "hasQuotaScope":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasQuotaScope"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.HasQuotaScope = data
+		case "hasQuotaScopeWith":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasQuotaScopeWith"))
+			data, err := ec.unmarshalOCredentialQuotaScopeWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeWhereInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.HasQuotaScopeWith = data
 		}
 	}
 
@@ -86671,7 +91031,7 @@ func (ec *executionContext) unmarshalInputUsageLogWhereInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "requestID", "requestIDNEQ", "requestIDIn", "requestIDNotIn", "apiKeyID", "apiKeyIDNEQ", "apiKeyIDIn", "apiKeyIDNotIn", "apiKeyIDGT", "apiKeyIDGTE", "apiKeyIDLT", "apiKeyIDLTE", "apiKeyIDIsNil", "apiKeyIDNotNil", "projectID", "projectIDNEQ", "projectIDIn", "projectIDNotIn", "channelID", "channelIDNEQ", "channelIDIn", "channelIDNotIn", "channelIDIsNil", "channelIDNotNil", "credentialID", "credentialIDNEQ", "credentialIDIn", "credentialIDNotIn", "credentialIDIsNil", "credentialIDNotNil", "modelID", "modelIDNEQ", "modelIDIn", "modelIDNotIn", "modelIDGT", "modelIDGTE", "modelIDLT", "modelIDLTE", "modelIDContains", "modelIDHasPrefix", "modelIDHasSuffix", "modelIDEqualFold", "modelIDContainsFold", "credentialFingerprint", "credentialFingerprintNEQ", "credentialFingerprintIn", "credentialFingerprintNotIn", "credentialFingerprintGT", "credentialFingerprintGTE", "credentialFingerprintLT", "credentialFingerprintLTE", "credentialFingerprintContains", "credentialFingerprintHasPrefix", "credentialFingerprintHasSuffix", "credentialFingerprintIsNil", "credentialFingerprintNotNil", "credentialFingerprintEqualFold", "credentialFingerprintContainsFold", "credentialNameSnapshot", "credentialNameSnapshotNEQ", "credentialNameSnapshotIn", "credentialNameSnapshotNotIn", "credentialNameSnapshotGT", "credentialNameSnapshotGTE", "credentialNameSnapshotLT", "credentialNameSnapshotLTE", "credentialNameSnapshotContains", "credentialNameSnapshotHasPrefix", "credentialNameSnapshotHasSuffix", "credentialNameSnapshotIsNil", "credentialNameSnapshotNotNil", "credentialNameSnapshotEqualFold", "credentialNameSnapshotContainsFold", "credentialKeyHint", "credentialKeyHintNEQ", "credentialKeyHintIn", "credentialKeyHintNotIn", "credentialKeyHintGT", "credentialKeyHintGTE", "credentialKeyHintLT", "credentialKeyHintLTE", "credentialKeyHintContains", "credentialKeyHintHasPrefix", "credentialKeyHintHasSuffix", "credentialKeyHintIsNil", "credentialKeyHintNotNil", "credentialKeyHintEqualFold", "credentialKeyHintContainsFold", "credentialSource", "credentialSourceNEQ", "credentialSourceIn", "credentialSourceNotIn", "credentialSourceGT", "credentialSourceGTE", "credentialSourceLT", "credentialSourceLTE", "credentialSourceContains", "credentialSourceHasPrefix", "credentialSourceHasSuffix", "credentialSourceIsNil", "credentialSourceNotNil", "credentialSourceEqualFold", "credentialSourceContainsFold", "promptTokens", "promptTokensNEQ", "promptTokensIn", "promptTokensNotIn", "promptTokensGT", "promptTokensGTE", "promptTokensLT", "promptTokensLTE", "completionTokens", "completionTokensNEQ", "completionTokensIn", "completionTokensNotIn", "completionTokensGT", "completionTokensGTE", "completionTokensLT", "completionTokensLTE", "totalTokens", "totalTokensNEQ", "totalTokensIn", "totalTokensNotIn", "totalTokensGT", "totalTokensGTE", "totalTokensLT", "totalTokensLTE", "promptAudioTokens", "promptAudioTokensNEQ", "promptAudioTokensIn", "promptAudioTokensNotIn", "promptAudioTokensGT", "promptAudioTokensGTE", "promptAudioTokensLT", "promptAudioTokensLTE", "promptAudioTokensIsNil", "promptAudioTokensNotNil", "promptCachedTokens", "promptCachedTokensNEQ", "promptCachedTokensIn", "promptCachedTokensNotIn", "promptCachedTokensGT", "promptCachedTokensGTE", "promptCachedTokensLT", "promptCachedTokensLTE", "promptCachedTokensIsNil", "promptCachedTokensNotNil", "promptWriteCachedTokens", "promptWriteCachedTokensNEQ", "promptWriteCachedTokensIn", "promptWriteCachedTokensNotIn", "promptWriteCachedTokensGT", "promptWriteCachedTokensGTE", "promptWriteCachedTokensLT", "promptWriteCachedTokensLTE", "promptWriteCachedTokensIsNil", "promptWriteCachedTokensNotNil", "promptWriteCachedTokens5m", "promptWriteCachedTokens5mNEQ", "promptWriteCachedTokens5mIn", "promptWriteCachedTokens5mNotIn", "promptWriteCachedTokens5mGT", "promptWriteCachedTokens5mGTE", "promptWriteCachedTokens5mLT", "promptWriteCachedTokens5mLTE", "promptWriteCachedTokens5mIsNil", "promptWriteCachedTokens5mNotNil", "promptWriteCachedTokens1h", "promptWriteCachedTokens1hNEQ", "promptWriteCachedTokens1hIn", "promptWriteCachedTokens1hNotIn", "promptWriteCachedTokens1hGT", "promptWriteCachedTokens1hGTE", "promptWriteCachedTokens1hLT", "promptWriteCachedTokens1hLTE", "promptWriteCachedTokens1hIsNil", "promptWriteCachedTokens1hNotNil", "completionAudioTokens", "completionAudioTokensNEQ", "completionAudioTokensIn", "completionAudioTokensNotIn", "completionAudioTokensGT", "completionAudioTokensGTE", "completionAudioTokensLT", "completionAudioTokensLTE", "completionAudioTokensIsNil", "completionAudioTokensNotNil", "completionReasoningTokens", "completionReasoningTokensNEQ", "completionReasoningTokensIn", "completionReasoningTokensNotIn", "completionReasoningTokensGT", "completionReasoningTokensGTE", "completionReasoningTokensLT", "completionReasoningTokensLTE", "completionReasoningTokensIsNil", "completionReasoningTokensNotNil", "completionAcceptedPredictionTokens", "completionAcceptedPredictionTokensNEQ", "completionAcceptedPredictionTokensIn", "completionAcceptedPredictionTokensNotIn", "completionAcceptedPredictionTokensGT", "completionAcceptedPredictionTokensGTE", "completionAcceptedPredictionTokensLT", "completionAcceptedPredictionTokensLTE", "completionAcceptedPredictionTokensIsNil", "completionAcceptedPredictionTokensNotNil", "completionRejectedPredictionTokens", "completionRejectedPredictionTokensNEQ", "completionRejectedPredictionTokensIn", "completionRejectedPredictionTokensNotIn", "completionRejectedPredictionTokensGT", "completionRejectedPredictionTokensGTE", "completionRejectedPredictionTokensLT", "completionRejectedPredictionTokensLTE", "completionRejectedPredictionTokensIsNil", "completionRejectedPredictionTokensNotNil", "source", "sourceNEQ", "sourceIn", "sourceNotIn", "format", "formatNEQ", "formatIn", "formatNotIn", "formatGT", "formatGTE", "formatLT", "formatLTE", "formatContains", "formatHasPrefix", "formatHasSuffix", "formatEqualFold", "formatContainsFold", "totalCost", "totalCostNEQ", "totalCostIn", "totalCostNotIn", "totalCostGT", "totalCostGTE", "totalCostLT", "totalCostLTE", "totalCostIsNil", "totalCostNotNil", "costPriceReferenceID", "costPriceReferenceIDNEQ", "costPriceReferenceIDIn", "costPriceReferenceIDNotIn", "costPriceReferenceIDGT", "costPriceReferenceIDGTE", "costPriceReferenceIDLT", "costPriceReferenceIDLTE", "costPriceReferenceIDContains", "costPriceReferenceIDHasPrefix", "costPriceReferenceIDHasSuffix", "costPriceReferenceIDIsNil", "costPriceReferenceIDNotNil", "costPriceReferenceIDEqualFold", "costPriceReferenceIDContainsFold", "hasRequest", "hasRequestWith", "hasProject", "hasProjectWith", "hasChannel", "hasChannelWith", "hasCredential", "hasCredentialWith"}
+	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "requestID", "requestIDNEQ", "requestIDIn", "requestIDNotIn", "apiKeyID", "apiKeyIDNEQ", "apiKeyIDIn", "apiKeyIDNotIn", "apiKeyIDGT", "apiKeyIDGTE", "apiKeyIDLT", "apiKeyIDLTE", "apiKeyIDIsNil", "apiKeyIDNotNil", "projectID", "projectIDNEQ", "projectIDIn", "projectIDNotIn", "channelID", "channelIDNEQ", "channelIDIn", "channelIDNotIn", "channelIDIsNil", "channelIDNotNil", "credentialID", "credentialIDNEQ", "credentialIDIn", "credentialIDNotIn", "credentialIDIsNil", "credentialIDNotNil", "modelID", "modelIDNEQ", "modelIDIn", "modelIDNotIn", "modelIDGT", "modelIDGTE", "modelIDLT", "modelIDLTE", "modelIDContains", "modelIDHasPrefix", "modelIDHasSuffix", "modelIDEqualFold", "modelIDContainsFold", "credentialFingerprint", "credentialFingerprintNEQ", "credentialFingerprintIn", "credentialFingerprintNotIn", "credentialFingerprintGT", "credentialFingerprintGTE", "credentialFingerprintLT", "credentialFingerprintLTE", "credentialFingerprintContains", "credentialFingerprintHasPrefix", "credentialFingerprintHasSuffix", "credentialFingerprintIsNil", "credentialFingerprintNotNil", "credentialFingerprintEqualFold", "credentialFingerprintContainsFold", "secretFingerprint", "secretFingerprintNEQ", "secretFingerprintIn", "secretFingerprintNotIn", "secretFingerprintGT", "secretFingerprintGTE", "secretFingerprintLT", "secretFingerprintLTE", "secretFingerprintContains", "secretFingerprintHasPrefix", "secretFingerprintHasSuffix", "secretFingerprintIsNil", "secretFingerprintNotNil", "secretFingerprintEqualFold", "secretFingerprintContainsFold", "resourceScopeKey", "resourceScopeKeyNEQ", "resourceScopeKeyIn", "resourceScopeKeyNotIn", "resourceScopeKeyGT", "resourceScopeKeyGTE", "resourceScopeKeyLT", "resourceScopeKeyLTE", "resourceScopeKeyContains", "resourceScopeKeyHasPrefix", "resourceScopeKeyHasSuffix", "resourceScopeKeyIsNil", "resourceScopeKeyNotNil", "resourceScopeKeyEqualFold", "resourceScopeKeyContainsFold", "quotaScopeID", "quotaScopeIDNEQ", "quotaScopeIDIn", "quotaScopeIDNotIn", "quotaScopeIDIsNil", "quotaScopeIDNotNil", "quotaScopeNameSnapshot", "quotaScopeNameSnapshotNEQ", "quotaScopeNameSnapshotIn", "quotaScopeNameSnapshotNotIn", "quotaScopeNameSnapshotGT", "quotaScopeNameSnapshotGTE", "quotaScopeNameSnapshotLT", "quotaScopeNameSnapshotLTE", "quotaScopeNameSnapshotContains", "quotaScopeNameSnapshotHasPrefix", "quotaScopeNameSnapshotHasSuffix", "quotaScopeNameSnapshotIsNil", "quotaScopeNameSnapshotNotNil", "quotaScopeNameSnapshotEqualFold", "quotaScopeNameSnapshotContainsFold", "quotaScopeStatusSnapshot", "quotaScopeStatusSnapshotNEQ", "quotaScopeStatusSnapshotIn", "quotaScopeStatusSnapshotNotIn", "quotaScopeStatusSnapshotGT", "quotaScopeStatusSnapshotGTE", "quotaScopeStatusSnapshotLT", "quotaScopeStatusSnapshotLTE", "quotaScopeStatusSnapshotContains", "quotaScopeStatusSnapshotHasPrefix", "quotaScopeStatusSnapshotHasSuffix", "quotaScopeStatusSnapshotIsNil", "quotaScopeStatusSnapshotNotNil", "quotaScopeStatusSnapshotEqualFold", "quotaScopeStatusSnapshotContainsFold", "credentialNameSnapshot", "credentialNameSnapshotNEQ", "credentialNameSnapshotIn", "credentialNameSnapshotNotIn", "credentialNameSnapshotGT", "credentialNameSnapshotGTE", "credentialNameSnapshotLT", "credentialNameSnapshotLTE", "credentialNameSnapshotContains", "credentialNameSnapshotHasPrefix", "credentialNameSnapshotHasSuffix", "credentialNameSnapshotIsNil", "credentialNameSnapshotNotNil", "credentialNameSnapshotEqualFold", "credentialNameSnapshotContainsFold", "credentialKeyHint", "credentialKeyHintNEQ", "credentialKeyHintIn", "credentialKeyHintNotIn", "credentialKeyHintGT", "credentialKeyHintGTE", "credentialKeyHintLT", "credentialKeyHintLTE", "credentialKeyHintContains", "credentialKeyHintHasPrefix", "credentialKeyHintHasSuffix", "credentialKeyHintIsNil", "credentialKeyHintNotNil", "credentialKeyHintEqualFold", "credentialKeyHintContainsFold", "credentialSource", "credentialSourceNEQ", "credentialSourceIn", "credentialSourceNotIn", "credentialSourceGT", "credentialSourceGTE", "credentialSourceLT", "credentialSourceLTE", "credentialSourceContains", "credentialSourceHasPrefix", "credentialSourceHasSuffix", "credentialSourceIsNil", "credentialSourceNotNil", "credentialSourceEqualFold", "credentialSourceContainsFold", "credentialQuotaStatusSnapshot", "credentialQuotaStatusSnapshotNEQ", "credentialQuotaStatusSnapshotIn", "credentialQuotaStatusSnapshotNotIn", "credentialQuotaStatusSnapshotGT", "credentialQuotaStatusSnapshotGTE", "credentialQuotaStatusSnapshotLT", "credentialQuotaStatusSnapshotLTE", "credentialQuotaStatusSnapshotContains", "credentialQuotaStatusSnapshotHasPrefix", "credentialQuotaStatusSnapshotHasSuffix", "credentialQuotaStatusSnapshotIsNil", "credentialQuotaStatusSnapshotNotNil", "credentialQuotaStatusSnapshotEqualFold", "credentialQuotaStatusSnapshotContainsFold", "promptTokens", "promptTokensNEQ", "promptTokensIn", "promptTokensNotIn", "promptTokensGT", "promptTokensGTE", "promptTokensLT", "promptTokensLTE", "completionTokens", "completionTokensNEQ", "completionTokensIn", "completionTokensNotIn", "completionTokensGT", "completionTokensGTE", "completionTokensLT", "completionTokensLTE", "totalTokens", "totalTokensNEQ", "totalTokensIn", "totalTokensNotIn", "totalTokensGT", "totalTokensGTE", "totalTokensLT", "totalTokensLTE", "promptAudioTokens", "promptAudioTokensNEQ", "promptAudioTokensIn", "promptAudioTokensNotIn", "promptAudioTokensGT", "promptAudioTokensGTE", "promptAudioTokensLT", "promptAudioTokensLTE", "promptAudioTokensIsNil", "promptAudioTokensNotNil", "promptCachedTokens", "promptCachedTokensNEQ", "promptCachedTokensIn", "promptCachedTokensNotIn", "promptCachedTokensGT", "promptCachedTokensGTE", "promptCachedTokensLT", "promptCachedTokensLTE", "promptCachedTokensIsNil", "promptCachedTokensNotNil", "promptWriteCachedTokens", "promptWriteCachedTokensNEQ", "promptWriteCachedTokensIn", "promptWriteCachedTokensNotIn", "promptWriteCachedTokensGT", "promptWriteCachedTokensGTE", "promptWriteCachedTokensLT", "promptWriteCachedTokensLTE", "promptWriteCachedTokensIsNil", "promptWriteCachedTokensNotNil", "promptWriteCachedTokens5m", "promptWriteCachedTokens5mNEQ", "promptWriteCachedTokens5mIn", "promptWriteCachedTokens5mNotIn", "promptWriteCachedTokens5mGT", "promptWriteCachedTokens5mGTE", "promptWriteCachedTokens5mLT", "promptWriteCachedTokens5mLTE", "promptWriteCachedTokens5mIsNil", "promptWriteCachedTokens5mNotNil", "promptWriteCachedTokens1h", "promptWriteCachedTokens1hNEQ", "promptWriteCachedTokens1hIn", "promptWriteCachedTokens1hNotIn", "promptWriteCachedTokens1hGT", "promptWriteCachedTokens1hGTE", "promptWriteCachedTokens1hLT", "promptWriteCachedTokens1hLTE", "promptWriteCachedTokens1hIsNil", "promptWriteCachedTokens1hNotNil", "completionAudioTokens", "completionAudioTokensNEQ", "completionAudioTokensIn", "completionAudioTokensNotIn", "completionAudioTokensGT", "completionAudioTokensGTE", "completionAudioTokensLT", "completionAudioTokensLTE", "completionAudioTokensIsNil", "completionAudioTokensNotNil", "completionReasoningTokens", "completionReasoningTokensNEQ", "completionReasoningTokensIn", "completionReasoningTokensNotIn", "completionReasoningTokensGT", "completionReasoningTokensGTE", "completionReasoningTokensLT", "completionReasoningTokensLTE", "completionReasoningTokensIsNil", "completionReasoningTokensNotNil", "completionAcceptedPredictionTokens", "completionAcceptedPredictionTokensNEQ", "completionAcceptedPredictionTokensIn", "completionAcceptedPredictionTokensNotIn", "completionAcceptedPredictionTokensGT", "completionAcceptedPredictionTokensGTE", "completionAcceptedPredictionTokensLT", "completionAcceptedPredictionTokensLTE", "completionAcceptedPredictionTokensIsNil", "completionAcceptedPredictionTokensNotNil", "completionRejectedPredictionTokens", "completionRejectedPredictionTokensNEQ", "completionRejectedPredictionTokensIn", "completionRejectedPredictionTokensNotIn", "completionRejectedPredictionTokensGT", "completionRejectedPredictionTokensGTE", "completionRejectedPredictionTokensLT", "completionRejectedPredictionTokensLTE", "completionRejectedPredictionTokensIsNil", "completionRejectedPredictionTokensNotNil", "source", "sourceNEQ", "sourceIn", "sourceNotIn", "format", "formatNEQ", "formatIn", "formatNotIn", "formatGT", "formatGTE", "formatLT", "formatLTE", "formatContains", "formatHasPrefix", "formatHasSuffix", "formatEqualFold", "formatContainsFold", "totalCost", "totalCostNEQ", "totalCostIn", "totalCostNotIn", "totalCostGT", "totalCostGTE", "totalCostLT", "totalCostLTE", "totalCostIsNil", "totalCostNotNil", "costPriceReferenceID", "costPriceReferenceIDNEQ", "costPriceReferenceIDIn", "costPriceReferenceIDNotIn", "costPriceReferenceIDGT", "costPriceReferenceIDGTE", "costPriceReferenceIDLT", "costPriceReferenceIDLTE", "costPriceReferenceIDContains", "costPriceReferenceIDHasPrefix", "costPriceReferenceIDHasSuffix", "costPriceReferenceIDIsNil", "costPriceReferenceIDNotNil", "costPriceReferenceIDEqualFold", "costPriceReferenceIDContainsFold", "hasRequest", "hasRequestWith", "hasProject", "hasProjectWith", "hasChannel", "hasChannelWith", "hasCredential", "hasCredentialWith", "hasQuotaScope", "hasQuotaScopeWith"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -87369,6 +91729,484 @@ func (ec *executionContext) unmarshalInputUsageLogWhereInput(ctx context.Context
 				return it, err
 			}
 			it.CredentialFingerprintContainsFold = data
+		case "secretFingerprint":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprint"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprint = data
+		case "secretFingerprintNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintNEQ = data
+		case "secretFingerprintIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintIn = data
+		case "secretFingerprintNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintNotIn = data
+		case "secretFingerprintGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintGT = data
+		case "secretFingerprintGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintGTE = data
+		case "secretFingerprintLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintLT = data
+		case "secretFingerprintLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintLTE = data
+		case "secretFingerprintContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintContains = data
+		case "secretFingerprintHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintHasPrefix = data
+		case "secretFingerprintHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintHasSuffix = data
+		case "secretFingerprintIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintIsNil = data
+		case "secretFingerprintNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintNotNil = data
+		case "secretFingerprintEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintEqualFold = data
+		case "secretFingerprintContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.SecretFingerprintContainsFold = data
+		case "resourceScopeKey":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKey"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKey = data
+		case "resourceScopeKeyNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyNEQ = data
+		case "resourceScopeKeyIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyIn = data
+		case "resourceScopeKeyNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyNotIn = data
+		case "resourceScopeKeyGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyGT = data
+		case "resourceScopeKeyGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyGTE = data
+		case "resourceScopeKeyLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyLT = data
+		case "resourceScopeKeyLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyLTE = data
+		case "resourceScopeKeyContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyContains = data
+		case "resourceScopeKeyHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyHasPrefix = data
+		case "resourceScopeKeyHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyHasSuffix = data
+		case "resourceScopeKeyIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyIsNil = data
+		case "resourceScopeKeyNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyNotNil = data
+		case "resourceScopeKeyEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyEqualFold = data
+		case "resourceScopeKeyContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ResourceScopeKeyContainsFold = data
+		case "quotaScopeID":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeID"))
+			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.QuotaScopeID = converted
+		case "quotaScopeIDNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDNEQ"))
+			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.QuotaScopeIDNEQ = converted
+		case "quotaScopeIDIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDIn"))
+			data, err := ec.unmarshalOID2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUIDᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrsToInts(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.QuotaScopeIDIn = converted
+		case "quotaScopeIDNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDNotIn"))
+			data, err := ec.unmarshalOID2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUIDᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			converted, err := objects.ConvertGUIDPtrsToInts(data)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			it.QuotaScopeIDNotIn = converted
+		case "quotaScopeIDIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeIDIsNil = data
+		case "quotaScopeIDNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeIDNotNil = data
+		case "quotaScopeNameSnapshot":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshot"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshot = data
+		case "quotaScopeNameSnapshotNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotNEQ = data
+		case "quotaScopeNameSnapshotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotIn = data
+		case "quotaScopeNameSnapshotNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotNotIn = data
+		case "quotaScopeNameSnapshotGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotGT = data
+		case "quotaScopeNameSnapshotGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotGTE = data
+		case "quotaScopeNameSnapshotLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotLT = data
+		case "quotaScopeNameSnapshotLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotLTE = data
+		case "quotaScopeNameSnapshotContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotContains = data
+		case "quotaScopeNameSnapshotHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotHasPrefix = data
+		case "quotaScopeNameSnapshotHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotHasSuffix = data
+		case "quotaScopeNameSnapshotIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotIsNil = data
+		case "quotaScopeNameSnapshotNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotNotNil = data
+		case "quotaScopeNameSnapshotEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotEqualFold = data
+		case "quotaScopeNameSnapshotContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshotContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeNameSnapshotContainsFold = data
+		case "quotaScopeStatusSnapshot":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshot"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshot = data
+		case "quotaScopeStatusSnapshotNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotNEQ = data
+		case "quotaScopeStatusSnapshotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotIn = data
+		case "quotaScopeStatusSnapshotNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotNotIn = data
+		case "quotaScopeStatusSnapshotGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotGT = data
+		case "quotaScopeStatusSnapshotGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotGTE = data
+		case "quotaScopeStatusSnapshotLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotLT = data
+		case "quotaScopeStatusSnapshotLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotLTE = data
+		case "quotaScopeStatusSnapshotContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotContains = data
+		case "quotaScopeStatusSnapshotHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotHasPrefix = data
+		case "quotaScopeStatusSnapshotHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotHasSuffix = data
+		case "quotaScopeStatusSnapshotIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotIsNil = data
+		case "quotaScopeStatusSnapshotNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotNotNil = data
+		case "quotaScopeStatusSnapshotEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotEqualFold = data
+		case "quotaScopeStatusSnapshotContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeStatusSnapshotContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.QuotaScopeStatusSnapshotContainsFold = data
 		case "credentialNameSnapshot":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialNameSnapshot"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -87684,6 +92522,111 @@ func (ec *executionContext) unmarshalInputUsageLogWhereInput(ctx context.Context
 				return it, err
 			}
 			it.CredentialSourceContainsFold = data
+		case "credentialQuotaStatusSnapshot":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshot"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CredentialQuotaStatusSnapshot = data
+		case "credentialQuotaStatusSnapshotNEQ":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshotNEQ"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CredentialQuotaStatusSnapshotNEQ = data
+		case "credentialQuotaStatusSnapshotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CredentialQuotaStatusSnapshotIn = data
+		case "credentialQuotaStatusSnapshotNotIn":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshotNotIn"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CredentialQuotaStatusSnapshotNotIn = data
+		case "credentialQuotaStatusSnapshotGT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshotGT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CredentialQuotaStatusSnapshotGT = data
+		case "credentialQuotaStatusSnapshotGTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshotGTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CredentialQuotaStatusSnapshotGTE = data
+		case "credentialQuotaStatusSnapshotLT":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshotLT"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CredentialQuotaStatusSnapshotLT = data
+		case "credentialQuotaStatusSnapshotLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshotLTE"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CredentialQuotaStatusSnapshotLTE = data
+		case "credentialQuotaStatusSnapshotContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshotContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CredentialQuotaStatusSnapshotContains = data
+		case "credentialQuotaStatusSnapshotHasPrefix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshotHasPrefix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CredentialQuotaStatusSnapshotHasPrefix = data
+		case "credentialQuotaStatusSnapshotHasSuffix":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshotHasSuffix"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CredentialQuotaStatusSnapshotHasSuffix = data
+		case "credentialQuotaStatusSnapshotIsNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshotIsNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CredentialQuotaStatusSnapshotIsNil = data
+		case "credentialQuotaStatusSnapshotNotNil":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshotNotNil"))
+			data, err := ec.unmarshalOBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CredentialQuotaStatusSnapshotNotNil = data
+		case "credentialQuotaStatusSnapshotEqualFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshotEqualFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CredentialQuotaStatusSnapshotEqualFold = data
+		case "credentialQuotaStatusSnapshotContainsFold":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshotContainsFold"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CredentialQuotaStatusSnapshotContainsFold = data
 		case "promptTokens":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("promptTokens"))
 			data, err := ec.unmarshalOInt2ᚖint64(ctx, v)
@@ -88832,6 +93775,20 @@ func (ec *executionContext) unmarshalInputUsageLogWhereInput(ctx context.Context
 				return it, err
 			}
 			it.HasCredentialWith = data
+		case "hasQuotaScope":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasQuotaScope"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.HasQuotaScope = data
+		case "hasQuotaScopeWith":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasQuotaScopeWith"))
+			data, err := ec.unmarshalOCredentialQuotaScopeWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeWhereInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.HasQuotaScopeWith = data
 		}
 	}
 
@@ -90616,6 +95573,11 @@ func (ec *executionContext) _Node(ctx context.Context, sel ast.SelectionSet, obj
 			return graphql.Null
 		}
 		return ec._DataStorage(ctx, sel, obj)
+	case *ent.CredentialQuotaScope:
+		if obj == nil {
+			return graphql.Null
+		}
+		return ec._CredentialQuotaScope(ctx, sel, obj)
 	case *ent.ChannelProbe:
 		if obj == nil {
 			return graphql.Null
@@ -92678,7 +97640,7 @@ func (ec *executionContext) _Channel(ctx context.Context, sel ast.SelectionSet, 
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "providerQuotaStatus":
+		case "providerQuotaStatuses":
 			field := field
 
 			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
@@ -92687,7 +97649,7 @@ func (ec *executionContext) _Channel(ctx context.Context, sel ast.SelectionSet, 
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Channel_providerQuotaStatus(ctx, field, obj)
+				res = ec._Channel_providerQuotaStatuses(ctx, field, obj)
 				return res
 			}
 
@@ -92826,6 +97788,39 @@ func (ec *executionContext) _Channel(ctx context.Context, sel ast.SelectionSet, 
 					}
 				}()
 				res = ec._Channel_disabledAPIKeys(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "providerQuotaStatus":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Channel_providerQuotaStatus(ctx, field, obj)
 				return res
 			}
 
@@ -93085,8 +98080,6 @@ func (ec *executionContext) _ChannelCredentialRef(ctx context.Context, sel ast.S
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
-		case "weightOverride":
-			out.Values[i] = ec._ChannelCredentialRef_weightOverride(ctx, field, obj)
 		case "channel":
 			field := field
 
@@ -95643,6 +100636,357 @@ func (ec *executionContext) _CostStatsByModel(ctx context.Context, sel ast.Selec
 	return out
 }
 
+var credentialQuotaScopeImplementors = []string{"CredentialQuotaScope", "Node"}
+
+func (ec *executionContext) _CredentialQuotaScope(ctx context.Context, sel ast.SelectionSet, obj *ent.CredentialQuotaScope) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, credentialQuotaScopeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("CredentialQuotaScope")
+		case "id":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._CredentialQuotaScope_id(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "createdAt":
+			out.Values[i] = ec._CredentialQuotaScope_createdAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "updatedAt":
+			out.Values[i] = ec._CredentialQuotaScope_updatedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "name":
+			out.Values[i] = ec._CredentialQuotaScope_name(ctx, field, obj)
+		case "status":
+			out.Values[i] = ec._CredentialQuotaScope_status(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "unit":
+			out.Values[i] = ec._CredentialQuotaScope_unit(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "limitAmount":
+			out.Values[i] = ec._CredentialQuotaScope_limitAmount(ctx, field, obj)
+		case "usedAmount":
+			out.Values[i] = ec._CredentialQuotaScope_usedAmount(ctx, field, obj)
+		case "warningThresholdPercent":
+			out.Values[i] = ec._CredentialQuotaScope_warningThresholdPercent(ctx, field, obj)
+		case "resetPolicy":
+			out.Values[i] = ec._CredentialQuotaScope_resetPolicy(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "resetAt":
+			out.Values[i] = ec._CredentialQuotaScope_resetAt(ctx, field, obj)
+		case "windowStartedAt":
+			out.Values[i] = ec._CredentialQuotaScope_windowStartedAt(ctx, field, obj)
+		case "overLimitAction":
+			out.Values[i] = ec._CredentialQuotaScope_overLimitAction(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "pauseUntil":
+			out.Values[i] = ec._CredentialQuotaScope_pauseUntil(ctx, field, obj)
+		case "source":
+			out.Values[i] = ec._CredentialQuotaScope_source(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "lastError":
+			out.Values[i] = ec._CredentialQuotaScope_lastError(ctx, field, obj)
+		case "remark":
+			out.Values[i] = ec._CredentialQuotaScope_remark(ctx, field, obj)
+		case "credentials":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._CredentialQuotaScope_credentials(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "providerQuotaStatuses":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._CredentialQuotaScope_providerQuotaStatuses(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "executions":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._CredentialQuotaScope_executions(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "usageLogs":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._CredentialQuotaScope_usageLogs(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var credentialQuotaScopeConnectionImplementors = []string{"CredentialQuotaScopeConnection"}
+
+func (ec *executionContext) _CredentialQuotaScopeConnection(ctx context.Context, sel ast.SelectionSet, obj *ent.CredentialQuotaScopeConnection) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, credentialQuotaScopeConnectionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("CredentialQuotaScopeConnection")
+		case "edges":
+			out.Values[i] = ec._CredentialQuotaScopeConnection_edges(ctx, field, obj)
+		case "pageInfo":
+			out.Values[i] = ec._CredentialQuotaScopeConnection_pageInfo(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalCount":
+			out.Values[i] = ec._CredentialQuotaScopeConnection_totalCount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var credentialQuotaScopeEdgeImplementors = []string{"CredentialQuotaScopeEdge"}
+
+func (ec *executionContext) _CredentialQuotaScopeEdge(ctx context.Context, sel ast.SelectionSet, obj *ent.CredentialQuotaScopeEdge) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, credentialQuotaScopeEdgeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("CredentialQuotaScopeEdge")
+		case "node":
+			out.Values[i] = ec._CredentialQuotaScopeEdge_node(ctx, field, obj)
+		case "cursor":
+			out.Values[i] = ec._CredentialQuotaScopeEdge_cursor(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var dailyRequestStatsImplementors = []string{"DailyRequestStats"}
 
 func (ec *executionContext) _DailyRequestStats(ctx context.Context, sel ast.SelectionSet, obj *DailyRequestStats) graphql.Marshaler {
@@ -98090,6 +103434,20 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "updateUpstreamCredential":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_updateUpstreamCredential(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "createCredentialQuotaScope":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createCredentialQuotaScope(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updateCredentialQuotaScope":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateCredentialQuotaScope(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -100823,16 +106181,13 @@ func (ec *executionContext) _ProviderQuotaStatus(ctx context.Context, sel ast.Se
 		case "channelID":
 			field := field
 
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
 				defer func() {
 					if r := recover(); r != nil {
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
 				res = ec._ProviderQuotaStatus_channelID(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
 				return res
 			}
 
@@ -100856,6 +106211,11 @@ func (ec *executionContext) _ProviderQuotaStatus(ctx context.Context, sel ast.Se
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "scopeKey":
+			out.Values[i] = ec._ProviderQuotaStatus_scopeKey(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "credentialID":
 			field := field
 
@@ -100891,6 +106251,43 @@ func (ec *executionContext) _ProviderQuotaStatus(ctx context.Context, sel ast.Se
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "credentialFingerprint":
 			out.Values[i] = ec._ProviderQuotaStatus_credentialFingerprint(ctx, field, obj)
+		case "secretFingerprint":
+			out.Values[i] = ec._ProviderQuotaStatus_secretFingerprint(ctx, field, obj)
+		case "resourceScopeKey":
+			out.Values[i] = ec._ProviderQuotaStatus_resourceScopeKey(ctx, field, obj)
+		case "quotaScopeID":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._ProviderQuotaStatus_quotaScopeID(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "providerType":
 			out.Values[i] = ec._ProviderQuotaStatus_providerType(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -100921,16 +106318,13 @@ func (ec *executionContext) _ProviderQuotaStatus(ctx context.Context, sel ast.Se
 		case "channel":
 			field := field
 
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
 				defer func() {
 					if r := recover(); r != nil {
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
 				res = ec._ProviderQuotaStatus_channel(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
 				return res
 			}
 
@@ -100964,6 +106358,39 @@ func (ec *executionContext) _ProviderQuotaStatus(ctx context.Context, sel ast.Se
 					}
 				}()
 				res = ec._ProviderQuotaStatus_credential(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "quotaScope":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._ProviderQuotaStatus_quotaScope(ctx, field, obj)
 				return res
 			}
 
@@ -101258,6 +106685,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_channelOverrideTemplates(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "credentialQuotaScopes":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_credentialQuotaScopes(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -103790,6 +109239,47 @@ func (ec *executionContext) _RequestExecution(ctx context.Context, sel ast.Selec
 			}
 		case "credentialFingerprint":
 			out.Values[i] = ec._RequestExecution_credentialFingerprint(ctx, field, obj)
+		case "secretFingerprint":
+			out.Values[i] = ec._RequestExecution_secretFingerprint(ctx, field, obj)
+		case "resourceScopeKey":
+			out.Values[i] = ec._RequestExecution_resourceScopeKey(ctx, field, obj)
+		case "quotaScopeID":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RequestExecution_quotaScopeID(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "quotaScopeNameSnapshot":
+			out.Values[i] = ec._RequestExecution_quotaScopeNameSnapshot(ctx, field, obj)
+		case "quotaScopeStatusSnapshot":
+			out.Values[i] = ec._RequestExecution_quotaScopeStatusSnapshot(ctx, field, obj)
 		case "credentialNameSnapshot":
 			out.Values[i] = ec._RequestExecution_credentialNameSnapshot(ctx, field, obj)
 		case "credentialKeyHint":
@@ -104006,6 +109496,39 @@ func (ec *executionContext) _RequestExecution(ctx context.Context, sel ast.Selec
 					}
 				}()
 				res = ec._RequestExecution_credential(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "quotaScope":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RequestExecution_quotaScope(ctx, field, obj)
 				return res
 			}
 
@@ -107784,41 +113307,50 @@ func (ec *executionContext) _UpstreamCredential(ctx context.Context, sel ast.Sel
 			}
 		case "name":
 			out.Values[i] = ec._UpstreamCredential_name(ctx, field, obj)
-		case "providerType":
-			out.Values[i] = ec._UpstreamCredential_providerType(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "baseURL":
-			out.Values[i] = ec._UpstreamCredential_baseURL(ctx, field, obj)
-		case "authKind":
-			out.Values[i] = ec._UpstreamCredential_authKind(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "secretKind":
-			out.Values[i] = ec._UpstreamCredential_secretKind(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "issuerScope":
-			out.Values[i] = ec._UpstreamCredential_issuerScope(ctx, field, obj)
 		case "keyHint":
 			out.Values[i] = ec._UpstreamCredential_keyHint(ctx, field, obj)
 		case "quotaScopeID":
-			out.Values[i] = ec._UpstreamCredential_quotaScopeID(ctx, field, obj)
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._UpstreamCredential_quotaScopeID(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "fingerprint":
 			out.Values[i] = ec._UpstreamCredential_fingerprint(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "secretFingerprint":
+			out.Values[i] = ec._UpstreamCredential_secretFingerprint(ctx, field, obj)
 		case "status":
 			out.Values[i] = ec._UpstreamCredential_status(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "weight":
-			out.Values[i] = ec._UpstreamCredential_weight(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
@@ -107946,6 +113478,39 @@ func (ec *executionContext) _UpstreamCredential(ctx context.Context, sel ast.Sel
 					}
 				}()
 				res = ec._UpstreamCredential_providerQuotaStatuses(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "quotaScope":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._UpstreamCredential_quotaScope(ctx, field, obj)
 				return res
 			}
 
@@ -108327,12 +113892,55 @@ func (ec *executionContext) _UsageLog(ctx context.Context, sel ast.SelectionSet,
 			}
 		case "credentialFingerprint":
 			out.Values[i] = ec._UsageLog_credentialFingerprint(ctx, field, obj)
+		case "secretFingerprint":
+			out.Values[i] = ec._UsageLog_secretFingerprint(ctx, field, obj)
+		case "resourceScopeKey":
+			out.Values[i] = ec._UsageLog_resourceScopeKey(ctx, field, obj)
+		case "quotaScopeID":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._UsageLog_quotaScopeID(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "quotaScopeNameSnapshot":
+			out.Values[i] = ec._UsageLog_quotaScopeNameSnapshot(ctx, field, obj)
+		case "quotaScopeStatusSnapshot":
+			out.Values[i] = ec._UsageLog_quotaScopeStatusSnapshot(ctx, field, obj)
 		case "credentialNameSnapshot":
 			out.Values[i] = ec._UsageLog_credentialNameSnapshot(ctx, field, obj)
 		case "credentialKeyHint":
 			out.Values[i] = ec._UsageLog_credentialKeyHint(ctx, field, obj)
 		case "credentialSource":
 			out.Values[i] = ec._UsageLog_credentialSource(ctx, field, obj)
+		case "credentialQuotaStatusSnapshot":
+			out.Values[i] = ec._UsageLog_credentialQuotaStatusSnapshot(ctx, field, obj)
 		case "promptTokens":
 			out.Values[i] = ec._UsageLog_promptTokens(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -108497,6 +114105,39 @@ func (ec *executionContext) _UsageLog(ctx context.Context, sel ast.SelectionSet,
 					}
 				}()
 				res = ec._UsageLog_credential(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "quotaScope":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._UsageLog_quotaScope(ctx, field, obj)
 				return res
 			}
 
@@ -112211,6 +117852,11 @@ func (ec *executionContext) unmarshalNCreateChannelOverrideTemplateInput2github�
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalNCreateCredentialQuotaScopeInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐCreateCredentialQuotaScopeInput(ctx context.Context, v any) (biz.CreateCredentialQuotaScopeInput, error) {
+	res, err := ec.unmarshalInputCreateCredentialQuotaScopeInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNCreateDataStorageInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCreateDataStorageInput(ctx context.Context, v any) (ent.CreateDataStorageInput, error) {
 	res, err := ec.unmarshalInputCreateDataStorageInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -112269,6 +117915,105 @@ func (ec *executionContext) unmarshalNCreateUpstreamCredentialInput2githubᚗcom
 func (ec *executionContext) unmarshalNCreateUserInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCreateUserInput(ctx context.Context, v any) (ent.CreateUserInput, error) {
 	res, err := ec.unmarshalInputCreateUserInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNCredentialQuotaScope2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScope(ctx context.Context, sel ast.SelectionSet, v ent.CredentialQuotaScope) graphql.Marshaler {
+	return ec._CredentialQuotaScope(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNCredentialQuotaScope2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScope(ctx context.Context, sel ast.SelectionSet, v *ent.CredentialQuotaScope) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._CredentialQuotaScope(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNCredentialQuotaScopeConnection2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeConnection(ctx context.Context, sel ast.SelectionSet, v ent.CredentialQuotaScopeConnection) graphql.Marshaler {
+	return ec._CredentialQuotaScopeConnection(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNCredentialQuotaScopeConnection2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeConnection(ctx context.Context, sel ast.SelectionSet, v *ent.CredentialQuotaScopeConnection) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._CredentialQuotaScopeConnection(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNCredentialQuotaScopeOrderField2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeOrderField(ctx context.Context, v any) (*ent.CredentialQuotaScopeOrderField, error) {
+	var res = new(ent.CredentialQuotaScopeOrderField)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNCredentialQuotaScopeOrderField2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeOrderField(ctx context.Context, sel ast.SelectionSet, v *ent.CredentialQuotaScopeOrderField) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return v
+}
+
+func (ec *executionContext) unmarshalNCredentialQuotaScopeOverLimitAction2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐOverLimitAction(ctx context.Context, v any) (credentialquotascope.OverLimitAction, error) {
+	var res credentialquotascope.OverLimitAction
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNCredentialQuotaScopeOverLimitAction2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐOverLimitAction(ctx context.Context, sel ast.SelectionSet, v credentialquotascope.OverLimitAction) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNCredentialQuotaScopeResetPolicy2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐResetPolicy(ctx context.Context, v any) (credentialquotascope.ResetPolicy, error) {
+	var res credentialquotascope.ResetPolicy
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNCredentialQuotaScopeResetPolicy2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐResetPolicy(ctx context.Context, sel ast.SelectionSet, v credentialquotascope.ResetPolicy) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNCredentialQuotaScopeSource2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐSource(ctx context.Context, v any) (credentialquotascope.Source, error) {
+	var res credentialquotascope.Source
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNCredentialQuotaScopeSource2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐSource(ctx context.Context, sel ast.SelectionSet, v credentialquotascope.Source) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNCredentialQuotaScopeStatus2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐStatus(ctx context.Context, v any) (credentialquotascope.Status, error) {
+	var res credentialquotascope.Status
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNCredentialQuotaScopeStatus2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐStatus(ctx context.Context, sel ast.SelectionSet, v credentialquotascope.Status) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNCredentialQuotaScopeUnit2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐUnit(ctx context.Context, v any) (credentialquotascope.Unit, error) {
+	var res credentialquotascope.Unit
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNCredentialQuotaScopeUnit2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐUnit(ctx context.Context, sel ast.SelectionSet, v credentialquotascope.Unit) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNCredentialQuotaScopeWhereInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeWhereInput(ctx context.Context, v any) (*ent.CredentialQuotaScopeWhereInput, error) {
+	res, err := ec.unmarshalInputCredentialQuotaScopeWhereInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalNCursor2entgoᚗioᚋcontribᚋentgqlᚐCursor(ctx context.Context, v any) (entgql.Cursor[int], error) {
@@ -115850,6 +121595,11 @@ func (ec *executionContext) unmarshalNUpdateChannelOverrideTemplateInput2github�
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalNUpdateCredentialQuotaScopeInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐUpdateCredentialQuotaScopeInput(ctx context.Context, v any) (biz.UpdateCredentialQuotaScopeInput, error) {
+	res, err := ec.unmarshalInputUpdateCredentialQuotaScopeInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNUpdateDataStorageInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUpdateDataStorageInput(ctx context.Context, v any) (ent.UpdateDataStorageInput, error) {
 	res, err := ec.unmarshalInputUpdateDataStorageInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -115990,16 +121740,6 @@ func (ec *executionContext) marshalNUpstreamCredential2ᚖgithubᚗcomᚋlooplj�
 	return ec._UpstreamCredential(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNUpstreamCredentialAuthKind2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐAuthKind(ctx context.Context, v any) (upstreamcredential.AuthKind, error) {
-	var res upstreamcredential.AuthKind
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNUpstreamCredentialAuthKind2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐAuthKind(ctx context.Context, sel ast.SelectionSet, v upstreamcredential.AuthKind) graphql.Marshaler {
-	return v
-}
-
 func (ec *executionContext) marshalNUpstreamCredentialConnection2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUpstreamCredentialConnection(ctx context.Context, sel ast.SelectionSet, v ent.UpstreamCredentialConnection) graphql.Marshaler {
 	return ec._UpstreamCredentialConnection(ctx, sel, &v)
 }
@@ -116033,16 +121773,6 @@ func (ec *executionContext) marshalNUpstreamCredentialOrderField2ᚖgithubᚗcom
 func (ec *executionContext) unmarshalNUpstreamCredentialSecretInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐUpstreamCredentialSecret(ctx context.Context, v any) (objects.UpstreamCredentialSecret, error) {
 	res, err := ec.unmarshalInputUpstreamCredentialSecretInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNUpstreamCredentialSecretKind2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐSecretKind(ctx context.Context, v any) (upstreamcredential.SecretKind, error) {
-	var res upstreamcredential.SecretKind
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNUpstreamCredentialSecretKind2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐSecretKind(ctx context.Context, sel ast.SelectionSet, v upstreamcredential.SecretKind) graphql.Marshaler {
-	return v
 }
 
 func (ec *executionContext) unmarshalNUpstreamCredentialStatus2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐStatus(ctx context.Context, v any) (upstreamcredential.Status, error) {
@@ -118446,6 +124176,508 @@ func (ec *executionContext) unmarshalOCostItemInput2ᚕgithubᚗcomᚋloopljᚋa
 		}
 	}
 	return res, nil
+}
+
+func (ec *executionContext) unmarshalOCreateCredentialQuotaScopeInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐCreateCredentialQuotaScopeInput(ctx context.Context, v any) (*biz.CreateCredentialQuotaScopeInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputCreateCredentialQuotaScopeInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOCredentialQuotaScope2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScope(ctx context.Context, sel ast.SelectionSet, v *ent.CredentialQuotaScope) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._CredentialQuotaScope(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOCredentialQuotaScopeEdge2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeEdge(ctx context.Context, sel ast.SelectionSet, v []*ent.CredentialQuotaScopeEdge) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOCredentialQuotaScopeEdge2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeEdge(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	return ret
+}
+
+func (ec *executionContext) marshalOCredentialQuotaScopeEdge2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeEdge(ctx context.Context, sel ast.SelectionSet, v *ent.CredentialQuotaScopeEdge) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._CredentialQuotaScopeEdge(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOCredentialQuotaScopeOrder2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeOrder(ctx context.Context, v any) (*ent.CredentialQuotaScopeOrder, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputCredentialQuotaScopeOrder(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOCredentialQuotaScopeOverLimitAction2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐOverLimitActionᚄ(ctx context.Context, v any) ([]credentialquotascope.OverLimitAction, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]credentialquotascope.OverLimitAction, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNCredentialQuotaScopeOverLimitAction2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐOverLimitAction(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOCredentialQuotaScopeOverLimitAction2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐOverLimitActionᚄ(ctx context.Context, sel ast.SelectionSet, v []credentialquotascope.OverLimitAction) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNCredentialQuotaScopeOverLimitAction2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐOverLimitAction(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalOCredentialQuotaScopeOverLimitAction2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐOverLimitAction(ctx context.Context, v any) (*credentialquotascope.OverLimitAction, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(credentialquotascope.OverLimitAction)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOCredentialQuotaScopeOverLimitAction2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐOverLimitAction(ctx context.Context, sel ast.SelectionSet, v *credentialquotascope.OverLimitAction) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
+func (ec *executionContext) unmarshalOCredentialQuotaScopeResetPolicy2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐResetPolicyᚄ(ctx context.Context, v any) ([]credentialquotascope.ResetPolicy, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]credentialquotascope.ResetPolicy, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNCredentialQuotaScopeResetPolicy2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐResetPolicy(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOCredentialQuotaScopeResetPolicy2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐResetPolicyᚄ(ctx context.Context, sel ast.SelectionSet, v []credentialquotascope.ResetPolicy) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNCredentialQuotaScopeResetPolicy2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐResetPolicy(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalOCredentialQuotaScopeResetPolicy2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐResetPolicy(ctx context.Context, v any) (*credentialquotascope.ResetPolicy, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(credentialquotascope.ResetPolicy)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOCredentialQuotaScopeResetPolicy2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐResetPolicy(ctx context.Context, sel ast.SelectionSet, v *credentialquotascope.ResetPolicy) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
+func (ec *executionContext) unmarshalOCredentialQuotaScopeSource2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐSourceᚄ(ctx context.Context, v any) ([]credentialquotascope.Source, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]credentialquotascope.Source, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNCredentialQuotaScopeSource2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐSource(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOCredentialQuotaScopeSource2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐSourceᚄ(ctx context.Context, sel ast.SelectionSet, v []credentialquotascope.Source) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNCredentialQuotaScopeSource2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐSource(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalOCredentialQuotaScopeSource2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐSource(ctx context.Context, v any) (*credentialquotascope.Source, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(credentialquotascope.Source)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOCredentialQuotaScopeSource2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐSource(ctx context.Context, sel ast.SelectionSet, v *credentialquotascope.Source) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
+func (ec *executionContext) unmarshalOCredentialQuotaScopeStatus2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐStatusᚄ(ctx context.Context, v any) ([]credentialquotascope.Status, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]credentialquotascope.Status, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNCredentialQuotaScopeStatus2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐStatus(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOCredentialQuotaScopeStatus2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐStatusᚄ(ctx context.Context, sel ast.SelectionSet, v []credentialquotascope.Status) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNCredentialQuotaScopeStatus2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐStatus(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalOCredentialQuotaScopeStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐStatus(ctx context.Context, v any) (*credentialquotascope.Status, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(credentialquotascope.Status)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOCredentialQuotaScopeStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐStatus(ctx context.Context, sel ast.SelectionSet, v *credentialquotascope.Status) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
+func (ec *executionContext) unmarshalOCredentialQuotaScopeUnit2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐUnitᚄ(ctx context.Context, v any) ([]credentialquotascope.Unit, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]credentialquotascope.Unit, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNCredentialQuotaScopeUnit2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐUnit(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOCredentialQuotaScopeUnit2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐUnitᚄ(ctx context.Context, sel ast.SelectionSet, v []credentialquotascope.Unit) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNCredentialQuotaScopeUnit2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐUnit(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalOCredentialQuotaScopeUnit2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐUnit(ctx context.Context, v any) (*credentialquotascope.Unit, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(credentialquotascope.Unit)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOCredentialQuotaScopeUnit2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋcredentialquotascopeᚐUnit(ctx context.Context, sel ast.SelectionSet, v *credentialquotascope.Unit) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
+func (ec *executionContext) unmarshalOCredentialQuotaScopeWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeWhereInputᚄ(ctx context.Context, v any) ([]*ent.CredentialQuotaScopeWhereInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]*ent.CredentialQuotaScopeWhereInput, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNCredentialQuotaScopeWhereInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeWhereInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) unmarshalOCredentialQuotaScopeWhereInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeWhereInput(ctx context.Context, v any) (*ent.CredentialQuotaScopeWhereInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputCredentialQuotaScopeWhereInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) unmarshalOCursor2ᚖentgoᚗioᚋcontribᚋentgqlᚐCursor(ctx context.Context, v any) (*entgql.Cursor[int], error) {
@@ -122453,92 +128685,19 @@ func (ec *executionContext) unmarshalOUpdateChannelProbeSettingInput2githubᚗco
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalOUpdateCredentialQuotaScopeInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐUpdateCredentialQuotaScopeInput(ctx context.Context, v any) (*biz.UpdateCredentialQuotaScopeInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputUpdateCredentialQuotaScopeInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalOUpstreamCredential2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUpstreamCredential(ctx context.Context, sel ast.SelectionSet, v *ent.UpstreamCredential) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._UpstreamCredential(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalOUpstreamCredentialAuthKind2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐAuthKindᚄ(ctx context.Context, v any) ([]upstreamcredential.AuthKind, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var vSlice []any
-	vSlice = graphql.CoerceList(v)
-	var err error
-	res := make([]upstreamcredential.AuthKind, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNUpstreamCredentialAuthKind2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐAuthKind(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) marshalOUpstreamCredentialAuthKind2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐAuthKindᚄ(ctx context.Context, sel ast.SelectionSet, v []upstreamcredential.AuthKind) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNUpstreamCredentialAuthKind2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐAuthKind(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) unmarshalOUpstreamCredentialAuthKind2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐAuthKind(ctx context.Context, v any) (*upstreamcredential.AuthKind, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var res = new(upstreamcredential.AuthKind)
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOUpstreamCredentialAuthKind2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐAuthKind(ctx context.Context, sel ast.SelectionSet, v *upstreamcredential.AuthKind) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return v
 }
 
 func (ec *executionContext) marshalOUpstreamCredentialEdge2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUpstreamCredentialEdge(ctx context.Context, sel ast.SelectionSet, v []*ent.UpstreamCredentialEdge) graphql.Marshaler {
@@ -122595,87 +128754,6 @@ func (ec *executionContext) unmarshalOUpstreamCredentialOrder2ᚖgithubᚗcomᚋ
 	}
 	res, err := ec.unmarshalInputUpstreamCredentialOrder(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOUpstreamCredentialSecretKind2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐSecretKindᚄ(ctx context.Context, v any) ([]upstreamcredential.SecretKind, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var vSlice []any
-	vSlice = graphql.CoerceList(v)
-	var err error
-	res := make([]upstreamcredential.SecretKind, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNUpstreamCredentialSecretKind2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐSecretKind(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) marshalOUpstreamCredentialSecretKind2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐSecretKindᚄ(ctx context.Context, sel ast.SelectionSet, v []upstreamcredential.SecretKind) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNUpstreamCredentialSecretKind2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐSecretKind(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) unmarshalOUpstreamCredentialSecretKind2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐSecretKind(ctx context.Context, v any) (*upstreamcredential.SecretKind, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var res = new(upstreamcredential.SecretKind)
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOUpstreamCredentialSecretKind2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐSecretKind(ctx context.Context, sel ast.SelectionSet, v *upstreamcredential.SecretKind) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return v
 }
 
 func (ec *executionContext) unmarshalOUpstreamCredentialStatus2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐStatusᚄ(ctx context.Context, v any) ([]upstreamcredential.Status, error) {
