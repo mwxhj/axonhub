@@ -1,7 +1,12 @@
 package gql
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/samber/lo"
@@ -11,6 +16,7 @@ import (
 	"github.com/looplj/axonhub/internal/contexts"
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/enttest"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
@@ -233,6 +239,280 @@ func TestQueryResolver_CredentialQuotaScopeResolvers(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, ent.TypeCredentialQuotaScope, providerQuotaScopeGUID.Type)
 	require.Equal(t, scope.ID, providerQuotaScopeGUID.ID)
+}
+
+func TestGraphQLArchiveUpstreamCredentialMutation(t *testing.T) {
+	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+	defer client.Close()
+
+	ctx := context.Background()
+	ctx = ent.NewContext(ctx, client)
+	ctx = authz.WithTestBypass(ctx)
+
+	upstreamCredentialService := biz.NewUpstreamCredentialService(biz.UpstreamCredentialServiceParams{Ent: client})
+	handler := NewGraphqlHandlers(Dependencies{
+		Ent:                       client,
+		UpstreamCredentialService: upstreamCredentialService,
+	})
+
+	credential, err := upstreamCredentialService.CreateUpstreamCredential(ctx, biz.CreateUpstreamCredentialInput{
+		Name:   lo.ToPtr("archive graphql"),
+		Secret: objects.UpstreamCredentialSecretFromAPIKey("sk-graphql-archive"),
+		Status: lo.ToPtr(upstreamcredential.StatusEnabled),
+	})
+	require.NoError(t, err)
+
+	ch, err := client.Channel.Create().
+		SetType(channel.TypeOpenai).
+		SetName("Archive Channel").
+		SetBaseURL("https://api.openai.com/v1").
+		SetCredentials(objects.ChannelCredentials{}).
+		SetSupportedModels([]string{"gpt-4"}).
+		SetDefaultTestModel("gpt-4").
+		SetStatus(channel.StatusEnabled).
+		Save(ctx)
+	require.NoError(t, err)
+
+	ref, err := client.ChannelCredentialRef.Create().
+		SetChannelID(ch.ID).
+		SetCredentialID(credential.ID).
+		SetEnabled(true).
+		Save(ctx)
+	require.NoError(t, err)
+
+	query := `
+		mutation ArchiveUpstreamCredential($id: ID!) {
+			archiveUpstreamCredential(id: $id) {
+				id
+				status
+				channelRefs(first: 100) {
+					totalCount
+					edges {
+						node {
+							id
+							enabled
+						}
+					}
+				}
+				providerQuotaStatuses {
+					id
+					status
+					ready
+					providerType
+				}
+			}
+		}
+	`
+
+	body, err := json.Marshal(map[string]any{
+		"query":         query,
+		"operationName": "ArchiveUpstreamCredential",
+		"variables": map[string]any{
+			"id": fmt.Sprintf("gid://axonhub/%s/%d", ent.TypeUpstreamCredential, credential.ID),
+		},
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/admin/graphql", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(authz.WithTestBypass(req.Context()))
+	rec := httptest.NewRecorder()
+
+	handler.Graphql.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	var payload struct {
+		Data struct {
+			ArchiveUpstreamCredential struct {
+				ID          string `json:"id"`
+				Status      string `json:"status"`
+				ChannelRefs struct {
+					TotalCount int `json:"totalCount"`
+					Edges      []struct {
+						Node struct {
+							ID      string `json:"id"`
+							Enabled bool   `json:"enabled"`
+						} `json:"node"`
+					} `json:"edges"`
+				} `json:"channelRefs"`
+				ProviderQuotaStatuses []struct {
+					ID           string `json:"id"`
+					Status       string `json:"status"`
+					Ready        bool   `json:"ready"`
+					ProviderType string `json:"providerType"`
+				} `json:"providerQuotaStatuses"`
+			} `json:"archiveUpstreamCredential"`
+		} `json:"data"`
+		Errors []struct {
+			Message string `json:"message"`
+		} `json:"errors"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &payload))
+	require.Empty(t, payload.Errors, rec.Body.String())
+	require.NotEmpty(t, payload.Data.ArchiveUpstreamCredential.ID)
+	require.Equal(t, "archived", payload.Data.ArchiveUpstreamCredential.Status)
+	require.Equal(t, 1, payload.Data.ArchiveUpstreamCredential.ChannelRefs.TotalCount)
+	require.Len(t, payload.Data.ArchiveUpstreamCredential.ChannelRefs.Edges, 1)
+	require.False(t, payload.Data.ArchiveUpstreamCredential.ChannelRefs.Edges[0].Node.Enabled)
+	require.Empty(t, payload.Data.ArchiveUpstreamCredential.ProviderQuotaStatuses)
+
+	reloadedRef, err := client.ChannelCredentialRef.Query().
+		Where(channelcredentialref.ID(ref.ID)).
+		Only(ctx)
+	require.NoError(t, err)
+	require.False(t, reloadedRef.Enabled)
+}
+
+func TestGraphQLCreateUpstreamCredentialMutation(t *testing.T) {
+	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+	defer client.Close()
+
+	upstreamCredentialService := biz.NewUpstreamCredentialService(biz.UpstreamCredentialServiceParams{Ent: client})
+	handler := NewGraphqlHandlers(Dependencies{
+		Ent:                       client,
+		UpstreamCredentialService: upstreamCredentialService,
+	})
+
+	query := `
+		mutation CreateUpstreamCredential($input: CreateUpstreamCredentialInput!) {
+			createUpstreamCredential(input: $input) {
+				id
+				name
+				keyHint
+				quotaScopeID
+				secretFingerprint
+				quotaScope {
+					id
+					name
+					status
+					unit
+					limitAmount
+					usedAmount
+					resetPolicy
+					warningThresholdPercent
+					overLimitAction
+				}
+				quotaStatus
+				fingerprint
+				status
+				remark
+				createdAt
+				updatedAt
+				channelRefs(first: 100) {
+					totalCount
+					edges {
+						node {
+							id
+							channelID
+							credentialID
+							enabled
+						}
+					}
+				}
+				providerQuotaStatuses {
+					id
+					status
+					ready
+					providerType
+				}
+			}
+		}
+	`
+
+	tests := []struct {
+		name           string
+		input          map[string]any
+		wantQuotaScope bool
+	}{
+		{
+			name: "no quota",
+			input: map[string]any{
+				"name":   "plain key",
+				"secret": map[string]any{"apiKey": "sk-graphql-no-quota"},
+				"status": "enabled",
+			},
+		},
+		{
+			name: "inline quota",
+			input: map[string]any{
+				"name":   "budgeted key",
+				"secret": map[string]any{"apiKey": "sk-graphql-inline-quota"},
+				"status": "enabled",
+				"quota": map[string]any{
+					"name":                    "graphql budget",
+					"unit":                    "token",
+					"limitAmount":             "1000",
+					"usedAmount":              "0",
+					"resetPolicy":             "monthly",
+					"warningThresholdPercent": 80,
+					"overLimitAction":         "warn",
+				},
+			},
+			wantQuotaScope: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body, err := json.Marshal(map[string]any{
+				"query":         query,
+				"operationName": "CreateUpstreamCredential",
+				"variables": map[string]any{
+					"input": tt.input,
+				},
+			})
+			require.NoError(t, err)
+
+			req := httptest.NewRequest(http.MethodPost, "/admin/graphql", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			req = req.WithContext(authz.WithTestBypass(req.Context()))
+			rec := httptest.NewRecorder()
+
+			handler.Graphql.ServeHTTP(rec, req)
+			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+			var payload struct {
+				Data struct {
+					CreateUpstreamCredential struct {
+						ID                string          `json:"id"`
+						Name              string          `json:"name"`
+						KeyHint           string          `json:"keyHint"`
+						QuotaScopeID      *string         `json:"quotaScopeID"`
+						SecretFingerprint *string         `json:"secretFingerprint"`
+						QuotaScope        json.RawMessage `json:"quotaScope"`
+						Status            string          `json:"status"`
+						ChannelRefs       struct {
+							TotalCount int `json:"totalCount"`
+						} `json:"channelRefs"`
+						ProviderQuotaStatuses []struct {
+							ID           string `json:"id"`
+							Status       string `json:"status"`
+							Ready        bool   `json:"ready"`
+							ProviderType string `json:"providerType"`
+						} `json:"providerQuotaStatuses"`
+					} `json:"createUpstreamCredential"`
+				} `json:"data"`
+				Errors []struct {
+					Message string `json:"message"`
+				} `json:"errors"`
+			}
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &payload))
+			require.Empty(t, payload.Errors, rec.Body.String())
+			require.NotEmpty(t, payload.Data.CreateUpstreamCredential.ID)
+			require.NotEmpty(t, payload.Data.CreateUpstreamCredential.KeyHint)
+			require.NotNil(t, payload.Data.CreateUpstreamCredential.SecretFingerprint)
+			require.Equal(t, "enabled", payload.Data.CreateUpstreamCredential.Status)
+			require.Equal(t, 0, payload.Data.CreateUpstreamCredential.ChannelRefs.TotalCount)
+			require.Empty(t, payload.Data.CreateUpstreamCredential.ProviderQuotaStatuses)
+			if tt.wantQuotaScope {
+				require.NotNil(t, payload.Data.CreateUpstreamCredential.QuotaScopeID)
+				require.NotEqual(t, json.RawMessage("null"), payload.Data.CreateUpstreamCredential.QuotaScope)
+			} else {
+				require.Nil(t, payload.Data.CreateUpstreamCredential.QuotaScopeID)
+				require.Equal(t, json.RawMessage("null"), payload.Data.CreateUpstreamCredential.QuotaScope)
+			}
+		})
+	}
 }
 
 func TestQueryResolver_AllChannelTags_ProjectProfileFiltersVisibleTags(t *testing.T) {

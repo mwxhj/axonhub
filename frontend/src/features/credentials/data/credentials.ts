@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { graphqlRequest } from '@/gql/graphql';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { graphqlRequest } from '@/gql/graphql';
 import { useErrorHandler } from '@/hooks/use-error-handler';
 import {
   attachCredentialToChannelInputSchema,
@@ -23,6 +23,7 @@ import {
   type CredentialRef,
   type CredentialStatus,
   type MigrateLegacyCredentialsPayload,
+  type ProviderQuotaStatus,
   type RotateUpstreamCredentialSecretInput,
   type UpdateChannelCredentialRefInput,
   type UpdateUpstreamCredentialInput,
@@ -39,6 +40,7 @@ export type {
   CredentialRef,
   CredentialStatus,
   MigrateLegacyCredentialsPayload,
+  ProviderQuotaStatus,
   RotateUpstreamCredentialSecretInput,
   UpdateChannelCredentialRefInput,
   UpdateUpstreamCredentialInput,
@@ -69,6 +71,23 @@ const CREDENTIAL_FIELDS = `
     source
     lastError
     remark
+  }
+  providerQuotaStatuses {
+    id
+    channelID
+    scopeKey
+    credentialID
+    credentialFingerprint
+    secretFingerprint
+    resourceScopeKey
+    quotaScopeID
+    providerType
+    status
+    quotaData
+    nextResetAt
+    ready
+    nextCheckAt
+    updatedAt
   }
   quotaStatus
   lastError
@@ -325,6 +344,14 @@ const ROTATE_UPSTREAM_CREDENTIAL_SECRET_MUTATION = `
   }
 `;
 
+const ARCHIVE_UPSTREAM_CREDENTIAL_MUTATION = `
+  mutation ArchiveUpstreamCredential($id: ID!) {
+    archiveUpstreamCredential(id: $id) {
+      ${CREDENTIAL_FIELDS}
+    }
+  }
+`;
+
 const UPDATE_UPSTREAM_CREDENTIAL_STATUS_MUTATION = `
   mutation UpdateUpstreamCredentialStatus($id: ID!, $status: UpstreamCredentialStatus!) {
     updateUpstreamCredentialStatus(id: $id, status: $status) {
@@ -370,6 +397,7 @@ function invalidateCredentialQueries(queryClient: ReturnType<typeof useQueryClie
   queryClient.invalidateQueries({ queryKey: ['upstreamCredentials'] });
   queryClient.invalidateQueries({ queryKey: ['credentialQuotaScopes'] });
   queryClient.invalidateQueries({ queryKey: ['credentialAttachableChannels'] });
+  queryClient.invalidateQueries({ queryKey: ['upstreamCredentialDetail'] });
   queryClient.invalidateQueries({ queryKey: ['channels'] });
 }
 
@@ -382,10 +410,7 @@ export function useUpstreamCredentials(variables?: Record<string, unknown>, opti
     queryKey: ['upstreamCredentials', variables],
     queryFn: async () => {
       try {
-        const data = await graphqlRequest<{ upstreamCredentials: UpstreamCredentialsConnection }>(
-          UPSTREAM_CREDENTIALS_QUERY,
-          variables
-        );
+        const data = await graphqlRequest<{ upstreamCredentials: UpstreamCredentialsConnection }>(UPSTREAM_CREDENTIALS_QUERY, variables);
         return upstreamCredentialsConnectionSchema.parse(data.upstreamCredentials);
       } catch (error) {
         handleError(error, t('common.errors.internalServerError'));
@@ -404,10 +429,7 @@ export function useAttachableChannels(variables?: Record<string, unknown>, optio
     queryKey: ['credentialAttachableChannels', variables],
     queryFn: async () => {
       try {
-        const data = await graphqlRequest<{ channels: AttachableChannelsConnection }>(
-          ATTACHABLE_CHANNELS_QUERY,
-          variables
-        );
+        const data = await graphqlRequest<{ channels: AttachableChannelsConnection }>(ATTACHABLE_CHANNELS_QUERY, variables);
         return attachableChannelsConnectionSchema.parse(data.channels);
       } catch (error) {
         handleError(error, t('common.errors.internalServerError'));
@@ -467,10 +489,9 @@ export function useCreateUpstreamCredential() {
     mutationFn: async (input: CreateUpstreamCredentialInput) => {
       try {
         const validated = createUpstreamCredentialInputSchema.parse(input);
-        const data = await graphqlRequest<{ createUpstreamCredential: UpstreamCredential }>(
-          CREATE_UPSTREAM_CREDENTIAL_MUTATION,
-          { input: validated }
-        );
+        const data = await graphqlRequest<{ createUpstreamCredential: UpstreamCredential }>(CREATE_UPSTREAM_CREDENTIAL_MUTATION, {
+          input: validated,
+        });
         return upstreamCredentialSchema.parse(data.createUpstreamCredential);
       } catch (error) {
         handleError(error, { context: t('credentials.dialogs.create.title') });
@@ -493,10 +514,10 @@ export function useUpdateUpstreamCredential() {
     mutationFn: async ({ id, input }: { id: string; input: UpdateUpstreamCredentialInput }) => {
       try {
         const validated = updateUpstreamCredentialInputSchema.parse(input);
-        const data = await graphqlRequest<{ updateUpstreamCredential: UpstreamCredential }>(
-          UPDATE_UPSTREAM_CREDENTIAL_MUTATION,
-          { id, input: validated }
-        );
+        const data = await graphqlRequest<{ updateUpstreamCredential: UpstreamCredential }>(UPDATE_UPSTREAM_CREDENTIAL_MUTATION, {
+          id,
+          input: validated,
+        });
         return upstreamCredentialSchema.parse(data.updateUpstreamCredential);
       } catch (error) {
         handleError(error, { context: t('credentials.dialogs.edit.title') });
@@ -561,6 +582,28 @@ export function useUpdateUpstreamCredentialStatus() {
   });
 }
 
+export function useArchiveUpstreamCredential() {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const { handleError } = useErrorHandler();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      try {
+        const data = await graphqlRequest<{ archiveUpstreamCredential: UpstreamCredential }>(ARCHIVE_UPSTREAM_CREDENTIAL_MUTATION, { id });
+        return upstreamCredentialSchema.parse(data.archiveUpstreamCredential);
+      } catch (error) {
+        handleError(error, { context: t('credentials.dialogs.archive.title') });
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      invalidateCredentialQueries(queryClient);
+      toast.success(t('credentials.messages.archiveSuccess'));
+    },
+  });
+}
+
 export function useAttachCredentialToChannel() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -570,10 +613,9 @@ export function useAttachCredentialToChannel() {
     mutationFn: async (input: AttachCredentialToChannelInput) => {
       try {
         const validated = attachCredentialToChannelInputSchema.parse(input);
-        const data = await graphqlRequest<{ attachCredentialToChannel: CredentialRef }>(
-          ATTACH_CREDENTIAL_TO_CHANNEL_MUTATION,
-          { input: validated }
-        );
+        const data = await graphqlRequest<{ attachCredentialToChannel: CredentialRef }>(ATTACH_CREDENTIAL_TO_CHANNEL_MUTATION, {
+          input: validated,
+        });
         return credentialRefSchema.parse(data.attachCredentialToChannel);
       } catch (error) {
         handleError(error, { context: t('credentials.dialogs.channels.attach') });
@@ -596,10 +638,10 @@ export function useUpdateChannelCredentialRef() {
     mutationFn: async ({ id, input }: { id: string; input: UpdateChannelCredentialRefInput }) => {
       try {
         const validated = updateChannelCredentialRefInputSchema.parse(input);
-        const data = await graphqlRequest<{ updateChannelCredentialRef: CredentialRef }>(
-          UPDATE_CHANNEL_CREDENTIAL_REF_MUTATION,
-          { id, input: validated }
-        );
+        const data = await graphqlRequest<{ updateChannelCredentialRef: CredentialRef }>(UPDATE_CHANNEL_CREDENTIAL_REF_MUTATION, {
+          id,
+          input: validated,
+        });
         return credentialRefSchema.parse(data.updateChannelCredentialRef);
       } catch (error) {
         handleError(error, { context: t('credentials.dialogs.channels.title') });
@@ -621,10 +663,10 @@ export function useDetachCredentialFromChannel() {
   return useMutation({
     mutationFn: async ({ channelID, credentialID }: { channelID: string; credentialID: string }) => {
       try {
-        const data = await graphqlRequest<{ detachCredentialFromChannel: boolean }>(
-          DETACH_CREDENTIAL_FROM_CHANNEL_MUTATION,
-          { channelID, credentialID }
-        );
+        const data = await graphqlRequest<{ detachCredentialFromChannel: boolean }>(DETACH_CREDENTIAL_FROM_CHANNEL_MUTATION, {
+          channelID,
+          credentialID,
+        });
         return data.detachCredentialFromChannel;
       } catch (error) {
         handleError(error, { context: t('credentials.dialogs.channels.detach') });

@@ -212,6 +212,7 @@ func getNilableChannel(ctx context.Context, client *ent.Client, channelID int) (
 		return nil, nil
 	}
 
+	client = clientFromContext(ctx, client)
 	ch, err := client.Channel.Query().Where(channel.ID(channelID)).First(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -233,6 +234,7 @@ func getNilableUpstreamCredential(ctx context.Context, client *ent.Client, crede
 		return nil, nil
 	}
 
+	client = clientFromContext(ctx, client)
 	credential, err := client.UpstreamCredential.Query().Where(upstreamcredential.ID(credentialID)).First(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -254,6 +256,7 @@ func getNilableCredentialQuotaScope(ctx context.Context, client *ent.Client, quo
 		return nil, nil
 	}
 
+	client = clientFromContext(ctx, client)
 	scope, err := client.CredentialQuotaScope.Query().Where(credentialquotascope.ID(quotaScopeID)).First(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -268,6 +271,14 @@ func getNilableCredentialQuotaScope(ctx context.Context, client *ent.Client, quo
 	}
 
 	return scope, nil
+}
+
+func clientFromContext(ctx context.Context, fallback *ent.Client) *ent.Client {
+	if client := ent.FromContext(ctx); client != nil {
+		return client
+	}
+
+	return fallback
 }
 
 func getNilableUser(ctx context.Context, client *ent.Client, userID int) (*ent.User, error) {

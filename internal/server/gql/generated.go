@@ -938,6 +938,7 @@ type ComplexityRoot struct {
 	Mutation struct {
 		AddUserToProject                     func(childComplexity int, input AddUserToProjectInput) int
 		ApplyChannelOverrideTemplate         func(childComplexity int, input ApplyChannelOverrideTemplateInput) int
+		ArchiveUpstreamCredential            func(childComplexity int, id objects.GUID) int
 		AttachCredentialToChannel            func(childComplexity int, input biz.AttachCredentialToChannelInput) int
 		Backup                               func(childComplexity int, input backup.BackupOptions) int
 		BulkArchiveAPIKeys                   func(childComplexity int, ids []*objects.GUID) int
@@ -2194,6 +2195,7 @@ type MutationResolver interface {
 	CreateCredentialQuotaScope(ctx context.Context, input biz.CreateCredentialQuotaScopeInput) (*ent.CredentialQuotaScope, error)
 	UpdateCredentialQuotaScope(ctx context.Context, id objects.GUID, input biz.UpdateCredentialQuotaScopeInput) (*ent.CredentialQuotaScope, error)
 	RotateUpstreamCredentialSecret(ctx context.Context, id objects.GUID, input biz.RotateUpstreamCredentialSecretInput) (*ent.UpstreamCredential, error)
+	ArchiveUpstreamCredential(ctx context.Context, id objects.GUID) (*ent.UpstreamCredential, error)
 	UpdateUpstreamCredentialStatus(ctx context.Context, id objects.GUID, status upstreamcredential.Status) (*ent.UpstreamCredential, error)
 	AttachCredentialToChannel(ctx context.Context, input biz.AttachCredentialToChannelInput) (*ent.ChannelCredentialRef, error)
 	UpdateChannelCredentialRef(ctx context.Context, id objects.GUID, input biz.UpdateChannelCredentialRefInput) (*ent.ChannelCredentialRef, error)
@@ -5640,6 +5642,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.ApplyChannelOverrideTemplate(childComplexity, args["input"].(ApplyChannelOverrideTemplateInput)), true
+	case "Mutation.archiveUpstreamCredential":
+		if e.complexity.Mutation.ArchiveUpstreamCredential == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_archiveUpstreamCredential_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.ArchiveUpstreamCredential(childComplexity, args["id"].(objects.GUID)), true
 	case "Mutation.attachCredentialToChannel":
 		if e.complexity.Mutation.AttachCredentialToChannel == nil {
 			break
@@ -12180,6 +12193,17 @@ func (ec *executionContext) field_Mutation_applyChannelOverrideTemplate_args(ctx
 		return nil, err
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_archiveUpstreamCredential_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNID2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -33542,6 +33566,83 @@ func (ec *executionContext) fieldContext_Mutation_rotateUpstreamCredentialSecret
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_rotateUpstreamCredentialSecret_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_archiveUpstreamCredential(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_archiveUpstreamCredential,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().ArchiveUpstreamCredential(ctx, fc.Args["id"].(objects.GUID))
+		},
+		nil,
+		ec.marshalNUpstreamCredential2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUpstreamCredential,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_archiveUpstreamCredential(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_UpstreamCredential_id(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_UpstreamCredential_createdAt(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
+			case "name":
+				return ec.fieldContext_UpstreamCredential_name(ctx, field)
+			case "keyHint":
+				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
+			case "quotaScopeID":
+				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
+			case "fingerprint":
+				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
+			case "secretFingerprint":
+				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
+			case "status":
+				return ec.fieldContext_UpstreamCredential_status(ctx, field)
+			case "quotaStatus":
+				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
+			case "lastError":
+				return ec.fieldContext_UpstreamCredential_lastError(ctx, field)
+			case "remark":
+				return ec.fieldContext_UpstreamCredential_remark(ctx, field)
+			case "channelRefs":
+				return ec.fieldContext_UpstreamCredential_channelRefs(ctx, field)
+			case "executions":
+				return ec.fieldContext_UpstreamCredential_executions(ctx, field)
+			case "usageLogs":
+				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
+			case "providerQuotaStatuses":
+				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
+			case "quotaScope":
+				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_archiveUpstreamCredential_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -103455,6 +103556,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "rotateUpstreamCredentialSecret":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_rotateUpstreamCredentialSecret(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "archiveUpstreamCredential":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_archiveUpstreamCredential(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

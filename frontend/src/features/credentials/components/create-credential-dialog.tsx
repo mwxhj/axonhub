@@ -4,14 +4,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,7 +16,7 @@ import { CredentialQuotaFields } from './credential-quota-fields';
 import { CredentialSecretFields } from './credential-secret-fields';
 import { buildCreateCredentialInput, defaultCredentialFormValues } from './form-utils';
 
-const statuses: CredentialStatus[] = ['enabled', 'disabled', 'archived'];
+const statuses: CredentialStatus[] = ['enabled', 'disabled'];
 
 export function CreateCredentialDialog() {
   const { t } = useTranslation();

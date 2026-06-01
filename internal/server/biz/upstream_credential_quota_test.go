@@ -129,6 +129,147 @@ func TestUpstreamCredentialService_CreateAndUpdateInlineQuotaScope(t *testing.T)
 	require.Equal(t, 90, *scope.WarningThresholdPercent)
 }
 
+func TestNormalizeCreateCredentialQuotaScopeInputDefaultsDailyAndMonthlyResetAt(t *testing.T) {
+	loc := time.FixedZone("UTC+8", 8*60*60)
+	now := time.Date(2026, 6, 1, 15, 30, 0, 0, loc)
+
+	daily := credentialquotascope.ResetPolicyDaily
+	dailyInput, err := normalizeCreateCredentialQuotaScopeInput(CreateCredentialQuotaScopeInput{
+		ResetPolicy: &daily,
+	}, now)
+	require.NoError(t, err)
+	require.NotNil(t, dailyInput.ResetAt)
+	require.Equal(t, time.Date(2026, 6, 1, 16, 0, 0, 0, time.UTC), *dailyInput.ResetAt)
+	require.NotNil(t, dailyInput.WindowStartedAt)
+	require.Equal(t, now.UTC(), *dailyInput.WindowStartedAt)
+
+	monthly := credentialquotascope.ResetPolicyMonthly
+	monthlyInput, err := normalizeCreateCredentialQuotaScopeInput(CreateCredentialQuotaScopeInput{
+		ResetPolicy: &monthly,
+	}, now)
+	require.NoError(t, err)
+	require.NotNil(t, monthlyInput.ResetAt)
+	require.Equal(t, time.Date(2026, 6, 30, 16, 0, 0, 0, time.UTC), *monthlyInput.ResetAt)
+	require.NotNil(t, monthlyInput.WindowStartedAt)
+	require.Equal(t, now.UTC(), *monthlyInput.WindowStartedAt)
+}
+
+func TestUpstreamCredentialService_CreateCredentialQuotaScopeValidatesCustomResetWindow(t *testing.T) {
+	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
+	defer client.Close()
+
+	ctx := context.Background()
+	ctx = ent.NewContext(ctx, client)
+	ctx = authz.WithTestBypass(ctx)
+
+	svc := NewUpstreamCredentialService(UpstreamCredentialServiceParams{Ent: client})
+	custom := credentialquotascope.ResetPolicyCustom
+
+	_, err := svc.CreateCredentialQuotaScope(ctx, CreateCredentialQuotaScopeInput{
+		ResetPolicy: &custom,
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "requires windowStartedAt and resetAt")
+
+	startedAt := time.Date(2026, 6, 1, 10, 0, 0, 0, time.UTC)
+	resetAt := startedAt
+	_, err = svc.CreateCredentialQuotaScope(ctx, CreateCredentialQuotaScopeInput{
+		ResetPolicy:     &custom,
+		WindowStartedAt: &startedAt,
+		ResetAt:         &resetAt,
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "resetAt must be after windowStartedAt")
+
+	resetAt = startedAt.Add(24 * time.Hour)
+	scope, err := svc.CreateCredentialQuotaScope(ctx, CreateCredentialQuotaScopeInput{
+		ResetPolicy:     &custom,
+		WindowStartedAt: &startedAt,
+		ResetAt:         &resetAt,
+	})
+	require.NoError(t, err)
+	require.Equal(t, credentialquotascope.ResetPolicyCustom, scope.ResetPolicy)
+	require.NotNil(t, scope.WindowStartedAt)
+	require.NotNil(t, scope.ResetAt)
+	require.Equal(t, resetAt, *scope.ResetAt)
+}
+
+func TestUpstreamCredentialService_UpdateCredentialQuotaScopeDefaultsResetAtWhenPolicyBecomesAutomatic(t *testing.T) {
+	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
+	defer client.Close()
+
+	ctx := context.Background()
+	ctx = ent.NewContext(ctx, client)
+	ctx = authz.WithTestBypass(ctx)
+
+	svc := NewUpstreamCredentialService(UpstreamCredentialServiceParams{Ent: client})
+	scope, err := svc.CreateCredentialQuotaScope(ctx, CreateCredentialQuotaScopeInput{
+		Name: lo.ToPtr("manual scope"),
+	})
+	require.NoError(t, err)
+	require.Nil(t, scope.ResetAt)
+
+	daily := credentialquotascope.ResetPolicyDaily
+	updated, err := svc.UpdateCredentialQuotaScope(ctx, scope.ID, UpdateCredentialQuotaScopeInput{
+		ResetPolicy: &daily,
+	})
+	require.NoError(t, err)
+	require.Equal(t, credentialquotascope.ResetPolicyDaily, updated.ResetPolicy)
+	require.NotNil(t, updated.ResetAt)
+	require.NotNil(t, updated.WindowStartedAt)
+}
+
+func TestUpstreamCredentialService_ArchiveDisablesRefsAndRuntimeSelection(t *testing.T) {
+	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
+	defer client.Close()
+
+	ctx := context.Background()
+	ctx = ent.NewContext(ctx, client)
+	ctx = authz.WithTestBypass(ctx)
+
+	svc := NewUpstreamCredentialService(UpstreamCredentialServiceParams{Ent: client})
+	credential, err := svc.CreateUpstreamCredential(ctx, CreateUpstreamCredentialInput{
+		Name:   lo.ToPtr("archive me"),
+		Secret: objects.UpstreamCredentialSecretFromAPIKey("sk-archive-me"),
+		Status: lo.ToPtr(upstreamcredential.StatusEnabled),
+	})
+	require.NoError(t, err)
+
+	ch := createCredentialTestChannel(t, ctx, client)
+	_, err = client.ChannelCredentialRef.Create().
+		SetChannelID(ch.ID).
+		SetCredentialID(credential.ID).
+		SetEnabled(true).
+		Save(ctx)
+	require.NoError(t, err)
+
+	archived, err := svc.ArchiveUpstreamCredential(ctx, credential.ID)
+	require.NoError(t, err)
+	require.Equal(t, upstreamcredential.StatusArchived, archived.Status)
+
+	ref, err := client.ChannelCredentialRef.Query().
+		Where(
+			channelcredentialref.ChannelID(ch.ID),
+			channelcredentialref.CredentialID(credential.ID),
+		).
+		Only(ctx)
+	require.NoError(t, err)
+	require.False(t, ref.Enabled)
+
+	reloaded, err := client.Channel.Query().
+		Where(channel.ID(ch.ID)).
+		WithCredentialRefs(func(q *ent.ChannelCredentialRefQuery) {
+			q.WithCredential()
+		}).
+		Only(ctx)
+	require.NoError(t, err)
+
+	views := credentialViewsFromRefs(reloaded)
+	require.Len(t, views, 1)
+	require.False(t, runtimeCredentialViews(views)[0].Enabled)
+	require.Empty(t, enabledAPIKeyCredentialViews(views))
+}
+
 func TestCredentialViewsFromRefsMarksExhaustedQuotaScopeUnavailable(t *testing.T) {
 	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
 	defer client.Close()

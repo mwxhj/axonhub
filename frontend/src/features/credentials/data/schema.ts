@@ -39,6 +39,25 @@ export const credentialQuotaScopeSchema = z.object({
 });
 export type CredentialQuotaScope = z.infer<typeof credentialQuotaScopeSchema>;
 
+export const providerQuotaStatusSchema = z.object({
+  id: z.string(),
+  channelID: z.string().optional().nullable(),
+  scopeKey: z.string(),
+  credentialID: z.string().optional().nullable(),
+  credentialFingerprint: z.string().optional().nullable(),
+  secretFingerprint: z.string().optional().nullable(),
+  resourceScopeKey: z.string().optional().nullable(),
+  quotaScopeID: z.string().optional().nullable(),
+  providerType: z.string(),
+  status: z.enum(['available', 'warning', 'exhausted', 'unknown']),
+  quotaData: z.record(z.string(), z.unknown()).optional().nullable(),
+  nextResetAt: z.string().optional().nullable(),
+  ready: z.boolean(),
+  nextCheckAt: z.string(),
+  updatedAt: z.string(),
+});
+export type ProviderQuotaStatus = z.infer<typeof providerQuotaStatusSchema>;
+
 export const credentialQuotaScopeEdgeSchema = z.object({
   node: credentialQuotaScopeSchema.nullable(),
 });
@@ -84,6 +103,7 @@ export const upstreamCredentialSchema = z.object({
   quotaScopeID: z.string().optional().nullable(),
   secretFingerprint: z.string().optional().nullable(),
   quotaScope: credentialQuotaScopeSchema.optional().nullable(),
+  providerQuotaStatuses: z.array(providerQuotaStatusSchema).optional().nullable(),
   quotaStatus: z.string().optional().nullable(),
   lastError: z.string().optional().nullable(),
   fingerprint: z.string().optional().nullable(),
@@ -228,6 +248,7 @@ export const createUpstreamCredentialInputSchema = z.object({
       usedAmount: z.string().optional(),
       resetPolicy: credentialQuotaResetPolicySchema.optional(),
       resetAt: z.string().optional(),
+      windowStartedAt: z.string().optional(),
       warningThresholdPercent: z.number().int().min(0).max(100).optional(),
       overLimitAction: credentialQuotaOverLimitActionSchema.optional(),
       remark: z.string().optional(),
@@ -242,7 +263,13 @@ export const updateUpstreamCredentialInputSchema = z.object({
   status: credentialStatusSchema.optional(),
   quotaScopeID: z.string().optional(),
   clearQuotaScope: z.boolean().optional(),
-  quota: createUpstreamCredentialInputSchema.shape.quota,
+  quota: createUpstreamCredentialInputSchema.shape.quota
+    .unwrap()
+    .extend({
+      clearResetAt: z.boolean().optional(),
+      clearWindowStartedAt: z.boolean().optional(),
+    })
+    .optional(),
   remark: z.string().optional(),
 });
 export type UpdateUpstreamCredentialInput = z.infer<typeof updateUpstreamCredentialInputSchema>;
@@ -284,6 +311,7 @@ export type CredentialFormValues = {
   quotaUsedAmount: string;
   quotaResetPolicy: CredentialQuotaResetPolicy;
   quotaResetAt: string;
+  quotaWindowStartedAt: string;
   quotaWarningThresholdPercent: number;
   quotaOverLimitAction: CredentialQuotaOverLimitAction;
   quotaRemark: string;

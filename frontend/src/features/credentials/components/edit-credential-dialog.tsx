@@ -4,14 +4,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -57,6 +50,9 @@ export function EditCredentialDialog() {
         quotaUsedAmount: currentCredential.quotaScope?.usedAmount ?? '',
         quotaResetPolicy: currentCredential.quotaScope?.resetPolicy ?? 'none',
         quotaResetAt: currentCredential.quotaScope?.resetAt ? currentCredential.quotaScope.resetAt.slice(0, 16) : '',
+        quotaWindowStartedAt: currentCredential.quotaScope?.windowStartedAt
+          ? currentCredential.quotaScope.windowStartedAt.slice(0, 16)
+          : '',
         quotaWarningThresholdPercent: currentCredential.quotaScope?.warningThresholdPercent ?? 80,
         quotaOverLimitAction: currentCredential.quotaScope?.overLimitAction ?? 'warn',
         quotaRemark: currentCredential.quotaScope?.remark ?? '',
@@ -103,7 +99,11 @@ export function EditCredentialDialog() {
               </div>
               <div className='grid gap-2'>
                 <Label>{t('credentials.fields.secretFingerprint')}</Label>
-                <Input value={currentCredential?.secretFingerprint ?? currentCredential?.fingerprint ?? ''} readOnly className='bg-muted font-mono text-xs' />
+                <Input
+                  value={currentCredential?.secretFingerprint ?? currentCredential?.fingerprint ?? ''}
+                  readOnly
+                  className='bg-muted font-mono text-xs'
+                />
               </div>
             </div>
 

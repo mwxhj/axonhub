@@ -266,3 +266,93 @@ credential resolver -> context safe credential target
 -> provider quota updates credential/resource/quota scope
 -> request UI displays credential name + key hint + source + resource/quota scope
 ```
+
+---
+
+## Credential Local Quota And Archive Product Contract
+
+### 1. Scope / Trigger
+
+Read this section before changing:
+
+- `CreateCredentialQuotaScopeInput` or `UpdateCredentialQuotaScopeInput` handling.
+- GraphQL credential archive/delete mutations.
+- Credentials UI fields that display quota state or routing availability.
+
+This contract keeps three meanings separate: local quota scope, provider quota status, and derived routing availability.
+
+### 2. Signatures
+
+Backend service/API signatures:
+
+```go
+func (svc *UpstreamCredentialService) ArchiveUpstreamCredential(ctx context.Context, id int) (*ent.UpstreamCredential, error)
+func normalizeCreateCredentialQuotaScopeInput(input CreateCredentialQuotaScopeInput, now time.Time) (CreateCredentialQuotaScopeInput, error)
+func normalizeUpdateCredentialQuotaScopeInput(scope *ent.CredentialQuotaScope, input UpdateCredentialQuotaScopeInput, now time.Time) (UpdateCredentialQuotaScopeInput, error)
+```
+
+GraphQL product mutation:
+
+```graphql
+archiveUpstreamCredential(id: ID!): UpstreamCredential!
+```
+
+### 3. Contracts
+
+- Local quota is `CredentialQuotaScope`: `status`, `unit`, `limit_amount`, `used_amount`, `reset_policy`, `reset_at`, `window_started_at`, `over_limit_action`, `pause_until`, `source`.
+- Provider quota is `ProviderQuotaStatus`: `provider_type`, `status`, `ready`, `next_reset_at`, `next_check_at`, `scope_key`, resource/credential/quota-scope identifiers.
+- UI must not collapse local quota status and provider quota status into one unlabeled badge. Show local quota, provider quota, and routing availability separately.
+- `reset_policy=daily` defaults missing `reset_at` to the next local midnight stored as UTC and defaults missing `window_started_at` to current UTC time.
+- `reset_policy=monthly` defaults missing `reset_at` to the first day of the next local month at midnight stored as UTC and defaults missing `window_started_at` to current UTC time.
+- `reset_policy=custom` requires `window_started_at` and `reset_at`, with `reset_at > window_started_at`.
+- Archive is a soft product action: set `UpstreamCredential.status=archived`, disable enabled `ChannelCredentialRef` rows for the credential, reload channel routing state, and keep history/safe metadata readable.
+- Archive does not wipe `secret_payload` unless a future explicit wipe action is added.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required Behavior |
+|-----------|-------------------|
+| Create daily/monthly quota without `reset_at` | Fill predictable next local reset time and save UTC. |
+| Update scope from `none`/`manual` to daily/monthly with empty effective `reset_at` | Fill predictable next local reset time. |
+| Custom quota missing `window_started_at` or `reset_at` | Return a specific validation error. |
+| Custom quota with `reset_at <= window_started_at` | Return a specific validation error. |
+| Archive credential with enabled channel refs | Disable refs in the same logical transaction and return archived credential. |
+| Archive credential with request/usage history | Preserve history and safe snapshots; do not hard delete rows. |
+
+### 5. Good / Base / Bad Cases
+
+- Good: daily local quota created with no reset time returns a concrete next local reset.
+- Good: credential detail shows local quota used/limit/remaining separately from provider-observed status.
+- Good: archive action tells the operator routing stops, refs are disabled, and history remains visible.
+- Base: credential has no local quota and no provider observation; UI says no local quota and no provider observation, routing derives from status/refs.
+- Bad: frontend displays `quotaScope.status || credential.quotaStatus` as one generic quota badge.
+- Bad: archive is only reachable by a generic status dropdown with no side-effect confirmation.
+
+### 6. Tests Required
+
+When changing this contract, add or update tests for:
+
+- Daily and monthly reset defaulting.
+- Custom reset validation for missing and invalid windows.
+- GraphQL create/update mutations using frontend-like quota fields.
+- `archiveUpstreamCredential` disabling refs and returning an archived credential.
+- Runtime credential views excluding archived or disabled-ref credentials.
+- Frontend type checks for credential quota/provider quota fields.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```text
+quota badge = quotaScope.status || credential.quotaStatus || "unknown"
+delete action = set status archived from generic status dialog
+```
+
+#### Correct
+
+```text
+local quota section = CredentialQuotaScope fields
+provider quota section = ProviderQuotaStatus rows
+routing availability = derived from credential status + refs + local quota + provider quota
+archive action = explicit confirmation -> archive mutation -> refs disabled
+```

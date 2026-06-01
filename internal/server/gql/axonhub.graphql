@@ -892,6 +892,7 @@ type Mutation {
     id: ID!
     input: RotateUpstreamCredentialSecretInput!
   ): UpstreamCredential!
+  archiveUpstreamCredential(id: ID!): UpstreamCredential!
   updateUpstreamCredentialStatus(
     id: ID!
     status: UpstreamCredentialStatus!

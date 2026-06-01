@@ -440,6 +440,11 @@ func (r *mutationResolver) RotateUpstreamCredentialSecret(ctx context.Context, i
 	return r.upstreamCredentialService.RotateUpstreamCredentialSecret(ctx, id.ID, input)
 }
 
+// ArchiveUpstreamCredential is the resolver for the archiveUpstreamCredential field.
+func (r *mutationResolver) ArchiveUpstreamCredential(ctx context.Context, id objects.GUID) (*ent.UpstreamCredential, error) {
+	return r.upstreamCredentialService.ArchiveUpstreamCredential(ctx, id.ID)
+}
+
 // UpdateUpstreamCredentialStatus is the resolver for the updateUpstreamCredentialStatus field.
 func (r *mutationResolver) UpdateUpstreamCredentialStatus(ctx context.Context, id objects.GUID, status upstreamcredential.Status) (*ent.UpstreamCredential, error) {
 	return r.upstreamCredentialService.UpdateUpstreamCredential(ctx, id.ID, biz.UpdateUpstreamCredentialInput{

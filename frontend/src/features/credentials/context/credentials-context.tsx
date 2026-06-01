@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState } from 'react';
 import type { UpstreamCredential } from '../data/credentials';
 
-type CredentialsDialogType = 'create' | 'detail' | 'edit' | 'rotate' | 'status' | 'channels' | null;
+type CredentialsDialogType = 'create' | 'detail' | 'edit' | 'rotate' | 'status' | 'channels' | 'archive' | null;
 
 interface CredentialsContextType {
   open: CredentialsDialogType;
@@ -31,8 +31,6 @@ export default function CredentialsProvider({ children }: CredentialsProviderPro
   const [currentCredential, setCurrentCredential] = useState<UpstreamCredential | null>(null);
 
   return (
-    <CredentialsContext.Provider value={{ open, setOpen, currentCredential, setCurrentCredential }}>
-      {children}
-    </CredentialsContext.Provider>
+    <CredentialsContext.Provider value={{ open, setOpen, currentCredential, setCurrentCredential }}>{children}</CredentialsContext.Provider>
   );
 }

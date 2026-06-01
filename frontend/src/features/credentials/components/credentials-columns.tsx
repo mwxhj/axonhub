@@ -1,6 +1,6 @@
+import { format } from 'date-fns';
 import { ColumnDef } from '@tanstack/react-table';
 import { TFunction } from 'i18next';
-import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import type { UpstreamCredential } from '../data/credentials';
 import { CredentialsActions } from './credentials-actions';
@@ -12,10 +12,10 @@ function shortFingerprint(value: string) {
   return `${value.slice(0, 13)}...${value.slice(-8)}`;
 }
 
-function quotaLabel(credential: UpstreamCredential, t: TFunction) {
+function localQuotaLabel(credential: UpstreamCredential, t: TFunction) {
   const quota = credential.quotaScope;
   if (!quota) {
-    return credential.quotaStatus || t('credentials.quota.status.unknown');
+    return t('credentials.quota.none');
   }
 
   const pieces = [quota.usedAmount, quota.limitAmount].filter(Boolean);
@@ -24,6 +24,18 @@ function quotaLabel(credential: UpstreamCredential, t: TFunction) {
   }
 
   return quota.status ? t(`credentials.quota.status.${quota.status}`) : t('credentials.quota.status.unknown');
+}
+
+function providerQuotaLabel(credential: UpstreamCredential, t: TFunction) {
+  const statuses = credential.providerQuotaStatuses ?? [];
+  if (statuses.length === 0) {
+    return t('credentials.providerQuota.empty');
+  }
+
+  const exhausted = statuses.find((status) => !status.ready || status.status === 'exhausted');
+  const status = exhausted ?? statuses.find((item) => item.status === 'warning') ?? statuses[0];
+
+  return `${t(`credentials.providerQuota.status.${status.status}`, { defaultValue: status.status })} · ${status.providerType}`;
 }
 
 export const createCredentialColumns = (t: TFunction): ColumnDef<UpstreamCredential>[] => [
@@ -47,17 +59,22 @@ export const createCredentialColumns = (t: TFunction): ColumnDef<UpstreamCredent
     cell: ({ row }) => <span className='text-muted-foreground font-mono text-xs'>{row.original.keyHint || '-'}</span>,
   },
   {
-    id: 'quota',
-    header: t('credentials.columns.quota'),
+    id: 'localQuota',
+    header: t('credentials.columns.localQuota'),
     cell: ({ row }) => {
       const quota = row.original.quotaScope;
       return (
         <div className='min-w-0'>
-          <div className='truncate text-sm'>{quota?.name || t('credentials.quota.defaultScope')}</div>
-          <div className='text-muted-foreground mt-1 truncate text-xs'>{quotaLabel(row.original, t)}</div>
+          <div className='truncate text-sm'>{quota?.name || t('credentials.quota.none')}</div>
+          <div className='text-muted-foreground mt-1 truncate text-xs'>{localQuotaLabel(row.original, t)}</div>
         </div>
       );
     },
+  },
+  {
+    id: 'providerQuota',
+    header: t('credentials.columns.providerQuota'),
+    cell: ({ row }) => <span className='text-muted-foreground line-clamp-2 text-xs'>{providerQuotaLabel(row.original, t)}</span>,
   },
   {
     accessorKey: 'lastError',
@@ -83,7 +100,11 @@ export const createCredentialColumns = (t: TFunction): ColumnDef<UpstreamCredent
   {
     accessorKey: 'updatedAt',
     header: t('common.columns.updatedAt'),
-    cell: ({ row }) => <span className='text-muted-foreground whitespace-nowrap text-sm'>{format(new Date(row.original.updatedAt), 'yyyy-MM-dd HH:mm')}</span>,
+    cell: ({ row }) => (
+      <span className='text-muted-foreground text-sm whitespace-nowrap'>
+        {format(new Date(row.original.updatedAt), 'yyyy-MM-dd HH:mm')}
+      </span>
+    ),
   },
   {
     id: 'actions',

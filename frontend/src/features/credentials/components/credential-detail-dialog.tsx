@@ -2,23 +2,23 @@
 
 import { format } from 'date-fns';
 import type { TFunction } from 'i18next';
-import { AlertCircle, KeyRound, Link, Pencil } from 'lucide-react';
+import { AlertCircle, Archive, KeyRound, Link, Pencil } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCredentialsContext } from '../context/credentials-context';
 import { useUpstreamCredentialDetail } from '../data/credentials';
-import type { CredentialExecution, CredentialRef, CredentialUsageLog, UpstreamCredentialDetail } from '../data/schema';
+import type {
+  CredentialExecution,
+  CredentialQuotaScope,
+  CredentialRef,
+  CredentialUsageLog,
+  ProviderQuotaStatus,
+  UpstreamCredentialDetail,
+} from '../data/schema';
 
 function shortIdentity(value?: string | null) {
   if (!value) {
@@ -42,10 +42,12 @@ function dateLabel(value?: Date | string | null) {
 }
 
 function Field({ label, value, mono = false }: { label: string; value?: string | number | null; mono?: boolean }) {
+  const displayValue = value === undefined || value === null || value === '' ? '-' : value;
+
   return (
     <div className='min-w-0'>
       <div className='text-muted-foreground text-xs'>{label}</div>
-      <div className={`truncate text-sm ${mono ? 'font-mono' : ''}`}>{value || '-'}</div>
+      <div className={`truncate text-sm ${mono ? 'font-mono' : ''}`}>{displayValue}</div>
     </div>
   );
 }
@@ -62,8 +64,81 @@ function usageLogs(credential: UpstreamCredentialDetail): CredentialUsageLog[] {
   return credential.usageLogs?.edges?.map((edge) => edge.node).filter((item): item is CredentialUsageLog => Boolean(item)) ?? [];
 }
 
+function providerQuotaStatuses(credential: UpstreamCredentialDetail): ProviderQuotaStatus[] {
+  return credential.providerQuotaStatuses ?? [];
+}
+
 function quotaStatusLabel(status: string | null | undefined, t: TFunction) {
   return status ? t(`credentials.quota.status.${status}`, { defaultValue: status }) : t('credentials.quota.status.unknown');
+}
+
+function providerQuotaStatusLabel(status: string | null | undefined, t: TFunction) {
+  return status ? t(`credentials.providerQuota.status.${status}`, { defaultValue: status }) : t('credentials.providerQuota.status.unknown');
+}
+
+function decimalLabel(value?: string | null) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : '-';
+}
+
+function remainingLabel(quota?: CredentialQuotaScope | null) {
+  if (!quota?.limitAmount || !quota.usedAmount) {
+    return '-';
+  }
+
+  const limit = Number(quota.limitAmount);
+  const used = Number(quota.usedAmount);
+  if (!Number.isFinite(limit) || !Number.isFinite(used)) {
+    return '-';
+  }
+
+  const remaining = limit - used;
+  return String(Number.isInteger(remaining) ? remaining : Number(remaining.toFixed(6)));
+}
+
+function localQuotaBlocksRouting(quota?: CredentialQuotaScope | null) {
+  if (!quota) {
+    return false;
+  }
+
+  const resetAt = quota.resetAt ? new Date(quota.resetAt) : null;
+  const resetDue = resetAt ? resetAt.getTime() <= Date.now() : false;
+  if (resetDue && ['daily', 'monthly', 'custom'].includes(quota.resetPolicy ?? '')) {
+    return false;
+  }
+
+  if (quota.status === 'disabled') {
+    return true;
+  }
+  if (quota.status === 'paused') {
+    const pauseUntil = quota.pauseUntil ? new Date(quota.pauseUntil) : null;
+    return !pauseUntil || pauseUntil.getTime() > Date.now();
+  }
+  if (quota.status === 'exhausted') {
+    return quota.overLimitAction === 'pause' || quota.overLimitAction === 'disable';
+  }
+
+  return false;
+}
+
+function routingAvailabilityKey(credential: UpstreamCredentialDetail, refs: CredentialRef[], providerStatuses: ProviderQuotaStatus[]) {
+  if (credential.status === 'archived') {
+    return 'archived';
+  }
+  if (credential.status === 'disabled') {
+    return 'disabled';
+  }
+  if (refs.filter((ref) => ref.enabled).length === 0) {
+    return 'noEnabledRefs';
+  }
+  if (localQuotaBlocksRouting(credential.quotaScope)) {
+    return 'blockedLocalQuota';
+  }
+  if (providerStatuses.some((status) => !status.ready || status.status === 'exhausted')) {
+    return 'blockedProviderQuota';
+  }
+
+  return 'selectable';
 }
 
 export function CredentialDetailDialog() {
@@ -78,7 +153,7 @@ export function CredentialDetailDialog() {
     setCurrentCredential(null);
   };
 
-  const openRelatedDialog = (dialog: 'edit' | 'rotate' | 'channels') => {
+  const openRelatedDialog = (dialog: 'edit' | 'rotate' | 'channels' | 'archive') => {
     if (credential) {
       setCurrentCredential(credential);
     }
@@ -87,9 +162,11 @@ export function CredentialDetailDialog() {
 
   const quota = credential?.quotaScope;
   const refs = credential ? channelRefs(credential) : [];
+  const enabledRefs = refs.filter((ref) => ref.enabled);
+  const providerStatuses = credential ? providerQuotaStatuses(credential) : [];
   const recentExecutions = credential ? executions(credential) : [];
   const recentUsageLogs = credential ? usageLogs(credential) : [];
-  const quotaStatus = quota?.status || credential?.quotaStatus || 'unknown';
+  const routingKey = credential ? routingAvailabilityKey(credential, refs, providerStatuses) : 'selectable';
 
   return (
     <Dialog open={isOpen} onOpenChange={(nextOpen) => (nextOpen ? setOpen('detail') : close())}>
@@ -104,8 +181,13 @@ export function CredentialDetailDialog() {
         ) : (
           <div className='max-h-[72vh] overflow-y-auto pr-1'>
             <div className='mb-4 flex flex-wrap items-center gap-2'>
-              <Badge variant={credential.status === 'enabled' ? 'default' : 'secondary'}>{t(`credentials.status.${credential.status}`)}</Badge>
-              <Badge variant='outline'>{quotaStatusLabel(quotaStatus, t)}</Badge>
+              <Badge variant={credential.status === 'enabled' ? 'default' : 'secondary'}>
+                {t(`credentials.status.${credential.status}`)}
+              </Badge>
+              <Badge variant='outline'>{quota ? quotaStatusLabel(quota.status, t) : t('credentials.quota.none')}</Badge>
+              <Badge variant={routingKey === 'selectable' ? 'default' : 'secondary'}>
+                {t(`credentials.routingAvailability.${routingKey}`)}
+              </Badge>
               {credential.keyHint && <Badge variant='secondary'>{credential.keyHint}</Badge>}
             </div>
 
@@ -127,16 +209,25 @@ export function CredentialDetailDialog() {
               <TabsContent value='overview' className='mt-4 space-y-4'>
                 <div className='grid gap-4 rounded-md border p-3 md:grid-cols-3'>
                   <Field label={t('credentials.fields.keyHint')} value={credential.keyHint} mono />
-                  <Field label={t('credentials.fields.secretFingerprint')} value={shortIdentity(credential.secretFingerprint || credential.fingerprint)} mono />
+                  <Field
+                    label={t('credentials.fields.secretFingerprint')}
+                    value={shortIdentity(credential.secretFingerprint || credential.fingerprint)}
+                    mono
+                  />
                   <Field label={t('credentials.fields.status')} value={t(`credentials.status.${credential.status}`)} />
-                  <Field label={t('credentials.columns.channels')} value={refs.length} />
-                  <Field label={t('credentials.columns.quota')} value={quota?.name || quotaStatusLabel(quotaStatus, t)} />
+                  <Field label={t('credentials.columns.channels')} value={`${enabledRefs.length} / ${refs.length}`} />
+                  <Field label={t('credentials.columns.localQuota')} value={quota?.name || t('credentials.quota.none')} />
+                  <Field
+                    label={t('credentials.columns.providerQuota')}
+                    value={providerStatuses.length || t('credentials.providerQuota.empty')}
+                  />
+                  <Field label={t('credentials.detail.routingAvailability')} value={t(`credentials.routingAvailability.${routingKey}`)} />
                   <Field label={t('common.columns.updatedAt')} value={dateLabel(credential.updatedAt)} />
                 </div>
                 {credential.remark && (
                   <div className='rounded-md border p-3'>
                     <div className='text-muted-foreground text-xs'>{t('credentials.fields.remark')}</div>
-                    <p className='mt-1 whitespace-pre-wrap text-sm'>{credential.remark}</p>
+                    <p className='mt-1 text-sm whitespace-pre-wrap'>{credential.remark}</p>
                   </div>
                 )}
               </TabsContent>
@@ -157,28 +248,108 @@ export function CredentialDetailDialog() {
                     </div>
                   ))
                 ) : (
-                  <div className='text-muted-foreground rounded-md border py-8 text-center text-sm'>{t('credentials.dialogs.channels.empty')}</div>
+                  <div className='text-muted-foreground rounded-md border py-8 text-center text-sm'>
+                    {t('credentials.dialogs.channels.empty')}
+                  </div>
                 )}
               </TabsContent>
 
               <TabsContent value='quota' className='mt-4 space-y-4'>
-                <div className='grid gap-4 rounded-md border p-3 md:grid-cols-3'>
-                  <Field label={t('credentials.fields.quotaScopeName')} value={quota?.name || t('credentials.quota.defaultScope')} />
-                  <Field label={t('credentials.fields.quotaUnit')} value={quota?.unit ? t(`credentials.quota.units.${quota.unit}`) : '-'} />
-                  <Field label={t('credentials.fields.status')} value={quotaStatusLabel(quotaStatus, t)} />
-                  <Field label={t('credentials.fields.quotaLimitAmount')} value={quota?.limitAmount} mono />
-                  <Field label={t('credentials.fields.quotaUsedAmount')} value={quota?.usedAmount} mono />
-                  <Field label={t('credentials.fields.quotaWarningThresholdPercent')} value={quota?.warningThresholdPercent} />
-                  <Field label={t('credentials.fields.quotaResetPolicy')} value={quota?.resetPolicy ? t(`credentials.quota.resetPolicies.${quota.resetPolicy}`) : '-'} />
-                  <Field label={t('credentials.fields.quotaResetAt')} value={dateLabel(quota?.resetAt)} />
-                  <Field label={t('credentials.fields.quotaOverLimitAction')} value={quota?.overLimitAction ? t(`credentials.quota.overLimitActions.${quota.overLimitAction}`) : '-'} />
-                </div>
-                {(quota?.lastError || quota?.remark) && (
-                  <div className='grid gap-3 rounded-md border p-3'>
-                    {quota?.lastError && <Field label={t('credentials.detail.latestError')} value={quota.lastError} />}
-                    {quota?.remark && <Field label={t('credentials.fields.quotaRemark')} value={quota.remark} />}
+                <section className='space-y-3 rounded-md border p-3'>
+                  <div className='flex flex-wrap items-center justify-between gap-2'>
+                    <h4 className='text-sm font-medium'>{t('credentials.quota.localTitle')}</h4>
+                    <Badge variant='outline'>{quota ? quotaStatusLabel(quota.status, t) : t('credentials.quota.none')}</Badge>
                   </div>
-                )}
+                  {quota ? (
+                    <div className='grid gap-4 md:grid-cols-3'>
+                      <Field label={t('credentials.fields.quotaScopeName')} value={quota.name || t('credentials.quota.defaultScope')} />
+                      <Field
+                        label={t('credentials.fields.quotaUnit')}
+                        value={quota.unit ? t(`credentials.quota.units.${quota.unit}`) : '-'}
+                      />
+                      <Field label={t('credentials.fields.quotaLimitAmount')} value={decimalLabel(quota.limitAmount)} mono />
+                      <Field label={t('credentials.fields.quotaUsedAmount')} value={decimalLabel(quota.usedAmount)} mono />
+                      <Field label={t('credentials.fields.quotaRemainingAmount')} value={remainingLabel(quota)} mono />
+                      <Field label={t('credentials.fields.quotaWarningThresholdPercent')} value={quota.warningThresholdPercent} />
+                      <Field
+                        label={t('credentials.fields.quotaResetPolicy')}
+                        value={quota.resetPolicy ? t(`credentials.quota.resetPolicies.${quota.resetPolicy}`) : '-'}
+                      />
+                      <Field label={t('credentials.fields.quotaWindowStartedAt')} value={dateLabel(quota.windowStartedAt)} />
+                      <Field label={t('credentials.fields.quotaResetAt')} value={dateLabel(quota.resetAt)} />
+                      <Field
+                        label={t('credentials.fields.quotaOverLimitAction')}
+                        value={quota.overLimitAction ? t(`credentials.quota.overLimitActions.${quota.overLimitAction}`) : '-'}
+                      />
+                      <Field
+                        label={t('credentials.fields.quotaSource')}
+                        value={quota.source ? t(`credentials.quota.sources.${quota.source}`, { defaultValue: quota.source }) : '-'}
+                      />
+                    </div>
+                  ) : (
+                    <div className='text-muted-foreground text-sm'>{t('credentials.quota.noneScopeHint')}</div>
+                  )}
+                  {(quota?.lastError || quota?.remark) && (
+                    <div className='grid gap-3 border-t pt-3'>
+                      {quota?.lastError && <Field label={t('credentials.detail.latestError')} value={quota.lastError} />}
+                      {quota?.remark && <Field label={t('credentials.fields.quotaRemark')} value={quota.remark} />}
+                    </div>
+                  )}
+                </section>
+
+                <section className='space-y-3 rounded-md border p-3'>
+                  <h4 className='text-sm font-medium'>{t('credentials.providerQuota.title')}</h4>
+                  {providerStatuses.length > 0 ? (
+                    <div className='space-y-3'>
+                      {providerStatuses.map((status) => (
+                        <div key={status.id} className='grid gap-3 border-t pt-3 first:border-t-0 first:pt-0 md:grid-cols-3'>
+                          <Field label={t('credentials.providerQuota.provider')} value={status.providerType} />
+                          <Field label={t('credentials.fields.status')} value={providerQuotaStatusLabel(status.status, t)} />
+                          <Field
+                            label={t('credentials.providerQuota.ready')}
+                            value={status.ready ? t('credentials.common.yes') : t('credentials.common.no')}
+                          />
+                          <Field label={t('credentials.providerQuota.nextResetAt')} value={dateLabel(status.nextResetAt)} />
+                          <Field label={t('credentials.providerQuota.nextCheckAt')} value={dateLabel(status.nextCheckAt)} />
+                          <Field label={t('credentials.providerQuota.scopeKey')} value={shortIdentity(status.scopeKey)} mono />
+                          <Field
+                            label={t('credentials.providerQuota.resourceScopeKey')}
+                            value={shortIdentity(status.resourceScopeKey)}
+                            mono
+                          />
+                          <Field label={t('common.columns.updatedAt')} value={dateLabel(status.updatedAt)} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className='text-muted-foreground text-sm'>{t('credentials.providerQuota.empty')}</div>
+                  )}
+                </section>
+
+                <section className='space-y-3 rounded-md border p-3'>
+                  <div className='flex flex-wrap items-center justify-between gap-2'>
+                    <h4 className='text-sm font-medium'>{t('credentials.detail.routingAvailability')}</h4>
+                    <Badge variant={routingKey === 'selectable' ? 'default' : 'secondary'}>
+                      {t(`credentials.routingAvailability.${routingKey}`)}
+                    </Badge>
+                  </div>
+                  <div className='grid gap-4 md:grid-cols-3'>
+                    <Field label={t('credentials.fields.status')} value={t(`credentials.status.${credential.status}`)} />
+                    <Field label={t('credentials.detail.enabledRefs')} value={`${enabledRefs.length} / ${refs.length}`} />
+                    <Field
+                      label={t('credentials.detail.localQuotaBlocksRouting')}
+                      value={localQuotaBlocksRouting(quota) ? t('credentials.common.yes') : t('credentials.common.no')}
+                    />
+                    <Field
+                      label={t('credentials.detail.providerQuotaBlocksRouting')}
+                      value={
+                        providerStatuses.some((status) => !status.ready || status.status === 'exhausted')
+                          ? t('credentials.common.yes')
+                          : t('credentials.common.no')
+                      }
+                    />
+                  </div>
+                </section>
               </TabsContent>
 
               <TabsContent value='history' className='mt-4 grid gap-4 lg:grid-cols-2'>
@@ -192,7 +363,9 @@ export function CredentialDetailDialog() {
                           <Badge variant={execution.status === 'completed' ? 'default' : 'secondary'}>{execution.status}</Badge>
                         </div>
                         <div className='text-muted-foreground truncate text-xs'>
-                          {[dateLabel(execution.createdAt), execution.channel?.name, execution.credentialSource].filter(Boolean).join(' · ')}
+                          {[dateLabel(execution.createdAt), execution.channel?.name, execution.credentialSource]
+                            .filter(Boolean)
+                            .join(' · ')}
                         </div>
                         <div className='text-muted-foreground truncate font-mono text-xs'>
                           {execution.credentialKeyHint || execution.resourceScopeKey || '-'}
@@ -201,7 +374,9 @@ export function CredentialDetailDialog() {
                       </div>
                     ))
                   ) : (
-                    <div className='text-muted-foreground rounded-md border py-8 text-center text-sm'>{t('credentials.detail.emptyExecutions')}</div>
+                    <div className='text-muted-foreground rounded-md border py-8 text-center text-sm'>
+                      {t('credentials.detail.emptyExecutions')}
+                    </div>
                   )}
                 </div>
 
@@ -229,7 +404,9 @@ export function CredentialDetailDialog() {
                       </div>
                     ))
                   ) : (
-                    <div className='text-muted-foreground rounded-md border py-8 text-center text-sm'>{t('credentials.detail.emptyUsage')}</div>
+                    <div className='text-muted-foreground rounded-md border py-8 text-center text-sm'>
+                      {t('credentials.detail.emptyUsage')}
+                    </div>
                   )}
                 </div>
               </TabsContent>
@@ -251,6 +428,12 @@ export function CredentialDetailDialog() {
               <KeyRound className='mr-2 h-4 w-4' />
               {t('credentials.actions.rotate')}
             </Button>
+            {credential?.status !== 'archived' && (
+              <Button type='button' variant='destructive' onClick={() => openRelatedDialog('archive')} disabled={!credential}>
+                <Archive className='mr-2 h-4 w-4' />
+                {t('credentials.actions.archive')}
+              </Button>
+            )}
           </div>
           <Button type='button' variant='outline' onClick={close}>
             {t('common.buttons.close')}

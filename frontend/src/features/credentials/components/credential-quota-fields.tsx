@@ -25,9 +25,39 @@ interface CredentialQuotaFieldsProps {
 const quotaUnits: CredentialQuotaUnit[] = ['usd', 'token', 'request', 'credit', 'custom', 'unknown'];
 const resetPolicies: CredentialQuotaResetPolicy[] = ['none', 'manual', 'daily', 'monthly', 'custom'];
 const overLimitActions: CredentialQuotaOverLimitAction[] = ['warn', 'pause', 'disable'];
+const automaticUnits: CredentialQuotaUnit[] = ['usd', 'token', 'request'];
 
 function isQuotaScope(scope: CredentialQuotaScope | null | undefined): scope is CredentialQuotaScope {
   return Boolean(scope);
+}
+
+function dateTimeLocalValue(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return [
+    date.getFullYear(),
+    '-',
+    pad(date.getMonth() + 1),
+    '-',
+    pad(date.getDate()),
+    'T',
+    pad(date.getHours()),
+    ':',
+    pad(date.getMinutes()),
+  ].join('');
+}
+
+function nextResetValue(policy: CredentialQuotaResetPolicy) {
+  const now = new Date();
+  if (policy === 'daily') {
+    return dateTimeLocalValue(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0));
+  }
+  if (policy === 'monthly') {
+    return dateTimeLocalValue(new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0));
+  }
+  if (policy === 'custom') {
+    return dateTimeLocalValue(new Date(now.getTime() + 24 * 60 * 60 * 1000));
+  }
+  return '';
 }
 
 export function CredentialQuotaFields({ register, setValue, watch, errors }: CredentialQuotaFieldsProps) {
@@ -38,12 +68,31 @@ export function CredentialQuotaFields({ register, setValue, watch, errors }: Cre
   const quotaScopeID = watch('quotaScopeID');
   const unit = watch('quotaUnit');
   const resetPolicy = watch('quotaResetPolicy');
+  const resetAt = watch('quotaResetAt');
+  const windowStartedAt = watch('quotaWindowStartedAt');
   const overLimitAction = watch('quotaOverLimitAction');
+  const unitBehaviorKey = automaticUnits.includes(unit) ? 'automatic' : 'manual';
+
+  const handleResetPolicyChange = (value: string) => {
+    const policy = value as CredentialQuotaResetPolicy;
+    setValue('quotaResetPolicy', policy);
+    if (policy === 'none' || policy === 'manual') {
+      setValue('quotaResetAt', '');
+      setValue('quotaWindowStartedAt', '');
+      return;
+    }
+    if (!resetAt) {
+      setValue('quotaResetAt', nextResetValue(policy));
+    }
+    if (!windowStartedAt) {
+      setValue('quotaWindowStartedAt', dateTimeLocalValue(new Date()));
+    }
+  };
 
   return (
     <div className='grid gap-4 rounded-md border p-3'>
       <div className='grid gap-1'>
-        <h4 className='text-sm font-medium'>{t('credentials.quota.title')}</h4>
+        <h4 className='text-sm font-medium'>{t('credentials.quota.localTitle')}</h4>
         <p className='text-muted-foreground text-xs'>{t('credentials.quota.description')}</p>
       </div>
 
@@ -112,6 +161,7 @@ export function CredentialQuotaFields({ register, setValue, watch, errors }: Cre
                   ))}
                 </SelectContent>
               </Select>
+              <span className='text-muted-foreground text-xs'>{t(`credentials.quota.unitBehavior.${unitBehaviorKey}`)}</span>
             </div>
           </div>
 
@@ -146,10 +196,7 @@ export function CredentialQuotaFields({ register, setValue, watch, errors }: Cre
           <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
             <div className='grid gap-2'>
               <Label htmlFor='credential-quota-reset'>{t('credentials.fields.quotaResetPolicy')}</Label>
-              <Select
-                value={resetPolicy}
-                onValueChange={(value) => setValue('quotaResetPolicy', value as CredentialQuotaResetPolicy)}
-              >
+              <Select value={resetPolicy} onValueChange={handleResetPolicyChange}>
                 <SelectTrigger id='credential-quota-reset'>
                   <SelectValue />
                 </SelectTrigger>
@@ -166,6 +213,13 @@ export function CredentialQuotaFields({ register, setValue, watch, errors }: Cre
               <Label htmlFor='credential-quota-reset-at'>{t('credentials.fields.quotaResetAt')}</Label>
               <Input id='credential-quota-reset-at' type='datetime-local' {...register('quotaResetAt')} />
             </div>
+            <div className='grid gap-2'>
+              <Label htmlFor='credential-quota-window-start'>{t('credentials.fields.quotaWindowStartedAt')}</Label>
+              <Input id='credential-quota-window-start' type='datetime-local' {...register('quotaWindowStartedAt')} />
+            </div>
+          </div>
+
+          <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
             <div className='grid gap-2'>
               <Label htmlFor='credential-quota-action'>{t('credentials.fields.quotaOverLimitAction')}</Label>
               <Select

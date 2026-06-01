@@ -2,9 +2,9 @@
 
 import { Archive, Info, KeyRound, Link, MoreHorizontal, Pencil, Power } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { PermissionGuard } from '@/components/permission-guard';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { PermissionGuard } from '@/components/permission-guard';
 import { useCredentialsContext } from '../context/credentials-context';
 import type { UpstreamCredential } from '../data/credentials';
 
@@ -16,7 +16,7 @@ export function CredentialsActions({ credential }: CredentialsActionsProps) {
   const { t } = useTranslation();
   const { setOpen, setCurrentCredential } = useCredentialsContext();
 
-  const openDialog = (dialog: 'detail' | 'edit' | 'rotate' | 'status' | 'channels') => {
+  const openDialog = (dialog: 'detail' | 'edit' | 'rotate' | 'status' | 'channels' | 'archive') => {
     setCurrentCredential(credential);
     setOpen(dialog);
   };
@@ -48,9 +48,15 @@ export function CredentialsActions({ credential }: CredentialsActionsProps) {
             {t('credentials.actions.rotate')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openDialog('status')}>
-            {credential.status === 'archived' ? <Power className='mr-2 h-4 w-4' /> : <Archive className='mr-2 h-4 w-4' />}
+            <Power className='mr-2 h-4 w-4' />
             {t('credentials.actions.status')}
           </DropdownMenuItem>
+          {credential.status !== 'archived' && (
+            <DropdownMenuItem onClick={() => openDialog('archive')} className='text-destructive focus:text-destructive'>
+              <Archive className='mr-2 h-4 w-4' />
+              {t('credentials.actions.archive')}
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </PermissionGuard>

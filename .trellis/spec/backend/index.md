@@ -25,7 +25,7 @@ Before changing backend routing, load balancing, retry/fallback, provider quota,
 | Guide | Description | Status |
 |-------|-------------|--------|
 | [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
-| [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations | To fill |
+| [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations, GraphQL transaction client usage | Active |
 | [Error Handling](./error-handling.md) | Error types, handling strategies | To fill |
 | [Routing Guidelines](./routing-guidelines.md) | Channel routing, sticky-session, retry/fallback, credential/quota contracts | Active |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |

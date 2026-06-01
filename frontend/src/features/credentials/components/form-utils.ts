@@ -11,7 +11,7 @@ export const defaultCredentialFormValues: CredentialFormValues = {
   name: '',
   apiKey: '',
   status: 'enabled',
-  quotaScopeMode: 'new',
+  quotaScopeMode: 'none',
   quotaScopeID: '',
   quotaScopeName: '',
   quotaUnit: 'usd',
@@ -19,6 +19,7 @@ export const defaultCredentialFormValues: CredentialFormValues = {
   quotaUsedAmount: '',
   quotaResetPolicy: 'none',
   quotaResetAt: '',
+  quotaWindowStartedAt: '',
   quotaWarningThresholdPercent: 80,
   quotaOverLimitAction: 'warn',
   quotaRemark: '',
@@ -48,14 +49,15 @@ export function buildCredentialSecret(values: CredentialFormValues): CredentialS
   return { apiKey: clean(values.apiKey) };
 }
 
-function buildQuotaInput(values: CredentialFormValues) {
+function buildQuotaInput(values: CredentialFormValues, options?: { forUpdate?: boolean }) {
   const limitAmount = clean(values.quotaLimitAmount);
   const usedAmount = clean(values.quotaUsedAmount);
   const quotaName = clean(values.quotaScopeName);
   const quotaRemark = clean(values.quotaRemark);
   const resetAt = toTime(values.quotaResetAt);
+  const windowStartedAt = toTime(values.quotaWindowStartedAt);
 
-  if (!limitAmount && !usedAmount && !quotaName && !quotaRemark && values.quotaResetPolicy === 'none') {
+  if (!limitAmount && !usedAmount && !quotaName && !quotaRemark && values.quotaResetPolicy === 'none' && !resetAt && !windowStartedAt) {
     return undefined;
   }
 
@@ -66,6 +68,13 @@ function buildQuotaInput(values: CredentialFormValues) {
     usedAmount,
     resetPolicy: values.quotaResetPolicy,
     resetAt,
+    windowStartedAt,
+    clearResetAt:
+      options?.forUpdate && !resetAt && (values.quotaResetPolicy === 'none' || values.quotaResetPolicy === 'manual') ? true : undefined,
+    clearWindowStartedAt:
+      options?.forUpdate && !windowStartedAt && (values.quotaResetPolicy === 'none' || values.quotaResetPolicy === 'manual')
+        ? true
+        : undefined,
     warningThresholdPercent: Number(values.quotaWarningThresholdPercent) || undefined,
     overLimitAction: values.quotaOverLimitAction,
     remark: quotaRemark,
@@ -99,7 +108,7 @@ export function buildUpdateCredentialInput(values: CredentialFormValues): Update
   if (values.quotaScopeMode === 'shared') {
     input.quotaScopeID = clean(values.quotaScopeID);
   } else if (values.quotaScopeMode === 'new') {
-    input.quota = buildQuotaInput(values);
+    input.quota = buildQuotaInput(values, { forUpdate: true });
   } else {
     input.clearQuotaScope = true;
   }
