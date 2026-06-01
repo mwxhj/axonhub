@@ -172,3 +172,36 @@ Restored credential-local quota as a key feature, moved OAuth credential creatio
 ### Next Steps
 
 - None - task complete
+
+
+## Session 6: Sticky quota ratio balancing
+
+**Date**: 2026-06-01
+**Task**: Sticky quota ratio balancing
+**Branch**: `unstable`
+
+### Summary
+
+Implemented sticky-session first-bind balancing by local key quota usage ratio, updated routing specs, and added focused backend tests for priority, mixed quota/no-quota, shared scope, and invalid quota data behavior.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5a2f156` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 5
+- **Total Sessions**: 6
 - **Last Active**: 2026-06-01
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~174 | Active |
+| `journal-1.md` | ~207 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 6 | 2026-06-01 | Sticky quota ratio balancing | `5a2f156` | `unstable` |
 | 5 | 2026-06-01 | Credential key quota and OAuth credential creation | `ed86881` | `unstable` |
 | 4 | 2026-06-01 | Credential-centered channel cleanup | `30596c2` | `unstable` |
 | 3 | 2026-06-01 | Credential restore and delete fixes | `4a62d1b` | `unstable` |
