@@ -73,3 +73,36 @@ Clarified local/provider quota UI, added quota reset defaults and validation, an
 ### Next Steps
 
 - None - task complete
+
+
+## Session 3: Credential restore and delete fixes
+
+**Date**: 2026-06-01
+**Task**: Credential restore and delete fixes
+**Branch**: `unstable`
+
+### Summary
+
+Fixed same-secret archived credential creation, made archive reversible for routing refs, added credential delete API/UI, and updated credential archive/delete contracts.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4a62d1b` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
