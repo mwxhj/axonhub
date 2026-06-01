@@ -445,6 +445,11 @@ func (r *mutationResolver) ArchiveUpstreamCredential(ctx context.Context, id obj
 	return r.upstreamCredentialService.ArchiveUpstreamCredential(ctx, id.ID)
 }
 
+// DeleteUpstreamCredential is the resolver for the deleteUpstreamCredential field.
+func (r *mutationResolver) DeleteUpstreamCredential(ctx context.Context, id objects.GUID) (bool, error) {
+	return r.upstreamCredentialService.DeleteUpstreamCredential(ctx, id.ID)
+}
+
 // UpdateUpstreamCredentialStatus is the resolver for the updateUpstreamCredentialStatus field.
 func (r *mutationResolver) UpdateUpstreamCredentialStatus(ctx context.Context, id objects.GUID, status upstreamcredential.Status) (*ent.UpstreamCredential, error) {
 	return r.upstreamCredentialService.UpdateUpstreamCredential(ctx, id.ID, biz.UpdateUpstreamCredentialInput{

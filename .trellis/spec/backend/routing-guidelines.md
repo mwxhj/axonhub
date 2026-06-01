@@ -287,6 +287,7 @@ Backend service/API signatures:
 
 ```go
 func (svc *UpstreamCredentialService) ArchiveUpstreamCredential(ctx context.Context, id int) (*ent.UpstreamCredential, error)
+func (svc *UpstreamCredentialService) DeleteUpstreamCredential(ctx context.Context, id int) (bool, error)
 func normalizeCreateCredentialQuotaScopeInput(input CreateCredentialQuotaScopeInput, now time.Time) (CreateCredentialQuotaScopeInput, error)
 func normalizeUpdateCredentialQuotaScopeInput(scope *ent.CredentialQuotaScope, input UpdateCredentialQuotaScopeInput, now time.Time) (UpdateCredentialQuotaScopeInput, error)
 ```
@@ -295,6 +296,7 @@ GraphQL product mutation:
 
 ```graphql
 archiveUpstreamCredential(id: ID!): UpstreamCredential!
+deleteUpstreamCredential(id: ID!): Boolean!
 ```
 
 ### 3. Contracts
@@ -305,7 +307,10 @@ archiveUpstreamCredential(id: ID!): UpstreamCredential!
 - `reset_policy=daily` defaults missing `reset_at` to the next local midnight stored as UTC and defaults missing `window_started_at` to current UTC time.
 - `reset_policy=monthly` defaults missing `reset_at` to the first day of the next local month at midnight stored as UTC and defaults missing `window_started_at` to current UTC time.
 - `reset_policy=custom` requires `window_started_at` and `reset_at`, with `reset_at > window_started_at`.
-- Archive is a soft product action: set `UpstreamCredential.status=archived`, disable enabled `ChannelCredentialRef` rows for the credential, reload channel routing state, and keep history/safe metadata readable.
+- Archive is a reversible product action: set `UpstreamCredential.status=archived`, preserve `ChannelCredentialRef` rows, reload channel routing state, and keep history/safe metadata readable. Runtime already excludes archived credentials because credential views require `ref.enabled && credential.status=enabled`.
+- Re-enabling an archived credential must restore routing availability. To recover rows archived by older code, the archived-to-enabled transition may restore refs for that credential.
+- Creating a credential with a secret that matches an archived credential should reactivate/update the archived credential instead of returning a still-archived row unchanged.
+- Delete is the irreversible product action for credential management: remove channel refs, soft-delete the credential, reload channel routing state, and allow the same secret to be added again.
 - Archive does not wipe `secret_payload` unless a future explicit wipe action is added.
 
 ### 4. Validation & Error Matrix
@@ -316,14 +321,18 @@ archiveUpstreamCredential(id: ID!): UpstreamCredential!
 | Update scope from `none`/`manual` to daily/monthly with empty effective `reset_at` | Fill predictable next local reset time. |
 | Custom quota missing `window_started_at` or `reset_at` | Return a specific validation error. |
 | Custom quota with `reset_at <= window_started_at` | Return a specific validation error. |
-| Archive credential with enabled channel refs | Disable refs in the same logical transaction and return archived credential. |
+| Archive credential with enabled channel refs | Preserve refs, return archived credential, and rely on credential status to remove it from runtime routing. |
+| Re-enable archived credential | Set status enabled and recover refs when needed so routing availability returns. |
+| Create credential with same secret as archived credential | Reactivate/update the archived credential and return it enabled by default. |
+| Delete credential with channel refs | Delete refs, soft-delete credential, and allow same secret recreation. |
 | Archive credential with request/usage history | Preserve history and safe snapshots; do not hard delete rows. |
 
 ### 5. Good / Base / Bad Cases
 
 - Good: daily local quota created with no reset time returns a concrete next local reset.
 - Good: credential detail shows local quota used/limit/remaining separately from provider-observed status.
-- Good: archive action tells the operator routing stops, refs are disabled, and history remains visible.
+- Good: archive action tells the operator routing stops, refs are preserved for restore, and history remains visible.
+- Good: delete action tells the operator refs are removed and the same secret can be added again.
 - Base: credential has no local quota and no provider observation; UI says no local quota and no provider observation, routing derives from status/refs.
 - Bad: frontend displays `quotaScope.status || credential.quotaStatus` as one generic quota badge.
 - Bad: archive is only reachable by a generic status dropdown with no side-effect confirmation.
@@ -335,8 +344,10 @@ When changing this contract, add or update tests for:
 - Daily and monthly reset defaulting.
 - Custom reset validation for missing and invalid windows.
 - GraphQL create/update mutations using frontend-like quota fields.
-- `archiveUpstreamCredential` disabling refs and returning an archived credential.
-- Runtime credential views excluding archived or disabled-ref credentials.
+- `archiveUpstreamCredential` preserving refs and returning an archived credential.
+- Runtime credential views excluding archived credentials even when refs remain enabled.
+- Archived same-secret create reactivating the credential.
+- `deleteUpstreamCredential` removing refs, soft-deleting credential, and allowing same-secret recreation.
 - Frontend type checks for credential quota/provider quota fields.
 
 ### 7. Wrong vs Correct
@@ -354,5 +365,6 @@ delete action = set status archived from generic status dialog
 local quota section = CredentialQuotaScope fields
 provider quota section = ProviderQuotaStatus rows
 routing availability = derived from credential status + refs + local quota + provider quota
-archive action = explicit confirmation -> archive mutation -> refs disabled
+archive action = explicit confirmation -> archive mutation -> refs preserved for restore
+delete action = explicit confirmation -> delete mutation -> refs removed + credential soft-deleted
 ```

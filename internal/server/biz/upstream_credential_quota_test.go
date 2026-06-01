@@ -14,6 +14,8 @@ import (
 	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/enttest"
+	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
+	"github.com/looplj/axonhub/internal/ent/schema/schematype"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/objects"
 )
@@ -219,7 +221,7 @@ func TestUpstreamCredentialService_UpdateCredentialQuotaScopeDefaultsResetAtWhen
 	require.NotNil(t, updated.WindowStartedAt)
 }
 
-func TestUpstreamCredentialService_ArchiveDisablesRefsAndRuntimeSelection(t *testing.T) {
+func TestUpstreamCredentialService_ArchivePreservesRefsAndStatusControlsRuntimeSelection(t *testing.T) {
 	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
 	defer client.Close()
 
@@ -254,7 +256,7 @@ func TestUpstreamCredentialService_ArchiveDisablesRefsAndRuntimeSelection(t *tes
 		).
 		Only(ctx)
 	require.NoError(t, err)
-	require.False(t, ref.Enabled)
+	require.True(t, ref.Enabled)
 
 	reloaded, err := client.Channel.Query().
 		Where(channel.ID(ch.ID)).
@@ -268,6 +270,148 @@ func TestUpstreamCredentialService_ArchiveDisablesRefsAndRuntimeSelection(t *tes
 	require.Len(t, views, 1)
 	require.False(t, runtimeCredentialViews(views)[0].Enabled)
 	require.Empty(t, enabledAPIKeyCredentialViews(views))
+
+	enabled, err := svc.UpdateUpstreamCredential(ctx, credential.ID, UpdateUpstreamCredentialInput{
+		Status: lo.ToPtr(upstreamcredential.StatusEnabled),
+	})
+	require.NoError(t, err)
+	require.Equal(t, upstreamcredential.StatusEnabled, enabled.Status)
+
+	reloaded, err = client.Channel.Query().
+		Where(channel.ID(ch.ID)).
+		WithCredentialRefs(func(q *ent.ChannelCredentialRefQuery) {
+			q.WithCredential()
+		}).
+		Only(ctx)
+	require.NoError(t, err)
+
+	views = credentialViewsFromRefs(reloaded)
+	require.Len(t, enabledAPIKeyCredentialViews(views), 1)
+}
+
+func TestUpstreamCredentialService_CreateSameSecretReactivatesArchivedCredentialAndRestoresRefs(t *testing.T) {
+	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
+	defer client.Close()
+
+	ctx := context.Background()
+	ctx = ent.NewContext(ctx, client)
+	ctx = authz.WithTestBypass(ctx)
+
+	svc := NewUpstreamCredentialService(UpstreamCredentialServiceParams{Ent: client})
+	secret := objects.UpstreamCredentialSecretFromAPIKey("sk-reactivate")
+	credential, err := svc.CreateUpstreamCredential(ctx, CreateUpstreamCredentialInput{
+		Name:   lo.ToPtr("old"),
+		Secret: secret,
+		Status: lo.ToPtr(upstreamcredential.StatusEnabled),
+	})
+	require.NoError(t, err)
+
+	ch := createCredentialTestChannel(t, ctx, client)
+	ref, err := client.ChannelCredentialRef.Create().
+		SetChannelID(ch.ID).
+		SetCredentialID(credential.ID).
+		SetEnabled(true).
+		Save(ctx)
+	require.NoError(t, err)
+
+	_, err = svc.ArchiveUpstreamCredential(ctx, credential.ID)
+	require.NoError(t, err)
+
+	// Simulate rows archived by the previous implementation, which disabled refs.
+	_, err = client.ChannelCredentialRef.UpdateOneID(ref.ID).
+		SetEnabled(false).
+		Save(ctx)
+	require.NoError(t, err)
+
+	reactivated, err := svc.CreateUpstreamCredential(ctx, CreateUpstreamCredentialInput{
+		Name:   lo.ToPtr("restored"),
+		Secret: secret,
+		Status: lo.ToPtr(upstreamcredential.StatusEnabled),
+		Remark: lo.ToPtr("reactivated"),
+	})
+	require.NoError(t, err)
+	require.Equal(t, credential.ID, reactivated.ID)
+	require.Equal(t, upstreamcredential.StatusEnabled, reactivated.Status)
+	require.Equal(t, "restored", reactivated.Name)
+	require.Equal(t, "reactivated", reactivated.Remark)
+
+	reloadedRef, err := client.ChannelCredentialRef.Get(ctx, ref.ID)
+	require.NoError(t, err)
+	require.True(t, reloadedRef.Enabled)
+
+	count, err := client.UpstreamCredential.Query().Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 1, count)
+}
+
+func TestUpstreamCredentialService_DeleteRemovesRefsAndAllowsSecretRecreate(t *testing.T) {
+	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
+	defer client.Close()
+
+	ctx := context.Background()
+	ctx = ent.NewContext(ctx, client)
+	ctx = authz.WithTestBypass(ctx)
+
+	svc := NewUpstreamCredentialService(UpstreamCredentialServiceParams{Ent: client})
+	secret := objects.UpstreamCredentialSecretFromAPIKey("sk-delete-recreate")
+	credential, err := svc.CreateUpstreamCredential(ctx, CreateUpstreamCredentialInput{
+		Name:   lo.ToPtr("delete me"),
+		Secret: secret,
+		Status: lo.ToPtr(upstreamcredential.StatusEnabled),
+	})
+	require.NoError(t, err)
+
+	ch := createCredentialTestChannel(t, ctx, client)
+	_, err = client.ChannelCredentialRef.Create().
+		SetChannelID(ch.ID).
+		SetCredentialID(credential.ID).
+		SetEnabled(true).
+		Save(ctx)
+	require.NoError(t, err)
+
+	_, err = client.ProviderQuotaStatus.Create().
+		SetProviderType(providerquotastatus.ProviderTypeSynthetic).
+		SetScopeKey("credential:test").
+		SetCredentialID(credential.ID).
+		SetStatus(providerquotastatus.StatusAvailable).
+		SetQuotaData(map[string]any{}).
+		SetReady(true).
+		SetNextCheckAt(time.Now()).
+		Save(ctx)
+	require.NoError(t, err)
+
+	ok, err := svc.DeleteUpstreamCredential(ctx, credential.ID)
+	require.NoError(t, err)
+	require.True(t, ok)
+
+	refCount, err := client.ChannelCredentialRef.Query().
+		Where(channelcredentialref.CredentialID(credential.ID)).
+		Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 0, refCount)
+
+	statusCount, err := client.ProviderQuotaStatus.Query().
+		Where(providerquotastatus.CredentialID(credential.ID)).
+		Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 0, statusCount)
+
+	activeCount, err := client.UpstreamCredential.Query().Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 0, activeCount)
+
+	allCount, err := client.UpstreamCredential.Query().Count(schematype.SkipSoftDelete(ctx))
+	require.NoError(t, err)
+	require.Equal(t, 1, allCount)
+
+	recreated, err := svc.CreateUpstreamCredential(ctx, CreateUpstreamCredentialInput{
+		Name:   lo.ToPtr("new"),
+		Secret: secret,
+		Status: lo.ToPtr(upstreamcredential.StatusEnabled),
+	})
+	require.NoError(t, err)
+	require.NotEqual(t, credential.ID, recreated.ID)
+	require.Equal(t, "new", recreated.Name)
 }
 
 func TestCredentialViewsFromRefsMarksExhaustedQuotaScopeUnavailable(t *testing.T) {

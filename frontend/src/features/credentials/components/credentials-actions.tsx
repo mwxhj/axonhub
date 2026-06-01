@@ -1,6 +1,6 @@
 'use client';
 
-import { Archive, Info, KeyRound, Link, MoreHorizontal, Pencil, Power } from 'lucide-react';
+import { Archive, Info, KeyRound, Link, MoreHorizontal, Pencil, Power, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -16,7 +16,7 @@ export function CredentialsActions({ credential }: CredentialsActionsProps) {
   const { t } = useTranslation();
   const { setOpen, setCurrentCredential } = useCredentialsContext();
 
-  const openDialog = (dialog: 'detail' | 'edit' | 'rotate' | 'status' | 'channels' | 'archive') => {
+  const openDialog = (dialog: 'detail' | 'edit' | 'rotate' | 'status' | 'channels' | 'archive' | 'delete') => {
     setCurrentCredential(credential);
     setOpen(dialog);
   };
@@ -57,6 +57,10 @@ export function CredentialsActions({ credential }: CredentialsActionsProps) {
               {t('credentials.actions.archive')}
             </DropdownMenuItem>
           )}
+          <DropdownMenuItem onClick={() => openDialog('delete')} className='text-destructive focus:text-destructive'>
+            <Trash2 className='mr-2 h-4 w-4' />
+            {t('credentials.actions.delete')}
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </PermissionGuard>

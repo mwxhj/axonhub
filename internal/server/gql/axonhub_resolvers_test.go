@@ -353,14 +353,218 @@ func TestGraphQLArchiveUpstreamCredentialMutation(t *testing.T) {
 	require.Equal(t, "archived", payload.Data.ArchiveUpstreamCredential.Status)
 	require.Equal(t, 1, payload.Data.ArchiveUpstreamCredential.ChannelRefs.TotalCount)
 	require.Len(t, payload.Data.ArchiveUpstreamCredential.ChannelRefs.Edges, 1)
-	require.False(t, payload.Data.ArchiveUpstreamCredential.ChannelRefs.Edges[0].Node.Enabled)
+	require.True(t, payload.Data.ArchiveUpstreamCredential.ChannelRefs.Edges[0].Node.Enabled)
 	require.Empty(t, payload.Data.ArchiveUpstreamCredential.ProviderQuotaStatuses)
 
 	reloadedRef, err := client.ChannelCredentialRef.Query().
 		Where(channelcredentialref.ID(ref.ID)).
 		Only(ctx)
 	require.NoError(t, err)
-	require.False(t, reloadedRef.Enabled)
+	require.True(t, reloadedRef.Enabled)
+}
+
+func TestGraphQLCreateUpstreamCredentialReactivatesArchivedSameSecret(t *testing.T) {
+	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+	defer client.Close()
+
+	ctx := context.Background()
+	ctx = ent.NewContext(ctx, client)
+	ctx = authz.WithTestBypass(ctx)
+
+	upstreamCredentialService := biz.NewUpstreamCredentialService(biz.UpstreamCredentialServiceParams{Ent: client})
+	handler := NewGraphqlHandlers(Dependencies{
+		Ent:                       client,
+		UpstreamCredentialService: upstreamCredentialService,
+	})
+
+	secret := objects.UpstreamCredentialSecretFromAPIKey("sk-graphql-reactivate")
+	credential, err := upstreamCredentialService.CreateUpstreamCredential(ctx, biz.CreateUpstreamCredentialInput{
+		Name:   lo.ToPtr("archived graphql"),
+		Secret: secret,
+		Status: lo.ToPtr(upstreamcredential.StatusEnabled),
+	})
+	require.NoError(t, err)
+
+	ch, err := client.Channel.Create().
+		SetType(channel.TypeOpenai).
+		SetName("Reactivate Channel").
+		SetBaseURL("https://api.openai.com/v1").
+		SetCredentials(objects.ChannelCredentials{}).
+		SetSupportedModels([]string{"gpt-4"}).
+		SetDefaultTestModel("gpt-4").
+		SetStatus(channel.StatusEnabled).
+		Save(ctx)
+	require.NoError(t, err)
+
+	ref, err := client.ChannelCredentialRef.Create().
+		SetChannelID(ch.ID).
+		SetCredentialID(credential.ID).
+		SetEnabled(true).
+		Save(ctx)
+	require.NoError(t, err)
+
+	_, err = upstreamCredentialService.ArchiveUpstreamCredential(ctx, credential.ID)
+	require.NoError(t, err)
+	_, err = client.ChannelCredentialRef.UpdateOneID(ref.ID).SetEnabled(false).Save(ctx)
+	require.NoError(t, err)
+
+	query := `
+		mutation CreateUpstreamCredential($input: CreateUpstreamCredentialInput!) {
+			createUpstreamCredential(input: $input) {
+				id
+				name
+				status
+				remark
+				channelRefs(first: 100) {
+					totalCount
+					edges {
+						node {
+							id
+							enabled
+						}
+					}
+				}
+			}
+		}
+	`
+
+	body, err := json.Marshal(map[string]any{
+		"query":         query,
+		"operationName": "CreateUpstreamCredential",
+		"variables": map[string]any{
+			"input": map[string]any{
+				"name":   "reactivated graphql",
+				"secret": map[string]any{"apiKey": "sk-graphql-reactivate"},
+				"status": "enabled",
+				"remark": "restored",
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/admin/graphql", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(authz.WithTestBypass(req.Context()))
+	rec := httptest.NewRecorder()
+
+	handler.Graphql.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	var payload struct {
+		Data struct {
+			CreateUpstreamCredential struct {
+				ID          string `json:"id"`
+				Name        string `json:"name"`
+				Status      string `json:"status"`
+				Remark      string `json:"remark"`
+				ChannelRefs struct {
+					TotalCount int `json:"totalCount"`
+					Edges      []struct {
+						Node struct {
+							ID      string `json:"id"`
+							Enabled bool   `json:"enabled"`
+						} `json:"node"`
+					} `json:"edges"`
+				} `json:"channelRefs"`
+			} `json:"createUpstreamCredential"`
+		} `json:"data"`
+		Errors []struct {
+			Message string `json:"message"`
+		} `json:"errors"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &payload))
+	require.Empty(t, payload.Errors, rec.Body.String())
+	require.Equal(t, fmt.Sprintf("gid://axonhub/%s/%d", ent.TypeUpstreamCredential, credential.ID), payload.Data.CreateUpstreamCredential.ID)
+	require.Equal(t, "reactivated graphql", payload.Data.CreateUpstreamCredential.Name)
+	require.Equal(t, "enabled", payload.Data.CreateUpstreamCredential.Status)
+	require.Equal(t, "restored", payload.Data.CreateUpstreamCredential.Remark)
+	require.Equal(t, 1, payload.Data.CreateUpstreamCredential.ChannelRefs.TotalCount)
+	require.Len(t, payload.Data.CreateUpstreamCredential.ChannelRefs.Edges, 1)
+	require.True(t, payload.Data.CreateUpstreamCredential.ChannelRefs.Edges[0].Node.Enabled)
+}
+
+func TestGraphQLDeleteUpstreamCredentialMutation(t *testing.T) {
+	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=1")
+	defer client.Close()
+
+	ctx := context.Background()
+	ctx = ent.NewContext(ctx, client)
+	ctx = authz.WithTestBypass(ctx)
+
+	upstreamCredentialService := biz.NewUpstreamCredentialService(biz.UpstreamCredentialServiceParams{Ent: client})
+	handler := NewGraphqlHandlers(Dependencies{
+		Ent:                       client,
+		UpstreamCredentialService: upstreamCredentialService,
+	})
+
+	credential, err := upstreamCredentialService.CreateUpstreamCredential(ctx, biz.CreateUpstreamCredentialInput{
+		Name:   lo.ToPtr("delete graphql"),
+		Secret: objects.UpstreamCredentialSecretFromAPIKey("sk-graphql-delete"),
+		Status: lo.ToPtr(upstreamcredential.StatusEnabled),
+	})
+	require.NoError(t, err)
+
+	ch, err := client.Channel.Create().
+		SetType(channel.TypeOpenai).
+		SetName("Delete Channel").
+		SetBaseURL("https://api.openai.com/v1").
+		SetCredentials(objects.ChannelCredentials{}).
+		SetSupportedModels([]string{"gpt-4"}).
+		SetDefaultTestModel("gpt-4").
+		SetStatus(channel.StatusEnabled).
+		Save(ctx)
+	require.NoError(t, err)
+
+	_, err = client.ChannelCredentialRef.Create().
+		SetChannelID(ch.ID).
+		SetCredentialID(credential.ID).
+		SetEnabled(true).
+		Save(ctx)
+	require.NoError(t, err)
+
+	query := `
+		mutation DeleteUpstreamCredential($id: ID!) {
+			deleteUpstreamCredential(id: $id)
+		}
+	`
+	body, err := json.Marshal(map[string]any{
+		"query":         query,
+		"operationName": "DeleteUpstreamCredential",
+		"variables": map[string]any{
+			"id": fmt.Sprintf("gid://axonhub/%s/%d", ent.TypeUpstreamCredential, credential.ID),
+		},
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/admin/graphql", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(authz.WithTestBypass(req.Context()))
+	rec := httptest.NewRecorder()
+
+	handler.Graphql.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	var payload struct {
+		Data struct {
+			DeleteUpstreamCredential bool `json:"deleteUpstreamCredential"`
+		} `json:"data"`
+		Errors []struct {
+			Message string `json:"message"`
+		} `json:"errors"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &payload))
+	require.Empty(t, payload.Errors, rec.Body.String())
+	require.True(t, payload.Data.DeleteUpstreamCredential)
+
+	refCount, err := client.ChannelCredentialRef.Query().
+		Where(channelcredentialref.CredentialID(credential.ID)).
+		Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 0, refCount)
+
+	credentialCount, err := client.UpstreamCredential.Query().Count(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 0, credentialCount)
 }
 
 func TestGraphQLCreateUpstreamCredentialMutation(t *testing.T) {

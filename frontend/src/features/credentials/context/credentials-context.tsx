@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState } from 'react';
 import type { UpstreamCredential } from '../data/credentials';
 
-type CredentialsDialogType = 'create' | 'detail' | 'edit' | 'rotate' | 'status' | 'channels' | 'archive' | null;
+type CredentialsDialogType = 'create' | 'detail' | 'edit' | 'rotate' | 'status' | 'channels' | 'archive' | 'delete' | null;
 
 interface CredentialsContextType {
   open: CredentialsDialogType;

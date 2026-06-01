@@ -352,6 +352,12 @@ const ARCHIVE_UPSTREAM_CREDENTIAL_MUTATION = `
   }
 `;
 
+const DELETE_UPSTREAM_CREDENTIAL_MUTATION = `
+  mutation DeleteUpstreamCredential($id: ID!) {
+    deleteUpstreamCredential(id: $id)
+  }
+`;
+
 const UPDATE_UPSTREAM_CREDENTIAL_STATUS_MUTATION = `
   mutation UpdateUpstreamCredentialStatus($id: ID!, $status: UpstreamCredentialStatus!) {
     updateUpstreamCredentialStatus(id: $id, status: $status) {
@@ -600,6 +606,28 @@ export function useArchiveUpstreamCredential() {
     onSuccess: () => {
       invalidateCredentialQueries(queryClient);
       toast.success(t('credentials.messages.archiveSuccess'));
+    },
+  });
+}
+
+export function useDeleteUpstreamCredential() {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const { handleError } = useErrorHandler();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      try {
+        const data = await graphqlRequest<{ deleteUpstreamCredential: boolean }>(DELETE_UPSTREAM_CREDENTIAL_MUTATION, { id });
+        return data.deleteUpstreamCredential;
+      } catch (error) {
+        handleError(error, { context: t('credentials.dialogs.delete.title') });
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      invalidateCredentialQueries(queryClient);
+      toast.success(t('credentials.messages.deleteSuccess'));
     },
   });
 }

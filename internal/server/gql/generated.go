@@ -993,6 +993,7 @@ type ComplexityRoot struct {
 		DeletePromptProtectionRule           func(childComplexity int, id objects.GUID) int
 		DeleteProxyPreset                    func(childComplexity int, url string) int
 		DeleteRole                           func(childComplexity int, id objects.GUID) int
+		DeleteUpstreamCredential             func(childComplexity int, id objects.GUID) int
 		DeleteUser                           func(childComplexity int, id objects.GUID) int
 		DetachCredentialFromChannel          func(childComplexity int, channelID objects.GUID, credentialID objects.GUID) int
 		DisableChannelAPIKey                 func(childComplexity int, channelID objects.GUID, key string) int
@@ -2196,6 +2197,7 @@ type MutationResolver interface {
 	UpdateCredentialQuotaScope(ctx context.Context, id objects.GUID, input biz.UpdateCredentialQuotaScopeInput) (*ent.CredentialQuotaScope, error)
 	RotateUpstreamCredentialSecret(ctx context.Context, id objects.GUID, input biz.RotateUpstreamCredentialSecretInput) (*ent.UpstreamCredential, error)
 	ArchiveUpstreamCredential(ctx context.Context, id objects.GUID) (*ent.UpstreamCredential, error)
+	DeleteUpstreamCredential(ctx context.Context, id objects.GUID) (bool, error)
 	UpdateUpstreamCredentialStatus(ctx context.Context, id objects.GUID, status upstreamcredential.Status) (*ent.UpstreamCredential, error)
 	AttachCredentialToChannel(ctx context.Context, input biz.AttachCredentialToChannelInput) (*ent.ChannelCredentialRef, error)
 	UpdateChannelCredentialRef(ctx context.Context, id objects.GUID, input biz.UpdateChannelCredentialRefInput) (*ent.ChannelCredentialRef, error)
@@ -6242,6 +6244,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.DeleteRole(childComplexity, args["id"].(objects.GUID)), true
+	case "Mutation.deleteUpstreamCredential":
+		if e.complexity.Mutation.DeleteUpstreamCredential == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteUpstreamCredential_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteUpstreamCredential(childComplexity, args["id"].(objects.GUID)), true
 	case "Mutation.deleteUser":
 		if e.complexity.Mutation.DeleteUser == nil {
 			break
@@ -12790,6 +12803,17 @@ func (ec *executionContext) field_Mutation_deleteProxyPreset_args(ctx context.Co
 }
 
 func (ec *executionContext) field_Mutation_deleteRole_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNID2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteUpstreamCredential_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNID2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID)
@@ -33643,6 +33667,47 @@ func (ec *executionContext) fieldContext_Mutation_archiveUpstreamCredential(ctx 
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_archiveUpstreamCredential_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteUpstreamCredential(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_deleteUpstreamCredential,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().DeleteUpstreamCredential(ctx, fc.Args["id"].(objects.GUID))
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_deleteUpstreamCredential(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteUpstreamCredential_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -103563,6 +103628,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "archiveUpstreamCredential":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_archiveUpstreamCredential(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deleteUpstreamCredential":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteUpstreamCredential(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++

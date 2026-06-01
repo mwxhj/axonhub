@@ -13,6 +13,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/predicate"
+	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/objects"
@@ -159,6 +160,9 @@ func (svc *UpstreamCredentialService) CreateUpstreamCredential(ctx context.Conte
 		return nil, fmt.Errorf("failed to check credential fingerprint: %w", err)
 	}
 	if existing != nil {
+		if existing.Status == upstreamcredential.StatusArchived {
+			return svc.reactivateArchivedCredential(ctx, existing.ID, input)
+		}
 		return existing, nil
 	}
 
@@ -208,6 +212,102 @@ func (svc *UpstreamCredentialService) CreateUpstreamCredential(ctx context.Conte
 		credential, err = create.Save(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to create upstream credential: %w", err)
+		}
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	svc.reloadChannels()
+
+	return credential, nil
+}
+
+func (svc *UpstreamCredentialService) reactivateArchivedCredential(ctx context.Context, id int, input CreateUpstreamCredentialInput) (*ent.UpstreamCredential, error) {
+	status := upstreamcredential.StatusEnabled
+	if input.Status != nil {
+		status = *input.Status
+	}
+
+	var credential *ent.UpstreamCredential
+	if err := svc.RunInTransaction(ctx, func(ctx context.Context) error {
+		client := svc.entFromContext(ctx)
+		current, err := client.UpstreamCredential.Get(ctx, id)
+		if err != nil {
+			return fmt.Errorf("failed to get archived upstream credential: %w", err)
+		}
+
+		update := client.UpstreamCredential.UpdateOneID(id).
+			SetStatus(status)
+
+		if input.Name != nil {
+			update.SetName(strings.TrimSpace(*input.Name))
+		}
+		if input.Weight != nil {
+			update.SetWeight(normalizeCredentialWeight(*input.Weight))
+		}
+		if input.QuotaScopeID != nil {
+			update.SetQuotaScopeID(input.QuotaScopeID.ID)
+		}
+		if input.Quota != nil {
+			if current.QuotaScopeID != nil && *current.QuotaScopeID > 0 {
+				quotaInput := UpdateCredentialQuotaScopeInput{
+					Name:                    input.Quota.Name,
+					Status:                  input.Quota.Status,
+					Unit:                    input.Quota.Unit,
+					LimitAmount:             input.Quota.LimitAmount,
+					UsedAmount:              input.Quota.UsedAmount,
+					WarningThresholdPercent: input.Quota.WarningThresholdPercent,
+					ResetPolicy:             input.Quota.ResetPolicy,
+					ResetAt:                 input.Quota.ResetAt,
+					WindowStartedAt:         input.Quota.WindowStartedAt,
+					OverLimitAction:         input.Quota.OverLimitAction,
+					PauseUntil:              input.Quota.PauseUntil,
+					Source:                  input.Quota.Source,
+					LastError:               input.Quota.LastError,
+					Remark:                  input.Quota.Remark,
+				}
+				scope, err := client.CredentialQuotaScope.Get(ctx, *current.QuotaScopeID)
+				if err != nil {
+					return fmt.Errorf("failed to get credential quota scope: %w", err)
+				}
+				normalized, err := normalizeUpdateCredentialQuotaScopeInput(scope, quotaInput, time.Now())
+				if err != nil {
+					return err
+				}
+				scopeUpdate := client.CredentialQuotaScope.UpdateOneID(*current.QuotaScopeID)
+				applyUpdateCredentialQuotaScopeInput(scopeUpdate, normalized)
+				if _, err := scopeUpdate.Save(ctx); err != nil {
+					return fmt.Errorf("failed to update credential quota scope: %w", err)
+				}
+			} else {
+				quotaInput, err := normalizeCreateCredentialQuotaScopeInput(*input.Quota, time.Now())
+				if err != nil {
+					return err
+				}
+				scopeCreate := client.CredentialQuotaScope.Create()
+				applyCreateCredentialQuotaScopeInput(scopeCreate, quotaInput)
+				scope, err := scopeCreate.Save(ctx)
+				if err != nil {
+					return fmt.Errorf("failed to create credential quota scope: %w", err)
+				}
+				update.SetQuotaScopeID(scope.ID)
+			}
+		}
+		if input.Remark != nil {
+			update.SetRemark(strings.TrimSpace(*input.Remark))
+		}
+
+		credential, err = update.Save(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to reactivate archived upstream credential: %w", err)
+		}
+
+		if status == upstreamcredential.StatusEnabled {
+			if err := svc.restoreCredentialRefs(ctx, id); err != nil {
+				return err
+			}
 		}
 
 		return nil
@@ -282,6 +382,12 @@ func (svc *UpstreamCredentialService) UpdateUpstreamCredential(ctx context.Conte
 			return fmt.Errorf("failed to update upstream credential: %w", err)
 		}
 
+		if input.Status != nil && current.Status == upstreamcredential.StatusArchived && *input.Status == upstreamcredential.StatusEnabled {
+			if err := svc.restoreCredentialRefs(ctx, id); err != nil {
+				return err
+			}
+		}
+
 		return nil
 	}); err != nil {
 		return nil, err
@@ -296,15 +402,6 @@ func (svc *UpstreamCredentialService) ArchiveUpstreamCredential(ctx context.Cont
 	var credential *ent.UpstreamCredential
 	if err := svc.RunInTransaction(ctx, func(ctx context.Context) error {
 		client := svc.entFromContext(ctx)
-		if _, err := client.ChannelCredentialRef.Update().
-			Where(
-				channelcredentialref.CredentialID(id),
-				channelcredentialref.Enabled(true),
-			).
-			SetEnabled(false).
-			Save(ctx); err != nil {
-			return fmt.Errorf("failed to disable archived credential refs: %w", err)
-		}
 
 		var err error
 		credential, err = client.UpstreamCredential.UpdateOneID(id).
@@ -322,6 +419,46 @@ func (svc *UpstreamCredentialService) ArchiveUpstreamCredential(ctx context.Cont
 	svc.reloadChannels()
 
 	return credential, nil
+}
+
+func (svc *UpstreamCredentialService) DeleteUpstreamCredential(ctx context.Context, id int) (bool, error) {
+	if err := svc.RunInTransaction(ctx, func(ctx context.Context) error {
+		client := svc.entFromContext(ctx)
+		if _, err := client.ChannelCredentialRef.Delete().
+			Where(channelcredentialref.CredentialID(id)).
+			Exec(ctx); err != nil {
+			return fmt.Errorf("failed to delete credential channel refs: %w", err)
+		}
+
+		if _, err := client.ProviderQuotaStatus.Delete().
+			Where(providerquotastatus.CredentialID(id)).
+			Exec(ctx); err != nil {
+			return fmt.Errorf("failed to delete credential provider quota statuses: %w", err)
+		}
+
+		if err := client.UpstreamCredential.DeleteOneID(id).Exec(ctx); err != nil {
+			return fmt.Errorf("failed to delete upstream credential: %w", err)
+		}
+
+		return nil
+	}); err != nil {
+		return false, err
+	}
+
+	svc.reloadChannels()
+
+	return true, nil
+}
+
+func (svc *UpstreamCredentialService) restoreCredentialRefs(ctx context.Context, credentialID int) error {
+	if _, err := svc.entFromContext(ctx).ChannelCredentialRef.Update().
+		Where(channelcredentialref.CredentialID(credentialID)).
+		SetEnabled(true).
+		Save(ctx); err != nil {
+		return fmt.Errorf("failed to restore credential refs: %w", err)
+	}
+
+	return nil
 }
 
 func (svc *UpstreamCredentialService) RotateUpstreamCredentialSecret(ctx context.Context, id int, input RotateUpstreamCredentialSecretInput) (*ent.UpstreamCredential, error) {
