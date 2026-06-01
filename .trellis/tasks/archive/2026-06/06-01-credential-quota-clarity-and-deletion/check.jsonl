@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend quality checklist for routing, quota, and credential-sensitive changes."}
+{"file": ".trellis/spec/backend/routing-guidelines.md", "reason": "Quality verification must preserve routing priority, sticky-session, quota skip, and credential observability contracts."}
+{"file": ".trellis/tasks/06-01-credential-quota-clarity-and-deletion/prd.md", "reason": "Acceptance criteria for checking the follow-up implementation."}
+{"file": ".trellis/tasks/06-01-credential-quota-clarity-and-deletion/info.md", "reason": "Technical design notes and risks to verify during implementation review."}

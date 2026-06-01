@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend task index and pre-development checklist for routing, quota, and credential work."}
+{"file": ".trellis/spec/backend/routing-guidelines.md", "reason": "Routing, sticky-session, credential, and quota contracts affected by archive and quota availability semantics."}
+{"file": ".trellis/tasks/06-01-credential-quota-clarity-and-deletion/prd.md", "reason": "Product requirements and acceptance criteria for quota clarity, reset defaults, and credential archive behavior."}
+{"file": ".trellis/tasks/06-01-credential-quota-clarity-and-deletion/info.md", "reason": "Technical notes, current code facts, implementation order, and risks for the follow-up implementation."}
