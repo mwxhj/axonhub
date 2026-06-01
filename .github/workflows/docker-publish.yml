@@ -56,7 +56,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            looplj/axonhub
+            mwxhj/axonhub
 
       - name: Build & push single-arch (to both registries)
         uses: docker/build-push-action@v6
@@ -65,8 +65,8 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: true
           tags: |
-            looplj/axonhub:${{ env.TAG }}-${{ matrix.arch }}
-            looplj/axonhub:latest-${{ matrix.arch }}
+            mwxhj/axonhub:${{ env.TAG }}-${{ matrix.arch }}
+            mwxhj/axonhub:latest-${{ matrix.arch }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -91,13 +91,13 @@ jobs:
       - name: Create & push manifest (Docker Hub - version)
         run: |
           docker buildx imagetools create \
-            -t looplj/axonhub:${TAG} \
-            looplj/axonhub:${TAG}-amd64 \
-            looplj/axonhub:${TAG}-arm64
+            -t mwxhj/axonhub:${TAG} \
+            mwxhj/axonhub:${TAG}-amd64 \
+            mwxhj/axonhub:${TAG}-arm64
 
       - name: Create & push manifest (Docker Hub - latest)
         run: |
           docker buildx imagetools create \
-            -t looplj/axonhub:latest \
-            looplj/axonhub:latest-amd64 \
-            looplj/axonhub:latest-arm64
+            -t mwxhj/axonhub:latest \
+            mwxhj/axonhub:latest-amd64 \
+            mwxhj/axonhub:latest-arm64
