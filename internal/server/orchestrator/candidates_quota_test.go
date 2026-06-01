@@ -504,7 +504,7 @@ func TestProviderQuotaSelector_FiltersChannelWhenAllCredentialViewsExhausted(t *
 	require.Equal(t, 1, selector.FilteredCount)
 }
 
-func TestProviderQuotaSelector_DoesNotFilterLocalQuotaScopeWithoutProviderData(t *testing.T) {
+func TestProviderQuotaSelectorFiltersLocalQuotaScopeWithoutProviderData(t *testing.T) {
 	base := &biz.Channel{Channel: &ent.Channel{
 		ID:      1,
 		Name:    "locally-paused",
@@ -540,6 +540,6 @@ func TestProviderQuotaSelector_DoesNotFilterLocalQuotaScopeWithoutProviderData(t
 	got, err := selector.Select(context.Background(), &llm.Request{Model: "gpt-4"})
 
 	require.NoError(t, err)
-	require.Len(t, got, 1)
-	require.Equal(t, 0, selector.FilteredCount)
+	require.Empty(t, got)
+	require.Equal(t, 1, selector.FilteredCount)
 }

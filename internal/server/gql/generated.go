@@ -1887,6 +1887,7 @@ type ComplexityRoot struct {
 		QuotaStatus           func(childComplexity int) int
 		Remark                func(childComplexity int) int
 		SecretFingerprint     func(childComplexity int) int
+		SecretSummary         func(childComplexity int) int
 		Status                func(childComplexity int) int
 		UpdatedAt             func(childComplexity int) int
 		UsageLogs             func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.UsageLogOrder, where *ent.UsageLogWhereInput) int
@@ -1901,6 +1902,13 @@ type ComplexityRoot struct {
 	UpstreamCredentialEdge struct {
 		Cursor func(childComplexity int) int
 		Node   func(childComplexity int) int
+	}
+
+	UpstreamCredentialSecretSummary struct {
+		BaseURL      func(childComplexity int) int
+		IssuerScope  func(childComplexity int) int
+		Kind         func(childComplexity int) int
+		ProviderType func(childComplexity int) int
 	}
 
 	UpstreamErrorPolicy struct {
@@ -2468,6 +2476,7 @@ type UpstreamCredentialResolver interface {
 	QuotaScopeID(ctx context.Context, obj *ent.UpstreamCredential) (*objects.GUID, error)
 
 	QuotaScope(ctx context.Context, obj *ent.UpstreamCredential) (*ent.CredentialQuotaScope, error)
+	SecretSummary(ctx context.Context, obj *ent.UpstreamCredential) (*UpstreamCredentialSecretSummary, error)
 }
 type UsageLogResolver interface {
 	ID(ctx context.Context, obj *ent.UsageLog) (*objects.GUID, error)
@@ -10579,6 +10588,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.UpstreamCredential.SecretFingerprint(childComplexity), true
+	case "UpstreamCredential.secretSummary":
+		if e.complexity.UpstreamCredential.SecretSummary == nil {
+			break
+		}
+
+		return e.complexity.UpstreamCredential.SecretSummary(childComplexity), true
 	case "UpstreamCredential.status":
 		if e.complexity.UpstreamCredential.Status == nil {
 			break
@@ -10634,6 +10649,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.UpstreamCredentialEdge.Node(childComplexity), true
+
+	case "UpstreamCredentialSecretSummary.baseURL":
+		if e.complexity.UpstreamCredentialSecretSummary.BaseURL == nil {
+			break
+		}
+
+		return e.complexity.UpstreamCredentialSecretSummary.BaseURL(childComplexity), true
+	case "UpstreamCredentialSecretSummary.issuerScope":
+		if e.complexity.UpstreamCredentialSecretSummary.IssuerScope == nil {
+			break
+		}
+
+		return e.complexity.UpstreamCredentialSecretSummary.IssuerScope(childComplexity), true
+	case "UpstreamCredentialSecretSummary.kind":
+		if e.complexity.UpstreamCredentialSecretSummary.Kind == nil {
+			break
+		}
+
+		return e.complexity.UpstreamCredentialSecretSummary.Kind(childComplexity), true
+	case "UpstreamCredentialSecretSummary.providerType":
+		if e.complexity.UpstreamCredentialSecretSummary.ProviderType == nil {
+			break
+		}
+
+		return e.complexity.UpstreamCredentialSecretSummary.ProviderType(childComplexity), true
 
 	case "UpstreamErrorPolicy.customMessage":
 		if e.complexity.UpstreamErrorPolicy.CustomMessage == nil {
@@ -20810,6 +20850,8 @@ func (ec *executionContext) fieldContext_ChannelCredentialRef_credential(_ conte
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
+			case "secretSummary":
+				return ec.fieldContext_UpstreamCredential_secretSummary(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
 		},
@@ -33254,6 +33296,8 @@ func (ec *executionContext) fieldContext_Mutation_createUpstreamCredential(ctx c
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
+			case "secretSummary":
+				return ec.fieldContext_UpstreamCredential_secretSummary(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
 		},
@@ -33331,6 +33375,8 @@ func (ec *executionContext) fieldContext_Mutation_updateUpstreamCredential(ctx c
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
+			case "secretSummary":
+				return ec.fieldContext_UpstreamCredential_secretSummary(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
 		},
@@ -33578,6 +33624,8 @@ func (ec *executionContext) fieldContext_Mutation_rotateUpstreamCredentialSecret
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
+			case "secretSummary":
+				return ec.fieldContext_UpstreamCredential_secretSummary(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
 		},
@@ -33655,6 +33703,8 @@ func (ec *executionContext) fieldContext_Mutation_archiveUpstreamCredential(ctx 
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
+			case "secretSummary":
+				return ec.fieldContext_UpstreamCredential_secretSummary(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
 		},
@@ -33773,6 +33823,8 @@ func (ec *executionContext) fieldContext_Mutation_updateUpstreamCredentialStatus
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
+			case "secretSummary":
+				return ec.fieldContext_UpstreamCredential_secretSummary(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
 		},
@@ -43190,6 +43242,8 @@ func (ec *executionContext) fieldContext_ProviderQuotaStatus_credential(_ contex
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
+			case "secretSummary":
+				return ec.fieldContext_UpstreamCredential_secretSummary(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
 		},
@@ -49866,6 +49920,8 @@ func (ec *executionContext) fieldContext_RequestExecution_credential(_ context.C
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
+			case "secretSummary":
+				return ec.fieldContext_UpstreamCredential_secretSummary(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
 		},
@@ -57842,6 +57898,45 @@ func (ec *executionContext) fieldContext_UpstreamCredential_quotaScope(_ context
 	return fc, nil
 }
 
+func (ec *executionContext) _UpstreamCredential_secretSummary(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredential) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UpstreamCredential_secretSummary,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.UpstreamCredential().SecretSummary(ctx, obj)
+		},
+		nil,
+		ec.marshalNUpstreamCredentialSecretSummary2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐUpstreamCredentialSecretSummary,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_UpstreamCredential_secretSummary(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UpstreamCredential",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "kind":
+				return ec.fieldContext_UpstreamCredentialSecretSummary_kind(ctx, field)
+			case "providerType":
+				return ec.fieldContext_UpstreamCredentialSecretSummary_providerType(ctx, field)
+			case "baseURL":
+				return ec.fieldContext_UpstreamCredentialSecretSummary_baseURL(ctx, field)
+			case "issuerScope":
+				return ec.fieldContext_UpstreamCredentialSecretSummary_issuerScope(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredentialSecretSummary", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _UpstreamCredentialConnection_edges(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredentialConnection) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -58003,6 +58098,8 @@ func (ec *executionContext) fieldContext_UpstreamCredentialEdge_node(_ context.C
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
+			case "secretSummary":
+				return ec.fieldContext_UpstreamCredential_secretSummary(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
 		},
@@ -58034,6 +58131,122 @@ func (ec *executionContext) fieldContext_UpstreamCredentialEdge_cursor(_ context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Cursor does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UpstreamCredentialSecretSummary_kind(ctx context.Context, field graphql.CollectedField, obj *UpstreamCredentialSecretSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UpstreamCredentialSecretSummary_kind,
+		func(ctx context.Context) (any, error) {
+			return obj.Kind, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_UpstreamCredentialSecretSummary_kind(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UpstreamCredentialSecretSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UpstreamCredentialSecretSummary_providerType(ctx context.Context, field graphql.CollectedField, obj *UpstreamCredentialSecretSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UpstreamCredentialSecretSummary_providerType,
+		func(ctx context.Context) (any, error) {
+			return obj.ProviderType, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_UpstreamCredentialSecretSummary_providerType(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UpstreamCredentialSecretSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UpstreamCredentialSecretSummary_baseURL(ctx context.Context, field graphql.CollectedField, obj *UpstreamCredentialSecretSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UpstreamCredentialSecretSummary_baseURL,
+		func(ctx context.Context) (any, error) {
+			return obj.BaseURL, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_UpstreamCredentialSecretSummary_baseURL(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UpstreamCredentialSecretSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _UpstreamCredentialSecretSummary_issuerScope(ctx context.Context, field graphql.CollectedField, obj *UpstreamCredentialSecretSummary) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_UpstreamCredentialSecretSummary_issuerScope,
+		func(ctx context.Context) (any, error) {
+			return obj.IssuerScope, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_UpstreamCredentialSecretSummary_issuerScope(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "UpstreamCredentialSecretSummary",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -59468,6 +59681,8 @@ func (ec *executionContext) fieldContext_UsageLog_credential(_ context.Context, 
 				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
+			case "secretSummary":
+				return ec.fieldContext_UpstreamCredential_secretSummary(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
 		},
@@ -71876,7 +72091,7 @@ func (ec *executionContext) unmarshalInputCreateUpstreamCredentialInput(ctx cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "secret", "status", "quotaScopeID", "quota", "remark"}
+	fieldsInOrder := [...]string{"name", "providerType", "baseURL", "issuerScope", "secret", "status", "quotaScopeID", "quota", "remark"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -71890,6 +72105,27 @@ func (ec *executionContext) unmarshalInputCreateUpstreamCredentialInput(ctx cont
 				return it, err
 			}
 			it.Name = data
+		case "providerType":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerType"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ProviderType = data
+		case "baseURL":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURL"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.BaseURL = data
+		case "issuerScope":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("issuerScope"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.IssuerScope = data
 		case "secret":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secret"))
 			data, err := ec.unmarshalNUpstreamCredentialSecretInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐUpstreamCredentialSecret(ctx, v)
@@ -113714,6 +113950,42 @@ func (ec *executionContext) _UpstreamCredential(ctx context.Context, sel ast.Sel
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "secretSummary":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._UpstreamCredential_secretSummary(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -113801,6 +114073,51 @@ func (ec *executionContext) _UpstreamCredentialEdge(ctx context.Context, sel ast
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var upstreamCredentialSecretSummaryImplementors = []string{"UpstreamCredentialSecretSummary"}
+
+func (ec *executionContext) _UpstreamCredentialSecretSummary(ctx context.Context, sel ast.SelectionSet, obj *UpstreamCredentialSecretSummary) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, upstreamCredentialSecretSummaryImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("UpstreamCredentialSecretSummary")
+		case "kind":
+			out.Values[i] = ec._UpstreamCredentialSecretSummary_kind(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "providerType":
+			out.Values[i] = ec._UpstreamCredentialSecretSummary_providerType(ctx, field, obj)
+		case "baseURL":
+			out.Values[i] = ec._UpstreamCredentialSecretSummary_baseURL(ctx, field, obj)
+		case "issuerScope":
+			out.Values[i] = ec._UpstreamCredentialSecretSummary_issuerScope(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -121953,6 +122270,20 @@ func (ec *executionContext) marshalNUpstreamCredentialOrderField2ᚖgithubᚗcom
 func (ec *executionContext) unmarshalNUpstreamCredentialSecretInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐUpstreamCredentialSecret(ctx context.Context, v any) (objects.UpstreamCredentialSecret, error) {
 	res, err := ec.unmarshalInputUpstreamCredentialSecretInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNUpstreamCredentialSecretSummary2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐUpstreamCredentialSecretSummary(ctx context.Context, sel ast.SelectionSet, v UpstreamCredentialSecretSummary) graphql.Marshaler {
+	return ec._UpstreamCredentialSecretSummary(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNUpstreamCredentialSecretSummary2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐUpstreamCredentialSecretSummary(ctx context.Context, sel ast.SelectionSet, v *UpstreamCredentialSecretSummary) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._UpstreamCredentialSecretSummary(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNUpstreamCredentialStatus2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐStatus(ctx context.Context, v any) (upstreamcredential.Status, error) {

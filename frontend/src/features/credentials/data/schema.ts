@@ -58,6 +58,14 @@ export const providerQuotaStatusSchema = z.object({
 });
 export type ProviderQuotaStatus = z.infer<typeof providerQuotaStatusSchema>;
 
+export const upstreamCredentialSecretSummarySchema = z.object({
+  kind: z.enum(['api_key', 'oauth', 'azure', 'gcp', 'other']).or(z.string()),
+  providerType: z.string().optional().nullable(),
+  baseURL: z.string().optional().nullable(),
+  issuerScope: z.string().optional().nullable(),
+});
+export type UpstreamCredentialSecretSummary = z.infer<typeof upstreamCredentialSecretSummarySchema>;
+
 export const credentialQuotaScopeEdgeSchema = z.object({
   node: credentialQuotaScopeSchema.nullable(),
 });
@@ -104,6 +112,7 @@ export const upstreamCredentialSchema = z.object({
   secretFingerprint: z.string().optional().nullable(),
   quotaScope: credentialQuotaScopeSchema.optional().nullable(),
   providerQuotaStatuses: z.array(providerQuotaStatusSchema).optional().nullable(),
+  secretSummary: upstreamCredentialSecretSummarySchema.optional().nullable(),
   quotaStatus: z.string().optional().nullable(),
   lastError: z.string().optional().nullable(),
   fingerprint: z.string().optional().nullable(),
@@ -237,6 +246,9 @@ export type CredentialSecretInput = z.infer<typeof credentialSecretInputSchema>;
 
 export const createUpstreamCredentialInputSchema = z.object({
   name: z.string().optional(),
+  providerType: z.string().optional(),
+  baseURL: z.string().optional(),
+  issuerScope: z.string().optional(),
   secret: credentialSecretInputSchema,
   status: credentialStatusSchema.optional(),
   quotaScopeID: z.string().optional(),
@@ -279,6 +291,12 @@ export const rotateUpstreamCredentialSecretInputSchema = z.object({
 });
 export type RotateUpstreamCredentialSecretInput = z.infer<typeof rotateUpstreamCredentialSecretInputSchema>;
 
+export const credentialSecretModeSchema = z.enum(['api_key', 'oauth']);
+export type CredentialSecretMode = z.infer<typeof credentialSecretModeSchema>;
+
+export const oauthCredentialProviderSchema = z.enum(['codex', 'claudecode', 'github_copilot', 'antigravity']);
+export type OAuthCredentialProvider = z.infer<typeof oauthCredentialProviderSchema>;
+
 export const attachCredentialToChannelInputSchema = z.object({
   channelID: z.string().min(1),
   credentialID: z.string().min(1),
@@ -301,7 +319,22 @@ export type MigrateLegacyCredentialsPayload = z.infer<typeof migrateLegacyCreden
 
 export type CredentialFormValues = {
   name: string;
+  secretMode: CredentialSecretMode;
   apiKey: string;
+  oauthProvider: OAuthCredentialProvider;
+  oauthCredentials: string;
   status: CredentialStatus;
+  quotaScopeMode: 'none' | 'new' | 'shared';
+  quotaScopeID: string;
+  quotaScopeName: string;
+  quotaUnit: CredentialQuotaUnit;
+  quotaLimitAmount: string;
+  quotaUsedAmount: string;
+  quotaResetPolicy: CredentialQuotaResetPolicy;
+  quotaResetAt: string;
+  quotaWindowStartedAt: string;
+  quotaWarningThresholdPercent: number;
+  quotaOverLimitAction: CredentialQuotaOverLimitAction;
+  quotaRemark: string;
   remark: string;
 };

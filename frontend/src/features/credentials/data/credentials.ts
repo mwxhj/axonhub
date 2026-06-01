@@ -89,6 +89,12 @@ const CREDENTIAL_FIELDS = `
     nextCheckAt
     updatedAt
   }
+  secretSummary {
+    kind
+    providerType
+    baseURL
+    issuerScope
+  }
   quotaStatus
   lastError
   fingerprint

@@ -414,7 +414,7 @@ func TestUpstreamCredentialService_DeleteRemovesRefsAndAllowsSecretRecreate(t *t
 	require.Equal(t, "new", recreated.Name)
 }
 
-func TestCredentialViewsFromRefsIgnoresExhaustedLocalQuotaScope(t *testing.T) {
+func TestCredentialViewsFromRefsFiltersExhaustedLocalQuotaScope(t *testing.T) {
 	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
 	defer client.Close()
 
@@ -476,11 +476,11 @@ func TestCredentialViewsFromRefsIgnoresExhaustedLocalQuotaScope(t *testing.T) {
 
 	views := credentialViewsFromRefs(reloaded)
 	require.Len(t, views, 1)
-	require.True(t, runtimeCredentialViews(views)[0].Enabled)
-	require.Len(t, enabledAPIKeyCredentialViews(views), 1)
+	require.False(t, runtimeCredentialViews(views)[0].Enabled)
+	require.Empty(t, enabledAPIKeyCredentialViews(views))
 }
 
-func TestCredentialViewsFromRefsKeepsAllLocalQuotaScopesSelectable(t *testing.T) {
+func TestCredentialViewsFromRefsFiltersOnlyBlockedLocalQuotaScope(t *testing.T) {
 	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
 	defer client.Close()
 
@@ -556,14 +556,11 @@ func TestCredentialViewsFromRefsKeepsAllLocalQuotaScopesSelectable(t *testing.T)
 	views := credentialViewsFromRefs(reloaded)
 	require.Len(t, views, 2)
 	enabledViews := enabledAPIKeyCredentialViews(views)
-	require.Len(t, enabledViews, 2)
-	require.ElementsMatch(t,
-		[]int{exhaustedCredential.ID, availableCredential.ID},
-		[]int{enabledViews[0].CredentialID, enabledViews[1].CredentialID},
-	)
+	require.Len(t, enabledViews, 1)
+	require.Equal(t, availableCredential.ID, enabledViews[0].CredentialID)
 }
 
-func TestCredentialViewQuotaSelectableIgnoresLocalScopeStatus(t *testing.T) {
+func TestCredentialViewQuotaSelectableHonorsLocalScopeStatus(t *testing.T) {
 	now := time.Now()
 
 	require.True(t, credentialViewQuotaSelectable(ChannelCredentialView{
@@ -571,12 +568,12 @@ func TestCredentialViewQuotaSelectableIgnoresLocalScopeStatus(t *testing.T) {
 		QuotaScopeOverLimitAction: credentialquotascope.OverLimitActionWarn.String(),
 	}))
 
-	require.True(t, credentialViewQuotaSelectable(ChannelCredentialView{
+	require.False(t, credentialViewQuotaSelectable(ChannelCredentialView{
 		QuotaScopeStatus:          credentialquotascope.StatusExhausted.String(),
 		QuotaScopeOverLimitAction: credentialquotascope.OverLimitActionPause.String(),
 	}))
 
-	require.True(t, credentialViewQuotaSelectable(ChannelCredentialView{
+	require.False(t, credentialViewQuotaSelectable(ChannelCredentialView{
 		QuotaScopeStatus:     credentialquotascope.StatusPaused.String(),
 		QuotaScopePauseUntil: lo.ToPtr(now.Add(time.Minute)),
 	}))
@@ -586,7 +583,7 @@ func TestCredentialViewQuotaSelectableIgnoresLocalScopeStatus(t *testing.T) {
 		QuotaScopePauseUntil: lo.ToPtr(now.Add(-time.Minute)),
 	}))
 
-	require.True(t, credentialViewQuotaSelectable(ChannelCredentialView{
+	require.False(t, credentialViewQuotaSelectable(ChannelCredentialView{
 		QuotaScopeStatus: credentialquotascope.StatusDisabled.String(),
 	}))
 
@@ -689,7 +686,7 @@ func TestBuildChannelKeepsQuotaPausedCredentialLoadable(t *testing.T) {
 	built, err := NewChannelServiceForTest(client).buildChannelWithTransformer(reloaded)
 	require.NoError(t, err)
 	require.NotNil(t, built)
-	require.Equal(t, []string{"sk-paused-loadable"}, built.cachedEnabledAPIKeys)
+	require.Empty(t, built.cachedEnabledAPIKeys)
 	require.Len(t, authCapableAPIKeyCredentialViews(built.cachedCredentialViews), 1)
 }
 

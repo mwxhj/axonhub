@@ -14,9 +14,23 @@ import {
 } from '@/components/ui/dialog';
 import { useCredentialsContext } from '../context/credentials-context';
 import { useRotateUpstreamCredentialSecret } from '../data/credentials';
-import type { CredentialFormValues } from '../data/schema';
+import type { CredentialFormValues, OAuthCredentialProvider, UpstreamCredential } from '../data/schema';
 import { CredentialSecretFields } from './credential-secret-fields';
 import { buildRotateCredentialInput, defaultCredentialFormValues } from './form-utils';
+
+function oauthProviderFromCredential(credential: Pick<UpstreamCredential, 'secretSummary'> | null): OAuthCredentialProvider {
+  switch (credential?.secretSummary?.providerType) {
+    case 'claudecode':
+      return 'claudecode';
+    case 'github_copilot':
+      return 'github_copilot';
+    case 'antigravity':
+      return 'antigravity';
+    case 'codex':
+    default:
+      return 'codex';
+  }
+}
 
 export function RotateCredentialDialog() {
   const { t } = useTranslation();
@@ -28,6 +42,8 @@ export function RotateCredentialDialog() {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<CredentialFormValues>({
     defaultValues: defaultCredentialFormValues,
@@ -35,7 +51,11 @@ export function RotateCredentialDialog() {
 
   useEffect(() => {
     if (isOpen && currentCredential) {
-      reset(defaultCredentialFormValues);
+      reset({
+        ...defaultCredentialFormValues,
+        secretMode: currentCredential.secretSummary?.kind === 'oauth' ? 'oauth' : 'api_key',
+        oauthProvider: oauthProviderFromCredential(currentCredential),
+      });
     }
   }, [currentCredential, isOpen, reset]);
 
@@ -65,7 +85,16 @@ export function RotateCredentialDialog() {
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit, () => {})} noValidate>
           <div className='grid max-h-[72vh] gap-4 overflow-y-auto py-4 pr-1'>
-            {currentCredential && <CredentialSecretFields register={register} errors={errors} />}
+            {currentCredential && (
+              <CredentialSecretFields
+                register={register}
+                setValue={setValue}
+                watch={watch}
+                errors={errors}
+                allowModeSwitch={false}
+                currentCredential={currentCredential}
+              />
+            )}
           </div>
           <DialogFooter>
             <Button type='button' variant='outline' onClick={close}>

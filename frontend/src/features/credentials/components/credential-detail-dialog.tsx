@@ -71,6 +71,36 @@ function providerQuotaStatusLabel(status: string | null | undefined, t: TFunctio
   return status ? t(`credentials.providerQuota.status.${status}`, { defaultValue: status }) : t('credentials.providerQuota.status.unknown');
 }
 
+function localQuotaBlocksRouting(credential: UpstreamCredentialDetail) {
+  const scope = credential.quotaScope;
+  if (!scope?.status) {
+    return false;
+  }
+
+  if (scope.resetAt && ['daily', 'monthly', 'custom'].includes(scope.resetPolicy ?? '')) {
+    const resetAt = new Date(scope.resetAt);
+    if (!Number.isNaN(resetAt.getTime()) && resetAt.getTime() <= Date.now()) {
+      return false;
+    }
+  }
+
+  if (scope.status === 'disabled') {
+    return true;
+  }
+  if (scope.status === 'paused') {
+    if (!scope.pauseUntil) {
+      return true;
+    }
+    const pauseUntil = new Date(scope.pauseUntil);
+    return Number.isNaN(pauseUntil.getTime()) || pauseUntil.getTime() > Date.now();
+  }
+  if (scope.status === 'exhausted') {
+    return scope.overLimitAction !== 'warn';
+  }
+
+  return false;
+}
+
 function routingAvailabilityKey(credential: UpstreamCredentialDetail, refs: CredentialRef[], providerStatuses: ProviderQuotaStatus[]) {
   if (credential.status === 'archived') {
     return 'archived';
@@ -80,6 +110,9 @@ function routingAvailabilityKey(credential: UpstreamCredentialDetail, refs: Cred
   }
   if (refs.filter((ref) => ref.enabled).length === 0) {
     return 'noEnabledRefs';
+  }
+  if (localQuotaBlocksRouting(credential)) {
+    return 'blockedLocalQuota';
   }
   if (providerStatuses.some((status) => !status.ready || status.status === 'exhausted')) {
     return 'blockedProviderQuota';
@@ -200,6 +233,41 @@ export function CredentialDetailDialog() {
 
               <TabsContent value='quota' className='mt-4 space-y-4'>
                 <section className='space-y-3 rounded-md border p-3'>
+                  <h4 className='text-sm font-medium'>{t('credentials.quota.localTitle')}</h4>
+                  {credential.quotaScope ? (
+                    <div className='grid gap-4 md:grid-cols-3'>
+                      <Field label={t('credentials.fields.quotaScopeName')} value={credential.quotaScope.name} />
+                      <Field
+                        label={t('credentials.fields.status')}
+                        value={credential.quotaScope.status ? t(`credentials.quota.status.${credential.quotaScope.status}`) : undefined}
+                      />
+                      <Field
+                        label={t('credentials.fields.quotaUnit')}
+                        value={credential.quotaScope.unit ? t(`credentials.quota.units.${credential.quotaScope.unit}`) : undefined}
+                      />
+                      <Field label={t('credentials.fields.quotaLimitAmount')} value={credential.quotaScope.limitAmount} />
+                      <Field label={t('credentials.fields.quotaUsedAmount')} value={credential.quotaScope.usedAmount} />
+                      <Field label={t('credentials.fields.quotaWarningThresholdPercent')} value={credential.quotaScope.warningThresholdPercent} />
+                      <Field
+                        label={t('credentials.fields.quotaResetPolicy')}
+                        value={
+                          credential.quotaScope.resetPolicy
+                            ? t(`credentials.quota.resetPolicies.${credential.quotaScope.resetPolicy}`)
+                            : undefined
+                        }
+                      />
+                      <Field label={t('credentials.fields.quotaResetAt')} value={dateLabel(credential.quotaScope.resetAt)} />
+                      <Field
+                        label={t('credentials.detail.localQuotaBlocksRouting')}
+                        value={localQuotaBlocksRouting(credential) ? t('credentials.common.yes') : t('credentials.common.no')}
+                      />
+                    </div>
+                  ) : (
+                    <div className='text-muted-foreground text-sm'>{t('credentials.quota.none')}</div>
+                  )}
+                </section>
+
+                <section className='space-y-3 rounded-md border p-3'>
                   <h4 className='text-sm font-medium'>{t('credentials.providerQuota.title')}</h4>
                   {providerStatuses.length > 0 ? (
                     <div className='space-y-3'>
@@ -238,6 +306,10 @@ export function CredentialDetailDialog() {
                   <div className='grid gap-4 md:grid-cols-3'>
                     <Field label={t('credentials.fields.status')} value={t(`credentials.status.${credential.status}`)} />
                     <Field label={t('credentials.detail.enabledRefs')} value={`${enabledRefs.length} / ${refs.length}`} />
+                    <Field
+                      label={t('credentials.detail.localQuotaBlocksRouting')}
+                      value={localQuotaBlocksRouting(credential) ? t('credentials.common.yes') : t('credentials.common.no')}
+                    />
                     <Field
                       label={t('credentials.detail.providerQuotaBlocksRouting')}
                       value={

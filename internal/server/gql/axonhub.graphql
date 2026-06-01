@@ -233,6 +233,9 @@ input UpstreamCredentialSecretInput {
 
 input CreateUpstreamCredentialInput {
   name: String
+  providerType: String
+  baseURL: String
+  issuerScope: String
   secret: UpstreamCredentialSecretInput!
   status: UpstreamCredentialStatus
   quotaScopeID: ID
@@ -285,6 +288,17 @@ input UpdateCredentialQuotaScopeInput {
   source: CredentialQuotaScopeSource
   lastError: String
   remark: String
+}
+
+type UpstreamCredentialSecretSummary {
+  kind: String!
+  providerType: String
+  baseURL: String
+  issuerScope: String
+}
+
+extend type UpstreamCredential {
+  secretSummary: UpstreamCredentialSecretSummary!
 }
 
 input RotateUpstreamCredentialSecretInput {

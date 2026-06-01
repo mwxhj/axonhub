@@ -24,6 +24,16 @@ function providerQuotaLabel(credential: UpstreamCredential, t: TFunction) {
   return `${t(`credentials.providerQuota.status.${status.status}`, { defaultValue: status.status })} · ${status.providerType}`;
 }
 
+function localQuotaLabel(credential: UpstreamCredential, t: TFunction) {
+  const scope = credential.quotaScope;
+  if (!scope) {
+    return t('credentials.quota.none');
+  }
+
+  const status = scope.status ? t(`credentials.quota.status.${scope.status}`, { defaultValue: scope.status }) : t('credentials.quota.status.unknown');
+  return `${status} · ${scope.name || t('credentials.quota.defaultScope')}`;
+}
+
 export const createCredentialColumns = (t: TFunction): ColumnDef<UpstreamCredential>[] => [
   {
     accessorKey: 'name',
@@ -43,6 +53,11 @@ export const createCredentialColumns = (t: TFunction): ColumnDef<UpstreamCredent
     accessorKey: 'keyHint',
     header: t('credentials.columns.keyHint'),
     cell: ({ row }) => <span className='text-muted-foreground font-mono text-xs'>{row.original.keyHint || '-'}</span>,
+  },
+  {
+    id: 'localQuota',
+    header: t('credentials.columns.localQuota'),
+    cell: ({ row }) => <span className='text-muted-foreground line-clamp-2 text-xs'>{localQuotaLabel(row.original, t)}</span>,
   },
   {
     id: 'providerQuota',

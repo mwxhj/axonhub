@@ -746,12 +746,60 @@ func dedupeCredentialViews(views []ChannelCredentialView) []ChannelCredentialVie
 }
 
 func credentialViewQuotaSelectable(view ChannelCredentialView) bool {
+	if !quotaScopeViewSelectable(view, time.Now()) {
+		return false
+	}
+
 	switch normalizeCredentialFingerprintPart(view.QuotaStatus) {
 	case "exhausted", "paused", "disabled":
 		return false
 	}
 
 	return true
+}
+
+func quotaScopeViewSelectable(view ChannelCredentialView, now time.Time) bool {
+	if view.QuotaScopeAutoResetDue(now) {
+		return true
+	}
+
+	switch normalizeCredentialFingerprintPart(view.QuotaScopeStatus) {
+	case "disabled":
+		return false
+	case "paused":
+		if view.QuotaScopePauseUntil == nil {
+			return false
+		}
+		return !view.QuotaScopePauseUntil.After(now)
+	case "exhausted":
+		switch normalizeCredentialFingerprintPart(view.QuotaScopeOverLimitAction) {
+		case "warn":
+			return true
+		case "pause", "disable":
+			return false
+		default:
+			return false
+		}
+	default:
+		return true
+	}
+}
+
+func (view ChannelCredentialView) QuotaScopeAutoResetDue(now time.Time) bool {
+	return quotaScopeAutoResetDue(view.QuotaScopeResetPolicy, view.QuotaScopeResetAt, now)
+}
+
+func quotaScopeAutoResetDue(resetPolicy string, resetAt *time.Time, now time.Time) bool {
+	if resetAt == nil || resetAt.After(now) {
+		return false
+	}
+
+	switch normalizeCredentialFingerprintPart(resetPolicy) {
+	case "daily", "monthly", "custom":
+		return true
+	default:
+		return false
+	}
 }
 
 func stableCredentialSecretMaterial(value any) string {

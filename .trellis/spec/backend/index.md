@@ -18,7 +18,7 @@ Before changing backend routing, load balancing, retry/fallback, provider quota,
 - [ ] Read [Routing Guidelines](./routing-guidelines.md), especially the sticky-session routing contract.
 - [ ] Confirm whether the change can affect priority tiers, weight semantics, retry/fallback, or upstream cache locality.
 - [ ] Confirm sticky-session writes happen only after upstream success and never from candidate selection alone.
-- [ ] Confirm the change does not reintroduce channel-owned key/OAuth storage or `CredentialQuotaScope` local quota as route availability state.
+- [ ] Confirm the change does not reintroduce channel-owned key/OAuth storage or channel-local quota. `CredentialQuotaScope` is allowed only as credential/key-local quota and may filter that credential view, not the whole channel.
 
 ---
 

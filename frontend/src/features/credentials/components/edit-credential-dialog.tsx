@@ -12,9 +12,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { useCredentialsContext } from '../context/credentials-context';
 import { useUpdateUpstreamCredential } from '../data/credentials';
 import type { CredentialFormValues, CredentialStatus } from '../data/schema';
+import { CredentialQuotaFields } from './credential-quota-fields';
 import { buildUpdateCredentialInput, defaultCredentialFormValues } from './form-utils';
 
 const statuses: CredentialStatus[] = ['enabled', 'disabled', 'archived'];
+
+function dateTimeLocalValue(value?: string | null) {
+  if (!value) {
+    return '';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  const pad = (item: number) => String(item).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
 
 export function EditCredentialDialog() {
   const { t } = useTranslation();
@@ -41,6 +54,19 @@ export function EditCredentialDialog() {
         ...defaultCredentialFormValues,
         name: currentCredential.name ?? '',
         status: currentCredential.status,
+        quotaScopeMode: currentCredential.quotaScopeID ? 'new' : 'none',
+        quotaScopeID: currentCredential.quotaScopeID ?? '',
+        quotaScopeName: currentCredential.quotaScope?.name ?? '',
+        quotaUnit: currentCredential.quotaScope?.unit ?? defaultCredentialFormValues.quotaUnit,
+        quotaLimitAmount: currentCredential.quotaScope?.limitAmount ?? '',
+        quotaUsedAmount: currentCredential.quotaScope?.usedAmount ?? '',
+        quotaResetPolicy: currentCredential.quotaScope?.resetPolicy ?? defaultCredentialFormValues.quotaResetPolicy,
+        quotaResetAt: dateTimeLocalValue(currentCredential.quotaScope?.resetAt),
+        quotaWindowStartedAt: dateTimeLocalValue(currentCredential.quotaScope?.windowStartedAt),
+        quotaWarningThresholdPercent:
+          currentCredential.quotaScope?.warningThresholdPercent ?? defaultCredentialFormValues.quotaWarningThresholdPercent,
+        quotaOverLimitAction: currentCredential.quotaScope?.overLimitAction ?? defaultCredentialFormValues.quotaOverLimitAction,
+        quotaRemark: currentCredential.quotaScope?.remark ?? '',
         remark: currentCredential.remark ?? '',
       });
     }
@@ -112,6 +138,8 @@ export function EditCredentialDialog() {
               <Label htmlFor='edit-credential-remark'>{t('credentials.fields.remark')}</Label>
               <Textarea id='edit-credential-remark' rows={3} {...register('remark')} />
             </div>
+
+            <CredentialQuotaFields register={register} setValue={setValue} watch={watch} errors={errors} />
           </div>
           <DialogFooter>
             <Button type='button' variant='outline' onClick={close}>

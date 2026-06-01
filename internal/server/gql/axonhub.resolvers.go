@@ -956,6 +956,20 @@ func (r *traceResolver) UsageMetadata(ctx context.Context, obj *ent.Trace) (*biz
 	return r.traceService.UsageMetadata(ctx, obj.ID)
 }
 
+// SecretSummary is the resolver for the secretSummary field.
+func (r *upstreamCredentialResolver) SecretSummary(ctx context.Context, obj *ent.UpstreamCredential) (*UpstreamCredentialSecretSummary, error) {
+	if obj == nil {
+		return &UpstreamCredentialSecretSummary{Kind: "other"}, nil
+	}
+
+	return &UpstreamCredentialSecretSummary{
+		Kind:         obj.SecretKind.String(),
+		ProviderType: lo.ToPtr(obj.ProviderType),
+		BaseURL:      lo.ToPtr(obj.BaseURL),
+		IssuerScope:  lo.ToPtr(obj.IssuerScope),
+	}, nil
+}
+
 // ChannelSettings returns ChannelSettingsResolver implementation.
 func (r *Resolver) ChannelSettings() ChannelSettingsResolver { return &channelSettingsResolver{r} }
 

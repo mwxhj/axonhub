@@ -300,6 +300,11 @@ func TestGraphQLArchiveUpstreamCredentialMutation(t *testing.T) {
 					ready
 					providerType
 				}
+				secretSummary {
+					kind
+					providerType
+					issuerScope
+				}
 			}
 		}
 	`
@@ -619,6 +624,11 @@ func TestGraphQLCreateUpstreamCredentialMutation(t *testing.T) {
 					ready
 					providerType
 				}
+				secretSummary {
+					kind
+					providerType
+					issuerScope
+				}
 			}
 		}
 	`
@@ -627,6 +637,9 @@ func TestGraphQLCreateUpstreamCredentialMutation(t *testing.T) {
 		name           string
 		input          map[string]any
 		wantQuotaScope bool
+		wantKind       string
+		wantProvider   string
+		wantIssuer     string
 	}{
 		{
 			name: "no quota",
@@ -635,6 +648,8 @@ func TestGraphQLCreateUpstreamCredentialMutation(t *testing.T) {
 				"secret": map[string]any{"apiKey": "sk-graphql-no-quota"},
 				"status": "enabled",
 			},
+			wantKind:   "api_key",
+			wantIssuer: "openai",
 		},
 		{
 			name: "inline quota",
@@ -653,6 +668,28 @@ func TestGraphQLCreateUpstreamCredentialMutation(t *testing.T) {
 				},
 			},
 			wantQuotaScope: true,
+			wantKind:       "api_key",
+			wantIssuer:     "openai",
+		},
+		{
+			name: "oauth credential scope",
+			input: map[string]any{
+				"name":         "codex oauth",
+				"providerType": "codex",
+				"issuerScope":  "openai",
+				"secret": map[string]any{
+					"apiKey": `{"access_token":"access-token","refresh_token":"refresh-token","token_type":"Bearer"}`,
+					"oauth": map[string]any{
+						"accessToken":  "access-token",
+						"refreshToken": "refresh-token",
+						"tokenType":    "Bearer",
+					},
+				},
+				"status": "enabled",
+			},
+			wantKind:     "oauth",
+			wantProvider: "codex",
+			wantIssuer:   "openai",
 		},
 	}
 
@@ -694,6 +731,11 @@ func TestGraphQLCreateUpstreamCredentialMutation(t *testing.T) {
 							Ready        bool   `json:"ready"`
 							ProviderType string `json:"providerType"`
 						} `json:"providerQuotaStatuses"`
+						SecretSummary struct {
+							Kind         string  `json:"kind"`
+							ProviderType *string `json:"providerType"`
+							IssuerScope  *string `json:"issuerScope"`
+						} `json:"secretSummary"`
 					} `json:"createUpstreamCredential"`
 				} `json:"data"`
 				Errors []struct {
@@ -708,6 +750,13 @@ func TestGraphQLCreateUpstreamCredentialMutation(t *testing.T) {
 			require.Equal(t, "enabled", payload.Data.CreateUpstreamCredential.Status)
 			require.Equal(t, 0, payload.Data.CreateUpstreamCredential.ChannelRefs.TotalCount)
 			require.Empty(t, payload.Data.CreateUpstreamCredential.ProviderQuotaStatuses)
+			require.Equal(t, tt.wantKind, payload.Data.CreateUpstreamCredential.SecretSummary.Kind)
+			if tt.wantProvider != "" {
+				require.Equal(t, tt.wantProvider, stringValue(payload.Data.CreateUpstreamCredential.SecretSummary.ProviderType))
+			}
+			if tt.wantIssuer != "" {
+				require.Equal(t, tt.wantIssuer, stringValue(payload.Data.CreateUpstreamCredential.SecretSummary.IssuerScope))
+			}
 			if tt.wantQuotaScope {
 				require.NotNil(t, payload.Data.CreateUpstreamCredential.QuotaScopeID)
 				require.NotEqual(t, json.RawMessage("null"), payload.Data.CreateUpstreamCredential.QuotaScope)
@@ -717,6 +766,13 @@ func TestGraphQLCreateUpstreamCredentialMutation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func stringValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
 
 func TestQueryResolver_AllChannelTags_ProjectProfileFiltersVisibleTags(t *testing.T) {

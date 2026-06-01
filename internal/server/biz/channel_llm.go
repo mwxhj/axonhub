@@ -1001,10 +1001,14 @@ func (svc *ChannelService) buildChannelWithTransformer(c *ent.Channel) (*Channel
 
 		return ch, nil
 	case channel.TypeAntigravity:
+		credentialView := primaryCredentialViewForAuthKind(ch, channelCredentialAuthKindOAuth)
+		if credentialView.CredentialID == 0 && credentialView.Fingerprint == "" {
+			credentialView = primaryCredentialViewForAuthKind(ch, channelCredentialAuthKindAPIKey)
+		}
 		transformer, err := antigravity.NewTransformer(
 			antigravity.Config{BaseURL: c.BaseURL, APIKey: c.Credentials.APIKey},
 			antigravity.WithHTTPClient(httpClient),
-			antigravity.WithOnTokenRefreshed(svc.onTokenRefreshed(c, primaryCredentialViewForAuthKind(ch, channelCredentialAuthKindAPIKey))),
+			antigravity.WithOnTokenRefreshed(svc.onTokenRefreshed(c, credentialView)),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create antigravity outbound transformer: %w", err)

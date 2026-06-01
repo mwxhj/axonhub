@@ -550,6 +550,13 @@ type UpdateUserAgentPassThroughSettingsInput struct {
 	Enabled bool `json:"enabled"`
 }
 
+type UpstreamCredentialSecretSummary struct {
+	Kind         string  `json:"kind"`
+	ProviderType *string `json:"providerType,omitempty"`
+	BaseURL      *string `json:"baseURL,omitempty"`
+	IssuerScope  *string `json:"issuerScope,omitempty"`
+}
+
 type UserAgentPassThroughSettings struct {
 	Enabled bool `json:"enabled"`
 }
