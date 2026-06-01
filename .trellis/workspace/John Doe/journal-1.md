@@ -106,3 +106,36 @@ Fixed same-secret archived credential creation, made archive reversible for rout
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: Credential-centered channel cleanup
+
+**Date**: 2026-06-01
+**Task**: Credential-centered channel cleanup
+**Branch**: `unstable`
+
+### Summary
+
+Made channels routing-only in product flows, removed local credential quota from route availability/UI, and moved provider quota semantics to credential/key targets.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `30596c2` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
