@@ -205,8 +205,21 @@ func (p *TraceStickyKeyProvider) selectStickyCredential(enabled []ChannelCredent
 }
 
 func (p *TraceStickyKeyProvider) rendezvousSelectByCredential(views []ChannelCredentialView, seed string) *ChannelCredentialView {
-	if len(views) == 0 {
+	selected, ok := SelectCredentialViewBySeed(views, seed)
+	if !ok {
 		return nil
+	}
+
+	return &selected
+}
+
+// SelectCredentialViewBySeed applies the same weighted deterministic ordering
+// used by TraceStickyKeyProvider, but returns the selected runtime credential
+// view for routing logic that must choose a concrete credential before
+// outbound transformation.
+func SelectCredentialViewBySeed(views []ChannelCredentialView, seed string) (ChannelCredentialView, bool) {
+	if len(views) == 0 {
+		return ChannelCredentialView{}, false
 	}
 
 	bestIdx := 0
@@ -221,7 +234,7 @@ func (p *TraceStickyKeyProvider) rendezvousSelectByCredential(views []ChannelCre
 		}
 	}
 
-	return &views[bestIdx]
+	return views[bestIdx], true
 }
 
 func (p *TraceStickyKeyProvider) selectPreferredCredential(enabled []ChannelCredentialView, credentialID int, fingerprint string) *ChannelCredentialView {

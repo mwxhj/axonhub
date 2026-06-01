@@ -53,6 +53,10 @@ type ChannelCredentialView struct {
 	QuotaScopePauseUntil      *time.Time
 	QuotaScopeResetPolicy     string
 	QuotaScopeResetAt         *time.Time
+	QuotaScopeUnit            string
+	QuotaScopeLimitAmount     string
+	QuotaScopeUsedAmount      string
+	QuotaScopeSource          string
 	Secret                    objects.UpstreamCredentialSecret
 	Enabled                   bool
 	Weight                    int
@@ -532,6 +536,10 @@ func credentialViewsFromRefs(c *ent.Channel) []ChannelCredentialView {
 				view.QuotaScopePauseUntil = quotaScope.PauseUntil
 				view.QuotaScopeResetPolicy = quotaScope.ResetPolicy.String()
 				view.QuotaScopeResetAt = quotaScope.ResetAt
+				view.QuotaScopeUnit = quotaScope.Unit.String()
+				view.QuotaScopeLimitAmount = quotaScope.LimitAmount
+				view.QuotaScopeUsedAmount = quotaScope.UsedAmount
+				view.QuotaScopeSource = quotaScope.Source.String()
 			}
 		}
 		views = append(views, view)

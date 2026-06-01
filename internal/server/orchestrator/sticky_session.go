@@ -6,10 +6,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"math/rand/v2"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/shopspring/decimal"
 
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/server/biz"
@@ -853,8 +854,7 @@ func (r *StickySessionRouter) Order(ctx context.Context, req StickySessionOrderR
 	primary, excludedChannelID, boundLookup, preferredTarget := r.boundCandidateForLookups(ctx, extraction.Lookups, req.Candidates, eligibleCandidates)
 	source := "binding"
 	if primary == nil {
-		primary = randomBestTierCandidate(eligibleCandidates)
-		source = "best-tier-random"
+		primary, preferredTarget, source = stickyFirstBindCandidate(ctx, req, eligibleCandidates, extraction.Key)
 	}
 	if primary == nil {
 		return loadBalancedCandidates(ctx, req.Candidates, req.Request, req.LoadBalancer, stickyRetryPolicyProvider(req))
@@ -1053,51 +1053,6 @@ func (r *StickySessionRouter) eligibleCandidates(ctx context.Context, req Sticky
 	return result
 }
 
-func randomBestTierCandidate(candidates []*ChannelModelsCandidate) *ChannelModelsCandidate {
-	bestPrioritySet := false
-	bestPriority := 0
-	for _, candidate := range candidates {
-		if candidate == nil || candidate.Channel == nil {
-			continue
-		}
-		if !bestPrioritySet || candidate.Priority < bestPriority {
-			bestPrioritySet = true
-			bestPriority = candidate.Priority
-		}
-	}
-	if !bestPrioritySet {
-		return nil
-	}
-
-	bestWeightSet := false
-	bestWeight := 0
-	for _, candidate := range candidates {
-		if candidate == nil || candidate.Channel == nil || candidate.Priority != bestPriority {
-			continue
-		}
-		if !bestWeightSet || candidate.Channel.OrderingWeight > bestWeight {
-			bestWeightSet = true
-			bestWeight = candidate.Channel.OrderingWeight
-		}
-	}
-	if !bestWeightSet {
-		return nil
-	}
-
-	tier := make([]*ChannelModelsCandidate, 0)
-	for _, candidate := range candidates {
-		if candidate != nil && candidate.Channel != nil && candidate.Priority == bestPriority && candidate.Channel.OrderingWeight == bestWeight {
-			tier = append(tier, candidate)
-		}
-	}
-	if len(tier) == 0 {
-		return nil
-	}
-
-	//nolint:gosec // Sticky first-bind distribution does not need cryptographic randomness.
-	return tier[rand.IntN(len(tier))]
-}
-
 func stickyOrderedCandidates(
 	ctx context.Context,
 	req StickySessionOrderRequest,
@@ -1141,6 +1096,221 @@ func stickyOrderedCandidates(
 	}
 
 	return result
+}
+
+func stickyFirstBindCandidate(
+	ctx context.Context,
+	req StickySessionOrderRequest,
+	eligibleCandidates []*ChannelModelsCandidate,
+	stickyKey string,
+) (*ChannelModelsCandidate, StickySessionTarget, string) {
+	ordered := loadBalancedCandidatesWithoutTracking(ctx, eligibleCandidates, req.Request, req.LoadBalancer, stickyRetryPolicyProvider(req))
+	if len(ordered) == 0 || ordered[0] == nil {
+		return nil, StickySessionTarget{}, "best-tier-load-balanced"
+	}
+
+	primary := ordered[0]
+	baseTarget := stickyCandidatePreferredTarget(primary, stickyKey)
+	if balanced, target, ok := stickyQuotaRatioFirstBindCandidate(primary, baseTarget, eligibleCandidates, stickyKey); ok {
+		return balanced, target, "quota-ratio-first-bind"
+	}
+
+	return primary, StickySessionTarget{}, "best-tier-load-balanced"
+}
+
+func stickyQuotaRatioFirstBindCandidate(
+	primary *ChannelModelsCandidate,
+	preferredTarget StickySessionTarget,
+	eligibleCandidates []*ChannelModelsCandidate,
+	stickyKey string,
+) (*ChannelModelsCandidate, StickySessionTarget, bool) {
+	baseView, ok := stickyTargetCredentialView(primary, preferredTarget)
+	if !ok {
+		return nil, StickySessionTarget{}, false
+	}
+
+	now := time.Now()
+	if _, ok := stickyLocalQuotaRatio(baseView, now); !ok {
+		return nil, StickySessionTarget{}, false
+	}
+
+	type scopeChoice struct {
+		candidate *ChannelModelsCandidate
+		view      biz.ChannelCredentialView
+		ratio     decimal.Decimal
+	}
+
+	choices := make([]scopeChoice, 0, len(eligibleCandidates))
+	seenScopes := make(map[int]struct{}, len(eligibleCandidates))
+	for _, candidate := range eligibleCandidates {
+		if candidate == nil || candidate.Channel == nil || primary == nil || candidate.Priority != primary.Priority {
+			continue
+		}
+		for _, view := range stickyEnabledCredentialViews(candidate) {
+			ratio, ok := stickyLocalQuotaRatio(view, now)
+			if !ok {
+				continue
+			}
+			if _, exists := seenScopes[view.QuotaScopeID]; exists {
+				continue
+			}
+			seenScopes[view.QuotaScopeID] = struct{}{}
+			choices = append(choices, scopeChoice{
+				candidate: candidate,
+				view:      stickyConcreteViewForScope(candidate, view.QuotaScopeID, stickyKey),
+				ratio:     ratio,
+			})
+		}
+	}
+	if len(choices) == 0 {
+		return nil, StickySessionTarget{}, false
+	}
+
+	best := choices[0]
+	for _, choice := range choices[1:] {
+		if choice.ratio.Cmp(best.ratio) < 0 {
+			best = choice
+		}
+	}
+
+	return best.candidate, stickyTargetFromCredentialView(best.candidate, best.view), true
+}
+
+func stickyCandidatePreferredTarget(candidate *ChannelModelsCandidate, stickyKey string) StickySessionTarget {
+	view, ok := stickySeededCredentialView(candidate, stickyKey)
+	if !ok {
+		if candidate == nil || candidate.Channel == nil {
+			return StickySessionTarget{}
+		}
+		return StickySessionTarget{ChannelID: candidate.Channel.ID}
+	}
+
+	return stickyTargetFromCredentialView(candidate, view)
+}
+
+func stickyTargetCredentialView(candidate *ChannelModelsCandidate, target StickySessionTarget) (biz.ChannelCredentialView, bool) {
+	views := stickyEnabledCredentialViews(candidate)
+	if len(views) == 0 {
+		return biz.ChannelCredentialView{}, false
+	}
+
+	for _, view := range views {
+		if target.CredentialID > 0 && view.CredentialID == target.CredentialID {
+			return view, true
+		}
+		if target.CredentialFingerprint != "" && view.Fingerprint == target.CredentialFingerprint {
+			return view, true
+		}
+	}
+
+	if len(views) == 1 {
+		return views[0], true
+	}
+
+	return biz.ChannelCredentialView{}, false
+}
+
+func stickyConcreteViewForScope(candidate *ChannelModelsCandidate, quotaScopeID int, stickyKey string) biz.ChannelCredentialView {
+	views := stickyEnabledCredentialViews(candidate)
+	matching := make([]biz.ChannelCredentialView, 0, len(views))
+	for _, view := range views {
+		if view.QuotaScopeID == quotaScopeID {
+			matching = append(matching, view)
+		}
+	}
+
+	if len(matching) == 0 {
+		return biz.ChannelCredentialView{}
+	}
+	if len(matching) == 1 {
+		return matching[0]
+	}
+
+	if stickyKey == "" {
+		return matching[0]
+	}
+	if selected, ok := biz.SelectCredentialViewBySeed(matching, "sticky:"+stickyKey); ok {
+		return selected
+	}
+
+	return matching[0]
+}
+
+func stickySeededCredentialView(candidate *ChannelModelsCandidate, stickyKey string) (biz.ChannelCredentialView, bool) {
+	views := stickyEnabledCredentialViews(candidate)
+	if len(views) == 0 {
+		return biz.ChannelCredentialView{}, false
+	}
+	if len(views) == 1 {
+		return views[0], true
+	}
+	if stickyKey == "" {
+		return biz.ChannelCredentialView{}, false
+	}
+
+	return biz.SelectCredentialViewBySeed(views, "sticky:"+stickyKey)
+}
+
+func stickyEnabledCredentialViews(candidate *ChannelModelsCandidate) []biz.ChannelCredentialView {
+	if candidate == nil || candidate.Channel == nil {
+		return nil
+	}
+
+	views := candidate.Channel.CredentialViews()
+	result := make([]biz.ChannelCredentialView, 0, len(views))
+	for _, view := range views {
+		if view.Enabled {
+			result = append(result, view)
+		}
+	}
+
+	return result
+}
+
+func stickyTargetFromCredentialView(candidate *ChannelModelsCandidate, view biz.ChannelCredentialView) StickySessionTarget {
+	target := StickySessionTarget{}
+	if candidate != nil && candidate.Channel != nil {
+		target.ChannelID = candidate.Channel.ID
+	}
+	target.CredentialID = view.CredentialID
+	target.CredentialFingerprint = view.Fingerprint
+	return target
+}
+
+func stickyLocalQuotaRatio(view biz.ChannelCredentialView, now time.Time) (decimal.Decimal, bool) {
+	if view.QuotaScopeID <= 0 || view.QuotaScopeAutoResetDue(now) {
+		return decimal.Decimal{}, false
+	}
+
+	source := strings.ToLower(strings.TrimSpace(view.QuotaScopeSource))
+	if source != "local_budget" {
+		return decimal.Decimal{}, false
+	}
+
+	unit := strings.ToLower(strings.TrimSpace(view.QuotaScopeUnit))
+	if unit == "" || unit == "unknown" {
+		return decimal.Decimal{}, false
+	}
+
+	resetPolicy := strings.ToLower(strings.TrimSpace(view.QuotaScopeResetPolicy))
+	if resetPolicy != "daily" {
+		return decimal.Decimal{}, false
+	}
+	if view.QuotaScopeResetAt == nil || !view.QuotaScopeResetAt.After(now) {
+		return decimal.Decimal{}, false
+	}
+
+	limit, err := decimal.NewFromString(strings.TrimSpace(view.QuotaScopeLimitAmount))
+	if err != nil || !limit.GreaterThan(decimal.Zero) {
+		return decimal.Decimal{}, false
+	}
+
+	used, err := decimal.NewFromString(strings.TrimSpace(view.QuotaScopeUsedAmount))
+	if err != nil || used.IsNegative() {
+		return decimal.Decimal{}, false
+	}
+
+	return used.Div(limit), true
 }
 
 func stickyRetryPolicyProvider(req StickySessionOrderRequest) RetryPolicyProvider {
