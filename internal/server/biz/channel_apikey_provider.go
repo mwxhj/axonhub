@@ -43,8 +43,10 @@ func (p *TraceStickyKeyProvider) Get(ctx context.Context) string {
 	enabled := p.enabledAPIKeyCredentialViews()
 	var constrained bool
 	enabled, constrained = filterAllowedCredentialViews(ctx, enabled)
+	var excluded bool
+	enabled, excluded = filterExcludedCredentialViews(ctx, enabled)
 	if len(enabled) == 0 {
-		if constrained || p.hasCredentialViewSource() {
+		if constrained || excluded || p.hasCredentialViewSource() {
 			return ""
 		}
 		allKeys := p.channel.Credentials.GetAllAPIKeys()
@@ -155,6 +157,49 @@ func filterAllowedCredentialViews(ctx context.Context, views []ChannelCredential
 				filtered = append(filtered, view)
 			}
 		}
+	}
+
+	return filtered, true
+}
+
+func filterExcludedCredentialViews(ctx context.Context, views []ChannelCredentialView) ([]ChannelCredentialView, bool) {
+	excludedIDs, excludedFingerprints, ok := contexts.GetExcludedCredentials(ctx)
+	if !ok || len(views) == 0 {
+		return views, false
+	}
+
+	idSet := make(map[int]struct{}, len(excludedIDs))
+	for _, id := range excludedIDs {
+		if id > 0 {
+			idSet[id] = struct{}{}
+		}
+	}
+
+	fingerprintSet := make(map[string]struct{}, len(excludedFingerprints))
+	for _, fingerprint := range excludedFingerprints {
+		if fingerprint != "" {
+			fingerprintSet[fingerprint] = struct{}{}
+		}
+	}
+
+	if len(idSet) == 0 && len(fingerprintSet) == 0 {
+		return views, false
+	}
+
+	filtered := make([]ChannelCredentialView, 0, len(views))
+	for _, view := range views {
+		if view.CredentialID > 0 {
+			if _, excluded := idSet[view.CredentialID]; excluded {
+				continue
+			}
+		}
+		if view.Fingerprint != "" {
+			if _, excluded := fingerprintSet[view.Fingerprint]; excluded {
+				continue
+			}
+		}
+
+		filtered = append(filtered, view)
 	}
 
 	return filtered, true

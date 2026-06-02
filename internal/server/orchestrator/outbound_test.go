@@ -105,6 +105,48 @@ func (m *mockTransformer) APIFormat() llm.APIFormat {
 	return llm.APIFormatOpenAIChatCompletion
 }
 
+type credentialSelectingTransformer struct {
+	provider *biz.TraceStickyKeyProvider
+}
+
+func (m *credentialSelectingTransformer) TransformRequest(ctx context.Context, req *llm.Request) (*httpclient.Request, error) {
+	apiKey := m.provider.Get(ctx)
+
+	body, err := json.Marshal(map[string]any{
+		"model":   req.Model,
+		"api_key": apiKey,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &httpclient.Request{
+		Method: "POST",
+		URL:    "https://api.example.com/v1/chat/completions",
+		Body:   body,
+	}, nil
+}
+
+func (m *credentialSelectingTransformer) TransformResponse(ctx context.Context, resp *httpclient.Response) (*llm.Response, error) {
+	return &llm.Response{}, nil
+}
+
+func (m *credentialSelectingTransformer) TransformStream(ctx context.Context, req *httpclient.Request, stream streams.Stream[*httpclient.StreamEvent]) (streams.Stream[*llm.Response], error) {
+	return nil, nil
+}
+
+func (m *credentialSelectingTransformer) TransformError(ctx context.Context, err *httpclient.Error) *llm.ResponseError {
+	return nil
+}
+
+func (m *credentialSelectingTransformer) AggregateStreamChunks(ctx context.Context, _ *httpclient.Request, chunks []*httpclient.StreamEvent) ([]byte, llm.ResponseMeta, error) {
+	return nil, llm.ResponseMeta{}, nil
+}
+
+func (m *credentialSelectingTransformer) APIFormat() llm.APIFormat {
+	return llm.APIFormatOpenAIChatCompletion
+}
+
 func TestPersistentOutboundTransformer_TransformRequest_OriginalModelRestoration(t *testing.T) {
 	tests := []struct {
 		name               string
@@ -510,6 +552,226 @@ func TestPersistentOutboundTransformer_NextChannel_UsesCandidateAPIFormatOutboun
 	require.Equal(t, 1, processor.state.CurrentCandidateIndex)
 	require.Same(t, embeddingChannel, processor.state.CurrentCandidate.Channel)
 	require.Same(t, embeddingOutbound, processor.wrapped)
+}
+
+func TestPersistentOutboundTransformer_PrepareForFallback_SameChannelCredential(t *testing.T) {
+	ctx := context.Background()
+
+	ch := &biz.Channel{
+		Channel: &ent.Channel{
+			ID:      1,
+			Name:    "same-channel",
+			Type:    channel.TypeOpenai,
+			BaseURL: "https://api.openai.com/v1",
+			Credentials: objects.ChannelCredentials{
+				APIKeys: []string{"key-1", "key-2"},
+			},
+		},
+	}
+	outboundTransformer := &credentialSelectingTransformer{provider: biz.NewTraceStickyKeyProvider(ch)}
+	ch.Outbound = outboundTransformer
+
+	firstFingerprint := ch.CredentialFingerprintForAPIKey("key-1")
+	state := &PersistenceState{
+		PreferredCredentialFingerprint: firstFingerprint,
+		CurrentCandidateIndex:          0,
+		CurrentModelIndex:              0,
+		ChannelModelsCandidates: []*ChannelModelsCandidate{
+			{
+				Channel:  ch,
+				Priority: 0,
+				Models:   []biz.ChannelModelEntry{{RequestModel: "gpt-4", ActualModel: "gpt-4"}},
+			},
+		},
+	}
+	state.CurrentCandidate = state.ChannelModelsCandidates[0]
+	processor := &PersistentOutboundTransformer{
+		wrapped: outboundTransformer,
+		state:   state,
+	}
+
+	rawReq, err := processor.TransformRequest(ctx, &llm.Request{Model: "gpt-4"})
+	require.NoError(t, err)
+	require.Equal(t, "key-1", gjson.GetBytes(rawReq.Body, "api_key").String())
+	require.Equal(t, firstFingerprint, state.CurrentCredentialFingerprint)
+
+	upstreamErr := &httpclient.Error{StatusCode: http.StatusUnauthorized}
+	require.True(t, processor.CanFallback(upstreamErr))
+	require.NoError(t, processor.PrepareForFallback(ctx, upstreamErr))
+	require.Equal(t, 0, state.CurrentCandidateIndex)
+	require.Equal(t, []string{firstFingerprint}, state.ExcludedCredentialFingerprints)
+	require.Equal(t, 1, state.FallbackTargetSwitches)
+
+	rawReq, err = processor.TransformRequest(ctx, &llm.Request{Model: "gpt-4"})
+	require.NoError(t, err)
+	require.Equal(t, "key-2", gjson.GetBytes(rawReq.Body, "api_key").String())
+	require.Equal(t, ch.CredentialFingerprintForAPIKey("key-2"), state.CurrentCredentialFingerprint)
+}
+
+func TestPersistentOutboundTransformer_PrepareForFallback_StaysInSamePriorityBeforeLowerPriority(t *testing.T) {
+	ctx := context.Background()
+
+	newCandidate := func(id int, name string, priority int) *ChannelModelsCandidate {
+		return &ChannelModelsCandidate{
+			Channel: &biz.Channel{
+				Channel: &ent.Channel{
+					ID:   id,
+					Name: name,
+				},
+				Outbound: &mockTransformer{},
+			},
+			Priority: priority,
+			Models:   []biz.ChannelModelEntry{{RequestModel: "gpt-4", ActualModel: "gpt-4"}},
+		}
+	}
+
+	state := &PersistenceState{
+		CurrentCandidateIndex: 0,
+		CurrentModelIndex:     0,
+		ChannelModelsCandidates: []*ChannelModelsCandidate{
+			newCandidate(1, "current", 0),
+			newCandidate(2, "same-priority", 0),
+			newCandidate(3, "lower-priority", 1),
+		},
+	}
+	state.CurrentCandidate = state.ChannelModelsCandidates[0]
+	processor := &PersistentOutboundTransformer{
+		wrapped: &mockTransformer{},
+		state:   state,
+	}
+
+	require.True(t, processor.CanFallback(&httpclient.Error{StatusCode: http.StatusInternalServerError}))
+	require.NoError(t, processor.PrepareForFallback(ctx, &httpclient.Error{StatusCode: http.StatusInternalServerError}))
+	require.Equal(t, 1, state.CurrentCandidateIndex)
+	require.Equal(t, 2, state.CurrentCandidate.Channel.ID)
+	require.Equal(t, 0, state.CurrentCandidate.Priority)
+
+	require.NoError(t, processor.PrepareForFallback(ctx, &httpclient.Error{StatusCode: http.StatusInternalServerError}))
+	require.Equal(t, 2, state.CurrentCandidateIndex)
+	require.Equal(t, 3, state.CurrentCandidate.Channel.ID)
+	require.Equal(t, 1, state.CurrentCandidate.Priority)
+}
+
+func TestPersistentOutboundTransformer_CanRetry_UsesFallbackWhenAvailable(t *testing.T) {
+	channelOne := &biz.Channel{
+		Channel: &ent.Channel{
+			ID:   1,
+			Name: "primary",
+		},
+		Outbound: &mockTransformer{},
+	}
+	channelTwo := &biz.Channel{
+		Channel: &ent.Channel{
+			ID:   2,
+			Name: "fallback",
+		},
+		Outbound: &mockTransformer{},
+	}
+
+	state := &PersistenceState{
+		CurrentCandidateIndex: 0,
+		CurrentModelIndex:     0,
+		ChannelModelsCandidates: []*ChannelModelsCandidate{
+			{
+				Channel:  channelOne,
+				Priority: 0,
+				Models:   []biz.ChannelModelEntry{{RequestModel: "gpt-4", ActualModel: "gpt-4"}},
+			},
+			{
+				Channel:  channelTwo,
+				Priority: 0,
+				Models:   []biz.ChannelModelEntry{{RequestModel: "gpt-4", ActualModel: "gpt-4"}},
+			},
+		},
+	}
+	state.CurrentCandidate = state.ChannelModelsCandidates[0]
+	processor := &PersistentOutboundTransformer{
+		wrapped: &mockTransformer{},
+		state:   state,
+	}
+	err := &httpclient.Error{StatusCode: http.StatusInternalServerError}
+
+	require.False(t, processor.CanRetry(err))
+	require.True(t, processor.CanFallback(err))
+}
+
+func TestPersistentOutboundTransformer_PrepareForFallback_SkipsCandidateWithFailedCredentialOnly(t *testing.T) {
+	ctx := context.Background()
+
+	sharedKey := "shared-key"
+	otherKey := "other-key"
+	sharedFingerprint := biz.ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://api.openai.com/v1", sharedKey)
+	otherFingerprint := biz.ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://api.openai.com/v1", otherKey)
+
+	newCredentialCandidate := func(id int, name string, key string, fingerprint string) *ChannelModelsCandidate {
+		return &ChannelModelsCandidate{
+			Channel: &biz.Channel{
+				Channel: &ent.Channel{
+					ID:      id,
+					Name:    name,
+					Type:    channel.TypeOpenai,
+					BaseURL: "https://api.openai.com/v1",
+					Credentials: objects.ChannelCredentials{
+						APIKeys: []string{key},
+					},
+				},
+				Outbound: &mockTransformer{},
+			},
+			Priority: 0,
+			Models:   []biz.ChannelModelEntry{{RequestModel: "gpt-4", ActualModel: "gpt-4"}},
+		}
+	}
+
+	state := &PersistenceState{
+		CurrentCredentialFingerprint: sharedFingerprint,
+		CurrentCandidateIndex:        0,
+		CurrentModelIndex:            0,
+		ChannelModelsCandidates: []*ChannelModelsCandidate{
+			newCredentialCandidate(1, "failed", sharedKey, sharedFingerprint),
+			newCredentialCandidate(2, "same-failed-credential", sharedKey, sharedFingerprint),
+			newCredentialCandidate(3, "other-credential", otherKey, otherFingerprint),
+		},
+	}
+	state.ChannelModelsCandidates[0].Channel = state.ChannelModelsCandidates[0].Channel.WithCredentialViewsForSelection([]biz.ChannelCredentialView{
+		{
+			Fingerprint: sharedFingerprint,
+			Secret:      objects.UpstreamCredentialSecretFromAPIKey(sharedKey),
+			AuthKind:    "api_key",
+			SecretKind:  "api_key",
+			Enabled:     true,
+		},
+	})
+	state.ChannelModelsCandidates[1].Channel = state.ChannelModelsCandidates[1].Channel.WithCredentialViewsForSelection([]biz.ChannelCredentialView{
+		{
+			Fingerprint: sharedFingerprint,
+			Secret:      objects.UpstreamCredentialSecretFromAPIKey(sharedKey),
+			AuthKind:    "api_key",
+			SecretKind:  "api_key",
+			Enabled:     true,
+		},
+	})
+	state.ChannelModelsCandidates[2].Channel = state.ChannelModelsCandidates[2].Channel.WithCredentialViewsForSelection([]biz.ChannelCredentialView{
+		{
+			Fingerprint: otherFingerprint,
+			Secret:      objects.UpstreamCredentialSecretFromAPIKey(otherKey),
+			AuthKind:    "api_key",
+			SecretKind:  "api_key",
+			Enabled:     true,
+		},
+	})
+	state.CurrentCandidate = state.ChannelModelsCandidates[0]
+
+	processor := &PersistentOutboundTransformer{
+		wrapped: &mockTransformer{},
+		state:   state,
+	}
+
+	err := &httpclient.Error{StatusCode: http.StatusUnauthorized}
+	require.True(t, processor.CanFallback(err))
+	require.NoError(t, processor.PrepareForFallback(ctx, err))
+	require.Equal(t, 2, state.CurrentCandidateIndex)
+	require.Equal(t, 3, state.CurrentCandidate.Channel.ID)
+	require.Equal(t, []string{sharedFingerprint}, state.ExcludedCredentialFingerprints)
 }
 
 func TestSelectOutboundForCandidate(t *testing.T) {
@@ -1179,7 +1441,7 @@ func TestPersistentOutboundTransformer_CanRetry_429_WithoutRetryAfter(t *testing
 		Outbound: &mockTransformer{},
 	}
 
-	t.Run("429 without Retry-After (nil headers) should allow retry", func(t *testing.T) {
+	t.Run("429 without Retry-After (nil headers) should skip same-target retry", func(t *testing.T) {
 		outbound := &PersistentOutboundTransformer{
 			wrapped: &mockTransformer{},
 			state: &PersistenceState{
@@ -1197,10 +1459,10 @@ func TestPersistentOutboundTransformer_CanRetry_429_WithoutRetryAfter(t *testing
 			Headers:    nil,
 		}
 
-		require.True(t, outbound.CanRetry(httpErr))
+		require.False(t, outbound.CanRetry(httpErr))
 	})
 
-	t.Run("429 without Retry-After (empty headers) should allow retry", func(t *testing.T) {
+	t.Run("429 without Retry-After (empty headers) should skip same-target retry", func(t *testing.T) {
 		outbound := &PersistentOutboundTransformer{
 			wrapped: &mockTransformer{},
 			state: &PersistenceState{
@@ -1218,10 +1480,10 @@ func TestPersistentOutboundTransformer_CanRetry_429_WithoutRetryAfter(t *testing
 			Headers:    http.Header{},
 		}
 
-		require.True(t, outbound.CanRetry(httpErr))
+		require.False(t, outbound.CanRetry(httpErr))
 	})
 
-	t.Run("429 without Retry-After (headers but no Retry-After key) should allow retry", func(t *testing.T) {
+	t.Run("429 without Retry-After (headers but no Retry-After key) should skip same-target retry", func(t *testing.T) {
 		outbound := &PersistentOutboundTransformer{
 			wrapped: &mockTransformer{},
 			state: &PersistenceState{
@@ -1241,7 +1503,7 @@ func TestPersistentOutboundTransformer_CanRetry_429_WithoutRetryAfter(t *testing
 			},
 		}
 
-		require.True(t, outbound.CanRetry(httpErr))
+		require.False(t, outbound.CanRetry(httpErr))
 	})
 }
 

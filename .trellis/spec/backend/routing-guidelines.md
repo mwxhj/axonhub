@@ -172,6 +172,113 @@ Rules:
 
 ---
 
+## Retry / Fallback Guardrails
+
+### 1. Scope / Trigger
+
+Read this section before changing:
+
+- Retry classification, same-channel retry, cross-channel fallback, or cross-priority fallback.
+- Sticky-session escape behavior after a target fails.
+- Credential-aware fallback, excluded-target tracking, or retry attempt budgeting.
+- Any middleware or selector that can hide an upstream failure by silently switching targets.
+
+This section defines project-level constraints, not only one implementation. The goal is to preserve user control and keep failures observable.
+
+### 2. Contracts
+
+- Retry/fallback must not hide real routing or upstream problems behind aggressive silent recovery.
+- Retry/fallback must not decide for the user that a request has taken "too long" before the user cancels it or the configured request timeout expires.
+- The system may bound retry/fallback by structural scope such as target count, credential count, priority drop count, or total attempts. It must not add a separate hidden time-budget cutoff just for fallback behavior.
+- Recovery should depend primarily on fallback, not on repeated same-target retry. Same-target retry should stay rare and narrowly justified.
+- Same-target retry is less valuable once sticky-session and credential-aware fallback exist. In sticky routing, repeatedly hitting the same failed target usually harms escape behavior more than it helps cache locality.
+- Fallback must stay local before it becomes global:
+  - same target retry first when the error is plausibly transient,
+  - then same-channel credential fallback,
+  - then same-priority target fallback,
+  - then lower-priority fallback only after the current priority tier is exhausted.
+- Same-channel credential fallback requires the channel transformer/auth layer to
+  select credentials at request time and honor request-scoped credential
+  exclusions. API-key providers that read context can do this. OAuth/token
+  providers that bind the credential during channel construction must first be
+  migrated to a request-scoped provider before they can support automatic
+  same-channel credential fallback.
+- Sticky-session is a preference, not a promise. A failed sticky target must be allowed to escape through normal retry/fallback.
+- Successful fallback does not erase the original failure. The failed target, failed attempt count, and final successful target must remain observable in logs, request executions, and metrics.
+- Retry/fallback must not silently change user-visible semantics after output has started. Once a response has begun streaming user-visible tokens, silent fallback to a different upstream target is forbidden.
+- Fallback must only occur when switching targets has a plausible chance to succeed. Clearly non-retryable request/model/configuration errors should be surfaced, not spread across more targets.
+- Priority is a service contract. Normal routing stays inside the best eligible priority tier. Lower-priority fallback is a deliberate degradation step, not a normal balancing path.
+
+### 3. Validation & Error Matrix
+
+| Condition | Required Behavior |
+|-----------|-------------------|
+| User has not canceled and request timeout has not expired | Retry/fallback may continue within structural attempt limits. Do not stop early because a fallback-specific time budget was reached. |
+| User cancels the request | Stop retry/fallback and surface cancellation. |
+| Same target fails with plausibly transient error | Same-target retry may occur if the retry policy and error classification both allow it, but keep it minimal. Prefer later fallback over repeated same-target retries. |
+| Current credential fails with credential-scoped error and same channel has another eligible credential | Prefer same-channel credential fallback before switching channels. |
+| Current credential fails but the channel's auth layer cannot honor request-scoped credential exclusions | Do not pretend same-channel credential fallback happened. Use normal cross-channel fallback or surface the failure when no fallback target remains. |
+| Current priority tier still has untried eligible targets | Do not cross to a lower priority tier yet. |
+| Current priority tier is exhausted and lower-priority fallback is allowed | Lower-priority fallback may begin. |
+| Request/model/configuration error is clearly non-retryable | Surface the error. Do not keep hopping targets just to improve apparent success rate. |
+| Sticky target fails and same-target retry is not clearly justified | Escape to fallback rather than repeatedly retrying the sticky target. |
+| Sticky target fails but fallback succeeds elsewhere | Return success, refresh sticky binding to the successful target, and keep the original failure observable. |
+| Response has already emitted user-visible tokens | Do not perform silent fallback to a different target. |
+
+### 4. Good / Base / Bad Cases
+
+- Good: sticky target fails with a credential-scoped error, another credential on the same channel succeeds, and the request execution history shows both attempts.
+- Good: a sticky target gets at most one transient same-target retry, then quickly escapes to credential-aware fallback when the target still fails.
+- Good: all targets in the current priority tier fail, fallback drops to the next priority tier, and a later success refreshes sticky binding while leaving the earlier failures visible.
+- Base: a long-running request continues retry/fallback within normal request lifetime because the user has not canceled it.
+- Bad: fallback stops after an internal 4-second budget even though the user still wants the request to continue.
+- Bad: the router keeps retrying the same sticky target several times even though other eligible credentials or channels are available.
+- Bad: a failing sticky target silently causes many hidden retries and then only the final success is visible to operators.
+- Bad: the router jumps to a lower priority tier before exhausting the current one.
+- Bad: a stream has already started, fallback switches upstreams, and the user receives mixed output from different targets.
+
+### 5. Tests Required
+
+When changing retry/fallback behavior, add or update tests for:
+
+- No fallback-specific hidden time budget cuts off an otherwise valid request.
+- Same-target retry remains minimal and does not dominate recovery when fallback targets are available.
+- Same-channel credential fallback is attempted before cross-channel fallback when classification says the failure is credential-scoped.
+- Credential fallback tests must cover both request-scoped API-key providers and construction-time auth providers, or explicitly document that construction-time auth providers are not covered by same-channel fallback yet.
+- Lower-priority fallback does not begin until the current priority tier is exhausted.
+- Successful fallback preserves observability of the failed attempts instead of only recording the final success.
+- Silent fallback is blocked after user-visible streaming output has started.
+- Non-retryable request/model/configuration errors surface directly without extra target hopping.
+
+### 6. Wrong vs Correct
+
+#### Wrong
+
+```text
+request fails
+-> fallback timer budget reached at 4s
+-> stop retrying early
+-> return timeout-like failure even though user did not cancel
+```
+
+This lets internal fallback heuristics override user intent and makes long-request failures harder to reason about.
+
+#### Correct
+
+```text
+request fails
+-> classify failure
+-> retry locally if plausible
+-> same-channel credential fallback if applicable
+-> same-priority fallback
+-> lower-priority fallback only after exhaustion
+-> continue until success, user cancel, configured timeout, or structural attempt limits
+```
+
+This keeps fallback conservative, observable, and subordinate to user intent.
+
+---
+
 ## Credential / Provider Quota Execution Observability
 
 ### 1. Scope / Trigger

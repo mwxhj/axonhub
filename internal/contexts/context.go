@@ -455,6 +455,27 @@ func GetAllowedCredentials(ctx context.Context) ([]int, []string, bool) {
 	return slices.Clone(container.AllowedCredentialIDs), slices.Clone(container.AllowedCredentialFingerprints), true
 }
 
+// WithExcludedCredentials stores credential identities that routing has already
+// attempted and failed during the current request. Channel credential providers
+// should avoid selecting these credentials on fallback attempts.
+func WithExcludedCredentials(ctx context.Context, credentialIDs []int, fingerprints []string) context.Context {
+	container := getContainer(ctx)
+	container.ExcludedCredentialIDs = slices.Clone(credentialIDs)
+	container.ExcludedCredentialFingerprints = slices.Clone(fingerprints)
+
+	return withContainer(ctx, container)
+}
+
+// GetExcludedCredentials retrieves the request-scoped credential exclusion set.
+func GetExcludedCredentials(ctx context.Context) ([]int, []string, bool) {
+	container := getContainer(ctx)
+	if len(container.ExcludedCredentialIDs) == 0 && len(container.ExcludedCredentialFingerprints) == 0 {
+		return nil, nil, false
+	}
+
+	return slices.Clone(container.ExcludedCredentialIDs), slices.Clone(container.ExcludedCredentialFingerprints), true
+}
+
 // WithProjectID stores the project ID in the context.
 func WithProjectID(ctx context.Context, projectID int) context.Context {
 	container := getContainer(ctx)

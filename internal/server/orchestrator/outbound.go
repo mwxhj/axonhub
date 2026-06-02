@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/samber/lo"
@@ -422,6 +424,7 @@ func (p *PersistentOutboundTransformer) TransformRequest(ctx context.Context, ll
 	ctx = contexts.WithCredentialSelectionSeed(ctx, "")
 	ctx = contexts.WithPreferredCredential(ctx, 0, "")
 	ctx = contexts.WithAllowedCredentials(ctx, nil, nil)
+	ctx = contexts.WithExcludedCredentials(ctx, p.state.ExcludedCredentialIDs, p.state.ExcludedCredentialFingerprints)
 	contexts.WithChannelCredential(ctx, 0, "", "")
 	contexts.WithChannelCredentialIdentity(ctx, "", "")
 	contexts.WithChannelCredentialMetadata(ctx, "", "", "", "")
@@ -689,7 +692,9 @@ func (p *PersistentOutboundTransformer) GetRequestedModel() string {
 // HasMoreChannels returns true if there are more candidates available for retry.
 // It implements the pipeline.Retryable interface.
 func (p *PersistentOutboundTransformer) HasMoreChannels() bool {
-	return p.state.CurrentCandidateIndex+1 < len(p.state.ChannelModelsCandidates)
+	next := p.nextCandidateIndexForFallback(0, "")
+
+	return next >= 0
 }
 
 // resetPassThroughStreamState cancels the current attempt's fan-out goroutine (if any)
@@ -713,12 +718,13 @@ func (p *PersistentOutboundTransformer) NextChannel(ctx context.Context) error {
 	// so it exits promptly and releases its upstream HTTP connection.
 	p.resetPassThroughStreamState()
 
-	p.state.CurrentCandidateIndex++
-
-	p.state.CurrentModelIndex = 0
-	if p.state.CurrentCandidateIndex >= len(p.state.ChannelModelsCandidates) {
+	nextIndex := p.nextCandidateIndexForFallback(0, "")
+	if nextIndex < 0 {
 		return errors.New("no more candidates available for retry")
 	}
+
+	p.state.CurrentModelIndex = 0
+	p.state.CurrentCandidateIndex = nextIndex
 
 	// Reset request execution for the new candidate
 	p.state.RequestExec = nil
@@ -740,11 +746,108 @@ func (p *PersistentOutboundTransformer) NextChannel(ctx context.Context) error {
 	return nil
 }
 
+// CanFallback reports whether the failed attempt can switch to another
+// execution target. This is broader than a channel switch: credential-scoped
+// failures first try another credential on the same channel before moving to
+// the next channel candidate.
+func (p *PersistentOutboundTransformer) CanFallback(err error) bool {
+	if p.state == nil || p.state.CurrentCandidate == nil {
+		return false
+	}
+
+	if !isFallbackableError(err) {
+		return false
+	}
+
+	failedID, failedFingerprint := p.currentCredentialForExclusion(err)
+	if isCredentialScopedFallbackError(err) &&
+		(failedID > 0 || failedFingerprint != "") &&
+		p.hasSameChannelCredentialFallback(failedID, failedFingerprint) {
+		return true
+	}
+
+	return p.nextCandidateIndexForFallback(failedID, failedFingerprint) >= 0
+}
+
+// PrepareForFallback switches to the next execution target after an attempt
+// fails. It preserves candidate ordering, but lets credential-scoped failures
+// escape locally to another credential in the same channel first.
+func (p *PersistentOutboundTransformer) PrepareForFallback(ctx context.Context, err error) error {
+	if p.state == nil || p.state.CurrentCandidate == nil {
+		return errors.New("no current candidate available for fallback")
+	}
+
+	p.resetPassThroughStreamState()
+	failedID, failedFingerprint := p.currentCredentialForExclusion(err)
+	if isCredentialScopedFallbackError(err) {
+		p.excludeFailedCredential(failedID, failedFingerprint)
+	}
+
+	if isCredentialScopedFallbackError(err) &&
+		(failedID > 0 || failedFingerprint != "") &&
+		p.hasSameChannelCredentialFallback(0, "") {
+		p.state.RequestExec = nil
+		p.state.FallbackTargetSwitches++
+		p.wrapped = selectOutboundForCandidate(p.state.CurrentCandidate)
+
+		if log.DebugEnabled(ctx) {
+			candidate := p.state.CurrentCandidate
+			model := ""
+			if p.state.CurrentModelIndex < len(candidate.Models) {
+				model = candidate.Models[p.state.CurrentModelIndex].ActualModel
+			}
+			log.Debug(ctx, "switching to same-channel credential fallback",
+				log.String("channel", candidate.Channel.Name),
+				log.String("model", model),
+				log.Int("channel_id", candidate.Channel.ID),
+				log.Int("current_candidate_index", p.state.CurrentCandidateIndex),
+				log.Int("current_model_index", p.state.CurrentModelIndex),
+			)
+		}
+
+		return nil
+	}
+
+	nextIndex := p.nextCandidateIndexForFallback(0, "")
+	if nextIndex < 0 {
+		return errors.New("no more candidates available for retry")
+	}
+
+	p.state.CurrentCandidateIndex = nextIndex
+	p.state.CurrentModelIndex = 0
+	p.state.RequestExec = nil
+	p.state.FallbackTargetSwitches++
+
+	candidate := p.state.ChannelModelsCandidates[p.state.CurrentCandidateIndex]
+	p.state.CurrentCandidate = candidate
+	p.wrapped = selectOutboundForCandidate(candidate)
+
+	if log.DebugEnabled(ctx) {
+		model := ""
+		if len(candidate.Models) > 0 {
+			model = candidate.Models[0].ActualModel
+		}
+		log.Debug(ctx, "switching to next fallback channel",
+			log.String("channel", candidate.Channel.Name),
+			log.String("model", model),
+			log.Int("index", p.state.CurrentCandidateIndex),
+			log.Int("priority", candidate.Priority),
+			log.String("api_format", candidate.APIFormat),
+		)
+	}
+
+	return nil
+}
+
 // CanRetry returns true if the current channel can be retried.
 // It implements the pipeline.ChannelRetryable interface, it just check the error is retryable, the
 // pipeline will ensure the maxSameChannelRetries is not exceeded.
 func (p *PersistentOutboundTransformer) CanRetry(err error) bool {
 	if p.state.CurrentCandidate == nil {
+		return false
+	}
+
+	if err == nil {
 		return false
 	}
 
@@ -770,29 +873,44 @@ func (p *PersistentOutboundTransformer) CanRetry(err error) bool {
 		return true
 	}
 
-	// 429 Too Many Requests: check if Retry-After header is present
-	if httpclient.HasRetryAfterHeader(err) {
-		// If Retry-After header is present, skip same-channel retry
-		// (the channel is explicitly rate-limited by upstream)
-		log.Debug(context.Background(), "429 with Retry-After, skipping same-channel retry",
+	if isCredentialScopedFallbackError(err) {
+		if httpclient.HasRetryAfterHeader(err) {
+			log.Debug(context.Background(), "credential-scoped error with Retry-After, skipping same-target retry",
+				log.Int("channel_id", p.state.CurrentCandidate.Channel.ID),
+			)
+		} else {
+			log.Debug(context.Background(), "credential-scoped error, skipping same-target retry",
+				log.Int("channel_id", p.state.CurrentCandidate.Channel.ID),
+			)
+		}
+
+		return false
+	}
+
+	if !isFallbackableError(err) {
+		return false
+	}
+
+	statusCode := ExtractStatusCodeFromError(err)
+	if statusCode >= 400 && statusCode < 500 {
+		log.Debug(context.Background(), "non-transient client error, skipping same-target retry",
 			log.Int("channel_id", p.state.CurrentCandidate.Channel.ID),
 		)
 
 		return false
 	}
 
-	// 429 without Retry-After header, allow same-channel retry (might be transient rate limit)
-	if httpclient.IsRateLimitErr(err) {
-		log.Debug(context.Background(), "429 without Retry-After, allowing same-channel retry",
-			log.Int("channel_id", p.state.CurrentCandidate.Channel.ID),
-		)
-
-		return true
-	}
-
 	// if there are more models available in the current candidate, try the next model.
 	if p.state.CurrentModelIndex+1 < len(p.state.CurrentCandidate.Models) {
 		return true
+	}
+
+	if p.nextCandidateIndexForFallback(0, "") >= 0 {
+		log.Debug(context.Background(), "fallback target available, skipping same-target retry",
+			log.Int("channel_id", p.state.CurrentCandidate.Channel.ID),
+		)
+
+		return false
 	}
 
 	// otherwise check if the error is retryable.
@@ -845,6 +963,159 @@ func (p *PersistentOutboundTransformer) PrepareForRetry(ctx context.Context) err
 	}
 
 	return nil
+}
+
+func (p *PersistentOutboundTransformer) currentCredentialForExclusion(err error) (int, string) {
+	if !isCredentialScopedFallbackError(err) || p.state == nil {
+		return 0, ""
+	}
+
+	return p.state.CurrentCredentialID, p.state.CurrentCredentialFingerprint
+}
+
+func (p *PersistentOutboundTransformer) excludeFailedCredential(credentialID int, fingerprint string) {
+	if p.state == nil {
+		return
+	}
+
+	if credentialID > 0 && !slices.Contains(p.state.ExcludedCredentialIDs, credentialID) {
+		p.state.ExcludedCredentialIDs = append(p.state.ExcludedCredentialIDs, credentialID)
+	}
+	if fingerprint != "" && !slices.Contains(p.state.ExcludedCredentialFingerprints, fingerprint) {
+		p.state.ExcludedCredentialFingerprints = append(p.state.ExcludedCredentialFingerprints, fingerprint)
+	}
+}
+
+func (p *PersistentOutboundTransformer) hasSameChannelCredentialFallback(extraExcludedID int, extraExcludedFingerprint string) bool {
+	if p.state == nil || p.state.CurrentCandidate == nil {
+		return false
+	}
+
+	candidate := p.state.CurrentCandidate
+	if candidate.Channel == nil {
+		return false
+	}
+
+	views := candidate.Channel.CredentialViews()
+	if len(views) == 0 {
+		return false
+	}
+
+	for _, view := range views {
+		if !sameChannelFallbackCredentialViewSelectable(view) {
+			continue
+		}
+		if credentialViewExcludedByState(p.state, view, extraExcludedID, extraExcludedFingerprint) {
+			continue
+		}
+
+		return true
+	}
+
+	return false
+}
+
+func (p *PersistentOutboundTransformer) nextCandidateIndexForFallback(extraExcludedID int, extraExcludedFingerprint string) int {
+	if p.state == nil {
+		return -1
+	}
+
+	currentCandidate := p.state.CurrentCandidate
+	if currentCandidate == nil &&
+		p.state.CurrentCandidateIndex >= 0 &&
+		p.state.CurrentCandidateIndex < len(p.state.ChannelModelsCandidates) {
+		currentCandidate = p.state.ChannelModelsCandidates[p.state.CurrentCandidateIndex]
+	}
+	if currentCandidate == nil {
+		return -1
+	}
+
+	currentPriority := currentCandidate.Priority
+	for i := p.state.CurrentCandidateIndex + 1; i < len(p.state.ChannelModelsCandidates); i++ {
+		candidate := p.state.ChannelModelsCandidates[i]
+		if candidate == nil || candidate.Priority != currentPriority {
+			continue
+		}
+		if candidateExecutableAfterCredentialExclusions(p.state, candidate, extraExcludedID, extraExcludedFingerprint) {
+			return i
+		}
+	}
+
+	for i := p.state.CurrentCandidateIndex + 1; i < len(p.state.ChannelModelsCandidates); i++ {
+		candidate := p.state.ChannelModelsCandidates[i]
+		if candidate == nil || candidate.Priority <= currentPriority {
+			continue
+		}
+		if candidateExecutableAfterCredentialExclusions(p.state, candidate, extraExcludedID, extraExcludedFingerprint) {
+			return i
+		}
+	}
+
+	return -1
+}
+
+func candidateExecutableAfterCredentialExclusions(
+	state *PersistenceState,
+	candidate *ChannelModelsCandidate,
+	extraExcludedID int,
+	extraExcludedFingerprint string,
+) bool {
+	if candidate == nil || candidate.Channel == nil {
+		return false
+	}
+
+	views := candidate.Channel.CredentialViews()
+	if len(views) == 0 {
+		return true
+	}
+
+	for _, view := range views {
+		if !view.Enabled {
+			continue
+		}
+		if credentialViewExcludedByState(state, view, extraExcludedID, extraExcludedFingerprint) {
+			continue
+		}
+
+		return true
+	}
+
+	return false
+}
+
+func sameChannelFallbackCredentialViewSelectable(view biz.ChannelCredentialView) bool {
+	if !view.Enabled || strings.TrimSpace(view.Secret.APIKey) == "" {
+		return false
+	}
+
+	authKind := strings.ToLower(strings.TrimSpace(view.AuthKind))
+	secretKind := strings.ToLower(strings.TrimSpace(view.SecretKind))
+
+	return authKind == "api_key" || secretKind == "api_key"
+}
+
+func credentialViewExcludedByState(
+	state *PersistenceState,
+	view biz.ChannelCredentialView,
+	extraExcludedID int,
+	extraExcludedFingerprint string,
+) bool {
+	if state == nil {
+		return false
+	}
+
+	if view.CredentialID > 0 {
+		if view.CredentialID == extraExcludedID || slices.Contains(state.ExcludedCredentialIDs, view.CredentialID) {
+			return true
+		}
+	}
+	if view.Fingerprint != "" {
+		if view.Fingerprint == extraExcludedFingerprint || slices.Contains(state.ExcludedCredentialFingerprints, view.Fingerprint) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // CustomizeExecutor customizes the executor for the current channel.

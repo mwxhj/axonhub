@@ -87,6 +87,12 @@ type contextContainer struct {
 	// channel credential provider to the credential views kept by routing.
 	AllowedCredentialIDs          []int
 	AllowedCredentialFingerprints []string
+
+	// ExcludedCredentialIDs and ExcludedCredentialFingerprints record
+	// credential identities that already failed in this request and should not
+	// be selected again by channel credential providers.
+	ExcludedCredentialIDs          []int
+	ExcludedCredentialFingerprints []string
 }
 
 // getContainer retrieves the existing container from context, or creates a new one and stores it in the context if it doesn't exist.

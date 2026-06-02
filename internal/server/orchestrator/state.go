@@ -89,6 +89,17 @@ type PersistenceState struct {
 	PreferredCredentialID int
 	// PreferredCredentialFingerprint stores the sticky credential identity selected by routing.
 	PreferredCredentialFingerprint string
+	// ExcludedCredentialIDs stores request-scoped credentials that failed and
+	// should not be selected again by the current fallback chain.
+	ExcludedCredentialIDs []int
+	// ExcludedCredentialFingerprints stores request-scoped credential
+	// fingerprints that failed and should not be selected again by the current
+	// fallback chain.
+	ExcludedCredentialFingerprints []string
+	// FallbackTargetSwitches counts execution-target changes after failures.
+	// Target switches include same-channel credential fallback and cross-channel
+	// fallback. Same-target retry is tracked separately by the pipeline.
+	FallbackTargetSwitches int
 	// CurrentCredentialAPIKey stores the raw upstream API key selected for the current attempt.
 	// It is used only for existing auto-disable logic and must not be logged in full.
 	CurrentCredentialAPIKey string

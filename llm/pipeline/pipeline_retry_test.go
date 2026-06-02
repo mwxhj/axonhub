@@ -150,6 +150,29 @@ func (m *mockExecutor) DoStream(ctx context.Context, req *httpclient.Request) (s
 	return nil, nil
 }
 
+type mockTargetFallbackOutbound struct {
+	*mockOutbound
+
+	canFallback        func(error) bool
+	prepareForFallback func(context.Context, error) error
+}
+
+func (m *mockTargetFallbackOutbound) CanFallback(err error) bool {
+	if m.canFallback != nil {
+		return m.canFallback(err)
+	}
+
+	return false
+}
+
+func (m *mockTargetFallbackOutbound) PrepareForFallback(ctx context.Context, err error) error {
+	if m.prepareForFallback != nil {
+		return m.prepareForFallback(ctx, err)
+	}
+
+	return nil
+}
+
 type mockMiddleware struct {
 	Middleware
 
@@ -270,6 +293,75 @@ func TestPipeline_Process_RetryLogic(t *testing.T) {
 		require.NotNil(t, res)
 		require.Equal(t, 2, execCalls)
 		require.Equal(t, 1, switchCalls)
+	})
+
+	t.Run("TargetFallbackRetrySuccess", func(t *testing.T) {
+		execCalls := 0
+		executor := &mockExecutor{
+			do: func(ctx context.Context, req *httpclient.Request) (*httpclient.Response, error) {
+				execCalls++
+				if execCalls == 1 {
+					return nil, errors.New("credential error")
+				}
+
+				return &httpclient.Response{}, nil
+			},
+		}
+
+		fallbackCalls := 0
+		outbound := &mockTargetFallbackOutbound{
+			mockOutbound: &mockOutbound{canRetry: func(err error) bool { return false }},
+			canFallback:  func(err error) bool { return true },
+			prepareForFallback: func(ctx context.Context, err error) error {
+				fallbackCalls++
+				return nil
+			},
+		}
+
+		p := &pipeline{
+			Executor:        executor,
+			Inbound:         inbound,
+			Outbound:        outbound,
+			retryConfigured: true,
+		}
+
+		res, err := p.Process(ctx, &httpclient.Request{})
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.Equal(t, 2, execCalls)
+		require.Equal(t, 1, fallbackCalls)
+	})
+
+	t.Run("TargetFallbackDisabledWithoutRetryConfiguration", func(t *testing.T) {
+		execCalls := 0
+		executor := &mockExecutor{
+			do: func(ctx context.Context, req *httpclient.Request) (*httpclient.Response, error) {
+				execCalls++
+				return nil, errors.New("credential error")
+			},
+		}
+
+		fallbackCalls := 0
+		outbound := &mockTargetFallbackOutbound{
+			mockOutbound: &mockOutbound{canRetry: func(err error) bool { return false }},
+			canFallback:  func(err error) bool { return true },
+			prepareForFallback: func(ctx context.Context, err error) error {
+				fallbackCalls++
+				return nil
+			},
+		}
+
+		p := &pipeline{
+			Executor: executor,
+			Inbound:  inbound,
+			Outbound: outbound,
+		}
+
+		res, err := p.Process(ctx, &httpclient.Request{})
+		require.Error(t, err)
+		require.Nil(t, res)
+		require.Equal(t, 1, execCalls)
+		require.Zero(t, fallbackCalls)
 	})
 
 	t.Run("MixedRetrySuccess", func(t *testing.T) {

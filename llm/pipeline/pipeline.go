@@ -23,6 +23,19 @@ type Retryable interface {
 	NextChannel(ctx context.Context) error
 }
 
+// TargetFallbackRetryable allows an outbound transformer to choose the next
+// execution target with access to the error that caused fallback. This supports
+// target changes that are not strictly channel switches, such as selecting a
+// different credential within the same channel.
+type TargetFallbackRetryable interface {
+	// CanFallback returns true when switching execution target is appropriate
+	// and another structurally bounded target is available.
+	CanFallback(err error) bool
+
+	// PrepareForFallback prepares the next execution target.
+	PrepareForFallback(ctx context.Context, err error) error
+}
+
 // ChannelRetryable interface for transformers that support same-channel retry.
 type ChannelRetryable interface {
 	// CanRetry returns true if the transformer can retry for current channel given the error that occurred.
@@ -53,6 +66,7 @@ func WithRetry(maxChannelRetries, maxSameChannelRetries int, retryDelay time.Dur
 		p.maxChannelRetries = maxChannelRetries
 		p.maxSameChannelRetries = maxSameChannelRetries
 		p.retryDelay = retryDelay
+		p.retryConfigured = true
 	}
 }
 
@@ -114,6 +128,7 @@ type pipeline struct {
 	maxChannelRetries      int
 	maxSameChannelRetries  int
 	retryDelay             time.Duration
+	retryConfigured        bool
 	emptyResponseDetection bool
 }
 
@@ -265,6 +280,7 @@ func (p *pipeline) Process(ctx context.Context, request *httpclient.Request) (*R
 
 	channelSwitches := 0
 	sameChannelRetries := 0
+	targetFallbacks := 0
 
 	// Step 3: Process the request
 	for {
@@ -304,7 +320,21 @@ func (p *pipeline) Process(ctx context.Context, request *httpclient.Request) (*R
 
 		// 2. If same-channel retry not possible/exhausted, try channel switching
 		if !canRetry {
-			if retryable, ok := p.Outbound.(Retryable); ok {
+			if fallbackRetryable, ok := p.Outbound.(TargetFallbackRetryable); ok {
+				if p.retryConfigured && fallbackRetryable.CanFallback(lastErr) {
+					if err := fallbackRetryable.PrepareForFallback(ctx, lastErr); err == nil {
+						targetFallbacks++
+						sameChannelRetries = 0 // Reset same-channel attempts for the new target
+						canRetry = true
+
+						slog.DebugContext(ctx, "switched to fallback target",
+							slog.Int("target_fallback_attempt", targetFallbacks),
+						)
+					} else {
+						slog.WarnContext(ctx, "failed to prepare target fallback", slog.Any("error", err))
+					}
+				}
+			} else if retryable, ok := p.Outbound.(Retryable); ok {
 				if channelSwitches < p.maxChannelRetries && retryable.HasMoreChannels() {
 					if err := retryable.NextChannel(ctx); err == nil {
 						channelSwitches++
@@ -336,6 +366,7 @@ func (p *pipeline) Process(ctx context.Context, request *httpclient.Request) (*R
 			slog.Any("error", lastErr),
 			slog.Int("channel_switches", channelSwitches),
 			slog.Int("same_channel_retries", sameChannelRetries),
+			slog.Int("target_fallbacks", targetFallbacks),
 		)
 	}
 
