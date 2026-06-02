@@ -205,3 +205,37 @@ Implemented sticky-session first-bind balancing by local key quota usage ratio, 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 7: Credential quota display and sticky fallback
+
+**Date**: 2026-06-02
+**Task**: Credential quota display and sticky fallback
+**Branch**: `unstable`
+
+### Summary
+
+Displayed local credential quota amounts in the credentials table and implemented credential-aware sticky fallback with request-scoped key exclusions, fallback-first retry behavior, priority-tier preservation, docs, and focused tests.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `52a39a0` | (see git log) |
+| `04d4078` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
