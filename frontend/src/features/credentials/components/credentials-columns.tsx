@@ -24,14 +24,58 @@ function providerQuotaLabel(credential: UpstreamCredential, t: TFunction) {
   return `${t(`credentials.providerQuota.status.${status.status}`, { defaultValue: status.status })} · ${status.providerType}`;
 }
 
-function localQuotaLabel(credential: UpstreamCredential, t: TFunction) {
-  const scope = credential.quotaScope;
-  if (!scope) {
-    return t('credentials.quota.none');
+function hasQuotaAmount(value: string | null | undefined) {
+  return Boolean(value?.trim());
+}
+
+function formatQuotaAmount(value: string | null | undefined, fallback = '-') {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return fallback;
   }
 
-  const status = scope.status ? t(`credentials.quota.status.${scope.status}`, { defaultValue: scope.status }) : t('credentials.quota.status.unknown');
-  return `${status} · ${scope.name || t('credentials.quota.defaultScope')}`;
+  const numeric = Number(trimmed);
+  if (!Number.isFinite(numeric)) {
+    return trimmed;
+  }
+
+  return new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: 6,
+  }).format(numeric);
+}
+
+function LocalQuotaCell({ credential, t }: { credential: UpstreamCredential; t: TFunction }) {
+  const scope = credential.quotaScope;
+  if (!scope) {
+    return <span className='text-muted-foreground text-xs'>{t('credentials.quota.none')}</span>;
+  }
+
+  const status = scope.status
+    ? t(`credentials.quota.status.${scope.status}`, { defaultValue: scope.status })
+    : t('credentials.quota.status.unknown');
+  const scopeLabel = `${status} · ${scope.name || t('credentials.quota.defaultScope')}`;
+  const shouldShowAmounts = hasQuotaAmount(scope.usedAmount) || hasQuotaAmount(scope.limitAmount);
+  const usedAmount = formatQuotaAmount(scope.usedAmount, '0');
+  const limitAmount = formatQuotaAmount(scope.limitAmount);
+  const unit = scope.unit ? t(`credentials.quota.units.${scope.unit}`, { defaultValue: scope.unit }) : '';
+  const amountLabel = `${t('credentials.fields.quotaUsedAmount')} ${usedAmount} / ${t('credentials.fields.quotaLimitAmount')} ${limitAmount}${unit ? ` ${unit}` : ''}`;
+
+  return (
+    <div className='min-w-40 space-y-0.5 text-xs'>
+      <div className='text-muted-foreground truncate' title={scopeLabel}>
+        {scopeLabel}
+      </div>
+      {shouldShowAmounts ? (
+        <div className='truncate' title={amountLabel}>
+          <span className='text-muted-foreground'>{t('credentials.fields.quotaUsedAmount')} </span>
+          <span className='font-mono'>{usedAmount}</span>
+          <span className='text-muted-foreground'> / {t('credentials.fields.quotaLimitAmount')} </span>
+          <span className='font-mono'>{limitAmount}</span>
+          {unit ? <span className='text-muted-foreground'> {unit}</span> : null}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export const createCredentialColumns = (t: TFunction): ColumnDef<UpstreamCredential>[] => [
@@ -57,7 +101,7 @@ export const createCredentialColumns = (t: TFunction): ColumnDef<UpstreamCredent
   {
     id: 'localQuota',
     header: t('credentials.columns.localQuota'),
-    cell: ({ row }) => <span className='text-muted-foreground line-clamp-2 text-xs'>{localQuotaLabel(row.original, t)}</span>,
+    cell: ({ row }) => <LocalQuotaCell credential={row.original} t={t} />,
   },
   {
     id: 'providerQuota',
