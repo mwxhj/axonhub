@@ -52,9 +52,7 @@ export type {
 const CREDENTIAL_FIELDS = `
   id
   name
-  keyHint
   quotaScopeID
-  secretFingerprint
   quotaScope {
     id
     name
@@ -74,16 +72,8 @@ const CREDENTIAL_FIELDS = `
   }
   providerQuotaStatuses {
     id
-    channelID
-    scopeKey
-    credentialID
-    credentialFingerprint
-    secretFingerprint
-    resourceScopeKey
-    quotaScopeID
     providerType
     status
-    quotaData
     nextResetAt
     ready
     nextCheckAt
@@ -97,7 +87,6 @@ const CREDENTIAL_FIELDS = `
   }
   quotaStatus
   lastError
-  fingerprint
   status
   remark
   createdAt
@@ -260,12 +249,6 @@ const UPSTREAM_CREDENTIAL_DETAIL_QUERY = `
               modelID
               responseStatusCode
               errorMessage
-              credentialNameSnapshot
-              credentialKeyHint
-              credentialSource
-              resourceScopeKey
-              quotaScopeNameSnapshot
-              quotaScopeStatusSnapshot
               channel {
                 id
                 name
@@ -297,12 +280,6 @@ const UPSTREAM_CREDENTIAL_DETAIL_QUERY = `
               totalCost
               source
               format
-              credentialNameSnapshot
-              credentialKeyHint
-              credentialSource
-              resourceScopeKey
-              quotaScopeNameSnapshot
-              quotaScopeStatusSnapshot
               channel {
                 id
                 name

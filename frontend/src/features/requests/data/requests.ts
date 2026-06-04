@@ -39,40 +39,16 @@ function buildRequestsQuery(permissions: { canViewApiKeys: boolean; canViewChann
     : '';
   const credentialFields = permissions.canViewChannels
     ? `
-                  credentialID
-                  credentialFingerprint
-                  secretFingerprint
-                  resourceScopeKey
-                  quotaScopeID
-                  quotaScopeNameSnapshot
-                  quotaScopeStatusSnapshot
-                  credentialNameSnapshot
-                  credentialKeyHint
-                  credentialSource
-                  credentialQuotaStatusSnapshot
                   credential {
                     id
                     name
-                    keyHint
                   }`
     : '';
   const usageLogCredentialFields = permissions.canViewChannels
     ? `
-                  credentialID
-                  credentialFingerprint
-                  secretFingerprint
-                  resourceScopeKey
-                  quotaScopeID
-                  quotaScopeNameSnapshot
-                  quotaScopeStatusSnapshot
-                  credentialNameSnapshot
-                  credentialKeyHint
-                  credentialSource
-                  credentialQuotaStatusSnapshot
                   credential {
                     id
                     name
-                    keyHint
                   }`
     : '';
 
@@ -166,21 +142,9 @@ function buildRequestDetailQuery(permissions: { canViewApiKeys: boolean; canView
     : '';
   const usageLogCredentialFields = permissions.canViewChannels
     ? `
-                  credentialID
-                  credentialFingerprint
-                  secretFingerprint
-                  resourceScopeKey
-                  quotaScopeID
-                  quotaScopeNameSnapshot
-                  quotaScopeStatusSnapshot
-                  credentialNameSnapshot
-                  credentialKeyHint
-                  credentialSource
-                  credentialQuotaStatusSnapshot
                   credential {
                     id
                     name
-                    keyHint
                   }`
     : '';
 
@@ -279,21 +243,9 @@ function buildRequestExecutionsQuery(permissions: { canViewChannels: boolean }) 
     : '';
   const credentialFields = permissions.canViewChannels
     ? `
-                credentialID
-                credentialFingerprint
-                secretFingerprint
-                resourceScopeKey
-                quotaScopeID
-                quotaScopeNameSnapshot
-                quotaScopeStatusSnapshot
-                credentialNameSnapshot
-                credentialKeyHint
-                credentialSource
-                credentialQuotaStatusSnapshot
                 credential {
                   id
                   name
-                  keyHint
                 }`
     : '';
 

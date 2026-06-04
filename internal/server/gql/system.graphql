@@ -280,11 +280,13 @@ input UpdateSystemChannelSettingsInput {
 type SystemGeneralSettings {
   currencyCode: String!
   timezone: String!
+  credentialQuotaDailyResetTime: String!
 }
 
 input UpdateSystemGeneralSettingsInput {
   currencyCode: String
   timezone: String
+  credentialQuotaDailyResetTime: String
 }
 
 type VideoStorageSettings {

@@ -18,21 +18,9 @@ function buildUsageLogsQuery(permissions: { canViewChannels: boolean }) {
     : '';
   const credentialFields = permissions.canViewChannels
     ? `
-            credentialID
-            credentialFingerprint
-            secretFingerprint
-            resourceScopeKey
-            quotaScopeID
-            quotaScopeNameSnapshot
-            quotaScopeStatusSnapshot
-            credentialNameSnapshot
-            credentialKeyHint
-            credentialSource
-            credentialQuotaStatusSnapshot
             credential {
               id
               name
-              keyHint
             }`
     : '';
 
@@ -90,21 +78,9 @@ function buildUsageLogDetailQuery(permissions: { canViewChannels: boolean }) {
     : '';
   const credentialFields = permissions.canViewChannels
     ? `
-          credentialID
-          credentialFingerprint
-          secretFingerprint
-          resourceScopeKey
-          quotaScopeID
-          quotaScopeNameSnapshot
-          quotaScopeStatusSnapshot
-          credentialNameSnapshot
-          credentialKeyHint
-          credentialSource
-          credentialQuotaStatusSnapshot
           credential {
             id
             name
-            keyHint
           }`
     : '';
 

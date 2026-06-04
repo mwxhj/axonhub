@@ -50,12 +50,13 @@ function ChannelCredentialRow({ credential, refItem }: { credential: UpstreamCre
   const providerQuotaStatus =
     credential.providerQuotaStatuses?.find((status) => !status.ready || status.status === 'exhausted') ??
     credential.providerQuotaStatuses?.find((status) => status.status === 'warning');
+  const credentialLabel = credential.name?.trim() || t('credentials.unnamed');
 
   return (
     <div className='grid gap-3 border-b py-3 last:border-b-0 md:grid-cols-[1fr_120px_92px] md:items-center'>
       <div className='min-w-0'>
         <div className='flex min-w-0 items-center gap-2'>
-          <span className='truncate font-medium'>{credential.name || credential.fingerprint}</span>
+          <span className='truncate font-medium'>{credentialLabel}</span>
           <Badge variant={credential.status === 'enabled' ? 'default' : 'secondary'}>{t(`credentials.status.${credential.status}`)}</Badge>
           {providerQuotaStatus && (
             <Badge variant='outline'>
@@ -63,7 +64,6 @@ function ChannelCredentialRow({ credential, refItem }: { credential: UpstreamCre
             </Badge>
           )}
         </div>
-        <div className='text-muted-foreground mt-1 truncate text-xs'>{credential.keyHint || '-'}</div>
       </div>
 
       <div className='flex items-center gap-2'>
@@ -186,7 +186,7 @@ export function ChannelsCredentialsDialog({ open, onOpenChange, channel }: Chann
                   <SelectContent>
                     {attachableCredentials.map((credential) => (
                       <SelectItem key={credential.id} value={credential.id}>
-                        {credential.name || credential.fingerprint}
+                        {credential.name?.trim() || t('credentials.unnamed')}
                       </SelectItem>
                     ))}
                   </SelectContent>

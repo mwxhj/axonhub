@@ -134,26 +134,59 @@ func TestUpstreamCredentialService_CreateAndUpdateInlineQuotaScope(t *testing.T)
 func TestNormalizeCreateCredentialQuotaScopeInputDefaultsDailyAndMonthlyResetAt(t *testing.T) {
 	loc := time.FixedZone("UTC+8", 8*60*60)
 	now := time.Date(2026, 6, 1, 15, 30, 0, 0, loc)
+	resetConfig := credentialQuotaResetConfig{
+		Location:       loc,
+		DailyResetTime: "09:30",
+	}
 
 	daily := credentialquotascope.ResetPolicyDaily
 	dailyInput, err := normalizeCreateCredentialQuotaScopeInput(CreateCredentialQuotaScopeInput{
 		ResetPolicy: &daily,
-	}, now)
+	}, now, resetConfig)
 	require.NoError(t, err)
 	require.NotNil(t, dailyInput.ResetAt)
-	require.Equal(t, time.Date(2026, 6, 1, 16, 0, 0, 0, time.UTC), *dailyInput.ResetAt)
+	require.Equal(t, time.Date(2026, 6, 2, 1, 30, 0, 0, time.UTC), *dailyInput.ResetAt)
 	require.NotNil(t, dailyInput.WindowStartedAt)
 	require.Equal(t, now.UTC(), *dailyInput.WindowStartedAt)
 
 	monthly := credentialquotascope.ResetPolicyMonthly
 	monthlyInput, err := normalizeCreateCredentialQuotaScopeInput(CreateCredentialQuotaScopeInput{
 		ResetPolicy: &monthly,
-	}, now)
+	}, now, resetConfig)
 	require.NoError(t, err)
 	require.NotNil(t, monthlyInput.ResetAt)
 	require.Equal(t, time.Date(2026, 6, 30, 16, 0, 0, 0, time.UTC), *monthlyInput.ResetAt)
 	require.NotNil(t, monthlyInput.WindowStartedAt)
 	require.Equal(t, now.UTC(), *monthlyInput.WindowStartedAt)
+}
+
+func TestUpstreamCredentialService_CreateCredentialQuotaScopeUsesSystemDailyResetTime(t *testing.T) {
+	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
+	defer client.Close()
+
+	ctx := context.Background()
+	ctx = ent.NewContext(ctx, client)
+	ctx = authz.WithTestBypass(ctx)
+
+	systemService := NewSystemService(SystemServiceParams{Ent: client})
+	require.NoError(t, systemService.SetGeneralSettings(ctx, SystemGeneralSettings{
+		CurrencyCode:                  "USD",
+		Timezone:                      "Asia/Shanghai",
+		CredentialQuotaDailyResetTime: "09:30",
+	}))
+
+	svc := NewUpstreamCredentialService(UpstreamCredentialServiceParams{Ent: client, SystemService: systemService})
+	daily := credentialquotascope.ResetPolicyDaily
+	scope, err := svc.CreateCredentialQuotaScope(ctx, CreateCredentialQuotaScopeInput{
+		ResetPolicy: &daily,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, scope.ResetAt)
+
+	localReset := scope.ResetAt.In(time.FixedZone("UTC+8", 8*60*60))
+	require.Equal(t, 9, localReset.Hour())
+	require.Equal(t, 30, localReset.Minute())
+	require.True(t, scope.ResetAt.After(time.Now()))
 }
 
 func TestUpstreamCredentialService_CreateCredentialQuotaScopeValidatesCustomResetWindow(t *testing.T) {

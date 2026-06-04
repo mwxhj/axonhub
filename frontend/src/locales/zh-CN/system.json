@@ -103,6 +103,8 @@
   "system.general.timezone.label": "时区",
   "system.general.timezone.placeholder": "选择时区",
   "system.general.timezone.description": "系统时区",
+  "system.general.credentialQuotaDailyResetTime.label": "Key 本地配额每日刷新时间",
+  "system.general.credentialQuotaDailyResetTime.description": "每日按 {{timezone}} 的这个时间刷新 Key 本地配额窗口。",
   "system.brand.title": "品牌设置",
   "system.brand.description": "配置系统的基本信息和品牌设置",
   "system.brand.brandName.label": "品牌名称",

@@ -2,7 +2,6 @@
 
 import { Archive } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Badge } from '@/components/ui/badge';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { useCredentialsContext } from '../context/credentials-context';
 import { useArchiveUpstreamCredential } from '../data/credentials';
@@ -41,14 +40,9 @@ export function CredentialArchiveDialog() {
         <div className='space-y-3'>
           <div>
             {t('credentials.dialogs.archive.description', {
-              name: currentCredential?.name || currentCredential?.keyHint || currentCredential?.id,
+              name: currentCredential?.name?.trim() || t('credentials.unnamed'),
             })}
           </div>
-          {currentCredential?.keyHint && (
-            <Badge variant='secondary' className='font-mono'>
-              {currentCredential.keyHint}
-            </Badge>
-          )}
           <ul className='text-muted-foreground list-disc space-y-1 pl-5 text-sm'>
             <li>{t('credentials.dialogs.archive.effects.routing')}</li>
             <li>{t('credentials.dialogs.archive.effects.refs')}</li>

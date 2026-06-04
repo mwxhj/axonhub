@@ -29,6 +29,7 @@ function RefRow({ refItem }: { refItem: CredentialRef }) {
   const { t } = useTranslation();
   const updateRef = useUpdateChannelCredentialRef();
   const detach = useDetachCredentialFromChannel();
+  const channelName = refItem.channel?.name?.trim() || t('credentials.common.unknown');
 
   const handleToggle = async (enabled: boolean) => {
     await updateRef.mutateAsync({
@@ -48,7 +49,7 @@ function RefRow({ refItem }: { refItem: CredentialRef }) {
     <div className='grid gap-3 border-b py-3 last:border-b-0 md:grid-cols-[1fr_120px_92px] md:items-center'>
       <div className='min-w-0'>
         <div className='flex min-w-0 items-center gap-2'>
-          <span className='truncate font-medium'>{refItem.channel?.name ?? refItem.channelID}</span>
+          <span className='truncate font-medium'>{channelName}</span>
           {refItem.channel?.status && (
             <Badge variant={refItem.channel.status === 'enabled' ? 'default' : 'secondary'}>
               {t(`credentials.channelStatus.${refItem.channel.status}`)}

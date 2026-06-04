@@ -5,13 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import type { UpstreamCredential } from '../data/credentials';
 import { CredentialsActions } from './credentials-actions';
 
-function shortFingerprint(value: string) {
-  if (value.length <= 24) {
-    return value;
-  }
-  return `${value.slice(0, 13)}...${value.slice(-8)}`;
-}
-
 function providerQuotaLabel(credential: UpstreamCredential, t: TFunction) {
   const statuses = credential.providerQuotaStatuses ?? [];
   if (statuses.length === 0) {
@@ -50,30 +43,25 @@ function LocalQuotaCell({ credential, t }: { credential: UpstreamCredential; t: 
     return <span className='text-muted-foreground text-xs'>{t('credentials.quota.none')}</span>;
   }
 
-  const status = scope.status
-    ? t(`credentials.quota.status.${scope.status}`, { defaultValue: scope.status })
-    : t('credentials.quota.status.unknown');
-  const scopeLabel = `${status} · ${scope.name || t('credentials.quota.defaultScope')}`;
   const shouldShowAmounts = hasQuotaAmount(scope.usedAmount) || hasQuotaAmount(scope.limitAmount);
   const usedAmount = formatQuotaAmount(scope.usedAmount, '0');
   const limitAmount = formatQuotaAmount(scope.limitAmount);
   const unit = scope.unit ? t(`credentials.quota.units.${scope.unit}`, { defaultValue: scope.unit }) : '';
-  const amountLabel = `${t('credentials.fields.quotaUsedAmount')} ${usedAmount} / ${t('credentials.fields.quotaLimitAmount')} ${limitAmount}${unit ? ` ${unit}` : ''}`;
+  const amountLabel = `${usedAmount} / ${limitAmount}${unit ? ` ${unit}` : ''} · ${t('credentials.quota.todayUsage')}`;
 
   return (
     <div className='min-w-40 space-y-0.5 text-xs'>
-      <div className='text-muted-foreground truncate' title={scopeLabel}>
-        {scopeLabel}
-      </div>
       {shouldShowAmounts ? (
         <div className='truncate' title={amountLabel}>
-          <span className='text-muted-foreground'>{t('credentials.fields.quotaUsedAmount')} </span>
           <span className='font-mono'>{usedAmount}</span>
-          <span className='text-muted-foreground'> / {t('credentials.fields.quotaLimitAmount')} </span>
+          <span className='text-muted-foreground'> / </span>
           <span className='font-mono'>{limitAmount}</span>
           {unit ? <span className='text-muted-foreground'> {unit}</span> : null}
+          <span className='text-muted-foreground'> · {t('credentials.quota.todayUsage')}</span>
         </div>
-      ) : null}
+      ) : (
+        <div className='text-muted-foreground truncate'>{t('credentials.quota.configured')}</div>
+      )}
     </div>
   );
 }
@@ -84,19 +72,12 @@ export const createCredentialColumns = (t: TFunction): ColumnDef<UpstreamCredent
     header: t('common.columns.name'),
     cell: ({ row }) => {
       const name = row.original.name?.trim();
-      const fingerprint = row.original.secretFingerprint || row.original.fingerprint || '';
       return (
         <div className='min-w-0'>
           <div className='truncate font-medium'>{name || t('credentials.unnamed')}</div>
-          <div className='text-muted-foreground mt-1 truncate font-mono text-xs'>{fingerprint ? shortFingerprint(fingerprint) : '-'}</div>
         </div>
       );
     },
-  },
-  {
-    accessorKey: 'keyHint',
-    header: t('credentials.columns.keyHint'),
-    cell: ({ row }) => <span className='text-muted-foreground font-mono text-xs'>{row.original.keyHint || '-'}</span>,
   },
   {
     id: 'localQuota',

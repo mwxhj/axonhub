@@ -26,21 +26,15 @@ export const requestExecutionSchema = z.object({
   // channelID: z.number(),
   channel: channelSchema.partial().nullable().optional(),
   credentialID: z.string().nullable().optional(),
-  credentialFingerprint: z.string().nullable().optional(),
-  secretFingerprint: z.string().nullable().optional(),
-  resourceScopeKey: z.string().nullable().optional(),
   quotaScopeID: z.string().nullable().optional(),
   quotaScopeNameSnapshot: z.string().nullable().optional(),
   quotaScopeStatusSnapshot: z.string().nullable().optional(),
   credentialNameSnapshot: z.string().nullable().optional(),
-  credentialKeyHint: z.string().nullable().optional(),
-  credentialSource: z.string().nullable().optional(),
   credentialQuotaStatusSnapshot: z.string().nullable().optional(),
   credential: z
     .object({
       id: z.string(),
       name: z.string().optional().nullable(),
-      keyHint: z.string().optional().nullable(),
     })
     .nullable()
     .optional(),

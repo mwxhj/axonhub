@@ -103,6 +103,8 @@
   "system.general.timezone.label": "Timezone",
   "system.general.timezone.placeholder": "Select timezone",
   "system.general.timezone.description": "System timezone.",
+  "system.general.credentialQuotaDailyResetTime.label": "Key local quota daily reset time",
+  "system.general.credentialQuotaDailyResetTime.description": "Daily key local quota windows reset at this time in {{timezone}}.",
   "system.brand.title": "Brand Settings",
   "system.brand.description": "Configure basic system information and branding settings",
   "system.brand.brandName.label": "Brand Name",

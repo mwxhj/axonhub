@@ -281,7 +281,11 @@ func (s *UsageLogService) incrementCredentialQuotaScopeUsage(ctx context.Context
 
 	var resetSnapshot *quotaScopeResetSnapshot
 	if shouldResetQuotaScope(scope, now) {
-		resetSnapshot = resetQuotaScopeWindow(scope, now)
+		var err error
+		resetSnapshot, err = resetQuotaScopeWindow(scope, now, credentialQuotaResetConfigFromSystem(ctx, s.SystemService))
+		if err != nil {
+			return err
+		}
 		used = decimal.Zero
 	}
 
@@ -308,7 +312,7 @@ func (s *UsageLogService) incrementCredentialQuotaScopeUsage(ctx context.Context
 		return fmt.Errorf("failed to update credential quota scope usage: %w", err)
 	}
 
-	if nextStatus != "" && nextStatus != scope.Status && s.ChannelService != nil {
+	if s.ChannelService != nil {
 		s.ChannelService.asyncReloadChannels()
 	}
 
@@ -354,20 +358,21 @@ type quotaScopeResetSnapshot struct {
 	ClearPauseUntil bool
 }
 
-func resetQuotaScopeWindow(scope *ent.CredentialQuotaScope, now time.Time) *quotaScopeResetSnapshot {
+func resetQuotaScopeWindow(scope *ent.CredentialQuotaScope, now time.Time, resetConfig credentialQuotaResetConfig) (*quotaScopeResetSnapshot, error) {
 	snapshot := &quotaScopeResetSnapshot{
 		WindowStartedAt: now,
 		ClearPauseUntil: true,
 	}
 	if scope == nil {
-		return snapshot
+		return snapshot, nil
 	}
 
 	switch scope.ResetPolicy {
 	case credentialquotascope.ResetPolicyDaily:
-		next := nextQuotaResetAt(*scope.ResetAt, now, func(t time.Time) time.Time {
-			return t.AddDate(0, 0, 1)
-		})
+		next, err := nextDailyCredentialQuotaResetAt(now, resetConfig)
+		if err != nil {
+			return nil, err
+		}
 		snapshot.ResetAt = &next
 	case credentialquotascope.ResetPolicyMonthly:
 		next := nextQuotaResetAt(*scope.ResetAt, now, func(t time.Time) time.Time {
@@ -385,7 +390,7 @@ func resetQuotaScopeWindow(scope *ent.CredentialQuotaScope, now time.Time) *quot
 		}
 	}
 
-	return snapshot
+	return snapshot, nil
 }
 
 func nextQuotaResetAt(resetAt time.Time, now time.Time, step func(time.Time) time.Time) time.Time {

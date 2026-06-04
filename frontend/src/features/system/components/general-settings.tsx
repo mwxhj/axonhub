@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import { AutoCompleteSelect } from '@/components/auto-complete-select';
 import { useSystemContext } from '../context/system-context';
 import { currencyCodes } from '../data/currencies';
@@ -38,6 +39,7 @@ export function GeneralSettings() {
 
   const [currencyCode, setCurrencyCode] = useState('USD');
   const [timezone, setTimezone] = useState('UTC');
+  const [credentialQuotaDailyResetTime, setCredentialQuotaDailyResetTime] = useState('00:00');
 
   const currencyItems = React.useMemo(
     () =>
@@ -55,6 +57,7 @@ export function GeneralSettings() {
     if (settings) {
       setCurrencyCode(settings.currencyCode || 'USD');
       setTimezone(settings.timezone || 'UTC');
+      setCredentialQuotaDailyResetTime(settings.credentialQuotaDailyResetTime || '00:00');
     }
   }, [settings]);
 
@@ -78,6 +81,7 @@ export function GeneralSettings() {
       await updateSettings.mutateAsync({
         currencyCode: currencyCode.trim(),
         timezone: timezone.trim(),
+        credentialQuotaDailyResetTime: credentialQuotaDailyResetTime.trim(),
       });
     } finally {
       setIsLoading(false);
@@ -107,7 +111,9 @@ export function GeneralSettings() {
   };
 
   const hasChanges = settings
-    ? settings.currencyCode !== currencyCode || settings.timezone !== timezone
+    ? settings.currencyCode !== currencyCode ||
+      settings.timezone !== timezone ||
+      settings.credentialQuotaDailyResetTime !== credentialQuotaDailyResetTime
     : false;
 
   if (isLoadingSettings) {
@@ -153,6 +159,21 @@ export function GeneralSettings() {
               />
             </div>
             <div className='text-muted-foreground text-sm'>{t('system.general.timezone.description')}</div>
+          </div>
+
+          <div className='space-y-2'>
+            <Label htmlFor='credential-quota-daily-reset-time'>{t('system.general.credentialQuotaDailyResetTime.label')}</Label>
+            <div className='max-w-md'>
+              <Input
+                id='credential-quota-daily-reset-time'
+                type='time'
+                value={credentialQuotaDailyResetTime}
+                onChange={(event) => setCredentialQuotaDailyResetTime(event.target.value)}
+              />
+            </div>
+            <div className='text-muted-foreground text-sm'>
+              {t('system.general.credentialQuotaDailyResetTime.description', { timezone })}
+            </div>
           </div>
         </CardContent>
       </Card>

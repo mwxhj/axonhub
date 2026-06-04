@@ -84,6 +84,52 @@ func TestSystemService_WithMemoryCache(t *testing.T) {
 	require.Equal(t, newValue, retrievedValue3)
 }
 
+func TestSystemService_GeneralSettingsBackfillsCredentialQuotaResetTime(t *testing.T) {
+	service, client := setupTestSystemService(t, xcache.Config{Mode: xcache.ModeMemory})
+	defer client.Close()
+
+	ctx := context.Background()
+	ctx = ent.NewContext(ctx, client)
+	ctx = authz.WithTestBypass(ctx)
+
+	raw, err := json.Marshal(SystemGeneralSettings{
+		CurrencyCode: "USD",
+		Timezone:     "Asia/Shanghai",
+	})
+	require.NoError(t, err)
+	require.NoError(t, service.setSystemValue(ctx, SystemKeyGeneralSettings, string(raw)))
+
+	settings, err := service.GeneralSettings(ctx)
+	require.NoError(t, err)
+	require.Equal(t, "USD", settings.CurrencyCode)
+	require.Equal(t, "Asia/Shanghai", settings.Timezone)
+	require.Equal(t, "00:00", settings.CredentialQuotaDailyResetTime)
+}
+
+func TestSystemService_SetGeneralSettingsValidatesCredentialQuotaResetTime(t *testing.T) {
+	service, client := setupTestSystemService(t, xcache.Config{Mode: xcache.ModeMemory})
+	defer client.Close()
+
+	ctx := context.Background()
+	ctx = ent.NewContext(ctx, client)
+	ctx = authz.WithTestBypass(ctx)
+
+	err := service.SetGeneralSettings(ctx, SystemGeneralSettings{
+		CurrencyCode:                  "USD",
+		Timezone:                      "Asia/Shanghai",
+		CredentialQuotaDailyResetTime: "24:00",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "hour")
+
+	err = service.SetGeneralSettings(ctx, SystemGeneralSettings{
+		CurrencyCode:                  "USD",
+		Timezone:                      "Asia/Shanghai",
+		CredentialQuotaDailyResetTime: "09:30",
+	})
+	require.NoError(t, err)
+}
+
 func TestSystemService_WithRedisCache(t *testing.T) {
 	mr := miniredis.RunT(t)
 	defer mr.Close()

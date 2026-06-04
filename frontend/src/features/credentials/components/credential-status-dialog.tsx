@@ -54,7 +54,7 @@ export function CredentialStatusDialog() {
       <DialogContent className='sm:max-w-[480px]'>
         <DialogHeader>
           <DialogTitle>{t('credentials.dialogs.status.title')}</DialogTitle>
-          <DialogDescription>{t('credentials.dialogs.status.description', { name: currentCredential?.name || currentCredential?.fingerprint || '' })}</DialogDescription>
+          <DialogDescription>{t('credentials.dialogs.status.description', { name: currentCredential?.name?.trim() || t('credentials.unnamed') })}</DialogDescription>
         </DialogHeader>
         <div className='grid gap-2 py-4'>
           <Label htmlFor='credential-status-select'>{t('credentials.fields.status')}</Label>

@@ -19,16 +19,6 @@ import type {
   UpstreamCredentialDetail,
 } from '../data/schema';
 
-function shortIdentity(value?: string | null) {
-  if (!value) {
-    return '-';
-  }
-  if (value.length <= 32) {
-    return value;
-  }
-  return `${value.slice(0, 15)}...${value.slice(-10)}`;
-}
-
 function dateLabel(value?: Date | string | null) {
   if (!value) {
     return '-';
@@ -166,7 +156,6 @@ export function CredentialDetailDialog() {
               <Badge variant={routingKey === 'selectable' ? 'default' : 'secondary'}>
                 {t(`credentials.routingAvailability.${routingKey}`)}
               </Badge>
-              {credential.keyHint && <Badge variant='secondary'>{credential.keyHint}</Badge>}
             </div>
 
             {credential.lastError && (
@@ -186,12 +175,6 @@ export function CredentialDetailDialog() {
 
               <TabsContent value='overview' className='mt-4 space-y-4'>
                 <div className='grid gap-4 rounded-md border p-3 md:grid-cols-3'>
-                  <Field label={t('credentials.fields.keyHint')} value={credential.keyHint} mono />
-                  <Field
-                    label={t('credentials.fields.secretFingerprint')}
-                    value={shortIdentity(credential.secretFingerprint || credential.fingerprint)}
-                    mono
-                  />
                   <Field label={t('credentials.fields.status')} value={t(`credentials.status.${credential.status}`)} />
                   <Field label={t('credentials.columns.channels')} value={`${enabledRefs.length} / ${refs.length}`} />
                   <Field
@@ -214,7 +197,7 @@ export function CredentialDetailDialog() {
                   refs.map((ref) => (
                     <div key={ref.id} className='grid gap-3 rounded-md border p-3 md:grid-cols-[1fr_auto] md:items-center'>
                       <div className='min-w-0'>
-                        <div className='truncate font-medium'>{ref.channel?.name || ref.channelID}</div>
+                        <div className='truncate font-medium'>{ref.channel?.name?.trim() || t('credentials.common.unknown')}</div>
                         <div className='text-muted-foreground mt-1 truncate text-xs'>
                           {[ref.channel?.type, ref.channel?.baseURL].filter(Boolean).join(' · ') || '-'}
                         </div>
@@ -281,12 +264,6 @@ export function CredentialDetailDialog() {
                           />
                           <Field label={t('credentials.providerQuota.nextResetAt')} value={dateLabel(status.nextResetAt)} />
                           <Field label={t('credentials.providerQuota.nextCheckAt')} value={dateLabel(status.nextCheckAt)} />
-                          <Field label={t('credentials.providerQuota.scopeKey')} value={shortIdentity(status.scopeKey)} mono />
-                          <Field
-                            label={t('credentials.providerQuota.resourceScopeKey')}
-                            value={shortIdentity(status.resourceScopeKey)}
-                            mono
-                          />
                           <Field label={t('common.columns.updatedAt')} value={dateLabel(status.updatedAt)} />
                         </div>
                       ))}
@@ -333,12 +310,7 @@ export function CredentialDetailDialog() {
                           <Badge variant={execution.status === 'completed' ? 'default' : 'secondary'}>{execution.status}</Badge>
                         </div>
                         <div className='text-muted-foreground truncate text-xs'>
-                          {[dateLabel(execution.createdAt), execution.channel?.name, execution.credentialSource]
-                            .filter(Boolean)
-                            .join(' · ')}
-                        </div>
-                        <div className='text-muted-foreground truncate font-mono text-xs'>
-                          {execution.credentialKeyHint || execution.resourceScopeKey || '-'}
+                          {[dateLabel(execution.createdAt), execution.channel?.name].filter(Boolean).join(' · ')}
                         </div>
                         {execution.errorMessage && <div className='text-destructive truncate text-xs'>{execution.errorMessage}</div>}
                       </div>

@@ -48,12 +48,6 @@ function dateTimeLocalValue(date: Date) {
 
 function nextResetValue(policy: CredentialQuotaResetPolicy) {
   const now = new Date();
-  if (policy === 'daily') {
-    return dateTimeLocalValue(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0));
-  }
-  if (policy === 'monthly') {
-    return dateTimeLocalValue(new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0));
-  }
   if (policy === 'custom') {
     return dateTimeLocalValue(new Date(now.getTime() + 24 * 60 * 60 * 1000));
   }
@@ -81,7 +75,7 @@ export function CredentialQuotaFields({ register, setValue, watch, errors }: Cre
       setValue('quotaWindowStartedAt', '');
       return;
     }
-    if (!resetAt) {
+    if (policy === 'custom' && !resetAt) {
       setValue('quotaResetAt', nextResetValue(policy));
     }
     if (!windowStartedAt) {
@@ -124,7 +118,7 @@ export function CredentialQuotaFields({ register, setValue, watch, errors }: Cre
               <SelectContent>
                 {quotaScopes.map((scope) => (
                   <SelectItem key={scope.id} value={scope.id}>
-                    {scope.name || scope.id}
+                    {scope.name?.trim() || t('credentials.quota.unnamedScope')}
                     {scope.status ? ` · ${t(`credentials.quota.status.${scope.status}`)}` : ''}
                   </SelectItem>
                 ))}

@@ -24,18 +24,21 @@ type UpstreamCredentialServiceParams struct {
 
 	Ent            *ent.Client
 	ChannelService *ChannelService
+	SystemService  *SystemService
 }
 
 type UpstreamCredentialService struct {
 	*AbstractService
 
 	channelService *ChannelService
+	systemService  *SystemService
 }
 
 func NewUpstreamCredentialService(params UpstreamCredentialServiceParams) *UpstreamCredentialService {
 	return &UpstreamCredentialService{
 		AbstractService: &AbstractService{db: params.Ent},
 		channelService:  params.ChannelService,
+		systemService:   params.SystemService,
 	}
 }
 
@@ -168,6 +171,7 @@ func (svc *UpstreamCredentialService) CreateUpstreamCredential(ctx context.Conte
 
 	var credential *ent.UpstreamCredential
 	if err := svc.RunInTransaction(ctx, func(ctx context.Context) error {
+		resetConfig := svc.credentialQuotaResetConfig(ctx)
 		create := svc.entFromContext(ctx).UpstreamCredential.Create().
 			SetProviderType(strings.TrimSpace(stringValuePtr(input.ProviderType))).
 			SetBaseURL(normalizeCredentialBaseURL(stringValuePtr(input.BaseURL))).
@@ -192,7 +196,7 @@ func (svc *UpstreamCredentialService) CreateUpstreamCredential(ctx context.Conte
 			create.SetQuotaScopeID(input.QuotaScopeID.ID)
 		}
 		if input.Quota != nil {
-			quotaInput, err := normalizeCreateCredentialQuotaScopeInput(*input.Quota, time.Now())
+			quotaInput, err := normalizeCreateCredentialQuotaScopeInput(*input.Quota, time.Now(), resetConfig)
 			if err != nil {
 				return err
 			}
@@ -233,6 +237,7 @@ func (svc *UpstreamCredentialService) reactivateArchivedCredential(ctx context.C
 	var credential *ent.UpstreamCredential
 	if err := svc.RunInTransaction(ctx, func(ctx context.Context) error {
 		client := svc.entFromContext(ctx)
+		resetConfig := svc.credentialQuotaResetConfig(ctx)
 		current, err := client.UpstreamCredential.Get(ctx, id)
 		if err != nil {
 			return fmt.Errorf("failed to get archived upstream credential: %w", err)
@@ -272,7 +277,7 @@ func (svc *UpstreamCredentialService) reactivateArchivedCredential(ctx context.C
 				if err != nil {
 					return fmt.Errorf("failed to get credential quota scope: %w", err)
 				}
-				normalized, err := normalizeUpdateCredentialQuotaScopeInput(scope, quotaInput, time.Now())
+				normalized, err := normalizeUpdateCredentialQuotaScopeInput(scope, quotaInput, time.Now(), resetConfig)
 				if err != nil {
 					return err
 				}
@@ -282,7 +287,7 @@ func (svc *UpstreamCredentialService) reactivateArchivedCredential(ctx context.C
 					return fmt.Errorf("failed to update credential quota scope: %w", err)
 				}
 			} else {
-				quotaInput, err := normalizeCreateCredentialQuotaScopeInput(*input.Quota, time.Now())
+				quotaInput, err := normalizeCreateCredentialQuotaScopeInput(*input.Quota, time.Now(), resetConfig)
 				if err != nil {
 					return err
 				}
@@ -324,6 +329,7 @@ func (svc *UpstreamCredentialService) UpdateUpstreamCredential(ctx context.Conte
 	var credential *ent.UpstreamCredential
 	if err := svc.RunInTransaction(ctx, func(ctx context.Context) error {
 		client := svc.entFromContext(ctx)
+		resetConfig := svc.credentialQuotaResetConfig(ctx)
 		current, err := client.UpstreamCredential.Get(ctx, id)
 		if err != nil {
 			return fmt.Errorf("failed to get upstream credential: %w", err)
@@ -350,7 +356,7 @@ func (svc *UpstreamCredentialService) UpdateUpstreamCredential(ctx context.Conte
 				if err != nil {
 					return fmt.Errorf("failed to get credential quota scope: %w", err)
 				}
-				quotaInput, err := normalizeUpdateCredentialQuotaScopeInput(scope, *input.Quota, time.Now())
+				quotaInput, err := normalizeUpdateCredentialQuotaScopeInput(scope, *input.Quota, time.Now(), resetConfig)
 				if err != nil {
 					return err
 				}
@@ -360,7 +366,7 @@ func (svc *UpstreamCredentialService) UpdateUpstreamCredential(ctx context.Conte
 					return fmt.Errorf("failed to update credential quota scope: %w", err)
 				}
 			} else {
-				quotaInput, err := updateCredentialQuotaScopeCreateInput(*input.Quota, time.Now())
+				quotaInput, err := updateCredentialQuotaScopeCreateInput(*input.Quota, time.Now(), resetConfig)
 				if err != nil {
 					return err
 				}
@@ -640,7 +646,7 @@ func (svc *UpstreamCredentialService) migrateCredentialRefsToTarget(ctx context.
 }
 
 func (svc *UpstreamCredentialService) CreateCredentialQuotaScope(ctx context.Context, input CreateCredentialQuotaScopeInput) (*ent.CredentialQuotaScope, error) {
-	quotaInput, err := normalizeCreateCredentialQuotaScopeInput(input, time.Now())
+	quotaInput, err := normalizeCreateCredentialQuotaScopeInput(input, time.Now(), svc.credentialQuotaResetConfig(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -665,7 +671,7 @@ func (svc *UpstreamCredentialService) UpdateCredentialQuotaScope(ctx context.Con
 		return nil, fmt.Errorf("failed to get credential quota scope: %w", err)
 	}
 
-	quotaInput, err := normalizeUpdateCredentialQuotaScopeInput(current, input, time.Now())
+	quotaInput, err := normalizeUpdateCredentialQuotaScopeInput(current, input, time.Now(), svc.credentialQuotaResetConfig(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -683,7 +689,50 @@ func (svc *UpstreamCredentialService) UpdateCredentialQuotaScope(ctx context.Con
 	return scope, nil
 }
 
-func normalizeCreateCredentialQuotaScopeInput(input CreateCredentialQuotaScopeInput, now time.Time) (CreateCredentialQuotaScopeInput, error) {
+type credentialQuotaResetConfig struct {
+	Location       *time.Location
+	DailyResetTime string
+}
+
+func (svc *UpstreamCredentialService) credentialQuotaResetConfig(ctx context.Context) credentialQuotaResetConfig {
+	return credentialQuotaResetConfigFromSystem(ctx, svc.systemService)
+}
+
+func credentialQuotaResetConfigFromSystem(ctx context.Context, systemService *SystemService) credentialQuotaResetConfig {
+	cfg := credentialQuotaResetConfig{
+		Location:       time.UTC,
+		DailyResetTime: defaultGeneralSettings.CredentialQuotaDailyResetTime,
+	}
+	if systemService == nil {
+		return cfg
+	}
+
+	settings, err := systemService.GeneralSettings(ctx)
+	if err != nil {
+		log.Warn(ctx, "failed to load system general settings for credential quota reset", log.Cause(err))
+		return cfg
+	}
+	if settings == nil {
+		return cfg
+	}
+
+	if settings.Timezone != "" {
+		if loc, err := time.LoadLocation(settings.Timezone); err == nil {
+			cfg.Location = loc
+		}
+	}
+	if strings.TrimSpace(settings.CredentialQuotaDailyResetTime) != "" {
+		cfg.DailyResetTime = strings.TrimSpace(settings.CredentialQuotaDailyResetTime)
+	}
+
+	return cfg
+}
+
+func normalizeCreateCredentialQuotaScopeInput(
+	input CreateCredentialQuotaScopeInput,
+	now time.Time,
+	resetConfig credentialQuotaResetConfig,
+) (CreateCredentialQuotaScopeInput, error) {
 	policy := credentialquotascope.ResetPolicyNone
 	if input.ResetPolicy != nil {
 		policy = *input.ResetPolicy
@@ -692,7 +741,10 @@ func normalizeCreateCredentialQuotaScopeInput(input CreateCredentialQuotaScopeIn
 	switch policy {
 	case credentialquotascope.ResetPolicyDaily:
 		if input.ResetAt == nil {
-			resetAt := nextDailyCredentialQuotaResetAt(now)
+			resetAt, err := nextDailyCredentialQuotaResetAt(now, resetConfig)
+			if err != nil {
+				return input, err
+			}
 			input.ResetAt = &resetAt
 		}
 		if input.WindowStartedAt == nil {
@@ -701,7 +753,7 @@ func normalizeCreateCredentialQuotaScopeInput(input CreateCredentialQuotaScopeIn
 		}
 	case credentialquotascope.ResetPolicyMonthly:
 		if input.ResetAt == nil {
-			resetAt := nextMonthlyCredentialQuotaResetAt(now)
+			resetAt := nextMonthlyCredentialQuotaResetAt(now, resetConfig)
 			input.ResetAt = &resetAt
 		}
 		if input.WindowStartedAt == nil {
@@ -720,7 +772,12 @@ func normalizeCreateCredentialQuotaScopeInput(input CreateCredentialQuotaScopeIn
 	return input, nil
 }
 
-func normalizeUpdateCredentialQuotaScopeInput(scope *ent.CredentialQuotaScope, input UpdateCredentialQuotaScopeInput, now time.Time) (UpdateCredentialQuotaScopeInput, error) {
+func normalizeUpdateCredentialQuotaScopeInput(
+	scope *ent.CredentialQuotaScope,
+	input UpdateCredentialQuotaScopeInput,
+	now time.Time,
+	resetConfig credentialQuotaResetConfig,
+) (UpdateCredentialQuotaScopeInput, error) {
 	if scope == nil {
 		return input, fmt.Errorf("credential quota scope is required")
 	}
@@ -753,7 +810,10 @@ func normalizeUpdateCredentialQuotaScopeInput(scope *ent.CredentialQuotaScope, i
 	switch policy {
 	case credentialquotascope.ResetPolicyDaily:
 		if resetAt == nil {
-			next := nextDailyCredentialQuotaResetAt(now)
+			next, err := nextDailyCredentialQuotaResetAt(now, resetConfig)
+			if err != nil {
+				return input, err
+			}
 			input.ResetAt = &next
 			input.ClearResetAt = false
 			resetAt = &next
@@ -765,7 +825,7 @@ func normalizeUpdateCredentialQuotaScopeInput(scope *ent.CredentialQuotaScope, i
 		}
 	case credentialquotascope.ResetPolicyMonthly:
 		if resetAt == nil {
-			next := nextMonthlyCredentialQuotaResetAt(now)
+			next := nextMonthlyCredentialQuotaResetAt(now, resetConfig)
 			input.ResetAt = &next
 			input.ClearResetAt = false
 			resetAt = &next
@@ -787,7 +847,11 @@ func normalizeUpdateCredentialQuotaScopeInput(scope *ent.CredentialQuotaScope, i
 	return input, nil
 }
 
-func updateCredentialQuotaScopeCreateInput(input UpdateCredentialQuotaScopeInput, now time.Time) (CreateCredentialQuotaScopeInput, error) {
+func updateCredentialQuotaScopeCreateInput(
+	input UpdateCredentialQuotaScopeInput,
+	now time.Time,
+	resetConfig credentialQuotaResetConfig,
+) (CreateCredentialQuotaScopeInput, error) {
 	createInput := CreateCredentialQuotaScopeInput{
 		Name:                    input.Name,
 		Status:                  input.Status,
@@ -805,16 +869,32 @@ func updateCredentialQuotaScopeCreateInput(input UpdateCredentialQuotaScopeInput
 		Remark:                  input.Remark,
 	}
 
-	return normalizeCreateCredentialQuotaScopeInput(createInput, now)
+	return normalizeCreateCredentialQuotaScopeInput(createInput, now, resetConfig)
 }
 
-func nextDailyCredentialQuotaResetAt(now time.Time) time.Time {
-	localNow := now.In(now.Location())
-	return time.Date(localNow.Year(), localNow.Month(), localNow.Day()+1, 0, 0, 0, 0, localNow.Location()).UTC()
+func nextDailyCredentialQuotaResetAt(now time.Time, resetConfig credentialQuotaResetConfig) (time.Time, error) {
+	loc := resetConfig.Location
+	if loc == nil {
+		loc = time.UTC
+	}
+	hour, minute, err := parseCredentialQuotaDailyResetTime(resetConfig.DailyResetTime)
+	if err != nil {
+		return time.Time{}, err
+	}
+	localNow := now.In(loc)
+	next := time.Date(localNow.Year(), localNow.Month(), localNow.Day(), hour, minute, 0, 0, loc)
+	if !next.After(localNow) {
+		next = next.AddDate(0, 0, 1)
+	}
+	return next.UTC(), nil
 }
 
-func nextMonthlyCredentialQuotaResetAt(now time.Time) time.Time {
-	localNow := now.In(now.Location())
+func nextMonthlyCredentialQuotaResetAt(now time.Time, resetConfig credentialQuotaResetConfig) time.Time {
+	loc := resetConfig.Location
+	if loc == nil {
+		loc = time.UTC
+	}
+	localNow := now.In(loc)
 	return time.Date(localNow.Year(), localNow.Month()+1, 1, 0, 0, 0, 0, localNow.Location()).UTC()
 }
 

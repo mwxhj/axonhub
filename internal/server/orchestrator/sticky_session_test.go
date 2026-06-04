@@ -125,6 +125,20 @@ func stickyTestQuotaCredentialView(
 	return view
 }
 
+func stickyTestUSDQuotaCredentialView(
+	credentialID int,
+	quotaScopeID int,
+	fingerprint string,
+	apiKey string,
+	usedAmount string,
+	limitAmount string,
+	resetAt time.Time,
+) biz.ChannelCredentialView {
+	view := stickyTestQuotaCredentialView(credentialID, quotaScopeID, fingerprint, apiKey, usedAmount, limitAmount, resetAt)
+	view.QuotaScopeUnit = credentialquotascope.UnitUsd.String()
+	return view
+}
+
 func stickyTestQuotaCandidate(
 	id int,
 	priority int,
@@ -346,6 +360,38 @@ func TestStickySessionRouter_BoundPrimaryDoesNotRebalanceByQuotaRatio(t *testing
 	require.Equal(t, 2, ordered[0].Channel.ID)
 	require.Equal(t, 20, state.PreferredCredentialID)
 	require.Equal(t, "cred:high", state.PreferredCredentialFingerprint)
+}
+
+func TestStickySessionRouter_ExpiredBindingRebindsByLowestUSDQuotaRatio(t *testing.T) {
+	now := time.Date(2026, 6, 3, 23, 22, 35, 0, time.UTC)
+	resetAt := time.Now().Add(time.Hour)
+	store := NewStickySessionBindingStore(5 * time.Minute)
+	store.now = func() time.Time { return now }
+	store.BindTarget("key", StickySessionTarget{ChannelID: 1, CredentialID: 10, CredentialFingerprint: "cred:lite"})
+	now = now.Add(6 * time.Minute)
+
+	router := NewStickySessionRouter(store, fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}})
+	state := &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: false}}}
+	candidates := []*ChannelModelsCandidate{
+		stickyTestQuotaCandidate(1, 0, 100, stickyTestUSDQuotaCredentialView(10, 100, "cred:lite", "lite-key", "59.137625", "100", resetAt)),
+		stickyTestQuotaCandidate(2, 0, 90, stickyTestUSDQuotaCredentialView(20, 200, "cred:air", "air-key", "37.154457", "300", resetAt)),
+		stickyTestQuotaCandidate(3, 0, 80, stickyTestUSDQuotaCredentialView(30, 300, "cred:plus", "plus-key", "10.255685", "500", resetAt)),
+		stickyTestQuotaCandidate(4, 0, 70, stickyTestUSDQuotaCredentialView(40, 400, "cred:std", "std-key", "45.703334", "500", resetAt)),
+	}
+
+	ordered := router.Order(context.Background(), StickySessionOrderRequest{
+		Request:      &llm.Request{Model: "gpt-4"},
+		State:        state,
+		Candidates:   candidates,
+		LoadBalancer: NewLoadBalancer(state.RetryPolicyProvider, nil, NewWeightStrategy()),
+	})
+
+	require.NotEmpty(t, ordered)
+	require.Equal(t, 3, ordered[0].Channel.ID)
+	require.Equal(t, 30, state.PreferredCredentialID)
+	require.Equal(t, "cred:plus", state.PreferredCredentialFingerprint)
+	_, ok := store.GetTarget("key")
+	require.False(t, ok)
 }
 
 func TestStickySessionRouter_QuotaRatioFirstBindDoesNotCrossPriority(t *testing.T) {

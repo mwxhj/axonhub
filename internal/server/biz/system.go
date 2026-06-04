@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -114,8 +115,9 @@ const (
 // SystemGeneralSettings represents general system configuration settings.
 type SystemGeneralSettings struct {
 	// CurrencyCode is the code used for currency display (e.g., USD, RMB).
-	CurrencyCode string `json:"currency_code"`
-	Timezone     string `json:"timezone"`
+	CurrencyCode                  string `json:"currency_code"`
+	Timezone                      string `json:"timezone"`
+	CredentialQuotaDailyResetTime string `json:"credential_quota_daily_reset_time"`
 }
 
 // VideoStorageSettings represents system settings for persisting generated videos.
@@ -1270,12 +1272,20 @@ func (s *SystemService) GeneralSettings(ctx context.Context) (*SystemGeneralSett
 	if settings.Timezone == "" {
 		settings.Timezone = defaultGeneralSettings.Timezone
 	}
+	if settings.CredentialQuotaDailyResetTime == "" {
+		settings.CredentialQuotaDailyResetTime = defaultGeneralSettings.CredentialQuotaDailyResetTime
+	}
 
 	return &settings, nil
 }
 
 // SetGeneralSettings sets the general settings configuration.
 func (s *SystemService) SetGeneralSettings(ctx context.Context, settings SystemGeneralSettings) error {
+	settings = normalizeSystemGeneralSettings(settings)
+	if _, _, err := parseCredentialQuotaDailyResetTime(settings.CredentialQuotaDailyResetTime); err != nil {
+		return err
+	}
+
 	jsonBytes, err := json.Marshal(settings)
 	if err != nil {
 		return fmt.Errorf("failed to marshal general settings: %w", err)
@@ -1291,6 +1301,47 @@ func (s *SystemService) SetGeneralSettings(ctx context.Context, settings SystemG
 	s.mu.Unlock()
 
 	return nil
+}
+
+func normalizeSystemGeneralSettings(settings SystemGeneralSettings) SystemGeneralSettings {
+	if strings.TrimSpace(settings.CurrencyCode) == "" {
+		settings.CurrencyCode = defaultGeneralSettings.CurrencyCode
+	}
+	if strings.TrimSpace(settings.Timezone) == "" {
+		settings.Timezone = defaultGeneralSettings.Timezone
+	}
+	if strings.TrimSpace(settings.CredentialQuotaDailyResetTime) == "" {
+		settings.CredentialQuotaDailyResetTime = defaultGeneralSettings.CredentialQuotaDailyResetTime
+	}
+	settings.CurrencyCode = strings.TrimSpace(settings.CurrencyCode)
+	settings.Timezone = strings.TrimSpace(settings.Timezone)
+	settings.CredentialQuotaDailyResetTime = strings.TrimSpace(settings.CredentialQuotaDailyResetTime)
+
+	return settings
+}
+
+func parseCredentialQuotaDailyResetTime(value string) (int, int, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		value = defaultGeneralSettings.CredentialQuotaDailyResetTime
+	}
+
+	parts := strings.Split(value, ":")
+	if len(parts) != 2 || len(parts[0]) != 2 || len(parts[1]) != 2 {
+		return 0, 0, fmt.Errorf("credential quota daily reset time must use HH:mm")
+	}
+
+	hour, err := strconv.Atoi(parts[0])
+	if err != nil || hour < 0 || hour > 23 {
+		return 0, 0, fmt.Errorf("credential quota daily reset hour must be between 00 and 23")
+	}
+
+	minute, err := strconv.Atoi(parts[1])
+	if err != nil || minute < 0 || minute > 59 {
+		return 0, 0, fmt.Errorf("credential quota daily reset minute must be between 00 and 59")
+	}
+
+	return hour, minute, nil
 }
 
 // DefaultDataStorageID retrieves the default data storage ID from system settings.

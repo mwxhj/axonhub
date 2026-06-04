@@ -1689,8 +1689,9 @@ type ComplexityRoot struct {
 	}
 
 	SystemGeneralSettings struct {
-		CurrencyCode func(childComplexity int) int
-		Timezone     func(childComplexity int) int
+		CredentialQuotaDailyResetTime func(childComplexity int) int
+		CurrencyCode                  func(childComplexity int) int
+		Timezone                      func(childComplexity int) int
 	}
 
 	SystemModelSettingOnboarding struct {
@@ -9788,6 +9789,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.SystemEdge.Node(childComplexity), true
 
+	case "SystemGeneralSettings.credentialQuotaDailyResetTime":
+		if e.complexity.SystemGeneralSettings.CredentialQuotaDailyResetTime == nil {
+			break
+		}
+
+		return e.complexity.SystemGeneralSettings.CredentialQuotaDailyResetTime(childComplexity), true
 	case "SystemGeneralSettings.currencyCode":
 		if e.complexity.SystemGeneralSettings.CurrencyCode == nil {
 			break
@@ -46552,6 +46559,8 @@ func (ec *executionContext) fieldContext_Query_systemGeneralSettings(_ context.C
 				return ec.fieldContext_SystemGeneralSettings_currencyCode(ctx, field)
 			case "timezone":
 				return ec.fieldContext_SystemGeneralSettings_timezone(ctx, field)
+			case "credentialQuotaDailyResetTime":
+				return ec.fieldContext_SystemGeneralSettings_credentialQuotaDailyResetTime(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type SystemGeneralSettings", field.Name)
 		},
@@ -53705,6 +53714,35 @@ func (ec *executionContext) _SystemGeneralSettings_timezone(ctx context.Context,
 }
 
 func (ec *executionContext) fieldContext_SystemGeneralSettings_timezone(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SystemGeneralSettings",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SystemGeneralSettings_credentialQuotaDailyResetTime(ctx context.Context, field graphql.CollectedField, obj *biz.SystemGeneralSettings) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_SystemGeneralSettings_credentialQuotaDailyResetTime,
+		func(ctx context.Context) (any, error) {
+			return obj.CredentialQuotaDailyResetTime, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_SystemGeneralSettings_credentialQuotaDailyResetTime(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "SystemGeneralSettings",
 		Field:      field,
@@ -89458,7 +89496,7 @@ func (ec *executionContext) unmarshalInputUpdateSystemGeneralSettingsInput(ctx c
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"currencyCode", "timezone"}
+	fieldsInOrder := [...]string{"currencyCode", "timezone", "credentialQuotaDailyResetTime"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -89479,6 +89517,13 @@ func (ec *executionContext) unmarshalInputUpdateSystemGeneralSettingsInput(ctx c
 				return it, err
 			}
 			it.Timezone = data
+		case "credentialQuotaDailyResetTime":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaDailyResetTime"))
+			data, err := ec.unmarshalOString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.CredentialQuotaDailyResetTime = data
 		}
 	}
 
@@ -111839,6 +111884,11 @@ func (ec *executionContext) _SystemGeneralSettings(ctx context.Context, sel ast.
 			}
 		case "timezone":
 			out.Values[i] = ec._SystemGeneralSettings_timezone(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "credentialQuotaDailyResetTime":
+			out.Values[i] = ec._SystemGeneralSettings_credentialQuotaDailyResetTime(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

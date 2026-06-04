@@ -50,8 +50,9 @@ var defaultChannelSetting = SystemChannelSettings{
 }
 
 var defaultGeneralSettings = SystemGeneralSettings{
-	CurrencyCode: "USD",
-	Timezone:     "UTC",
+	CurrencyCode:                  "USD",
+	Timezone:                      "UTC",
+	CredentialQuotaDailyResetTime: "00:00",
 }
 
 var defaultAutoBackupSettings = AutoBackupSettings{

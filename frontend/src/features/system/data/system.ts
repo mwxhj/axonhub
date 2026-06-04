@@ -228,11 +228,13 @@ export interface BrandSettings {
 export interface SystemGeneralSettings {
   currencyCode: string;
   timezone: string;
+  credentialQuotaDailyResetTime: string;
 }
 
 export interface UpdateSystemGeneralSettingsInput {
   currencyCode?: string;
   timezone?: string;
+  credentialQuotaDailyResetTime?: string;
 }
 
 export interface VideoStorageSettings {
@@ -888,6 +890,7 @@ const SYSTEM_GENERAL_SETTINGS_QUERY = `
     systemGeneralSettings {
       currencyCode
       timezone
+      credentialQuotaDailyResetTime
     }
   }
 `;

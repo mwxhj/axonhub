@@ -30,11 +30,7 @@ function CredentialsContent() {
   const whereClause = useMemo(() => {
     const where: Record<string, unknown> = {};
     if (debouncedNameFilter) {
-      where.or = [
-        { nameContainsFold: debouncedNameFilter },
-        { fingerprintContainsFold: debouncedNameFilter },
-        { keyHintContainsFold: debouncedNameFilter },
-      ];
+      where.nameContainsFold = debouncedNameFilter;
     }
     if (statusFilter === 'active') {
       where.statusIn = ['enabled', 'disabled'];

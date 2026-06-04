@@ -103,21 +103,6 @@ export function EditCredentialDialog() {
               <Input id='edit-credential-name' {...register('name')} />
             </div>
 
-            <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
-              <div className='grid gap-2'>
-                <Label>{t('credentials.fields.keyHint')}</Label>
-                <Input value={currentCredential?.keyHint ?? ''} readOnly className='bg-muted' />
-              </div>
-              <div className='grid gap-2'>
-                <Label>{t('credentials.fields.secretFingerprint')}</Label>
-                <Input
-                  value={currentCredential?.secretFingerprint ?? currentCredential?.fingerprint ?? ''}
-                  readOnly
-                  className='bg-muted font-mono text-xs'
-                />
-              </div>
-            </div>
-
             <div className='grid gap-2'>
               <Label htmlFor='edit-credential-status'>{t('credentials.fields.status')}</Label>
               <Select value={status} onValueChange={(value) => setValue('status', value as CredentialStatus)}>

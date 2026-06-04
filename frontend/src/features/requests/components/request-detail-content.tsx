@@ -29,16 +29,6 @@ interface RequestDetailContentProps {
   isPreviewStreaming?: boolean;
 }
 
-function shortSafeIdentity(value?: string | null) {
-  if (!value) {
-    return '';
-  }
-  if (value.length <= 32) {
-    return value;
-  }
-  return `${value.slice(0, 15)}...${value.slice(-9)}`;
-}
-
 export function RequestDetailContent({ requestId, projectId, previewRequest, isPreviewStreaming = false }: RequestDetailContentProps) {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'zh' ? zhCN : enUS;
@@ -308,21 +298,9 @@ export function RequestDetailContent({ requestId, projectId, previewRequest, isP
           const cacheHitRate = hasReadCache ? ((cachedTokens / promptTokens) * 100).toFixed(1) : '0.0';
           const writeCacheRate = hasWriteCache ? ((writeCachedTokens / promptTokens) * 100).toFixed(1) : '0.0';
           const cost = usage.totalCost ?? 0;
-          const usageCredentialName = usage.credentialNameSnapshot || usage.credential?.name || '';
-          const usageCredentialKeyHint = usage.credentialKeyHint || usage.credential?.keyHint || '';
-          const usageCredentialLabel =
-            usageCredentialName ||
-            usageCredentialKeyHint ||
-            shortSafeIdentity(usage.secretFingerprint || usage.credentialFingerprint) ||
-            t('requests.columns.unknown');
-          const usageCredentialMeta = [
-            usage.credentialSource,
-            usage.resourceScopeKey,
-            usage.quotaScopeNameSnapshot || usage.quotaScopeStatusSnapshot,
-            usage.credentialQuotaStatusSnapshot,
-          ].filter(Boolean);
-          const hasUsageCredential =
-            !!usageCredentialName || !!usageCredentialKeyHint || !!usage.secretFingerprint || !!usage.credentialFingerprint || usageCredentialMeta.length > 0;
+          const usageCredentialName = usage.credential?.name || '';
+          const usageCredentialLabel = usageCredentialName || t('requests.columns.unknown');
+          const hasUsageCredential = !!usageCredentialName;
 
           const promptCost = usage.costItems?.find((i: any) => i.itemCode === 'prompt_tokens')?.subtotal;
           const completionCost = usage.costItems?.find((i: any) => i.itemCode === 'completion_tokens')?.subtotal;
@@ -364,15 +342,7 @@ export function RequestDetailContent({ requestId, projectId, previewRequest, isP
                     <div className='flex min-w-0 items-center gap-2'>
                       <Key className='text-primary h-3.5 w-3.5 shrink-0' />
                       <span className='shrink-0 text-xs font-medium'>{t('requests.columns.credential')}</span>
-                      <span className='truncate font-mono text-xs'>{usageCredentialLabel}</span>
-                    </div>
-                    <div className='flex min-w-0 flex-col gap-0.5 sm:items-end'>
-                      {usageCredentialKeyHint && usageCredentialName && (
-                        <span className='text-muted-foreground truncate font-mono text-xs'>{usageCredentialKeyHint}</span>
-                      )}
-                      {usageCredentialMeta.length > 0 && (
-                        <span className='text-muted-foreground truncate text-xs'>{usageCredentialMeta.join(' · ')}</span>
-                      )}
+                      <span className='truncate text-xs'>{usageCredentialLabel}</span>
                     </div>
                   </div>
                 )}
@@ -673,26 +643,8 @@ export function RequestDetailContent({ requestId, projectId, previewRequest, isP
                                 {t('requests.columns.credential')}
                               </span>
                               <p className='text-muted-foreground truncate font-mono text-sm'>
-                                {execution.credentialNameSnapshot ||
-                                  execution.credential?.name ||
-                                  execution.credentialKeyHint ||
-                                  shortSafeIdentity(execution.secretFingerprint || execution.credentialFingerprint) ||
-                                  t('requests.columns.unknown')}
+                                {execution.credential?.name || t('requests.columns.unknown')}
                               </p>
-                              {execution.credentialKeyHint && (
-                                <p className='text-muted-foreground truncate font-mono text-xs'>{execution.credentialKeyHint}</p>
-                              )}
-                              {(execution.credentialSource || execution.resourceScopeKey || execution.quotaScopeNameSnapshot || execution.quotaScopeStatusSnapshot) && (
-                                <p className='text-muted-foreground truncate text-xs'>
-                                  {[
-                                    execution.credentialSource,
-                                    execution.resourceScopeKey,
-                                    execution.quotaScopeNameSnapshot || execution.quotaScopeStatusSnapshot,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' · ')}
-                                </p>
-                              )}
                             </div>
                             <div className='bg-background space-y-2 rounded-lg border p-3'>
                               <span className='flex items-center gap-2 text-sm font-medium'>

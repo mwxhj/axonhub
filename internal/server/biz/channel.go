@@ -13,6 +13,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/channel"
 	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/schema/schematype"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/log"
@@ -235,7 +236,14 @@ func (svc *ChannelService) reloadEnabledChannels(ctx context.Context, current []
 		return current, lastUpdate, false, err
 	}
 
-	latestUpdate := latestChannelCredentialUpdateTime(latestUpdatedChannel, latestUpdatedCredential, latestUpdatedCredentialRef)
+	latestUpdatedQuotaScope, err := svc.entFromContext(ctx).CredentialQuotaScope.Query().
+		Order(ent.Desc(credentialquotascope.FieldUpdatedAt)).
+		First(ctx)
+	if err != nil && !ent.IsNotFound(err) {
+		return current, lastUpdate, false, err
+	}
+
+	latestUpdate := latestChannelCredentialUpdateTime(latestUpdatedChannel, latestUpdatedCredential, latestUpdatedCredentialRef, latestUpdatedQuotaScope)
 	if latestUpdate.IsZero() {
 		if lastUpdate.IsZero() && len(current) == 0 {
 			return current, time.Time{}, false, nil
@@ -293,7 +301,12 @@ func (svc *ChannelService) reloadEnabledChannels(ctx context.Context, current []
 	return channels, latestUpdate, true, nil
 }
 
-func latestChannelCredentialUpdateTime(channel *ent.Channel, credential *ent.UpstreamCredential, ref *ent.ChannelCredentialRef) time.Time {
+func latestChannelCredentialUpdateTime(
+	channel *ent.Channel,
+	credential *ent.UpstreamCredential,
+	ref *ent.ChannelCredentialRef,
+	quotaScope *ent.CredentialQuotaScope,
+) time.Time {
 	var latest time.Time
 	if channel != nil && channel.UpdatedAt.After(latest) {
 		latest = channel.UpdatedAt
@@ -303,6 +316,9 @@ func latestChannelCredentialUpdateTime(channel *ent.Channel, credential *ent.Ups
 	}
 	if ref != nil && ref.UpdatedAt.After(latest) {
 		latest = ref.UpdatedAt
+	}
+	if quotaScope != nil && quotaScope.UpdatedAt.After(latest) {
+		latest = quotaScope.UpdatedAt
 	}
 
 	return latest

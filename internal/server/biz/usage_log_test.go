@@ -10,14 +10,17 @@ import (
 
 	"github.com/looplj/axonhub/internal/authz"
 	"github.com/looplj/axonhub/internal/ent"
+	"github.com/looplj/axonhub/internal/ent/channel"
 	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/enttest"
 	"github.com/looplj/axonhub/internal/ent/project"
 	"github.com/looplj/axonhub/internal/ent/request"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
 	"github.com/looplj/axonhub/internal/objects"
 	"github.com/looplj/axonhub/internal/pkg/xcache"
 	"github.com/looplj/axonhub/llm"
+	"github.com/looplj/axonhub/llm/httpclient"
 )
 
 func TestUsageLogService_CreateUsageLog_PromptWriteCachedTokens(t *testing.T) {
@@ -46,6 +49,11 @@ func TestUsageLogService_CreateUsageLog_PromptWriteCachedTokens(t *testing.T) {
 		CacheConfig: xcache.Config{},
 		Ent:         client,
 	})
+	require.NoError(t, systemService.SetGeneralSettings(ctx, SystemGeneralSettings{
+		CurrencyCode:                  "USD",
+		Timezone:                      "Asia/Shanghai",
+		CredentialQuotaDailyResetTime: "09:30",
+	}))
 	channelService := NewChannelServiceForTest(client)
 	svc := NewUsageLogService(client, systemService, channelService)
 
@@ -114,6 +122,11 @@ func TestUsageLogService_CreateUsageLogStoresCredentialScopeAndAccountsQuota(t *
 		CacheConfig: xcache.Config{},
 		Ent:         client,
 	})
+	require.NoError(t, systemService.SetGeneralSettings(ctx, SystemGeneralSettings{
+		CurrencyCode:                  "USD",
+		Timezone:                      "Asia/Shanghai",
+		CredentialQuotaDailyResetTime: "09:30",
+	}))
 	channelService := NewChannelServiceForTest(client)
 	svc := NewUsageLogService(client, systemService, channelService)
 
@@ -161,6 +174,105 @@ func TestUsageLogService_CreateUsageLogStoresCredentialScopeAndAccountsQuota(t *
 	require.Equal(t, credentialquotascope.StatusWarning, updatedScope.Status)
 }
 
+func TestUsageLogService_CreateUsageLogRefreshesCachedCredentialQuotaUsage(t *testing.T) {
+	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
+	defer client.Close()
+
+	ctx := context.Background()
+	ctx = ent.NewContext(ctx, client)
+	ctx = authz.WithTestBypass(ctx)
+
+	previousAsyncReloadDisabled := asyncReloadDisabled
+	asyncReloadDisabled = false
+	defer func() { asyncReloadDisabled = previousAsyncReloadDisabled }()
+
+	p, req, quotaScope, ch, channelService := setupUsageLogQuotaCachedChannel(t, ctx, client, "10")
+	defer channelService.Stop()
+
+	cached := channelService.GetEnabledChannel(ch.ID)
+	require.NotNil(t, cached)
+	require.Equal(t, "10", cached.CredentialViews()[0].QuotaScopeUsedAmount)
+
+	systemService := NewSystemService(SystemServiceParams{
+		CacheConfig: xcache.Config{},
+		Ent:         client,
+	})
+	svc := NewUsageLogService(client, systemService, channelService)
+
+	_, err := svc.CreateUsageLog(ctx, CreateUsageLogParams{
+		RequestID:     req.ID,
+		ProjectID:     p.ID,
+		ChannelID:     ch.ID,
+		ActualModelID: "test-model",
+		QuotaScopeID:  quotaScope.ID,
+		Usage: &llm.Usage{
+			PromptTokens: 5,
+			TotalTokens:  5,
+		},
+		Source:   usagelog.SourceAPI,
+		Format:   "openai/chat_completions",
+		APIKeyID: nil,
+	})
+	require.NoError(t, err)
+
+	require.Eventually(t, func() bool {
+		cached := channelService.GetEnabledChannel(ch.ID)
+		if cached == nil {
+			return false
+		}
+		views := cached.CredentialViews()
+		return len(views) == 1 && views[0].QuotaScopeUsedAmount == "15"
+	}, 2*time.Second, 25*time.Millisecond)
+}
+
+func TestChannelService_ReloadEnabledChannelsCacheDetectsQuotaScopeUsageUpdate(t *testing.T) {
+	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
+	defer client.Close()
+
+	ctx := context.Background()
+	ctx = ent.NewContext(ctx, client)
+	ctx = authz.WithTestBypass(ctx)
+
+	previousAsyncReloadDisabled := asyncReloadDisabled
+	asyncReloadDisabled = true
+	defer func() { asyncReloadDisabled = previousAsyncReloadDisabled }()
+
+	p, req, quotaScope, ch, channelService := setupUsageLogQuotaCachedChannel(t, ctx, client, "10")
+	defer channelService.Stop()
+
+	systemService := NewSystemService(SystemServiceParams{
+		CacheConfig: xcache.Config{},
+		Ent:         client,
+	})
+	svc := NewUsageLogService(client, systemService, channelService)
+
+	_, err := svc.CreateUsageLog(ctx, CreateUsageLogParams{
+		RequestID:     req.ID,
+		ProjectID:     p.ID,
+		ChannelID:     ch.ID,
+		ActualModelID: "test-model",
+		QuotaScopeID:  quotaScope.ID,
+		Usage: &llm.Usage{
+			PromptTokens: 5,
+			TotalTokens:  5,
+		},
+		Source:   usagelog.SourceAPI,
+		Format:   "openai/chat_completions",
+		APIKeyID: nil,
+	})
+	require.NoError(t, err)
+
+	cached := channelService.GetEnabledChannel(ch.ID)
+	require.NotNil(t, cached)
+	require.Equal(t, "10", cached.CredentialViews()[0].QuotaScopeUsedAmount)
+
+	require.NoError(t, channelService.enabledChannelsCache.Load(ctx, false))
+
+	cached = channelService.GetEnabledChannel(ch.ID)
+	require.NotNil(t, cached)
+	require.Equal(t, "15", cached.CredentialViews()[0].QuotaScopeUsedAmount)
+}
+
 func TestUsageLogService_CreateUsageLogResetsExpiredQuotaWindowBeforeAccounting(t *testing.T) {
 	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
 	defer client.Close()
@@ -204,6 +316,11 @@ func TestUsageLogService_CreateUsageLogResetsExpiredQuotaWindowBeforeAccounting(
 		CacheConfig: xcache.Config{},
 		Ent:         client,
 	})
+	require.NoError(t, systemService.SetGeneralSettings(ctx, SystemGeneralSettings{
+		CurrencyCode:                  "USD",
+		Timezone:                      "Asia/Shanghai",
+		CredentialQuotaDailyResetTime: "09:30",
+	}))
 	channelService := NewChannelServiceForTest(client)
 	svc := NewUsageLogService(client, systemService, channelService)
 
@@ -230,9 +347,104 @@ func TestUsageLogService_CreateUsageLogResetsExpiredQuotaWindowBeforeAccounting(
 	require.Equal(t, credentialquotascope.StatusAvailable, updatedScope.Status)
 	require.NotNil(t, updatedScope.ResetAt)
 	require.True(t, updatedScope.ResetAt.After(time.Now()))
+	localReset := updatedScope.ResetAt.In(time.FixedZone("UTC+8", 8*60*60))
+	require.Equal(t, 9, localReset.Hour())
+	require.Equal(t, 30, localReset.Minute())
 	require.NotNil(t, updatedScope.WindowStartedAt)
 	require.True(t, updatedScope.WindowStartedAt.After(startedAt))
 	require.Nil(t, updatedScope.PauseUntil)
+}
+
+func setupUsageLogQuotaCachedChannel(
+	t *testing.T,
+	ctx context.Context,
+	client *ent.Client,
+	usedAmount string,
+) (*ent.Project, *ent.Request, *ent.CredentialQuotaScope, *ent.Channel, *ChannelService) {
+	t.Helper()
+
+	baseTime := time.Now().Add(-time.Hour).UTC().Truncate(time.Second)
+
+	p, err := client.Project.Create().
+		SetName("test-project").
+		SetStatus(project.StatusActive).
+		SetUpdatedAt(baseTime).
+		Save(ctx)
+	require.NoError(t, err)
+
+	quotaScope, err := client.CredentialQuotaScope.Create().
+		SetName("token budget").
+		SetStatus(credentialquotascope.StatusAvailable).
+		SetUnit(credentialquotascope.UnitToken).
+		SetLimitAmount("100").
+		SetUsedAmount(usedAmount).
+		SetResetPolicy(credentialquotascope.ResetPolicyDaily).
+		SetResetAt(time.Now().Add(24 * time.Hour)).
+		SetSource(credentialquotascope.SourceLocalBudget).
+		SetUpdatedAt(baseTime).
+		Save(ctx)
+	require.NoError(t, err)
+
+	secret := objects.UpstreamCredentialSecretFromAPIKey("sk-quota-cache")
+	secretFingerprint := CredentialSecretFingerprintForSecret(channelCredentialAuthKindAPIKey, secret)
+	fingerprint := CredentialFingerprintForSecret("openai", channelCredentialAuthKindAPIKey, secret)
+	credential, err := client.UpstreamCredential.Create().
+		SetName("quota cache key").
+		SetProviderType(channel.TypeOpenai.String()).
+		SetBaseURL("https://api.openai.com/v1").
+		SetAuthKind(upstreamcredential.AuthKindAPIKey).
+		SetSecretKind(upstreamcredential.SecretKindAPIKey).
+		SetIssuerScope("openai").
+		SetKeyHint(CredentialKeyHintForSecret(channelCredentialAuthKindAPIKey, secret)).
+		SetSecretPayload(secret).
+		SetFingerprint(fingerprint).
+		SetSecretFingerprint(secretFingerprint).
+		SetQuotaScopeID(quotaScope.ID).
+		SetStatus(upstreamcredential.StatusEnabled).
+		SetUpdatedAt(baseTime).
+		Save(ctx)
+	require.NoError(t, err)
+
+	ch, err := client.Channel.Create().
+		SetName("quota-cache-channel").
+		SetType(channel.TypeOpenai).
+		SetStatus(channel.StatusEnabled).
+		SetBaseURL("https://api.openai.com/v1").
+		SetCredentials(objects.ChannelCredentials{}).
+		SetSupportedModels([]string{"test-model"}).
+		SetDefaultTestModel("test-model").
+		SetUpdatedAt(baseTime).
+		Save(ctx)
+	require.NoError(t, err)
+
+	_, err = client.ChannelCredentialRef.Create().
+		SetChannelID(ch.ID).
+		SetCredentialID(credential.ID).
+		SetEnabled(true).
+		SetUpdatedAt(baseTime).
+		Save(ctx)
+	require.NoError(t, err)
+
+	req, err := client.Request.Create().
+		SetProjectID(p.ID).
+		SetChannelID(ch.ID).
+		SetModelID("test-model").
+		SetStatus(request.StatusCompleted).
+		SetRequestBody(objects.JSONRawMessage([]byte(`{}`))).
+		Save(ctx)
+	require.NoError(t, err)
+
+	channelService := NewChannelService(ChannelServiceParams{
+		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
+		Ent:         client,
+		SystemService: &SystemService{
+			AbstractService: &AbstractService{db: client},
+			Cache:           xcache.NewFromConfig[ent.System](xcache.Config{Mode: xcache.ModeMemory}),
+		},
+		HttpClient: httpclient.NewHttpClient(),
+	})
+
+	return p, req, quotaScope, ch, channelService
 }
 
 func TestUsageLogService_CreateUsageLog_WithPriceReferenceID(t *testing.T) {
