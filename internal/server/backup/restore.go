@@ -620,7 +620,6 @@ func (svc *BackupService) restoreChannels(ctx context.Context, db *ent.Client, c
 				update := db.Channel.UpdateOneID(existing.ID).
 					SetNillableBaseURL(baseURL).
 					SetStatus(chData.Status).
-					SetCredentials(objects.ChannelCredentials{}).
 					ClearDisabledAPIKeys().
 					SetSupportedModels(chData.SupportedModels).
 					SetNillableAutoSyncSupportedModels(lo.ToPtr(chData.AutoSyncSupportedModels)).
@@ -651,7 +650,6 @@ func (svc *BackupService) restoreChannels(ctx context.Context, db *ent.Client, c
 				SetType(chData.Type).
 				SetNillableBaseURL(baseURL).
 				SetStatus(chData.Status).
-				SetCredentials(objects.ChannelCredentials{}).
 				SetSupportedModels(chData.SupportedModels).
 				SetNillableAutoSyncSupportedModels(lo.ToPtr(chData.AutoSyncSupportedModels)).
 				SetAutoSyncModelPattern(chData.AutoSyncModelPattern).

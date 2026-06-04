@@ -16,9 +16,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
 
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/log"
+	"github.com/looplj/axonhub/internal/objects"
 	"github.com/looplj/axonhub/internal/pkg/xcache"
+	"github.com/looplj/axonhub/internal/server/biz"
 	"github.com/looplj/axonhub/llm/httpclient"
+	"github.com/looplj/axonhub/llm/oauth"
+	"github.com/looplj/axonhub/llm/transformer/openai/copilot"
 )
 
 const (
@@ -57,9 +62,10 @@ func getGithubCopilotClientID() string {
 type CopilotHandlersParams struct {
 	fx.In
 
-	CacheConfig xcache.Config
-	HttpClient  *httpclient.HttpClient
-	Clock       Clock `optional:"true"`
+	CacheConfig               xcache.Config
+	HttpClient                *httpclient.HttpClient
+	UpstreamCredentialService *biz.UpstreamCredentialService
+	Clock                     Clock `optional:"true"`
 }
 
 // Clock provides time-related functions for testability.
@@ -78,6 +84,7 @@ func (realClock) After(d time.Duration) <-chan time.Time { return time.After(d) 
 type CopilotHandlers struct {
 	deviceCodeCache xcache.Cache[copilotDeviceFlowState]
 	httpClient      *httpclient.HttpClient
+	upstreamCredentialService *biz.UpstreamCredentialService
 	clock           Clock
 }
 
@@ -115,9 +122,10 @@ func NewCopilotHandlers(params CopilotHandlersParams) *CopilotHandlers {
 		clock = realClock{}
 	}
 	return &CopilotHandlers{
-		deviceCodeCache: xcache.NewFromConfig[copilotDeviceFlowState](params.CacheConfig),
-		httpClient:      params.HttpClient,
-		clock:           clock,
+		deviceCodeCache:          xcache.NewFromConfig[copilotDeviceFlowState](params.CacheConfig),
+		httpClient:               params.HttpClient,
+		upstreamCredentialService: params.UpstreamCredentialService,
+		clock:                    clock,
 	}
 }
 
@@ -258,11 +266,9 @@ type PollCopilotOAuthRequest struct {
 
 // PollCopilotOAuthResponse represents the response for polling OAuth token.
 type PollCopilotOAuthResponse struct {
-	Token   string `json:"access_token,omitempty"` //nolint:gosec
-	Type    string `json:"token_type,omitempty"`
-	Scope   string `json:"scope,omitempty"`
-	Status  string `json:"status"`
-	Message string `json:"message,omitempty"`
+	Credential *CredentialImportResponse `json:"credential,omitempty"`
+	Status     string                    `json:"status"`
+	Message    string                    `json:"message,omitempty"`
 }
 
 // PollOAuth polls for the OAuth access token using the device flow.
@@ -341,12 +347,31 @@ func (h *CopilotHandlers) PollOAuth(c *gin.Context) {
 			log.Warn(ctx, "failed to delete used oauth state from cache", log.String("session_id", req.SessionID), log.Cause(err))
 		}
 
+		credential, err := h.upstreamCredentialService.CreateUpstreamCredential(ctx, biz.CreateUpstreamCredentialInput{
+			ProviderType: loPtr("github_copilot"),
+			BaseURL:      loPtr(copilot.DefaultCopilotBaseURL),
+			SecretKind:   loSecretKind(upstreamcredential.SecretKindOauth),
+			AuthKind:     loAuthKind(upstreamcredential.AuthKindOauth),
+			IssuerScope:  loPtr("github_copilot"),
+			Status:       loStatus(upstreamcredential.StatusEnabled),
+			Secret: objects.UpstreamCredentialSecret{
+				APIKey: tokenResp.Token,
+				OAuth: &oauth.OAuthCredentials{
+					AccessToken: tokenResp.Token,
+					TokenType:   tokenResp.TokenType,
+					Scopes:      splitScopes(tokenResp.Scope),
+				},
+			},
+		})
+		if err != nil {
+			JSONError(c, http.StatusBadGateway, fmt.Errorf("failed to import oauth credential: %w", err))
+			return
+		}
+
 		c.JSON(http.StatusOK, PollCopilotOAuthResponse{
-			Token:   tokenResp.Token,
-			Type:    tokenResp.TokenType,
-			Scope:   tokenResp.Scope,
-			Status:  "complete",
-			Message: "Authorization complete. Access token received.",
+			Credential: credentialImportResponseFromEntity(credential),
+			Status:     "complete",
+			Message:    "Authorization complete. Credential imported.",
 		})
 		return
 	}
@@ -404,4 +429,14 @@ func (h *CopilotHandlers) pollAccessToken(ctx context.Context, httpClient *httpc
 	}
 
 	return &tokenResp, nil
+}
+
+func splitScopes(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	return strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ',' || r == ' '
+	})
 }

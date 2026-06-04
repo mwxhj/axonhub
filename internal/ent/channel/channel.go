@@ -172,6 +172,8 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 	// DefaultDeletedAt holds the default value on creation for the "deleted_at" field.
 	DefaultDeletedAt int
+	// DefaultCredentials holds the default value on creation for the "credentials" field.
+	DefaultCredentials objects.ChannelCredentials
 	// DefaultDisabledAPIKeys holds the default value on creation for the "disabled_api_keys" field.
 	DefaultDisabledAPIKeys []objects.DisabledAPIKey
 	// DefaultManualModels holds the default value on creation for the "manual_models" field.

@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { ProxyType } from '../components/channels-proxy-dialog';
+import type { UpstreamCredential } from '@/features/credentials/data/credentials';
 
 export interface ProxyConfig {
   type: ProxyType;
@@ -22,7 +23,7 @@ export interface OAuthExchangeInput {
 }
 
 export interface OAuthExchangeResult {
-  credentials: string;
+  credential: UpstreamCredential;
 }
 
 export interface OAuthFlowOptions {
@@ -44,7 +45,7 @@ export interface OAuthFlowOptions {
   /**
    * Callback when credentials are successfully obtained
    */
-  onSuccess?: (credentials: string) => void;
+  onSuccess?: (credential: UpstreamCredential) => void;
 }
 
 export interface OAuthFlowState {
@@ -71,7 +72,7 @@ export interface OAuthFlowActions {
  * const codexOAuth = useOAuthFlow({
  *   startFn: codexOAuthStart,
  *   exchangeFn: codexOAuthExchange,
- *   onSuccess: (credentials) => form.setValue('credentials.apiKey', credentials),
+ *   onSuccess: (credential) => console.log(credential.id),
  * });
  *
  * // Later in your component:
@@ -134,7 +135,7 @@ export function useOAuthFlow(options: OAuthFlowOptions): OAuthFlowState & OAuthF
       const result = await exchangeFn(exchangeInput);
 
       if (onSuccess) {
-        onSuccess(result.credentials);
+        onSuccess(result.credential);
       }
 
       toast.success(t('channels.dialogs.oauth.messages.credentialsImported'));

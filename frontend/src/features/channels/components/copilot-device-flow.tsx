@@ -7,16 +7,16 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { FormLabel } from '@/components/ui/form';
 import { useDeviceFlow } from '../hooks/use-device-flow';
+import type { UpstreamCredential } from '@/features/credentials/data/credentials';
 
 interface CopilotDeviceFlowProps {
-  onSuccess: (credentials: string) => void;
+  onSuccess: (credential: UpstreamCredential) => void;
   onError?: (error: string) => void;
-  existingCredentials?: string;
+  hasExistingCredential?: boolean;
 }
 
-export function CopilotDeviceFlow({ onSuccess, onError, existingCredentials }: CopilotDeviceFlowProps) {
+export function CopilotDeviceFlow({ onSuccess, onError, hasExistingCredential }: CopilotDeviceFlowProps) {
   const { t } = useTranslation();
-  const hasExistingCredentials = existingCredentials && existingCredentials.trim().length > 0;
   const deviceFlow = useDeviceFlow({
     onSuccess,
   });
@@ -42,7 +42,7 @@ export function CopilotDeviceFlow({ onSuccess, onError, existingCredentials }: C
   };
 
   // Show already authenticated state
-  if (hasExistingCredentials && !deviceFlow.userCode && !deviceFlow.isComplete && !deviceFlow.error) {
+  if (hasExistingCredential && !deviceFlow.userCode && !deviceFlow.isComplete && !deviceFlow.error) {
     return (
       <div className='mt-3 space-y-2'>
         <div className='rounded-md border border-green-500/50 bg-green-50/10 p-3'>

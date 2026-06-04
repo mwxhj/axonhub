@@ -14,8 +14,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
 
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/pkg/xcache"
+	"github.com/looplj/axonhub/internal/server/biz"
 	"github.com/looplj/axonhub/llm/httpclient"
 	"github.com/looplj/axonhub/llm/oauth"
 	"github.com/looplj/axonhub/llm/transformer/anthropic/claudecode"
@@ -24,19 +26,22 @@ import (
 type ClaudeCodeHandlersParams struct {
 	fx.In
 
-	CacheConfig xcache.Config
-	HttpClient  *httpclient.HttpClient
+	CacheConfig               xcache.Config
+	HttpClient                *httpclient.HttpClient
+	UpstreamCredentialService *biz.UpstreamCredentialService
 }
 
 type ClaudeCodeHandlers struct {
-	stateCache xcache.Cache[claudeCodeOAuthState]
-	httpClient *httpclient.HttpClient
+	stateCache                xcache.Cache[claudeCodeOAuthState]
+	httpClient                *httpclient.HttpClient
+	upstreamCredentialService *biz.UpstreamCredentialService
 }
 
 func NewClaudeCodeHandlers(params ClaudeCodeHandlersParams) *ClaudeCodeHandlers {
 	return &ClaudeCodeHandlers{
-		stateCache: xcache.NewFromConfig[claudeCodeOAuthState](params.CacheConfig),
-		httpClient: params.HttpClient,
+		stateCache:                xcache.NewFromConfig[claudeCodeOAuthState](params.CacheConfig),
+		httpClient:                params.HttpClient,
+		upstreamCredentialService: params.UpstreamCredentialService,
 	}
 }
 
@@ -131,7 +136,7 @@ type ExchangeClaudeCodeOAuthRequest struct {
 }
 
 type ExchangeClaudeCodeOAuthResponse struct {
-	Credentials string `json:"credentials"`
+	Credential *CredentialImportResponse `json:"credential"`
 }
 
 func parseClaudeCodeCallbackURL(callbackURL string) (string, string, error) {
@@ -224,11 +229,19 @@ func (h *ClaudeCodeHandlers) Exchange(c *gin.Context) {
 		return
 	}
 
-	output, err := creds.ToJSON()
+	credential, err := h.upstreamCredentialService.CreateUpstreamCredential(ctx, biz.CreateUpstreamCredentialInput{
+		ProviderType: loPtr("claudecode"),
+		BaseURL:      loPtr("https://api.anthropic.com/v1"),
+		SecretKind:   loSecretKind(upstreamcredential.SecretKindOauth),
+		AuthKind:     loAuthKind(upstreamcredential.AuthKindOauth),
+		IssuerScope:  loPtr("anthropic_gcp"),
+		Status:       loStatus(upstreamcredential.StatusEnabled),
+		Secret: bizOAuthSecret(creds, ""),
+	})
 	if err != nil {
-		JSONError(c, http.StatusInternalServerError, fmt.Errorf("failed to encode credentials: %w", err))
+		JSONError(c, http.StatusBadGateway, fmt.Errorf("failed to import oauth credential: %w", err))
 		return
 	}
 
-	c.JSON(http.StatusOK, ExchangeClaudeCodeOAuthResponse{Credentials: output})
+	c.JSON(http.StatusOK, ExchangeClaudeCodeOAuthResponse{Credential: credentialImportResponseFromEntity(credential)})
 }

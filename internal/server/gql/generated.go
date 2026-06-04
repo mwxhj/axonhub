@@ -267,14 +267,6 @@ type ComplexityRoot struct {
 		Title     func(childComplexity int) int
 	}
 
-	BulkImportChannelsResult struct {
-		Channels func(childComplexity int) int
-		Created  func(childComplexity int) int
-		Errors   func(childComplexity int) int
-		Failed   func(childComplexity int) int
-		Success  func(childComplexity int) int
-	}
-
 	BulkUpdateChannelOrderingResult struct {
 		Channels func(childComplexity int) int
 		Success  func(childComplexity int) int
@@ -899,7 +891,6 @@ type ComplexityRoot struct {
 		BulkArchiveAPIKeys                   func(childComplexity int, ids []*objects.GUID) int
 		BulkArchiveChannels                  func(childComplexity int, ids []*objects.GUID) int
 		BulkArchiveModels                    func(childComplexity int, ids []*objects.GUID) int
-		BulkCreateChannels                   func(childComplexity int, input biz.BulkCreateChannelsInput) int
 		BulkCreateModels                     func(childComplexity int, inputs []*ent.CreateModelInput) int
 		BulkDeleteChannels                   func(childComplexity int, ids []*objects.GUID) int
 		BulkDeleteModels                     func(childComplexity int, ids []*objects.GUID) int
@@ -916,7 +907,6 @@ type ComplexityRoot struct {
 		BulkEnableModels                     func(childComplexity int, ids []*objects.GUID) int
 		BulkEnablePromptProtectionRules      func(childComplexity int, ids []*objects.GUID) int
 		BulkEnablePrompts                    func(childComplexity int, ids []*objects.GUID) int
-		BulkImportChannels                   func(childComplexity int, input BulkImportChannelsInput) int
 		BulkRecoverChannels                  func(childComplexity int, ids []*objects.GUID) int
 		BulkUpdateChannelOrdering            func(childComplexity int, input BulkUpdateChannelOrderingInput) int
 		ClearCache                           func(childComplexity int, input ClearCacheInput) int
@@ -2052,7 +2042,6 @@ type ModelResolver interface {
 }
 type MutationResolver interface {
 	CreateChannel(ctx context.Context, input ent.CreateChannelInput) (*ent.Channel, error)
-	BulkCreateChannels(ctx context.Context, input biz.BulkCreateChannelsInput) ([]*ent.Channel, error)
 	UpdateChannel(ctx context.Context, id objects.GUID, input ent.UpdateChannelInput) (*ent.Channel, error)
 	SaveChannelEndpoints(ctx context.Context, input biz.SaveChannelEndpointsInput) (*ent.Channel, error)
 	UpdateChannelStatus(ctx context.Context, id objects.GUID, status channel.Status) (*ent.Channel, error)
@@ -2063,7 +2052,6 @@ type MutationResolver interface {
 	BulkRecoverChannels(ctx context.Context, ids []*objects.GUID) (bool, error)
 	BulkDeleteChannels(ctx context.Context, ids []*objects.GUID) (bool, error)
 	TestChannel(ctx context.Context, input TestChannelInput) (*TestChannelPayload, error)
-	BulkImportChannels(ctx context.Context, input BulkImportChannelsInput) (*biz.BulkImportChannelsResult, error)
 	BulkUpdateChannelOrdering(ctx context.Context, input BulkUpdateChannelOrderingInput) (*BulkUpdateChannelOrderingResult, error)
 	CreateUpstreamCredential(ctx context.Context, input biz.CreateUpstreamCredentialInput) (*ent.UpstreamCredential, error)
 	UpdateUpstreamCredential(ctx context.Context, id objects.GUID, input biz.UpdateUpstreamCredentialInput) (*ent.UpstreamCredential, error)
@@ -2970,37 +2958,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.BrandSettings.Title(childComplexity), true
-
-	case "BulkImportChannelsResult.channels":
-		if e.complexity.BulkImportChannelsResult.Channels == nil {
-			break
-		}
-
-		return e.complexity.BulkImportChannelsResult.Channels(childComplexity), true
-	case "BulkImportChannelsResult.created":
-		if e.complexity.BulkImportChannelsResult.Created == nil {
-			break
-		}
-
-		return e.complexity.BulkImportChannelsResult.Created(childComplexity), true
-	case "BulkImportChannelsResult.errors":
-		if e.complexity.BulkImportChannelsResult.Errors == nil {
-			break
-		}
-
-		return e.complexity.BulkImportChannelsResult.Errors(childComplexity), true
-	case "BulkImportChannelsResult.failed":
-		if e.complexity.BulkImportChannelsResult.Failed == nil {
-			break
-		}
-
-		return e.complexity.BulkImportChannelsResult.Failed(childComplexity), true
-	case "BulkImportChannelsResult.success":
-		if e.complexity.BulkImportChannelsResult.Success == nil {
-			break
-		}
-
-		return e.complexity.BulkImportChannelsResult.Success(childComplexity), true
 
 	case "BulkUpdateChannelOrderingResult.channels":
 		if e.complexity.BulkUpdateChannelOrderingResult.Channels == nil {
@@ -5414,17 +5371,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.BulkArchiveModels(childComplexity, args["ids"].([]*objects.GUID)), true
-	case "Mutation.bulkCreateChannels":
-		if e.complexity.Mutation.BulkCreateChannels == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_bulkCreateChannels_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.BulkCreateChannels(childComplexity, args["input"].(biz.BulkCreateChannelsInput)), true
 	case "Mutation.bulkCreateModels":
 		if e.complexity.Mutation.BulkCreateModels == nil {
 			break
@@ -5601,17 +5547,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.BulkEnablePrompts(childComplexity, args["ids"].([]*objects.GUID)), true
-	case "Mutation.bulkImportChannels":
-		if e.complexity.Mutation.BulkImportChannels == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_bulkImportChannels_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.BulkImportChannels(childComplexity, args["input"].(BulkImportChannelsInput)), true
 	case "Mutation.bulkRecoverChannels":
 		if e.complexity.Mutation.BulkRecoverChannels == nil {
 			break
@@ -10808,9 +10743,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputAutoDisableChannelStatusInput,
 		ec.unmarshalInputAzureCredentialInput,
 		ec.unmarshalInputBackupOptionsInput,
-		ec.unmarshalInputBulkCreateChannelsInput,
-		ec.unmarshalInputBulkImportChannelItem,
-		ec.unmarshalInputBulkImportChannelsInput,
 		ec.unmarshalInputBulkUpdateChannelOrderingInput,
 		ec.unmarshalInputChannelCredentialRefOrder,
 		ec.unmarshalInputChannelCredentialRefWhereInput,
@@ -11570,17 +11502,6 @@ func (ec *executionContext) field_Mutation_bulkArchiveModels_args(ctx context.Co
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_bulkCreateChannels_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNBulkCreateChannelsInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐBulkCreateChannelsInput)
-	if err != nil {
-		return nil, err
-	}
-	args["input"] = arg0
-	return args, nil
-}
-
 func (ec *executionContext) field_Mutation_bulkCreateModels_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -11754,17 +11675,6 @@ func (ec *executionContext) field_Mutation_bulkEnablePrompts_args(ctx context.Co
 		return nil, err
 	}
 	args["ids"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_bulkImportChannels_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNBulkImportChannelsInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐBulkImportChannelsInput)
-	if err != nil {
-		return nil, err
-	}
-	args["input"] = arg0
 	return args, nil
 }
 
@@ -17812,209 +17722,6 @@ func (ec *executionContext) fieldContext_BrandSettings_title(_ context.Context, 
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _BulkImportChannelsResult_success(ctx context.Context, field graphql.CollectedField, obj *biz.BulkImportChannelsResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_BulkImportChannelsResult_success,
-		func(ctx context.Context) (any, error) {
-			return obj.Success, nil
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_BulkImportChannelsResult_success(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "BulkImportChannelsResult",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _BulkImportChannelsResult_created(ctx context.Context, field graphql.CollectedField, obj *biz.BulkImportChannelsResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_BulkImportChannelsResult_created,
-		func(ctx context.Context) (any, error) {
-			return obj.Created, nil
-		},
-		nil,
-		ec.marshalNInt2int,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_BulkImportChannelsResult_created(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "BulkImportChannelsResult",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _BulkImportChannelsResult_failed(ctx context.Context, field graphql.CollectedField, obj *biz.BulkImportChannelsResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_BulkImportChannelsResult_failed,
-		func(ctx context.Context) (any, error) {
-			return obj.Failed, nil
-		},
-		nil,
-		ec.marshalNInt2int,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_BulkImportChannelsResult_failed(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "BulkImportChannelsResult",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _BulkImportChannelsResult_errors(ctx context.Context, field graphql.CollectedField, obj *biz.BulkImportChannelsResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_BulkImportChannelsResult_errors,
-		func(ctx context.Context) (any, error) {
-			return obj.Errors, nil
-		},
-		nil,
-		ec.marshalOString2ᚕstringᚄ,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_BulkImportChannelsResult_errors(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "BulkImportChannelsResult",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _BulkImportChannelsResult_channels(ctx context.Context, field graphql.CollectedField, obj *biz.BulkImportChannelsResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_BulkImportChannelsResult_channels,
-		func(ctx context.Context) (any, error) {
-			return obj.Channels, nil
-		},
-		nil,
-		ec.marshalNChannel2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐChannelᚄ,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_BulkImportChannelsResult_channels(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "BulkImportChannelsResult",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Channel_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Channel_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Channel_updatedAt(ctx, field)
-			case "type":
-				return ec.fieldContext_Channel_type(ctx, field)
-			case "baseURL":
-				return ec.fieldContext_Channel_baseURL(ctx, field)
-			case "name":
-				return ec.fieldContext_Channel_name(ctx, field)
-			case "status":
-				return ec.fieldContext_Channel_status(ctx, field)
-			case "supportedModels":
-				return ec.fieldContext_Channel_supportedModels(ctx, field)
-			case "manualModels":
-				return ec.fieldContext_Channel_manualModels(ctx, field)
-			case "autoSyncSupportedModels":
-				return ec.fieldContext_Channel_autoSyncSupportedModels(ctx, field)
-			case "autoSyncModelPattern":
-				return ec.fieldContext_Channel_autoSyncModelPattern(ctx, field)
-			case "tags":
-				return ec.fieldContext_Channel_tags(ctx, field)
-			case "defaultTestModel":
-				return ec.fieldContext_Channel_defaultTestModel(ctx, field)
-			case "policies":
-				return ec.fieldContext_Channel_policies(ctx, field)
-			case "settings":
-				return ec.fieldContext_Channel_settings(ctx, field)
-			case "orderingWeight":
-				return ec.fieldContext_Channel_orderingWeight(ctx, field)
-			case "errorMessage":
-				return ec.fieldContext_Channel_errorMessage(ctx, field)
-			case "remark":
-				return ec.fieldContext_Channel_remark(ctx, field)
-			case "endpoints":
-				return ec.fieldContext_Channel_endpoints(ctx, field)
-			case "requests":
-				return ec.fieldContext_Channel_requests(ctx, field)
-			case "executions":
-				return ec.fieldContext_Channel_executions(ctx, field)
-			case "usageLogs":
-				return ec.fieldContext_Channel_usageLogs(ctx, field)
-			case "channelProbes":
-				return ec.fieldContext_Channel_channelProbes(ctx, field)
-			case "channelModelPrices":
-				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
-			case "credentialRefs":
-				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "defaultEndpoints":
-				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
-			case "allModelEntries":
-				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "liveLimiterStats":
-				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Channel", field.Name)
 		},
 	}
 	return fc, nil
@@ -30293,105 +30000,6 @@ func (ec *executionContext) fieldContext_Mutation_createChannel(ctx context.Cont
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_bulkCreateChannels(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Mutation_bulkCreateChannels,
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().BulkCreateChannels(ctx, fc.Args["input"].(biz.BulkCreateChannelsInput))
-		},
-		nil,
-		ec.marshalNChannel2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐChannelᚄ,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Mutation_bulkCreateChannels(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Channel_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Channel_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Channel_updatedAt(ctx, field)
-			case "type":
-				return ec.fieldContext_Channel_type(ctx, field)
-			case "baseURL":
-				return ec.fieldContext_Channel_baseURL(ctx, field)
-			case "name":
-				return ec.fieldContext_Channel_name(ctx, field)
-			case "status":
-				return ec.fieldContext_Channel_status(ctx, field)
-			case "supportedModels":
-				return ec.fieldContext_Channel_supportedModels(ctx, field)
-			case "manualModels":
-				return ec.fieldContext_Channel_manualModels(ctx, field)
-			case "autoSyncSupportedModels":
-				return ec.fieldContext_Channel_autoSyncSupportedModels(ctx, field)
-			case "autoSyncModelPattern":
-				return ec.fieldContext_Channel_autoSyncModelPattern(ctx, field)
-			case "tags":
-				return ec.fieldContext_Channel_tags(ctx, field)
-			case "defaultTestModel":
-				return ec.fieldContext_Channel_defaultTestModel(ctx, field)
-			case "policies":
-				return ec.fieldContext_Channel_policies(ctx, field)
-			case "settings":
-				return ec.fieldContext_Channel_settings(ctx, field)
-			case "orderingWeight":
-				return ec.fieldContext_Channel_orderingWeight(ctx, field)
-			case "errorMessage":
-				return ec.fieldContext_Channel_errorMessage(ctx, field)
-			case "remark":
-				return ec.fieldContext_Channel_remark(ctx, field)
-			case "endpoints":
-				return ec.fieldContext_Channel_endpoints(ctx, field)
-			case "requests":
-				return ec.fieldContext_Channel_requests(ctx, field)
-			case "executions":
-				return ec.fieldContext_Channel_executions(ctx, field)
-			case "usageLogs":
-				return ec.fieldContext_Channel_usageLogs(ctx, field)
-			case "channelProbes":
-				return ec.fieldContext_Channel_channelProbes(ctx, field)
-			case "channelModelPrices":
-				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
-			case "credentialRefs":
-				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "defaultEndpoints":
-				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
-			case "allModelEntries":
-				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "liveLimiterStats":
-				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Channel", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_bulkCreateChannels_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Mutation_updateChannel(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -30980,59 +30588,6 @@ func (ec *executionContext) fieldContext_Mutation_testChannel(ctx context.Contex
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_testChannel_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_bulkImportChannels(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Mutation_bulkImportChannels,
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().BulkImportChannels(ctx, fc.Args["input"].(BulkImportChannelsInput))
-		},
-		nil,
-		ec.marshalNBulkImportChannelsResult2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐBulkImportChannelsResult,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Mutation_bulkImportChannels(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "success":
-				return ec.fieldContext_BulkImportChannelsResult_success(ctx, field)
-			case "created":
-				return ec.fieldContext_BulkImportChannelsResult_created(ctx, field)
-			case "failed":
-				return ec.fieldContext_BulkImportChannelsResult_failed(ctx, field)
-			case "errors":
-				return ec.fieldContext_BulkImportChannelsResult_errors(ctx, field)
-			case "channels":
-				return ec.fieldContext_BulkImportChannelsResult_channels(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type BulkImportChannelsResult", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_bulkImportChannels_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -61796,199 +61351,6 @@ func (ec *executionContext) unmarshalInputBackupOptionsInput(ctx context.Context
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputBulkCreateChannelsInput(ctx context.Context, obj any) (biz.BulkCreateChannelsInput, error) {
-	var it biz.BulkCreateChannelsInput
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"type", "name", "tags", "baseURL", "apiKeys", "supportedModels", "autoSyncSupportedModels", "defaultTestModel", "settings", "policies", "orderingWeight", "remark"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "type":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("type"))
-			data, err := ec.unmarshalNChannelType2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋchannelᚐType(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Type = data
-		case "name":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Name = data
-		case "tags":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("tags"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Tags = data
-		case "baseURL":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURL"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.BaseURL = data
-		case "apiKeys":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("apiKeys"))
-			data, err := ec.unmarshalNString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.APIKeys = data
-		case "supportedModels":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("supportedModels"))
-			data, err := ec.unmarshalNString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SupportedModels = data
-		case "autoSyncSupportedModels":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("autoSyncSupportedModels"))
-			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.AutoSyncSupportedModels = data
-		case "defaultTestModel":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("defaultTestModel"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.DefaultTestModel = data
-		case "settings":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("settings"))
-			data, err := ec.unmarshalOChannelSettingsInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐChannelSettings(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Settings = data
-		case "policies":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("policies"))
-			data, err := ec.unmarshalOChannelPoliciesInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐChannelPolicies(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Policies = data
-		case "orderingWeight":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("orderingWeight"))
-			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.OrderingWeight = data
-		case "remark":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("remark"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Remark = data
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputBulkImportChannelItem(ctx context.Context, obj any) (biz.BulkImportChannelItem, error) {
-	var it biz.BulkImportChannelItem
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"type", "name", "baseURL", "apiKey", "supportedModels", "defaultTestModel"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "type":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("type"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Type = data
-		case "name":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Name = data
-		case "baseURL":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("baseURL"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.BaseURL = data
-		case "apiKey":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("apiKey"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.APIKey = data
-		case "supportedModels":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("supportedModels"))
-			data, err := ec.unmarshalNString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SupportedModels = data
-		case "defaultTestModel":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("defaultTestModel"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.DefaultTestModel = data
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputBulkImportChannelsInput(ctx context.Context, obj any) (BulkImportChannelsInput, error) {
-	var it BulkImportChannelsInput
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"channels"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "channels":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("channels"))
-			data, err := ec.unmarshalNBulkImportChannelItem2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐBulkImportChannelItemᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Channels = data
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputBulkUpdateChannelOrderingInput(ctx context.Context, obj any) (BulkUpdateChannelOrderingInput, error) {
 	var it BulkUpdateChannelOrderingInput
 	asMap := map[string]any{}
@@ -90404,62 +89766,6 @@ func (ec *executionContext) _BrandSettings(ctx context.Context, sel ast.Selectio
 	return out
 }
 
-var bulkImportChannelsResultImplementors = []string{"BulkImportChannelsResult"}
-
-func (ec *executionContext) _BulkImportChannelsResult(ctx context.Context, sel ast.SelectionSet, obj *biz.BulkImportChannelsResult) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, bulkImportChannelsResultImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("BulkImportChannelsResult")
-		case "success":
-			out.Values[i] = ec._BulkImportChannelsResult_success(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "created":
-			out.Values[i] = ec._BulkImportChannelsResult_created(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "failed":
-			out.Values[i] = ec._BulkImportChannelsResult_failed(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "errors":
-			out.Values[i] = ec._BulkImportChannelsResult_errors(ctx, field, obj)
-		case "channels":
-			out.Values[i] = ec._BulkImportChannelsResult_channels(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
 var bulkUpdateChannelOrderingResultImplementors = []string{"BulkUpdateChannelOrderingResult"}
 
 func (ec *executionContext) _BulkUpdateChannelOrderingResult(ctx context.Context, sel ast.SelectionSet, obj *BulkUpdateChannelOrderingResult) graphql.Marshaler {
@@ -96156,13 +95462,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "bulkCreateChannels":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_bulkCreateChannels(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "updateChannel":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_updateChannel(ctx, field)
@@ -96229,13 +95528,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "testChannel":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_testChannel(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "bulkImportChannels":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_bulkImportChannels(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -108840,50 +108132,6 @@ func (ec *executionContext) marshalNBrandSettings2ᚖgithubᚗcomᚋloopljᚋaxo
 		return graphql.Null
 	}
 	return ec._BrandSettings(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalNBulkCreateChannelsInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐBulkCreateChannelsInput(ctx context.Context, v any) (biz.BulkCreateChannelsInput, error) {
-	res, err := ec.unmarshalInputBulkCreateChannelsInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNBulkImportChannelItem2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐBulkImportChannelItemᚄ(ctx context.Context, v any) ([]*biz.BulkImportChannelItem, error) {
-	var vSlice []any
-	vSlice = graphql.CoerceList(v)
-	var err error
-	res := make([]*biz.BulkImportChannelItem, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNBulkImportChannelItem2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐBulkImportChannelItem(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) unmarshalNBulkImportChannelItem2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐBulkImportChannelItem(ctx context.Context, v any) (*biz.BulkImportChannelItem, error) {
-	res, err := ec.unmarshalInputBulkImportChannelItem(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNBulkImportChannelsInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐBulkImportChannelsInput(ctx context.Context, v any) (BulkImportChannelsInput, error) {
-	res, err := ec.unmarshalInputBulkImportChannelsInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNBulkImportChannelsResult2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐBulkImportChannelsResult(ctx context.Context, sel ast.SelectionSet, v biz.BulkImportChannelsResult) graphql.Marshaler {
-	return ec._BulkImportChannelsResult(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNBulkImportChannelsResult2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐBulkImportChannelsResult(ctx context.Context, sel ast.SelectionSet, v *biz.BulkImportChannelsResult) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._BulkImportChannelsResult(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNBulkUpdateChannelOrderingInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐBulkUpdateChannelOrderingInput(ctx context.Context, v any) (BulkUpdateChannelOrderingInput, error) {

@@ -1,4 +1,4 @@
-import { IconPlus, IconUpload, IconArrowsSort, IconSettings, IconScale } from '@tabler/icons-react';
+import { IconPlus, IconArrowsSort, IconSettings, IconScale } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
@@ -28,11 +28,6 @@ export function ChannelsPrimaryButtons() {
           {/* Settings - requires write_channels permission */}
           <Button variant='outline' className='shrink-0 space-x-1' onClick={() => setOpen('channelSettings')}>
             <span>{t('channels.actions.settings')}</span> <IconSettings size={18} />
-          </Button>
-
-          {/* Bulk Import - requires write_channels permission */}
-          <Button variant='outline' className='shrink-0 space-x-1' onClick={() => setOpen('bulkImport')}>
-            <span>{t('channels.importChannels', '批量导入')}</span> <IconUpload size={18} />
           </Button>
 
           {/* Bulk Ordering - requires write_channels permission */}

@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/pkg/xcache"
 	"github.com/looplj/axonhub/llm/httpclient"
 )
@@ -49,6 +50,7 @@ func (fc *fakeClock) Advance(d time.Duration) {
 
 func TestCopilotHandlers_StartOAuth_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	deviceCodeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, http.MethodPost, r.Method)
@@ -76,11 +78,13 @@ func TestCopilotHandlers_StartOAuth_Success(t *testing.T) {
 	hc := httpclient.NewHttpClientWithClient(&http.Client{Transport: transport})
 
 	h := NewCopilotHandlers(CopilotHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  hc,
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                hc,
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/copilot/oauth/start", h.StartOAuth)
 
 	req := httptest.NewRequest(http.MethodPost, "/admin/copilot/oauth/start", bytes.NewBufferString("{}"))
@@ -102,13 +106,16 @@ func TestCopilotHandlers_StartOAuth_Success(t *testing.T) {
 
 func TestCopilotHandlers_StartOAuth_InvalidJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	h := NewCopilotHandlers(CopilotHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  httpclient.NewHttpClient(),
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                httpclient.NewHttpClient(),
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/copilot/oauth/start", h.StartOAuth)
 
 	req := httptest.NewRequest(http.MethodPost, "/admin/copilot/oauth/start", bytes.NewBufferString("{"))
@@ -123,6 +130,7 @@ func TestCopilotHandlers_StartOAuth_InvalidJSON(t *testing.T) {
 
 func TestCopilotHandlers_StartOAuth_GitHubError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	deviceCodeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
@@ -136,11 +144,13 @@ func TestCopilotHandlers_StartOAuth_GitHubError(t *testing.T) {
 	hc := httpclient.NewHttpClientWithClient(&http.Client{Transport: transport})
 
 	h := NewCopilotHandlers(CopilotHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  hc,
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                hc,
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/copilot/oauth/start", h.StartOAuth)
 
 	req := httptest.NewRequest(http.MethodPost, "/admin/copilot/oauth/start", bytes.NewBufferString("{}"))
@@ -154,6 +164,7 @@ func TestCopilotHandlers_StartOAuth_GitHubError(t *testing.T) {
 
 func TestCopilotHandlers_StartOAuth_EmptyDeviceCode(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	deviceCodeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -172,11 +183,13 @@ func TestCopilotHandlers_StartOAuth_EmptyDeviceCode(t *testing.T) {
 	hc := httpclient.NewHttpClientWithClient(&http.Client{Transport: transport})
 
 	h := NewCopilotHandlers(CopilotHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  hc,
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                hc,
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/copilot/oauth/start", h.StartOAuth)
 
 	req := httptest.NewRequest(http.MethodPost, "/admin/copilot/oauth/start", bytes.NewBufferString("{}"))
@@ -191,6 +204,7 @@ func TestCopilotHandlers_StartOAuth_EmptyDeviceCode(t *testing.T) {
 
 func TestCopilotHandlers_StartOAuth_WithProxy(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	deviceCodeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -210,11 +224,13 @@ func TestCopilotHandlers_StartOAuth_WithProxy(t *testing.T) {
 	hc := httpclient.NewHttpClientWithClient(&http.Client{Transport: transport})
 
 	h := NewCopilotHandlers(CopilotHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  hc,
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                hc,
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/copilot/oauth/start", h.StartOAuth)
 
 	reqBody, _ := json.Marshal(StartCopilotOAuthRequest{})
@@ -230,6 +246,7 @@ func TestCopilotHandlers_StartOAuth_WithProxy(t *testing.T) {
 
 func TestCopilotHandlers_PollOAuth_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	deviceCodeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -268,11 +285,13 @@ func TestCopilotHandlers_PollOAuth_Success(t *testing.T) {
 	hc := httpclient.NewHttpClientWithClient(&http.Client{Transport: transport})
 
 	h := NewCopilotHandlers(CopilotHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  hc,
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                hc,
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/copilot/oauth/start", h.StartOAuth)
 	router.POST("/admin/copilot/oauth/poll", h.PollOAuth)
 
@@ -298,13 +317,21 @@ func TestCopilotHandlers_PollOAuth_Success(t *testing.T) {
 	var pollResp PollCopilotOAuthResponse
 	require.NoError(t, json.Unmarshal(pollW.Body.Bytes(), &pollResp))
 	require.Equal(t, "complete", pollResp.Status)
-	require.Equal(t, "gho_test_access_token", pollResp.Token)
-	require.Equal(t, "bearer", pollResp.Type)
-	require.Equal(t, "read:user", pollResp.Scope)
+	require.NotNil(t, pollResp.Credential)
+	require.Equal(t, "github_copilot", pollResp.Credential.ProviderType)
+	require.Equal(t, "enabled", pollResp.Credential.Status)
+	require.Equal(t, "https://api.githubcopilot.com", pollResp.Credential.BaseURL)
+
+	createdCredential, err := deps.client.UpstreamCredential.Get(oauthBypassContext(deps.client), pollResp.Credential.ID)
+	require.NoError(t, err)
+	require.Equal(t, upstreamcredential.StatusEnabled, createdCredential.Status)
+	require.Equal(t, "github_copilot", createdCredential.ProviderType)
+	require.Equal(t, "https://api.githubcopilot.com", createdCredential.BaseURL)
 }
 
 func TestCopilotHandlers_PollOAuth_AuthorizationPending(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	deviceCodeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -334,11 +361,13 @@ func TestCopilotHandlers_PollOAuth_AuthorizationPending(t *testing.T) {
 	hc := httpclient.NewHttpClientWithClient(&http.Client{Transport: transport})
 
 	h := NewCopilotHandlers(CopilotHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  hc,
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                hc,
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/copilot/oauth/start", h.StartOAuth)
 	router.POST("/admin/copilot/oauth/poll", h.PollOAuth)
 
@@ -369,6 +398,7 @@ func TestCopilotHandlers_PollOAuth_AuthorizationPending(t *testing.T) {
 
 func TestCopilotHandlers_PollOAuth_SlowDown(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	deviceCodeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -398,11 +428,13 @@ func TestCopilotHandlers_PollOAuth_SlowDown(t *testing.T) {
 	hc := httpclient.NewHttpClientWithClient(&http.Client{Transport: transport})
 
 	h := NewCopilotHandlers(CopilotHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  hc,
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                hc,
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/copilot/oauth/start", h.StartOAuth)
 	router.POST("/admin/copilot/oauth/poll", h.PollOAuth)
 
@@ -433,6 +465,7 @@ func TestCopilotHandlers_PollOAuth_SlowDown(t *testing.T) {
 
 func TestCopilotHandlers_PollOAuth_ExpiredToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	deviceCodeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -462,11 +495,13 @@ func TestCopilotHandlers_PollOAuth_ExpiredToken(t *testing.T) {
 	hc := httpclient.NewHttpClientWithClient(&http.Client{Transport: transport})
 
 	h := NewCopilotHandlers(CopilotHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  hc,
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                hc,
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/copilot/oauth/start", h.StartOAuth)
 	router.POST("/admin/copilot/oauth/poll", h.PollOAuth)
 
@@ -493,6 +528,7 @@ func TestCopilotHandlers_PollOAuth_ExpiredToken(t *testing.T) {
 
 func TestCopilotHandlers_PollOAuth_AccessDenied(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	deviceCodeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -522,11 +558,13 @@ func TestCopilotHandlers_PollOAuth_AccessDenied(t *testing.T) {
 	hc := httpclient.NewHttpClientWithClient(&http.Client{Transport: transport})
 
 	h := NewCopilotHandlers(CopilotHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  hc,
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                hc,
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/copilot/oauth/start", h.StartOAuth)
 	router.POST("/admin/copilot/oauth/poll", h.PollOAuth)
 
@@ -553,13 +591,16 @@ func TestCopilotHandlers_PollOAuth_AccessDenied(t *testing.T) {
 
 func TestCopilotHandlers_PollOAuth_InvalidSession(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	h := NewCopilotHandlers(CopilotHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  httpclient.NewHttpClient(),
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                httpclient.NewHttpClient(),
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/copilot/oauth/poll", h.PollOAuth)
 
 	pollBody, _ := json.Marshal(PollCopilotOAuthRequest{
@@ -576,13 +617,16 @@ func TestCopilotHandlers_PollOAuth_InvalidSession(t *testing.T) {
 
 func TestCopilotHandlers_PollOAuth_InvalidJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	h := NewCopilotHandlers(CopilotHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  httpclient.NewHttpClient(),
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                httpclient.NewHttpClient(),
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/copilot/oauth/poll", h.PollOAuth)
 
 	pollReq := httptest.NewRequest(http.MethodPost, "/admin/copilot/oauth/poll", bytes.NewBufferString("{"))
@@ -596,13 +640,16 @@ func TestCopilotHandlers_PollOAuth_InvalidJSON(t *testing.T) {
 
 func TestCopilotHandlers_PollOAuth_MissingSessionID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	h := NewCopilotHandlers(CopilotHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  httpclient.NewHttpClient(),
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                httpclient.NewHttpClient(),
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/copilot/oauth/poll", h.PollOAuth)
 
 	pollBody, _ := json.Marshal(PollCopilotOAuthRequest{
@@ -618,6 +665,7 @@ func TestCopilotHandlers_PollOAuth_MissingSessionID(t *testing.T) {
 
 func TestCopilotHandlers_PollOAuth_DeviceCodeExpired(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	deviceCodeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -642,12 +690,14 @@ func TestCopilotHandlers_PollOAuth_DeviceCodeExpired(t *testing.T) {
 	}
 
 	h := NewCopilotHandlers(CopilotHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  hc,
-		Clock:       fakeClock,
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                hc,
+		UpstreamCredentialService: deps.upstreamCredentialService,
+		Clock:                     fakeClock,
 	})
 
 	router := gin.New()
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/copilot/oauth/start", h.StartOAuth)
 	router.POST("/admin/copilot/oauth/poll", h.PollOAuth)
 
@@ -676,6 +726,7 @@ func TestCopilotHandlers_PollOAuth_DeviceCodeExpired(t *testing.T) {
 
 func TestCopilotHandlers_PollOAuth_FormEncodedResponse(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	deviceCodeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -702,11 +753,13 @@ func TestCopilotHandlers_PollOAuth_FormEncodedResponse(t *testing.T) {
 	hc := httpclient.NewHttpClientWithClient(&http.Client{Transport: transport})
 
 	h := NewCopilotHandlers(CopilotHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  hc,
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                hc,
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/copilot/oauth/start", h.StartOAuth)
 	router.POST("/admin/copilot/oauth/poll", h.PollOAuth)
 
@@ -732,11 +785,13 @@ func TestCopilotHandlers_PollOAuth_FormEncodedResponse(t *testing.T) {
 	var pollResp PollCopilotOAuthResponse
 	require.NoError(t, json.Unmarshal(pollW.Body.Bytes(), &pollResp))
 	require.Equal(t, "complete", pollResp.Status)
-	require.Equal(t, "gho_form_encoded_token", pollResp.Token)
+	require.NotNil(t, pollResp.Credential)
+	require.Equal(t, "github_copilot", pollResp.Credential.ProviderType)
 }
 
 func TestCopilotHandlers_PollOAuth_DeletesStateOnSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	deviceCodeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -767,11 +822,13 @@ func TestCopilotHandlers_PollOAuth_DeletesStateOnSuccess(t *testing.T) {
 	hc := httpclient.NewHttpClientWithClient(&http.Client{Transport: transport})
 
 	h := NewCopilotHandlers(CopilotHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  hc,
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                hc,
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/copilot/oauth/start", h.StartOAuth)
 	router.POST("/admin/copilot/oauth/poll", h.PollOAuth)
 
@@ -805,6 +862,7 @@ func TestCopilotHandlers_PollOAuth_DeletesStateOnSuccess(t *testing.T) {
 
 func TestCopilotHandlers_PollOAuth_UnknownError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	deviceCodeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -834,11 +892,13 @@ func TestCopilotHandlers_PollOAuth_UnknownError(t *testing.T) {
 	hc := httpclient.NewHttpClientWithClient(&http.Client{Transport: transport})
 
 	h := NewCopilotHandlers(CopilotHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  hc,
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                hc,
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/copilot/oauth/start", h.StartOAuth)
 	router.POST("/admin/copilot/oauth/poll", h.PollOAuth)
 
@@ -865,6 +925,7 @@ func TestCopilotHandlers_PollOAuth_UnknownError(t *testing.T) {
 
 func TestCopilotHandlers_PollOAuth_WithProxy(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	deviceCodeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -895,11 +956,13 @@ func TestCopilotHandlers_PollOAuth_WithProxy(t *testing.T) {
 	hc := httpclient.NewHttpClientWithClient(&http.Client{Transport: transport})
 
 	h := NewCopilotHandlers(CopilotHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  hc,
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                hc,
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/copilot/oauth/start", h.StartOAuth)
 	router.POST("/admin/copilot/oauth/poll", h.PollOAuth)
 

@@ -49,6 +49,11 @@ export function CreateCredentialDialog() {
     reset(defaultCredentialFormValues);
   };
 
+  const handleImportedCredential = () => {
+    setOpen(null);
+    reset(defaultCredentialFormValues);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(nextOpen) => setOpen(nextOpen ? 'create' : null)}>
       <DialogContent className='sm:max-w-[720px]'>
@@ -63,7 +68,13 @@ export function CreateCredentialDialog() {
               <Input id='credential-name' {...register('name')} />
             </div>
 
-            <CredentialSecretFields register={register} setValue={setValue} watch={watch} errors={errors} />
+            <CredentialSecretFields
+              register={register}
+              setValue={setValue}
+              watch={watch}
+              errors={errors}
+              onImportedCredential={handleImportedCredential}
+            />
 
             <div className='grid grid-cols-1 gap-4 md:grid-cols-2'>
               <div className='grid gap-2'>

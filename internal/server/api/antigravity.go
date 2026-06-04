@@ -16,8 +16,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
 
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/pkg/xcache"
+	"github.com/looplj/axonhub/internal/server/biz"
 	"github.com/looplj/axonhub/llm/httpclient"
 	"github.com/looplj/axonhub/llm/oauth"
 	"github.com/looplj/axonhub/llm/transformer/antigravity"
@@ -26,19 +28,22 @@ import (
 type AntigravityHandlersParams struct {
 	fx.In
 
-	CacheConfig xcache.Config
-	HttpClient  *httpclient.HttpClient
+	CacheConfig               xcache.Config
+	HttpClient                *httpclient.HttpClient
+	UpstreamCredentialService *biz.UpstreamCredentialService
 }
 
 type AntigravityHandlers struct {
-	stateCache xcache.Cache[antigravityOAuthState]
-	httpClient *httpclient.HttpClient
+	stateCache                xcache.Cache[antigravityOAuthState]
+	httpClient                *httpclient.HttpClient
+	upstreamCredentialService *biz.UpstreamCredentialService
 }
 
 func NewAntigravityHandlers(params AntigravityHandlersParams) *AntigravityHandlers {
 	return &AntigravityHandlers{
-		stateCache: xcache.NewFromConfig[antigravityOAuthState](params.CacheConfig),
-		httpClient: params.HttpClient,
+		stateCache:                xcache.NewFromConfig[antigravityOAuthState](params.CacheConfig),
+		httpClient:                params.HttpClient,
+		upstreamCredentialService: params.UpstreamCredentialService,
 	}
 }
 
@@ -144,7 +149,7 @@ type ExchangeAntigravityOAuthRequest struct {
 }
 
 type ExchangeAntigravityOAuthResponse struct {
-	Credentials string `json:"credentials"`
+	Credential *CredentialImportResponse `json:"credential"`
 }
 
 func parseAntigravityCallbackURL(callbackURL string) (string, string, error) {
@@ -240,10 +245,22 @@ func (h *AntigravityHandlers) Exchange(c *gin.Context) {
 		}
 	}
 
-	// Format: refreshToken|projectId
-	output := fmt.Sprintf("%s|%s", creds.RefreshToken, projectID)
+	secret := fmt.Sprintf("%s|%s", creds.RefreshToken, projectID)
+	credential, err := h.upstreamCredentialService.CreateUpstreamCredential(ctx, biz.CreateUpstreamCredentialInput{
+		ProviderType: loPtr("antigravity"),
+		BaseURL:      loPtr(antigravity.EndpointProd),
+		SecretKind:   loSecretKind(upstreamcredential.SecretKindOauth),
+		AuthKind:     loAuthKind(upstreamcredential.AuthKindOauth),
+		IssuerScope:  loPtr("antigravity"),
+		Status:       loStatus(upstreamcredential.StatusEnabled),
+		Secret:       bizOAuthSecret(creds, secret),
+	})
+	if err != nil {
+		JSONError(c, http.StatusBadGateway, fmt.Errorf("failed to import oauth credential: %w", err))
+		return
+	}
 
-	c.JSON(http.StatusOK, ExchangeAntigravityOAuthResponse{Credentials: output})
+	c.JSON(http.StatusOK, ExchangeAntigravityOAuthResponse{Credential: credentialImportResponseFromEntity(credential)})
 }
 
 func (h *AntigravityHandlers) resolveProjectID(ctx context.Context, accessToken string, httpClient *httpclient.HttpClient) (string, error) {

@@ -76,6 +76,10 @@ export function RotateCredentialDialog() {
     close();
   };
 
+  const handleImportedCredential = () => {
+    close();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(nextOpen) => (nextOpen ? setOpen('rotate') : close())}>
       <DialogContent className='sm:max-w-[680px]'>
@@ -93,6 +97,7 @@ export function RotateCredentialDialog() {
                 errors={errors}
                 allowModeSwitch={false}
                 currentCredential={currentCredential}
+                onImportedCredential={handleImportedCredential}
               />
             )}
           </div>

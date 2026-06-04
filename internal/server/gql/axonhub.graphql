@@ -315,42 +315,6 @@ type TestChannelPayload {
   error: String
 }
 
-input BulkImportChannelItem {
-  type: String!
-  name: String!
-  baseURL: String
-  apiKey: String
-  supportedModels: [String!]!
-  defaultTestModel: String!
-}
-
-input BulkImportChannelsInput {
-  channels: [BulkImportChannelItem!]!
-}
-
-type BulkImportChannelsResult {
-  success: Boolean!
-  created: Int!
-  failed: Int!
-  errors: [String!]
-  channels: [Channel!]!
-}
-
-input BulkCreateChannelsInput {
-  type: ChannelType!
-  name: String!
-  tags: [String!]
-  baseURL: String
-  apiKeys: [String!]!
-  supportedModels: [String!]!
-  autoSyncSupportedModels: Boolean
-  defaultTestModel: String!
-  settings: ChannelSettingsInput
-  policies: ChannelPoliciesInput
-  orderingWeight: Int
-  remark: String
-}
-
 input ChannelOrderingItem {
   id: ID!
   orderingWeight: Int!
@@ -801,7 +765,6 @@ type ClearChannelOverrideTemplatesPayload {
 
 type Mutation {
   createChannel(input: CreateChannelInput!): Channel!
-  bulkCreateChannels(input: BulkCreateChannelsInput!): [Channel!]!
   updateChannel(id: ID!, input: UpdateChannelInput!): Channel!
   saveChannelEndpoints(input: SaveChannelEndpointsInput!): Channel!
   updateChannelStatus(id: ID!, status: ChannelStatus!): Channel!
@@ -812,7 +775,6 @@ type Mutation {
   bulkRecoverChannels(ids: [ID!]!): Boolean!
   bulkDeleteChannels(ids: [ID!]!): Boolean!
   testChannel(input: TestChannelInput!): TestChannelPayload!
-  bulkImportChannels(input: BulkImportChannelsInput!): BulkImportChannelsResult!
   bulkUpdateChannelOrdering(
     input: BulkUpdateChannelOrderingInput!
   ): BulkUpdateChannelOrderingResult!

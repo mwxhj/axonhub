@@ -4,7 +4,12 @@
 
 Remove or retire legacy product surfaces that duplicate the credential-owned routing model. The immediate product direction is: channels describe routing and transformation policy, while upstream credentials own API keys, OAuth tokens, cloud credentials, local key quota, and provider quota observation.
 
-This task is intentionally broad in discovery, but implementation should be split into safe deletion slices so migrations, runtime routing, GraphQL compatibility, and frontend flows do not break at once.
+This task now has a locked implementation slice: complete the channel-owned credential deletion path in one coordinated pass across product surface, write paths, runtime fallback, and final dead-storage cleanup planning. The four locked work items are:
+
+1. remove channel-side raw key management product surfaces
+2. close `channel.credentials` write paths
+3. hard-cut the remaining runtime legacy fallback paths
+4. prepare the final schema dead-storage removal path after migration neutralization
 
 ## What I Already Know
 
@@ -76,19 +81,21 @@ Candidates to refactor rather than delete immediately:
 * Channels may only attach, detach, enable, or disable credential refs.
 * Credentials must be the only product surface for creating, rotating, archiving, deleting, quota-setting, and OAuth-importing upstream identity.
 * OAuth providers such as Codex, Claude Code, GitHub Copilot, and Antigravity must import into credentials instead of channel inline credentials.
-* Channel-local API-key disable/delete flows must be replaced by credential ref disable/delete/archive flows.
+* Channel-local API-key disable/delete/test flows must be deleted, not re-skinned as another raw-key management surface.
+* Channel list/detail actions must not expose raw channel key management once the slice lands.
 
 ### Migration Safety
 
 * Existing channel inline credentials must be migrated to credentials and refs before the old write path is rejected.
 * Migration should clear or neutralize the legacy inline blob once refs are created, unless a deliberate read-only audit window is chosen.
 * Legacy `disabled_api_keys` does not need semantic preservation after migration; existing specs already allow ignoring it.
-* Runtime routing may retain read-only compatibility fallback for one migration window, but new writes must not create channel-owned secrets.
+* Runtime routing must stop depending on channel-owned key arrays for new data by the end of this slice.
 * Any deletion slice must keep existing enabled channels routable after migration.
 
 ### API Surface
 
 * Remove or deprecate GraphQL mutations that manage channel-owned API keys.
+* Remove channel-side test-key product mutations and related frontend calls.
 * Remove raw channel credential fields from frontend queries first, then from GraphQL schema once no frontend consumer depends on them.
 * Do not expose raw OAuth token fields through admin GraphQL or frontend data objects.
 * Keep safe identity fields such as credential ID, credential name, key hint, fingerprint, secret fingerprint, and quota status.
@@ -106,6 +113,17 @@ Candidates to refactor rather than delete immediately:
 * Same-channel credential fallback must use credential refs and request-scoped credential exclusion, not channel `apiKeys` arrays.
 * Provider quota and local quota filtering must remain credential-scoped.
 * Request execution, usage log, copy/export, and diagnostics must continue masking raw secrets.
+* OAuth refresh or exchange completion must never write refreshed tokens back into `Channel.credentials`.
+
+### Slice Boundary
+
+This implementation slice must land the following together:
+
+* delete channel raw-key management UI and GraphQL mutations
+* stop channel create/update from persisting inline credentials
+* stop OAuth completion flows from filling `Channel.credentials.apiKey`
+* remove runtime fallback readers that still prefer `Channel.credentials` when credential refs are absent
+* leave physical schema-column deletion for the follow-up cut only after migrated rows are neutralized and verified
 
 ## Acceptance Criteria
 
@@ -117,6 +135,7 @@ Candidates to refactor rather than delete immediately:
 * [ ] OAuth import creates/updates `UpstreamCredential` instead of filling `Channel.credentials.apiKey`.
 * [ ] Runtime tests prove routing still works through credential refs and no longer depends on channel-owned key arrays for new data.
 * [ ] Secret masking tests cover OAuth and API key copy/export/request surfaces after cleanup.
+* [ ] A follow-up-safe dead-storage removal path is documented for `Channel.credentials` and `disabled_api_keys` after migration neutralization.
 
 ## Definition of Done
 
@@ -132,7 +151,7 @@ Candidates to refactor rather than delete immediately:
 * Removing provider quota.
 * Removing sticky-session fallback.
 * Removing all retry code in one pass.
-* Dropping database columns before a verified migration/removal sequence exists.
+* Physically dropping database columns in this same slice before a verified migration/removal sequence exists.
 * Redesigning consumer/project/org budget quota.
 
 ## Technical Notes
@@ -148,6 +167,8 @@ Candidates to refactor rather than delete immediately:
 * `internal/server/gql/axonhub.graphql` still exposes channel credential and disabled API-key types/mutations.
 * `internal/server/biz/system.go` still models retry as `RetryPolicy`, including max channel retries, max single-channel retries, retry delay, load balancer strategy, and auto-disable channel settings.
 
-## Open Questions
+## Locked Decisions
 
-* Should the first deletion slice target channel-owned credential/OAuth surfaces before retry UI simplification?
+* This task implements channel-owned credential cleanup first; retry/fallback UX simplification is not part of this slice.
+* The four requested work items land together in one implementation slice.
+* Physical schema removal of `Channel.credentials` / `disabled_api_keys` is deferred until migrated rows are neutralized and verified, but all product/runtime writes and primary reads are cut in this slice.

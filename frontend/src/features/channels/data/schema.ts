@@ -375,37 +375,6 @@ export const channelConnectionSchema = z.object({
 });
 export type ChannelConnection = z.infer<typeof channelConnectionSchema>;
 
-// Bulk Import Schemas
-export const bulkImportChannelItemSchema = z.object({
-  type: channelTypeSchema,
-  name: z.string().min(1, 'Name is required'),
-  baseURL: z.string().url('Please enter a valid URL').min(1, 'Base URL is required'),
-  apiKey: z.string().min(1, 'API Key is required'),
-  supportedModels: z.array(z.string()).min(1, 'At least one supported model is required'),
-  defaultTestModel: z.string().min(1, 'Please select a default test model'),
-});
-export type BulkImportChannelItem = z.infer<typeof bulkImportChannelItemSchema>;
-
-export const bulkImportChannelsInputSchema = z.object({
-  channels: z.array(bulkImportChannelItemSchema).min(1, 'At least one channel is required'),
-});
-export type BulkImportChannelsInput = z.infer<typeof bulkImportChannelsInputSchema>;
-
-export const bulkImportChannelsResultSchema = z.object({
-  success: z.boolean(),
-  created: z.number(),
-  failed: z.number(),
-  errors: z.array(z.string()).optional().nullable(),
-  channels: z.array(channelSchema).nullable(),
-});
-export type BulkImportChannelsResult = z.infer<typeof bulkImportChannelsResultSchema>;
-
-// Raw text input for bulk import
-export const bulkImportTextSchema = z.object({
-  text: z.string().min(1, 'Please enter data to import'),
-});
-export type BulkImportText = z.infer<typeof bulkImportTextSchema>;
-
 // Bulk Ordering Schemas
 export const channelOrderingItemSchema = z.object({
   id: z.string(),

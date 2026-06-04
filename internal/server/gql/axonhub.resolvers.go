@@ -120,11 +120,6 @@ func (r *mutationResolver) CreateChannel(ctx context.Context, input ent.CreateCh
 	return r.channelService.CreateChannel(ctx, input)
 }
 
-// BulkCreateChannels is the resolver for the bulkCreateChannels field.
-func (r *mutationResolver) BulkCreateChannels(ctx context.Context, input biz.BulkCreateChannelsInput) ([]*ent.Channel, error) {
-	return r.channelService.BulkCreateChannels(ctx, input)
-}
-
 // UpdateChannel is the resolver for the updateChannel field.
 func (r *mutationResolver) UpdateChannel(ctx context.Context, id objects.GUID, input ent.UpdateChannelInput) (*ent.Channel, error) {
 	return r.channelService.UpdateChannel(ctx, id.ID, &input)
@@ -223,22 +218,6 @@ func (r *mutationResolver) TestChannel(ctx context.Context, input TestChannelInp
 		Success: result.Success,
 		Message: result.Message,
 		Error:   result.Error,
-	}, nil
-}
-
-// BulkImportChannels is the resolver for the bulkImportChannels field.
-func (r *mutationResolver) BulkImportChannels(ctx context.Context, input BulkImportChannelsInput) (*biz.BulkImportChannelsResult, error) {
-	result, err := r.channelService.BulkImportChannels(ctx, input.Channels)
-	if err != nil {
-		return nil, err
-	}
-
-	return &biz.BulkImportChannelsResult{
-		Success:  result.Success,
-		Created:  result.Created,
-		Failed:   result.Failed,
-		Errors:   result.Errors,
-		Channels: result.Channels,
 	}, nil
 }
 

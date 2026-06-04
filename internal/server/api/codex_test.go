@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 
-	"github.com/looplj/axonhub/internal/contexts"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/pkg/xcache"
 	"github.com/looplj/axonhub/llm/httpclient"
 	"github.com/looplj/axonhub/llm/transformer/openai/codex"
@@ -26,17 +26,16 @@ func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 
 func TestCodexHandlers_StartOAuth_InvalidJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	h := NewCodexHandlers(CodexHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  httpclient.NewHttpClient(),
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                httpclient.NewHttpClient(),
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
-	router.Use(func(c *gin.Context) {
-		c.Request = c.Request.WithContext(contexts.WithProjectID(c.Request.Context(), 123))
-		c.Next()
-	})
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/codex/oauth/start", h.StartOAuth)
 
 	req := httptest.NewRequest(http.MethodPost, "/admin/codex/oauth/start", bytes.NewBufferString("{"))
@@ -51,17 +50,16 @@ func TestCodexHandlers_StartOAuth_InvalidJSON(t *testing.T) {
 
 func TestCodexHandlers_StartOAuth_DoesNotIncludeOriginatorParam(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	h := NewCodexHandlers(CodexHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  httpclient.NewHttpClient(),
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                httpclient.NewHttpClient(),
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
-	router.Use(func(c *gin.Context) {
-		c.Request = c.Request.WithContext(contexts.WithProjectID(c.Request.Context(), 123))
-		c.Next()
-	})
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/codex/oauth/start", h.StartOAuth)
 
 	req := httptest.NewRequest(http.MethodPost, "/admin/codex/oauth/start", bytes.NewBufferString("{}"))
@@ -87,6 +85,7 @@ func TestCodexHandlers_StartOAuth_DoesNotIncludeOriginatorParam(t *testing.T) {
 
 func TestCodexHandlers_Exchange_StateDeletedOnTokenExchangeFailure(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	var tokenCalls int
 
@@ -117,15 +116,13 @@ func TestCodexHandlers_Exchange_StateDeletedOnTokenExchangeFailure(t *testing.T)
 	hc := httpclient.NewHttpClientWithClient(&http.Client{Transport: transport})
 
 	h := NewCodexHandlers(CodexHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  hc,
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                hc,
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
-	router.Use(func(c *gin.Context) {
-		c.Request = c.Request.WithContext(contexts.WithProjectID(c.Request.Context(), 123))
-		c.Next()
-	})
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/codex/oauth/start", h.StartOAuth)
 	router.POST("/admin/codex/oauth/exchange", h.Exchange)
 
@@ -165,6 +162,7 @@ func TestCodexHandlers_Exchange_StateDeletedOnTokenExchangeFailure(t *testing.T)
 
 func TestCodexHandlers_Exchange_RejectsStateMismatch(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -193,15 +191,13 @@ func TestCodexHandlers_Exchange_RejectsStateMismatch(t *testing.T) {
 	hc := httpclient.NewHttpClientWithClient(&http.Client{Transport: transport})
 
 	h := NewCodexHandlers(CodexHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  hc,
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                hc,
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
-	router.Use(func(c *gin.Context) {
-		c.Request = c.Request.WithContext(contexts.WithProjectID(c.Request.Context(), 123))
-		c.Next()
-	})
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/codex/oauth/start", h.StartOAuth)
 	router.POST("/admin/codex/oauth/exchange", h.Exchange)
 
@@ -247,6 +243,7 @@ func TestCodexHandlers_Exchange_RejectsStateMismatch(t *testing.T) {
 
 func TestCodexHandlers_Exchange_DeletesStateOnSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -275,15 +272,13 @@ func TestCodexHandlers_Exchange_DeletesStateOnSuccess(t *testing.T) {
 	hc := httpclient.NewHttpClientWithClient(&http.Client{Transport: transport})
 
 	h := NewCodexHandlers(CodexHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  hc,
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                hc,
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()
-	router.Use(func(c *gin.Context) {
-		c.Request = c.Request.WithContext(contexts.WithProjectID(c.Request.Context(), 123))
-		c.Next()
-	})
+	router.Use(oauthTestContextMiddleware(deps.client, 123))
 	router.POST("/admin/codex/oauth/start", h.StartOAuth)
 	router.POST("/admin/codex/oauth/exchange", h.Exchange)
 
@@ -310,6 +305,19 @@ func TestCodexHandlers_Exchange_DeletesStateOnSuccess(t *testing.T) {
 	router.ServeHTTP(exchangeW, exchangeReq)
 	require.Equal(t, http.StatusOK, exchangeW.Code)
 
+	var exchangeResp ExchangeCodexOAuthResponse
+	require.NoError(t, json.Unmarshal(exchangeW.Body.Bytes(), &exchangeResp))
+	require.NotNil(t, exchangeResp.Credential)
+	require.Equal(t, "codex", exchangeResp.Credential.ProviderType)
+	require.Equal(t, "enabled", exchangeResp.Credential.Status)
+	require.Equal(t, "https://chatgpt.com/backend-api/codex", exchangeResp.Credential.BaseURL)
+
+	createdCredential, err := deps.client.UpstreamCredential.Get(oauthBypassContext(deps.client), exchangeResp.Credential.ID)
+	require.NoError(t, err)
+	require.Equal(t, upstreamcredential.StatusEnabled, createdCredential.Status)
+	require.Equal(t, "codex", createdCredential.ProviderType)
+	require.Equal(t, "https://chatgpt.com/backend-api/codex", createdCredential.BaseURL)
+
 	exchangeReq2 := httptest.NewRequest(http.MethodPost, "/admin/codex/oauth/exchange", bytes.NewBuffer(exchangeBody))
 	exchangeReq2.Header.Set("Content-Type", "application/json")
 
@@ -321,10 +329,12 @@ func TestCodexHandlers_Exchange_DeletesStateOnSuccess(t *testing.T) {
 
 func TestCodexHandlers_DecodeAuthJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	deps := newOAuthHandlerTestDeps(t)
 
 	h := NewCodexHandlers(CodexHandlersParams{
-		CacheConfig: xcache.Config{Mode: xcache.ModeMemory},
-		HttpClient:  httpclient.NewHttpClient(),
+		CacheConfig:               xcache.Config{Mode: xcache.ModeMemory},
+		HttpClient:                httpclient.NewHttpClient(),
+		UpstreamCredentialService: deps.upstreamCredentialService,
 	})
 
 	router := gin.New()

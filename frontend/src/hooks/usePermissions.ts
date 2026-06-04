@@ -109,7 +109,6 @@ export function usePermissions() {
     () => ({
       canRead: hasScope('read_channels'),
       canWrite: hasScope('write_channels'),
-      canBulkImport: hasScope('write_channels'), // Bulk import requires write permission
       canCreate: hasScope('write_channels'),
       canEdit: hasScope('write_channels'),
       canDelete: hasScope('write_channels'),

@@ -12,7 +12,6 @@ import (
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
-	"github.com/looplj/axonhub/internal/ent/predicate"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/objects"
@@ -1215,78 +1214,6 @@ func (svc *UpstreamCredentialService) BackfillCredentialSecretFingerprints(ctx c
 	return payload, nil
 }
 
-func (svc *UpstreamCredentialService) findOrCreateCredentialForChannel(ctx context.Context, ch *ent.Channel, view ChannelCredentialView, idx int) (*ent.UpstreamCredential, bool, error) {
-	identityPredicates := []predicate.UpstreamCredential{
-		upstreamcredential.Fingerprint(view.Fingerprint),
-	}
-	if strings.TrimSpace(view.SecretFingerprint) != "" {
-		identityPredicates = append(identityPredicates, upstreamcredential.SecretFingerprintEQ(view.SecretFingerprint))
-	}
-
-	existing, err := svc.entFromContext(ctx).UpstreamCredential.Query().
-		Where(upstreamcredential.Or(identityPredicates...)).
-		First(ctx)
-	if err != nil && !ent.IsNotFound(err) {
-		return nil, false, fmt.Errorf("failed to query upstream credential: %w", err)
-	}
-	if existing != nil {
-		return existing, false, nil
-	}
-
-	viewSecretKind := upstreamcredential.SecretKind(resolveViewSecretKind(view))
-	if upstreamcredential.SecretKindValidator(viewSecretKind) != nil {
-		viewSecretKind = upstreamcredential.SecretKindOther
-	}
-
-	create := svc.entFromContext(ctx).UpstreamCredential.Create().
-		SetName(defaultCredentialName(ch, view, idx)).
-		SetProviderType(ch.Type.String()).
-		SetBaseURL(normalizeCredentialBaseURL(ch.BaseURL)).
-		SetAuthKind(upstreamcredential.AuthKind(view.AuthKind)).
-		SetSecretKind(viewSecretKind).
-		SetIssuerScope(resolveViewIssuerScope(ch, view)).
-		SetKeyHint(view.KeyHint).
-		SetSecretPayload(view.Secret).
-		SetFingerprint(view.Fingerprint).
-		SetWeight(normalizeCredentialWeight(view.Weight)).
-		SetStatus(legacyCredentialStatus(ch, view))
-	if strings.TrimSpace(view.SecretFingerprint) != "" {
-		create.SetSecretFingerprint(view.SecretFingerprint)
-	}
-
-	credential, err := create.Save(ctx)
-	if err != nil {
-		return nil, false, fmt.Errorf("failed to create upstream credential for channel %d: %w", ch.ID, err)
-	}
-
-	return credential, true, nil
-}
-
-func (svc *UpstreamCredentialService) ensureChannelCredentialRef(ctx context.Context, channelID int, credentialID int) (bool, error) {
-	exists, err := svc.entFromContext(ctx).ChannelCredentialRef.Query().
-		Where(
-			channelcredentialref.ChannelID(channelID),
-			channelcredentialref.CredentialID(credentialID),
-		).
-		Exist(ctx)
-	if err != nil {
-		return false, fmt.Errorf("failed to check channel credential ref: %w", err)
-	}
-	if exists {
-		return false, nil
-	}
-
-	if _, err := svc.entFromContext(ctx).ChannelCredentialRef.Create().
-		SetChannelID(channelID).
-		SetCredentialID(credentialID).
-		SetEnabled(true).
-		Save(ctx); err != nil {
-		return false, fmt.Errorf("failed to create channel credential ref: %w", err)
-	}
-
-	return true, nil
-}
-
 func (svc *UpstreamCredentialService) reloadChannels() {
 	if svc != nil && svc.channelService != nil {
 		svc.channelService.asyncReloadChannels()
@@ -1299,23 +1226,6 @@ func normalizeCredentialWeight(weight int) int {
 	}
 
 	return weight
-}
-
-func defaultCredentialName(ch *ent.Channel, view ChannelCredentialView, idx int) string {
-	if ch == nil {
-		return fmt.Sprintf("credential %d", idx+1)
-	}
-
-	authKind := view.AuthKind
-	if authKind == "" {
-		authKind = upstreamcredential.AuthKindAPIKey.String()
-	}
-
-	return fmt.Sprintf("%s %s %d", ch.Name, authKind, idx+1)
-}
-
-func legacyCredentialStatus(ch *ent.Channel, view ChannelCredentialView) upstreamcredential.Status {
-	return upstreamcredential.StatusEnabled
 }
 
 func stringValuePtr(value *string) string {
@@ -1382,53 +1292,6 @@ func authKindFromSecretKind(secretKind upstreamcredential.SecretKind) upstreamcr
 	}
 
 	return upstreamcredential.AuthKindOther
-}
-
-func resolveViewSecretKind(view ChannelCredentialView) string {
-	if kind := normalizeCredentialFingerprintPart(view.SecretKind); kind != "" {
-		return kind
-	}
-	if kind := normalizeCredentialFingerprintPart(view.AuthKind); kind != "" {
-		return kind
-	}
-
-	return CredentialSecretKindForSecret(view.Secret)
-}
-
-func resolveViewIssuerScope(ch *ent.Channel, view ChannelCredentialView) string {
-	if scope := strings.TrimSpace(view.IssuerScope); scope != "" {
-		return scope
-	}
-	if ch == nil {
-		return "unknown"
-	}
-
-	return CredentialIssuerScope(ch.Type.String(), ch.BaseURL)
-}
-
-func channelWithResolvedCredentials(ch *ent.Channel) *ent.Channel {
-	if ch == nil {
-		return nil
-	}
-
-	views := credentialViewsFromRefs(ch)
-	if len(views) == 0 {
-		return nil
-	}
-
-	clone := *ch
-	clone.Credentials = credentialsFromViews(views, objects.ChannelCredentials{})
-
-	return &clone
-}
-
-func channelCredentialViews(ch *ent.Channel) []ChannelCredentialView {
-	views := credentialViewsFromRefs(ch)
-	if len(views) > 0 {
-		return dedupeCredentialViews(views)
-	}
-
-	return nil
 }
 
 func providerTypeForChannel(ch *ent.Channel) string {

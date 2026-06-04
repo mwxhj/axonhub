@@ -1,1 +1,8 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend pre-development checklist for routing, credential handling, and compatibility cleanup."}
+{"file": ".trellis/spec/backend/credential-routing-model.md", "reason": "Channel vs credential ownership contract, archive/delete behavior, and local quota model must stay consistent during the hard cut."}
+{"file": ".trellis/spec/backend/routing-guidelines.md", "reason": "Runtime fallback, sticky-session, request execution observability, and credential-scoped routing rules are directly affected."}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend checklist for product-facing field exposure and removing dead operator UI."}
+{"file": ".trellis/spec/frontend/human-computer-interaction.md", "reason": "Channel and credential UI must stop exposing raw key-management/product-debug concepts."}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "This slice spans schema compatibility, GraphQL, runtime routing, OAuth flows, and frontend actions."}
+{"file": ".trellis/tasks/06-02-feature-pruning-legacy-cleanup/prd.md", "reason": "Locked scope and acceptance criteria for the four-part deletion slice."}
+{"file": ".trellis/tasks/06-02-feature-pruning-legacy-cleanup/research/legacy-surface-inventory.md", "reason": "Inventory of exact legacy channel-owned credential surfaces targeted by this cleanup."}

@@ -11,17 +11,6 @@ type UpstreamCredentialSecret struct {
 	Extra  map[string]any    `json:"extra,omitempty"`
 }
 
-// ToChannelCredentials converts a credential secret into the legacy channel
-// credential shape consumed by existing outbound transformers.
-func (s UpstreamCredentialSecret) ToChannelCredentials() ChannelCredentials {
-	return ChannelCredentials{
-		APIKey: s.APIKey,
-		OAuth:  s.OAuth,
-		Azure:  s.Azure,
-		GCP:    s.GCP,
-	}
-}
-
 func UpstreamCredentialSecretFromAPIKey(apiKey string) UpstreamCredentialSecret {
 	return UpstreamCredentialSecret{
 		APIKey: apiKey,

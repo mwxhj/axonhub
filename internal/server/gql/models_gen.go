@@ -87,10 +87,6 @@ type BrandSettings struct {
 	Title     *string `json:"title,omitempty"`
 }
 
-type BulkImportChannelsInput struct {
-	Channels []*biz.BulkImportChannelItem `json:"channels"`
-}
-
 type BulkUpdateChannelOrderingInput struct {
 	Channels []*biz.ChannelOrderingItem `json:"channels"`
 }

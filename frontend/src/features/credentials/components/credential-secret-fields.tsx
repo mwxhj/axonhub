@@ -25,6 +25,7 @@ interface CredentialSecretFieldsProps {
   errors: FieldErrors<CredentialFormValues>;
   allowModeSwitch?: boolean;
   currentCredential?: Pick<UpstreamCredential, 'secretSummary'> | null;
+  onImportedCredential?: (credential: UpstreamCredential) => void;
 }
 
 const oauthProviders: OAuthCredentialProvider[] = ['codex', 'claudecode', 'github_copilot', 'antigravity'];
@@ -44,6 +45,7 @@ export function CredentialSecretFields({
   errors,
   allowModeSwitch = true,
   currentCredential,
+  onImportedCredential,
 }: CredentialSecretFieldsProps) {
   const { t } = useTranslation();
   const [codexAuthJSONText, setCodexAuthJSONText] = useState('');
@@ -60,20 +62,24 @@ export function CredentialSecretFields({
     setValue('oauthCredentials', credentials, { shouldDirty: true, shouldValidate: true });
   };
 
+  const handleImportedCredential = (credential: UpstreamCredential) => {
+    onImportedCredential?.(credential);
+  };
+
   const codexOAuth = useOAuthFlow({
     startFn: codexOAuthStart,
     exchangeFn: codexOAuthExchange,
-    onSuccess: (credentials) => applyOAuthCredentials('codex', credentials),
+    onSuccess: handleImportedCredential,
   });
   const claudecodeOAuth = useOAuthFlow({
     startFn: claudecodeOAuthStart,
     exchangeFn: claudecodeOAuthExchange,
-    onSuccess: (credentials) => applyOAuthCredentials('claudecode', credentials),
+    onSuccess: handleImportedCredential,
   });
   const antigravityOAuth = useOAuthFlow({
     startFn: antigravityOAuthStart,
     exchangeFn: antigravityOAuthExchange,
-    onSuccess: (credentials) => applyOAuthCredentials('antigravity', credentials),
+    onSuccess: handleImportedCredential,
   });
 
   const handleSecretModeChange = (value: string) => {
@@ -206,7 +212,10 @@ export function CredentialSecretFields({
           {oauthProvider === 'claudecode' && renderRedirectOAuth(claudecodeOAuth, 'claudecode')}
           {oauthProvider === 'antigravity' && renderRedirectOAuth(antigravityOAuth, 'antigravity')}
           {oauthProvider === 'github_copilot' && (
-            <CopilotDeviceFlow onSuccess={(token) => applyOAuthCredentials('github_copilot', copilotCredentialsJSON(token))} />
+            <CopilotDeviceFlow
+              onSuccess={handleImportedCredential}
+              hasExistingCredential={currentSecretKind === 'oauth' && oauthProvider === 'github_copilot'}
+            />
           )}
 
           <div className='grid gap-2'>

@@ -14,15 +14,10 @@ import {
   channelConnectionSchema,
   channelSchema,
   channelEndpointsResponseSchema,
-  BulkImportChannelsInput,
-  BulkImportChannelsResult,
-  bulkImportChannelsResultSchema,
   BulkUpdateChannelOrderingInput,
   BulkUpdateChannelOrderingResult,
   bulkUpdateChannelOrderingResultSchema,
   channelSummaryConnectionSchema,
-  ChannelSettings,
-  ChannelPolicies,
   ChannelModelPrice,
   SaveChannelModelPriceInput,
   channelModelPriceSchema,
@@ -68,67 +63,6 @@ const CREATE_CHANNEL_MUTATION = `
       createdAt
       updatedAt
       type
-      baseURL
-      name
-      status
-      policies {
-        stream
-      }
-      supportedModels
-      autoSyncSupportedModels
-      autoSyncModelPattern
-      manualModels
-      tags
-      defaultTestModel
-        settings {
-          extraModelPrefix
-          modelMappings {
-            from
-            to
-          }
-          autoTrimedModelPrefixes
-          hideOriginalModels
-          hideMappedModels
-          lowercaseModelId
-          proxy {
-            type
-            url
-            username
-            password
-          }
-          transformOptions {
-            forceArrayInstructions
-            forceArrayInputs
-            replaceDeveloperRoleWithSystem
-          }
-          passThroughUserAgent
-          passThroughBody
-        }
-      orderingWeight
-      remark
-      defaultEndpoints {
-        apiFormat
-        path
-        baseURL
-        transport
-      }
-      endpoints {
-        apiFormat
-        path
-        baseURL
-        transport
-      }
-    }
-  }
-`;
-
-const BULK_CREATE_CHANNELS_MUTATION = `
-  mutation BulkCreateChannels($input: BulkCreateChannelsInput!) {
-    bulkCreateChannels(input: $input) {
-      id
-      type
-      createdAt
-      updatedAt
       baseURL
       name
       status
@@ -319,62 +253,6 @@ const TEST_CHANNEL_MUTATION = `
       success
       error
       message
-    }
-  }
-`;
-
-const BULK_IMPORT_CHANNELS_MUTATION = `
-  mutation BulkImportChannels($input: BulkImportChannelsInput!) {
-    bulkImportChannels(input: $input) {
-      success
-      created
-      failed
-      errors
-      channels {
-        id
-        createdAt
-        updatedAt
-        type
-        baseURL
-        name
-        status
-          supportedModels
-        autoSyncSupportedModels
-        autoSyncModelPattern
-        manualModels
-        tags
-        defaultTestModel
-        defaultEndpoints {
-          apiFormat
-          path
-          baseURL
-          transport
-        }
-        endpoints {
-          apiFormat
-          path
-          baseURL
-          transport
-        }
-        settings {
-          extraModelPrefix
-          modelMappings {
-            from
-            to
-          }
-          autoTrimedModelPrefixes
-          hideOriginalModels
-          hideMappedModels
-          lowercaseModelId
-          transformOptions {
-            forceArrayInstructions
-            forceArrayInputs
-            replaceDeveloperRoleWithSystem
-          }
-          passThroughUserAgent
-          passThroughBody
-        }
-      }
     }
   }
 `;
@@ -838,43 +716,6 @@ export function useCreateChannel() {
   });
 }
 
-export interface BulkCreateChannelsInput {
-  type: string;
-  name: string;
-  baseURL?: string;
-  tags?: string[];
-  apiKeys: string[];
-  supportedModels: string[];
-  autoSyncSupportedModels?: boolean;
-  defaultTestModel: string;
-  settings?: ChannelSettings;
-  policies?: ChannelPolicies;
-  orderingWeight?: number;
-  remark?: string;
-}
-
-export function useBulkCreateChannels() {
-  const queryClient = useQueryClient();
-  const { t } = useTranslation();
-  const { handleError } = useErrorHandler();
-
-  return useMutation({
-    mutationFn: async (input: BulkCreateChannelsInput) => {
-      try {
-        const data = await graphqlRequest<{ bulkCreateChannels: Channel[] }>(BULK_CREATE_CHANNELS_MUTATION, { input });
-        return data.bulkCreateChannels.map((ch) => channelSchema.parse(ch));
-      } catch (error) {
-        handleError(error, { context: 'Batch Create Channels' });
-        throw error;
-      }
-    },
-    onSuccess: (channels) => {
-      queryClient.invalidateQueries({ queryKey: ['channels'] });
-      toast.success(t('channels.messages.batchCreateSuccess', { count: channels.length }));
-    },
-  });
-}
-
 export function useUpdateChannel() {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
@@ -1159,42 +1000,6 @@ export function useTestChannel(options?: { silent?: boolean }) {
         // Handle case where GraphQL request succeeds but test fails
         const errorMsg = data.error || t('common.errors.internalServerError');
         toast.error(errorMsg);
-      }
-    },
-  });
-}
-
-export function useBulkImportChannels() {
-  const queryClient = useQueryClient();
-  const { t } = useTranslation();
-  const { handleError } = useErrorHandler();
-
-  return useMutation({
-    mutationFn: async (input: BulkImportChannelsInput) => {
-      try {
-        const data = await graphqlRequest<{ bulkImportChannels: BulkImportChannelsResult }>(BULK_IMPORT_CHANNELS_MUTATION, { input });
-        return bulkImportChannelsResultSchema.parse(data.bulkImportChannels);
-      } catch (error) {
-        handleError(error, { context: 'Bulk Import Channels' });
-        throw error;
-      }
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['channels'] });
-
-      if (data.success) {
-        toast.success(
-          t('channels.messages.bulkImportSuccess', {
-            created: data.created,
-          })
-        );
-      } else {
-        toast.error(
-          t('channels.messages.bulkImportPartialError', {
-            created: data.created,
-            failed: data.failed,
-          })
-        );
       }
     },
   });

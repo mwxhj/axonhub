@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import type { UpstreamCredential } from '@/features/credentials/data/credentials';
 import {
   copilotOAuthStart,
   copilotOAuthPoll,
@@ -12,7 +13,7 @@ export interface UseDeviceFlowOptions {
   /**
    * Callback when access token is successfully obtained
    */
-  onSuccess?: (accessToken: string) => void;
+  onSuccess?: (credential: UpstreamCredential) => void;
 }
 
 export interface UseDeviceFlowState {
@@ -40,7 +41,7 @@ export interface UseDeviceFlowActions {
  * @example
  * ```tsx
  * const deviceFlow = useDeviceFlow({
- *   onSuccess: (token) => form.setValue('credentials.apiKey', token),
+ *   onSuccess: (credential) => console.log(credential.id),
  * });
  *
  * // Display user code and verification URI
@@ -130,12 +131,12 @@ export function useDeviceFlow(
           { session_id: sessionId }
         );
 
-        if (result.access_token) {
+        if (result.credential) {
           setIsPolling(false);
           setIsComplete(true);
 
           if (onSuccessRef.current) {
-            onSuccessRef.current(result.access_token);
+            onSuccessRef.current(result.credential);
           }
 
           toast.success(t('channels.dialogs.oauth.messages.credentialsImported'));

@@ -106,6 +106,7 @@ func (Channel) Fields() []ent.Field {
 				entgql.OrderField("STATUS"),
 			),
 		field.JSON("credentials", objects.ChannelCredentials{}).
+			Default(objects.ChannelCredentials{}).
 			Sensitive().
 			Annotations(
 				entgql.Skip(entgql.SkipAll),

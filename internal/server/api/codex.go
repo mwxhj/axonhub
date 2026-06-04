@@ -14,8 +14,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
 
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/pkg/xcache"
+	"github.com/looplj/axonhub/internal/server/biz"
 	"github.com/looplj/axonhub/llm/httpclient"
 	"github.com/looplj/axonhub/llm/oauth"
 	"github.com/looplj/axonhub/llm/transformer/openai/codex"
@@ -24,19 +26,22 @@ import (
 type CodexHandlersParams struct {
 	fx.In
 
-	CacheConfig xcache.Config
-	HttpClient  *httpclient.HttpClient
+	CacheConfig               xcache.Config
+	HttpClient                *httpclient.HttpClient
+	UpstreamCredentialService *biz.UpstreamCredentialService
 }
 
 type CodexHandlers struct {
-	stateCache xcache.Cache[codexOAuthState]
-	httpClient *httpclient.HttpClient
+	stateCache                xcache.Cache[codexOAuthState]
+	httpClient                *httpclient.HttpClient
+	upstreamCredentialService *biz.UpstreamCredentialService
 }
 
 func NewCodexHandlers(params CodexHandlersParams) *CodexHandlers {
 	return &CodexHandlers{
-		stateCache: xcache.NewFromConfig[codexOAuthState](params.CacheConfig),
-		httpClient: params.HttpClient,
+		stateCache:                xcache.NewFromConfig[codexOAuthState](params.CacheConfig),
+		httpClient:                params.HttpClient,
+		upstreamCredentialService: params.UpstreamCredentialService,
 	}
 }
 
@@ -133,7 +138,7 @@ type ExchangeCodexOAuthRequest struct {
 }
 
 type ExchangeCodexOAuthResponse struct {
-	Credentials string `json:"credentials"`
+	Credential *CredentialImportResponse `json:"credential"`
 }
 
 type DecodeCodexAuthJSONRequest struct {
@@ -142,6 +147,14 @@ type DecodeCodexAuthJSONRequest struct {
 
 type DecodeCodexAuthJSONResponse struct {
 	Credentials string `json:"credentials"`
+}
+
+type CredentialImportResponse struct {
+	ID           int    `json:"id"`
+	Name         string `json:"name"`
+	Status       string `json:"status"`
+	ProviderType string `json:"provider_type"`
+	BaseURL      string `json:"base_url,omitempty"`
 }
 
 func parseCodexCallbackURL(callbackURL string) (string, string, error) {
@@ -254,11 +267,19 @@ func (h *CodexHandlers) Exchange(c *gin.Context) {
 		return
 	}
 
-	output, err := creds.ToJSON()
+	credential, err := h.upstreamCredentialService.CreateUpstreamCredential(ctx, biz.CreateUpstreamCredentialInput{
+		ProviderType: loPtr("codex"),
+		BaseURL:      loPtr("https://chatgpt.com/backend-api/codex#"),
+		SecretKind:   loSecretKind(upstreamcredential.SecretKindOauth),
+		AuthKind:     loAuthKind(upstreamcredential.AuthKindOauth),
+		IssuerScope:  loPtr("openai"),
+		Status:       loStatus(upstreamcredential.StatusEnabled),
+		Secret: bizOAuthSecret(creds, ""),
+	})
 	if err != nil {
-		JSONError(c, http.StatusInternalServerError, fmt.Errorf("failed to encode credentials: %w", err))
+		JSONError(c, http.StatusBadGateway, fmt.Errorf("failed to import oauth credential: %w", err))
 		return
 	}
 
-	c.JSON(http.StatusOK, ExchangeCodexOAuthResponse{Credentials: output})
+	c.JSON(http.StatusOK, ExchangeCodexOAuthResponse{Credential: credentialImportResponseFromEntity(credential)})
 }

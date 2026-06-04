@@ -9,9 +9,7 @@ export interface DeviceFlowStartResult {
 }
 
 export interface DeviceFlowPollResult {
-  access_token?: string
-  token_type?: string
-  scope?: string
+  credential?: import('@/features/credentials/data/credentials').UpstreamCredential
   status?: string
   message?: string
 }

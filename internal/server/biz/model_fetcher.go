@@ -262,9 +262,15 @@ func (f *ModelFetcher) FetchModels(ctx context.Context, input FetchModelsInput) 
 		}
 
 		if apiKey == "" {
-			enabledKeys := ch.GetEnabledAPIKeys()
-			if len(enabledKeys) > 0 {
-				apiKey = enabledKeys[0]
+			for _, view := range ch.CredentialViews() {
+				if !view.Enabled || strings.TrimSpace(view.Secret.APIKey) == "" {
+					continue
+				}
+				if normalizeCredentialFingerprintPart(view.AuthKind) != channelCredentialAuthKindAPIKey {
+					continue
+				}
+				apiKey = strings.TrimSpace(view.Secret.APIKey)
+				break
 			}
 		}
 

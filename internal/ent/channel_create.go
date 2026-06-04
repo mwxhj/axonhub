@@ -117,6 +117,14 @@ func (_c *ChannelCreate) SetCredentials(v objects.ChannelCredentials) *ChannelCr
 	return _c
 }
 
+// SetNillableCredentials sets the "credentials" field if the given value is not nil.
+func (_c *ChannelCreate) SetNillableCredentials(v *objects.ChannelCredentials) *ChannelCreate {
+	if v != nil {
+		_c.SetCredentials(*v)
+	}
+	return _c
+}
+
 // SetDisabledAPIKeys sets the "disabled_api_keys" field.
 func (_c *ChannelCreate) SetDisabledAPIKeys(v []objects.DisabledAPIKey) *ChannelCreate {
 	_c.mutation.SetDisabledAPIKeys(v)
@@ -391,6 +399,10 @@ func (_c *ChannelCreate) defaults() error {
 	if _, ok := _c.mutation.Status(); !ok {
 		v := channel.DefaultStatus
 		_c.mutation.SetStatus(v)
+	}
+	if _, ok := _c.mutation.Credentials(); !ok {
+		v := channel.DefaultCredentials
+		_c.mutation.SetCredentials(v)
 	}
 	if _, ok := _c.mutation.DisabledAPIKeys(); !ok {
 		v := channel.DefaultDisabledAPIKeys
