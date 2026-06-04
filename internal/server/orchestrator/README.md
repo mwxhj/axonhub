@@ -42,7 +42,7 @@ This architecture provides:
 
 ### Load Balancing
 
-- **`load_balancer.go`** - Core load balancing logic and `LoadBalancer` struct with partial sorting
+- **`load_balancer.go`** - Core load balancing logic and full candidate ranking
 - **`load_balancer_debug.go`** - Debug utilities for load balancing decisions
 - **`lb_strategy_rr.go`** - Round-robin strategy with inactivity decay and request count capping
 - **`lb_strategy_bp.go`** - Error-aware strategy that penalizes channels with recent failures
@@ -88,7 +88,7 @@ The orchestrator supports multiple load balancing strategies that can be combine
 6. **Model Aware Circuit Breaker** - Dynamically penalizes channels where the requested model is currently failing
 7. **Random** - Adds a small random factor to break ties between channels with identical scores
 
-The load balancer uses partial sorting for efficient top-k candidate selection based on retry policy configuration.
+The load balancer ranks the full feasible candidate set; retry and fallback choose later targets only after an attempt fails.
 
 ## Key Interfaces
 

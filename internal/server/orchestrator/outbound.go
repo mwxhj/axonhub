@@ -861,8 +861,8 @@ func (p *PersistentOutboundTransformer) CanRetry(err error) bool {
 		return false
 	}
 
-	// Empty response detection: allow same-channel retry so the pipeline can
-	// re-execute the request against the same (or next model in the) channel.
+	// Empty response detection: allow same-target retry so the pipeline can
+	// re-execute the same concrete target.
 	if errors.Is(err, pipeline.ErrEmptyResponse) ||
 		errors.Is(err, pipeline.ErrEmptyStreamChunks) ||
 		errors.Is(err, pipeline.ErrEmptyAggregatedBody) {
@@ -900,11 +900,6 @@ func (p *PersistentOutboundTransformer) CanRetry(err error) bool {
 		return false
 	}
 
-	// if there are more models available in the current candidate, try the next model.
-	if p.state.CurrentModelIndex+1 < len(p.state.CurrentCandidate.Models) {
-		return true
-	}
-
 	if p.nextCandidateIndexForFallback(0, "") >= 0 {
 		log.Debug(context.Background(), "fallback target available, skipping same-target retry",
 			log.Int("channel_id", p.state.CurrentCandidate.Channel.ID),
@@ -918,8 +913,7 @@ func (p *PersistentOutboundTransformer) CanRetry(err error) bool {
 }
 
 // PrepareForRetry implements the pipeline.ChannelRetryable interface.
-// This will reset the request execution for the same channel, so that the same request can be retried.
-// It will try the next model in the same channel if available.
+// This resets the request execution so the same concrete target can be retried.
 func (p *PersistentOutboundTransformer) PrepareForRetry(ctx context.Context) error {
 	candidate := p.state.CurrentCandidate
 
@@ -930,33 +924,14 @@ func (p *PersistentOutboundTransformer) PrepareForRetry(ctx context.Context) err
 	// so it exits promptly and releases its upstream HTTP connection.
 	p.resetPassThroughStreamState()
 
-	// If there's another model in the list, advance to it.
-	if p.state.CurrentModelIndex+1 < len(candidate.Models) {
-		// Increase the model index to the next model.
-		p.state.CurrentModelIndex++
-		p.wrapped = selectOutboundForCandidate(candidate)
+	p.wrapped = selectOutboundForCandidate(candidate)
 
-		if log.DebugEnabled(ctx) {
-			model := candidate.Models[p.state.CurrentModelIndex].ActualModel
-			log.Debug(ctx, "prepared same channel retry for next model",
-				log.Any("channel", candidate.Channel.Name),
-				log.Any("model", model),
-				log.String("api_format", candidate.APIFormat),
-				log.Int("current_candidate_index", p.state.CurrentCandidateIndex),
-				log.Int("current_entry_index", p.state.CurrentModelIndex),
-			)
-		}
-
-		return nil
-	}
-
-	// Otherwise, we're retrying the current (last) model.
-	// It handle the models count less than retry policy.
 	if log.DebugEnabled(ctx) {
 		model := candidate.Models[p.state.CurrentModelIndex].ActualModel
-		log.Debug(ctx, "prepared same channel retry for same model",
+		log.Debug(ctx, "prepared same-target retry",
 			log.Any("channel", candidate.Channel.Name),
 			log.Any("model", model),
+			log.String("api_format", candidate.APIFormat),
 			log.Int("current_candidate_index", p.state.CurrentCandidateIndex),
 			log.Int("current_entry_index", p.state.CurrentModelIndex),
 		)

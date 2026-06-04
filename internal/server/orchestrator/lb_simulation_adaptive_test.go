@@ -214,7 +214,7 @@ func TestAdaptiveLoadBalancer_Simulation_Healthy_DistributionByWeight(t *testing
 		metrics.AdvanceMs(tickMs)
 
 		sorted := lb.Sort(ctx, candidates, "gpt-4", false)
-		require.Len(t, sorted, 1)
+		require.NotEmpty(t, sorted)
 
 		picked := sorted[0].Channel.ID
 		requestCounts[picked]++
@@ -260,7 +260,7 @@ func TestAdaptiveLoadBalancer_Simulation_TraceStickyOverridesWeight(t *testing.T
 		metrics.AdvanceMs(tickMs)
 
 		sorted := lb.Sort(ctx, candidates, "gpt-4", false)
-		require.Len(t, sorted, 1)
+		require.NotEmpty(t, sorted)
 		require.Equal(t, candidates[2].Channel.ID, sorted[0].Channel.ID)
 		metrics.RecordSuccess(sorted[0].Channel.ID)
 	}
@@ -296,7 +296,7 @@ func TestAdaptiveLoadBalancer_Simulation_HighLatencyCanOverrideWeight(t *testing
 	metrics.AdvanceMs(50)
 
 	sorted := lb.Sort(ctx, candidates, "gpt-4", false)
-	require.Len(t, sorted, 1)
+	require.NotEmpty(t, sorted)
 	// Channel 0 has ~72pt latency penalty vs channel 1; with both at 0 requests,
 	// WeightRR gives 150 to both, ErrorAware gives 200 to both.
 	// Channel 0: 200 + 150 + 5.33 ≈ 355
@@ -330,7 +330,7 @@ func TestAdaptiveLoadBalancer_Simulation_ErrorMigrationAndRecovery(t *testing.T)
 		metrics.AdvanceMs(tickMs)
 
 		sorted := lb.Sort(ctx, candidates, "gpt-4", false)
-		require.Len(t, sorted, 1)
+		require.NotEmpty(t, sorted)
 		metrics.RecordSuccess(sorted[0].Channel.ID)
 	}
 
@@ -349,7 +349,7 @@ func TestAdaptiveLoadBalancer_Simulation_ErrorMigrationAndRecovery(t *testing.T)
 		metrics.AdvanceMs(tickMs)
 
 		sorted := lb.Sort(ctx, candidates, "gpt-4", false)
-		require.Len(t, sorted, 1)
+		require.NotEmpty(t, sorted)
 		require.NotEqual(t, failingID, sorted[0].Channel.ID)
 		metrics.RecordSuccess(sorted[0].Channel.ID)
 	}
@@ -380,7 +380,7 @@ func TestAdaptiveLoadBalancer_Simulation_ErrorMigrationAndRecovery(t *testing.T)
 		metrics.AdvanceMs(tickMs)
 
 		sorted := lb.Sort(ctx, candidates, "gpt-4", false)
-		require.Len(t, sorted, 1)
+		require.NotEmpty(t, sorted)
 
 		if sorted[0].Channel.ID == failingID {
 			found = true
@@ -478,12 +478,12 @@ func TestAdaptiveLoadBalancer_Simulation_InactivityDecayAllowsComeback(t *testin
 	metrics.AdvanceMs(50)
 
 	sorted := lb.Sort(ctx, candidates, "gpt-4", false)
-	require.Len(t, sorted, 1)
+	require.NotEmpty(t, sorted)
 	require.NotEqual(t, heavyID, sorted[0].Channel.ID)
 
 	metrics.AdvanceMs(30 * 60 * 1000)
 
 	sorted2 := lb.Sort(ctx, candidates, "gpt-4", false)
-	require.Len(t, sorted2, 1)
+	require.NotEmpty(t, sorted2)
 	require.Equal(t, heavyID, sorted2[0].Channel.ID)
 }

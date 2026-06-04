@@ -505,18 +505,12 @@ func effectiveAssociationSourceCounts(systemSettings *biz.SystemModelSettings, m
 }
 
 func aggregateChannelModelCandidates(resolvedCandidates []*resolvedAssociationCandidate) []*ChannelModelsCandidate {
-	type candidateKey struct {
-		channelID int
-		priority  int
-	}
-
 	type channelModelKey struct {
 		channelID   int
 		actualModel string
 	}
 
 	candidates := make([]*ChannelModelsCandidate, 0, len(resolvedCandidates))
-	candidateIndexByKey := make(map[candidateKey]int, len(resolvedCandidates))
 	seenChannelModels := make(map[channelModelKey]struct{}, len(resolvedCandidates))
 
 	for _, resolved := range resolvedCandidates {
@@ -524,9 +518,6 @@ func aggregateChannelModelCandidates(resolvedCandidates []*resolvedAssociationCa
 			continue
 		}
 
-		key := candidateKey{channelID: resolved.channel.ID, priority: resolved.priority}
-
-		modelsToAppend := make([]biz.ChannelModelEntry, 0, len(resolved.models))
 		for _, entry := range resolved.models {
 			modelKey := channelModelKey{
 				channelID:   resolved.channel.ID,
@@ -537,26 +528,12 @@ func aggregateChannelModelCandidates(resolvedCandidates []*resolvedAssociationCa
 			}
 
 			seenChannelModels[modelKey] = struct{}{}
-
-			modelsToAppend = append(modelsToAppend, entry)
-		}
-
-		if len(modelsToAppend) == 0 {
-			continue
-		}
-
-		idx, ok := candidateIndexByKey[key]
-		if !ok {
 			candidates = append(candidates, &ChannelModelsCandidate{
 				Channel:  resolved.channel,
 				Priority: resolved.priority,
-				Models:   []biz.ChannelModelEntry{},
+				Models:   []biz.ChannelModelEntry{entry},
 			})
-			idx = len(candidates) - 1
-			candidateIndexByKey[key] = idx
 		}
-
-		candidates[idx].Models = append(candidates[idx].Models, modelsToAppend...)
 	}
 
 	return candidates
@@ -626,7 +603,7 @@ type LoadBalancedSelector struct {
 }
 
 // WithLoadBalancedSelector creates a selector that applies load balancing to sort candidates.
-// The policy is used to determine the retry policy for early stopping.
+// The policy remains available for downstream retry/fallback decisions; sorting keeps the full candidate set.
 func WithLoadBalancedSelector(wrapped CandidateSelector, loadBalancer *LoadBalancer, policy RetryPolicyProvider) *LoadBalancedSelector {
 	return &LoadBalancedSelector{
 		wrapped:      wrapped,
@@ -676,14 +653,7 @@ func loadBalancedCandidatesWithTracking(
 	policy RetryPolicyProvider,
 	trackSelection bool,
 ) []*ChannelModelsCandidate {
-	// Get retry policy to determine the required number of candidates
-	requiredCount := 1
-	if policy != nil {
-		retryPolicy := policy.RetryPolicyOrDefault(ctx)
-		if retryPolicy.Enabled {
-			requiredCount = 1 + retryPolicy.MaxChannelRetries
-		}
-	}
+	_ = policy
 
 	// Group candidates by priority first (lower priority value = higher priority)
 	priorityGroups := make(map[int][]*ChannelModelsCandidate)
@@ -698,7 +668,6 @@ func loadBalancedCandidatesWithTracking(
 	slices.Sort(priorities)
 
 	// For each priority group, apply load balancing to sort candidates within the group
-	// Stop early if we have collected enough candidates
 	var result []*ChannelModelsCandidate
 
 	for _, p := range priorities {
@@ -713,26 +682,14 @@ func loadBalancedCandidatesWithTracking(
 			sortedCandidates = loadBalancer.SortWithoutTracking(ctx, group, req.Model, useStream)
 		}
 
-		// Add candidates, but stop if we have enough
-		remaining := requiredCount - len(result)
-		if remaining <= 0 {
-			break
-		}
-
-		if len(sortedCandidates) <= remaining {
-			result = append(result, sortedCandidates...)
-		} else {
-			result = append(result, sortedCandidates[:remaining]...)
-			break
-		}
+		result = append(result, sortedCandidates...)
 	}
 
 	if log.DebugEnabled(ctx) {
 		log.Debug(ctx, "Load balanced candidates for model",
 			log.String("model", req.Model),
 			log.Int("total_candidates", len(candidates)),
-			log.Int("sorted_candidates", len(result)),
-			log.Int("required_count", requiredCount))
+			log.Int("sorted_candidates", len(result)))
 	}
 
 	return result

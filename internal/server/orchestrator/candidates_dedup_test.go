@@ -18,7 +18,6 @@ func TestDefaultSelector_Select_Deduplication(t *testing.T) {
 		SetType(channel.TypeOpenai).
 		SetName("Deduplication Channel").
 		SetBaseURL("https://api.openai.com/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key"}).
 		SetSupportedModels([]string{"gpt-4"}).
 		SetDefaultTestModel("gpt-4").
 		SetSettings(&objects.ChannelSettings{
@@ -30,6 +29,7 @@ func TestDefaultSelector_Select_Deduplication(t *testing.T) {
 		SetStatus(channel.StatusEnabled).
 		Save(ctx)
 	require.NoError(t, err)
+	ch = attachAPIKeyCredentialForOrchestratorTest(t, ctx, client, ch, "test-key")
 
 	channelService := newTestChannelServiceForChannels(client)
 	modelService := newTestModelService(client)
@@ -77,19 +77,19 @@ func TestDefaultSelector_Select_Deduplication(t *testing.T) {
 	require.Equal(t, "gpt-4", result[0].Models[0].ActualModel)
 }
 
-func TestDefaultSelector_Select_AggregateSameChannelSamePriority(t *testing.T) {
+func TestDefaultSelector_Select_SplitsSameChannelSamePriorityModels(t *testing.T) {
 	ctx, client := setupTest(t)
 
 	ch, err := client.Channel.Create().
 		SetType(channel.TypeOpenai).
 		SetName("Aggregation Channel").
 		SetBaseURL("https://api.openai.com/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key"}).
 		SetSupportedModels([]string{"gpt-4", "gpt-3.5-turbo"}).
 		SetDefaultTestModel("gpt-4").
 		SetStatus(channel.StatusEnabled).
 		Save(ctx)
 	require.NoError(t, err)
+	ch = attachAPIKeyCredentialForOrchestratorTest(t, ctx, client, ch, "test-key")
 
 	channelService := newTestChannelServiceForChannels(client)
 	modelService := newTestModelService(client)
@@ -129,12 +129,14 @@ func TestDefaultSelector_Select_AggregateSameChannelSamePriority(t *testing.T) {
 	result, err := selector.Select(ctx, req)
 	require.NoError(t, err)
 
-	require.Len(t, result, 1)
-	require.Equal(t, ch.ID, result[0].Channel.ID)
-	require.Equal(t, 1, result[0].Priority)
-	require.Len(t, result[0].Models, 2)
-
-	actualModels := []string{result[0].Models[0].ActualModel, result[0].Models[1].ActualModel}
+	require.Len(t, result, 2)
+	actualModels := make([]string, 0, len(result))
+	for _, candidate := range result {
+		require.Equal(t, ch.ID, candidate.Channel.ID)
+		require.Equal(t, 1, candidate.Priority)
+		require.Len(t, candidate.Models, 1)
+		actualModels = append(actualModels, candidate.Models[0].ActualModel)
+	}
 	require.ElementsMatch(t, []string{"gpt-4", "gpt-3.5-turbo"}, actualModels)
 }
 
@@ -145,7 +147,6 @@ func TestDefaultSelector_Select_DeduplicateAcrossConditionalAssociationsByActual
 		SetType(channel.TypeOpenai).
 		SetName("Conditional Dedup Channel").
 		SetBaseURL("https://api.openai.com/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key"}).
 		SetSupportedModels([]string{"gpt-4"}).
 		SetDefaultTestModel("gpt-4").
 		SetSettings(&objects.ChannelSettings{
@@ -156,6 +157,7 @@ func TestDefaultSelector_Select_DeduplicateAcrossConditionalAssociationsByActual
 		SetStatus(channel.StatusEnabled).
 		Save(ctx)
 	require.NoError(t, err)
+	ch = attachAPIKeyCredentialForOrchestratorTest(t, ctx, client, ch, "test-key")
 
 	channelService := newTestChannelServiceForChannels(client)
 	modelService := newTestModelService(client)

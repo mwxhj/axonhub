@@ -10,8 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shopspring/decimal"
-
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/server/biz"
 	"github.com/looplj/axonhub/llm"
@@ -799,13 +797,11 @@ type StickySessionRouter struct {
 }
 
 const (
-	stickyRoutingSourceBinding                     = "binding-hit"
-	stickyRoutingSourceQuotaRatioFirstBind         = "rebind-by-quota-ratio"
-	stickyRoutingSourceLoadBalancedNoCandidates    = "rebind-degraded-no-candidate"
-	stickyRoutingSourceLoadBalancedNoComparableKey = "rebind-degraded-normal-lb"
+	stickyRoutingSourceBinding         = "binding-hit"
+	stickyRoutingSourceNormalFirstBind = "normal-first-bind"
+	stickyRoutingSourceNoCandidates    = "normal-first-bind-no-candidate"
 
-	stickyRoutingDegradeNone              = ""
-	stickyRoutingDegradeNoComparableQuota = "no-comparable-local-quota"
+	stickyRoutingDegradeNone = ""
 )
 
 func NewStickySessionRouter(store StickySessionStore, extractor StickyKeyExtractor) *StickySessionRouter {
@@ -1120,89 +1116,11 @@ func stickyFirstBindCandidate(
 ) (*ChannelModelsCandidate, StickySessionTarget, string, string) {
 	ordered := loadBalancedCandidatesWithoutTracking(ctx, eligibleCandidates, req.Request, req.LoadBalancer, stickyRetryPolicyProvider(req))
 	if len(ordered) == 0 || ordered[0] == nil {
-		return nil, StickySessionTarget{}, stickyRoutingSourceLoadBalancedNoCandidates, stickyRoutingDegradeNone
+		return nil, StickySessionTarget{}, stickyRoutingSourceNoCandidates, stickyRoutingDegradeNone
 	}
 
 	primary := ordered[0]
-	baseTarget := stickyCandidatePreferredTarget(primary, stickyKey)
-	if balanced, target, ok := stickyQuotaRatioFirstBindCandidate(primary, baseTarget, eligibleCandidates, stickyKey); ok {
-		return balanced, target, stickyRoutingSourceQuotaRatioFirstBind, stickyRoutingDegradeNone
-	}
-
-	return primary, StickySessionTarget{}, stickyRoutingSourceLoadBalancedNoComparableKey, stickyRoutingDegradeNoComparableQuota
-}
-
-func stickyQuotaRatioFirstBindCandidate(
-	primary *ChannelModelsCandidate,
-	preferredTarget StickySessionTarget,
-	eligibleCandidates []*ChannelModelsCandidate,
-	stickyKey string,
-) (*ChannelModelsCandidate, StickySessionTarget, bool) {
-	now := time.Now()
-	if !stickyCandidateHasComparableLocalQuota(primary, preferredTarget, now) {
-		return nil, StickySessionTarget{}, false
-	}
-
-	type scopeChoice struct {
-		candidate *ChannelModelsCandidate
-		view      biz.ChannelCredentialView
-		ratio     decimal.Decimal
-	}
-
-	choices := make([]scopeChoice, 0, len(eligibleCandidates))
-	seenScopes := make(map[int]struct{}, len(eligibleCandidates))
-	for _, candidate := range eligibleCandidates {
-		if candidate == nil || candidate.Channel == nil || primary == nil || candidate.Priority != primary.Priority {
-			continue
-		}
-		for _, view := range stickyEnabledCredentialViews(candidate) {
-			ratio, ok := stickyLocalQuotaRatio(view, now)
-			if !ok {
-				continue
-			}
-			if _, exists := seenScopes[view.QuotaScopeID]; exists {
-				continue
-			}
-			seenScopes[view.QuotaScopeID] = struct{}{}
-			choices = append(choices, scopeChoice{
-				candidate: candidate,
-				view:      stickyConcreteViewForScope(candidate, view.QuotaScopeID, stickyKey),
-				ratio:     ratio,
-			})
-		}
-	}
-	if len(choices) == 0 {
-		return nil, StickySessionTarget{}, false
-	}
-
-	best := choices[0]
-	for _, choice := range choices[1:] {
-		if choice.ratio.Cmp(best.ratio) < 0 {
-			best = choice
-		}
-	}
-
-	return best.candidate, stickyTargetFromCredentialView(best.candidate, best.view), true
-}
-
-func stickyCandidateHasComparableLocalQuota(
-	candidate *ChannelModelsCandidate,
-	preferredTarget StickySessionTarget,
-	now time.Time,
-) bool {
-	if view, ok := stickyTargetCredentialView(candidate, preferredTarget); ok {
-		if _, ok := stickyLocalQuotaRatio(view, now); ok {
-			return true
-		}
-	}
-
-	for _, view := range stickyEnabledCredentialViews(candidate) {
-		if _, ok := stickyLocalQuotaRatio(view, now); ok {
-			return true
-		}
-	}
-
-	return false
+	return primary, stickyCandidatePreferredTarget(primary, stickyKey), stickyRoutingSourceNormalFirstBind, stickyRoutingDegradeNone
 }
 
 func stickyCandidatePreferredTarget(candidate *ChannelModelsCandidate, stickyKey string) StickySessionTarget {
@@ -1237,32 +1155,6 @@ func stickyTargetCredentialView(candidate *ChannelModelsCandidate, target Sticky
 	}
 
 	return biz.ChannelCredentialView{}, false
-}
-
-func stickyConcreteViewForScope(candidate *ChannelModelsCandidate, quotaScopeID int, stickyKey string) biz.ChannelCredentialView {
-	views := stickyEnabledCredentialViews(candidate)
-	matching := make([]biz.ChannelCredentialView, 0, len(views))
-	for _, view := range views {
-		if view.QuotaScopeID == quotaScopeID {
-			matching = append(matching, view)
-		}
-	}
-
-	if len(matching) == 0 {
-		return biz.ChannelCredentialView{}
-	}
-	if len(matching) == 1 {
-		return matching[0]
-	}
-
-	if stickyKey == "" {
-		return matching[0]
-	}
-	if selected, ok := biz.SelectCredentialViewBySeed(matching, "sticky:"+stickyKey); ok {
-		return selected
-	}
-
-	return matching[0]
 }
 
 func stickySeededCredentialView(candidate *ChannelModelsCandidate, stickyKey string) (biz.ChannelCredentialView, bool) {
@@ -1304,42 +1196,6 @@ func stickyTargetFromCredentialView(candidate *ChannelModelsCandidate, view biz.
 	target.CredentialID = view.CredentialID
 	target.CredentialFingerprint = view.Fingerprint
 	return target
-}
-
-func stickyLocalQuotaRatio(view biz.ChannelCredentialView, now time.Time) (decimal.Decimal, bool) {
-	if view.QuotaScopeID <= 0 || view.QuotaScopeAutoResetDue(now) {
-		return decimal.Decimal{}, false
-	}
-
-	source := strings.ToLower(strings.TrimSpace(view.QuotaScopeSource))
-	if source != "local_budget" {
-		return decimal.Decimal{}, false
-	}
-
-	unit := strings.ToLower(strings.TrimSpace(view.QuotaScopeUnit))
-	if unit == "" || unit == "unknown" {
-		return decimal.Decimal{}, false
-	}
-
-	resetPolicy := strings.ToLower(strings.TrimSpace(view.QuotaScopeResetPolicy))
-	if resetPolicy != "daily" {
-		return decimal.Decimal{}, false
-	}
-	if view.QuotaScopeResetAt == nil || !view.QuotaScopeResetAt.After(now) {
-		return decimal.Decimal{}, false
-	}
-
-	limit, err := decimal.NewFromString(strings.TrimSpace(view.QuotaScopeLimitAmount))
-	if err != nil || !limit.GreaterThan(decimal.Zero) {
-		return decimal.Decimal{}, false
-	}
-
-	used, err := decimal.NewFromString(strings.TrimSpace(view.QuotaScopeUsedAmount))
-	if err != nil || used.IsNegative() {
-		return decimal.Decimal{}, false
-	}
-
-	return used.Div(limit), true
 }
 
 func stickyRetryPolicyProvider(req StickySessionOrderRequest) RetryPolicyProvider {

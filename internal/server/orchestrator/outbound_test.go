@@ -440,8 +440,7 @@ func TestPersistentOutboundTransformer_PrepareForRetry(t *testing.T) {
 		require.Nil(t, processor.state.RequestExec)
 	})
 
-	t.Run("multiple models, retry should trigger 'reuse same model' logic", func(t *testing.T) {
-		// Case: multiple models, retry should trigger "reuse same model" logic
+	t.Run("multiple models, retry still reuses same target", func(t *testing.T) {
 		processor := &PersistentOutboundTransformer{
 			wrapped: &mockTransformer{},
 			state: &PersistenceState{
@@ -457,13 +456,10 @@ func TestPersistentOutboundTransformer_PrepareForRetry(t *testing.T) {
 			},
 		}
 
-		// Execute PrepareForRetry
-		// It should reset RequestExec and do increased the CurrentModelIndex
 		err := processor.PrepareForRetry(ctx)
 
-		// Assert
 		require.NoError(t, err)
-		require.Equal(t, 1, processor.state.CurrentModelIndex)
+		require.Zero(t, processor.state.CurrentModelIndex)
 		require.Nil(t, processor.state.RequestExec)
 	})
 }
@@ -502,7 +498,7 @@ func TestPersistentOutboundTransformer_PrepareForRetry_UsesCandidateAPIFormatOut
 
 	err := processor.PrepareForRetry(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 1, processor.state.CurrentModelIndex)
+	require.Zero(t, processor.state.CurrentModelIndex)
 	require.Same(t, embeddingOutbound, processor.wrapped)
 }
 
@@ -563,15 +559,31 @@ func TestPersistentOutboundTransformer_PrepareForFallback_SameChannelCredential(
 			Name:    "same-channel",
 			Type:    channel.TypeOpenai,
 			BaseURL: "https://api.openai.com/v1",
-			Credentials: objects.ChannelCredentials{
-				APIKeys: []string{"key-1", "key-2"},
-			},
 		},
 	}
+	firstFingerprint := ch.CredentialFingerprintForAPIKey("key-1")
+	secondFingerprint := ch.CredentialFingerprintForAPIKey("key-2")
+	ch = ch.WithCredentialViewsForSelection([]biz.ChannelCredentialView{
+		{
+			CredentialID: 1,
+			Fingerprint:  firstFingerprint,
+			Secret:       objects.UpstreamCredentialSecretFromAPIKey("key-1"),
+			AuthKind:     "api_key",
+			SecretKind:   "api_key",
+			Enabled:      true,
+		},
+		{
+			CredentialID: 2,
+			Fingerprint:  secondFingerprint,
+			Secret:       objects.UpstreamCredentialSecretFromAPIKey("key-2"),
+			AuthKind:     "api_key",
+			SecretKind:   "api_key",
+			Enabled:      true,
+		},
+	})
 	outboundTransformer := &credentialSelectingTransformer{provider: biz.NewTraceStickyKeyProvider(ch)}
 	ch.Outbound = outboundTransformer
 
-	firstFingerprint := ch.CredentialFingerprintForAPIKey("key-1")
 	state := &PersistenceState{
 		PreferredCredentialFingerprint: firstFingerprint,
 		CurrentCandidateIndex:          0,
@@ -605,7 +617,7 @@ func TestPersistentOutboundTransformer_PrepareForFallback_SameChannelCredential(
 	rawReq, err = processor.TransformRequest(ctx, &llm.Request{Model: "gpt-4"})
 	require.NoError(t, err)
 	require.Equal(t, "key-2", gjson.GetBytes(rawReq.Body, "api_key").String())
-	require.Equal(t, ch.CredentialFingerprintForAPIKey("key-2"), state.CurrentCredentialFingerprint)
+	require.Equal(t, secondFingerprint, state.CurrentCredentialFingerprint)
 }
 
 func TestPersistentOutboundTransformer_PrepareForFallback_StaysInSamePriorityBeforeLowerPriority(t *testing.T) {
@@ -650,6 +662,47 @@ func TestPersistentOutboundTransformer_PrepareForFallback_StaysInSamePriorityBef
 	require.Equal(t, 2, state.CurrentCandidateIndex)
 	require.Equal(t, 3, state.CurrentCandidate.Channel.ID)
 	require.Equal(t, 1, state.CurrentCandidate.Priority)
+}
+
+func TestPersistentOutboundTransformer_PrepareForFallback_SwitchesExplicitSameChannelModelCandidate(t *testing.T) {
+	ctx := context.Background()
+	channel := &biz.Channel{
+		Channel: &ent.Channel{
+			ID:   1,
+			Name: "same-channel",
+		},
+		Outbound: &mockTransformer{},
+	}
+	state := &PersistenceState{
+		CurrentCandidateIndex: 0,
+		CurrentModelIndex:     0,
+		ChannelModelsCandidates: []*ChannelModelsCandidate{
+			{
+				Channel:  channel,
+				Priority: 0,
+				Models:   []biz.ChannelModelEntry{{RequestModel: "gpt-4", ActualModel: "model-a"}},
+			},
+			{
+				Channel:  channel,
+				Priority: 0,
+				Models:   []biz.ChannelModelEntry{{RequestModel: "gpt-4", ActualModel: "model-b"}},
+			},
+		},
+	}
+	state.CurrentCandidate = state.ChannelModelsCandidates[0]
+	processor := &PersistentOutboundTransformer{
+		wrapped: &mockTransformer{},
+		state:   state,
+	}
+	err := &httpclient.Error{StatusCode: http.StatusInternalServerError}
+
+	require.False(t, processor.CanRetry(err))
+	require.True(t, processor.CanFallback(err))
+	require.NoError(t, processor.PrepareForFallback(ctx, err))
+	require.Equal(t, 1, state.CurrentCandidateIndex)
+	require.Zero(t, state.CurrentModelIndex)
+	require.Same(t, channel, state.CurrentCandidate.Channel)
+	require.Equal(t, "model-b", state.CurrentCandidate.Models[0].ActualModel)
 }
 
 func TestPersistentOutboundTransformer_CanRetry_UsesFallbackWhenAvailable(t *testing.T) {

@@ -92,14 +92,14 @@ func TestDefaultSelector_SelectModelCandidates_Cache(t *testing.T) {
 
 	t.Run("cache invalidated when channel count changes", func(t *testing.T) {
 		// Add a new channel
-		client.Channel.Create().
+		anthropicChannel := client.Channel.Create().
 			SetName("anthropic-primary").
 			SetType(channel.TypeAnthropic).
 			SetSupportedModels([]string{"claude-3-opus"}).
 			SetDefaultTestModel("claude-3-opus").
-			SetCredentials(objects.ChannelCredentials{APIKey: "test-key"}).
 			SetStatus(channel.StatusEnabled).
 			SaveX(ctx)
+		attachAPIKeyCredentialForOrchestratorTest(t, ctx, client, anthropicChannel, "test-key")
 
 		req := &llm.Request{Model: modelID}
 		candidates, err := selector.selectModelCandidates(ctx, req)
@@ -270,10 +270,10 @@ func TestDefaultSelector_SelectModelCandidates_Cache(t *testing.T) {
 			SetType(channel.TypeAnthropic).
 			SetSupportedModels([]string{"claude-3-opus"}).
 			SetDefaultTestModel("claude-3-opus").
-			SetCredentials(objects.ChannelCredentials{APIKey: "test-key-long"}).
 			SetStatus(channel.StatusEnabled).
 			Save(ctx)
 		require.NoError(t, err)
+		longContextChannel = attachAPIKeyCredentialForOrchestratorTest(t, ctx, client, longContextChannel, "test-key-long")
 
 		client.Model.Create().
 			SetDeveloper("test-developer").
@@ -370,13 +370,13 @@ func TestDefaultSelector_SelectModelCandidates_Cache(t *testing.T) {
 			SetName("Stream Only Channel").
 			SetType(channel.TypeOpenai).
 			SetBaseURL("https://api.openai.com/v1").
-			SetCredentials(objects.ChannelCredentials{APIKey: "test-key-stream"}).
 			SetSupportedModels([]string{"gpt-4"}).
 			SetDefaultTestModel("gpt-4").
 			SetOrderingWeight(100).
 			SetStatus(channel.StatusEnabled).
 			Save(ctx)
 		require.NoError(t, err)
+		streamChannel = attachAPIKeyCredentialForOrchestratorTest(t, ctx, client, streamChannel, "test-key-stream")
 
 		client.Model.Create().
 			SetDeveloper("test-developer").
@@ -471,29 +471,29 @@ func TestDefaultSelector_SelectModelCandidates_Cache(t *testing.T) {
 
 	t.Run("cache expires after TTL", func(t *testing.T) {
 		// Create new channels with different names for this test since previous ones were soft-deleted
-		_, err := client.Channel.Create().
+		ttlChannel1, err := client.Channel.Create().
 			SetType(channel.TypeOpenai).
 			SetName("TTL Test Channel 1").
 			SetBaseURL("https://api.openai.com/v1").
-			SetCredentials(objects.ChannelCredentials{APIKey: "test-key-ttl-1"}).
 			SetSupportedModels([]string{"gpt-4", "gpt-3.5-turbo"}).
 			SetDefaultTestModel("gpt-4").
 			SetOrderingWeight(100).
 			SetStatus(channel.StatusEnabled).
 			Save(ctx)
 		require.NoError(t, err)
+		attachAPIKeyCredentialForOrchestratorTest(t, ctx, client, ttlChannel1, "test-key-ttl-1")
 
-		_, err = client.Channel.Create().
+		ttlChannel2, err := client.Channel.Create().
 			SetType(channel.TypeOpenai).
 			SetName("TTL Test Channel 2").
 			SetBaseURL("https://api.openai.com/v1").
-			SetCredentials(objects.ChannelCredentials{APIKey: "test-key-ttl-2"}).
 			SetSupportedModels([]string{"gpt-4", "gpt-3.5-turbo"}).
 			SetDefaultTestModel("gpt-4").
 			SetOrderingWeight(50).
 			SetStatus(channel.StatusEnabled).
 			Save(ctx)
 		require.NoError(t, err)
+		attachAPIKeyCredentialForOrchestratorTest(t, ctx, client, ttlChannel2, "test-key-ttl-2")
 
 		// Create a new channel service to see the new channels
 		newChannelService := newTestChannelServiceForChannels(client)

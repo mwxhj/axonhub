@@ -847,7 +847,7 @@ func (e *sequenceExecutor) DoStream(ctx context.Context, request *httpclient.Req
 	return nil, errors.New("streaming not supported by this executor")
 }
 
-func TestChatCompletionOrchestrator_Process_SameChannelRetryNextModel(t *testing.T) {
+func TestChatCompletionOrchestrator_Process_FallbackToExplicitSameChannelModelCandidate(t *testing.T) {
 	ctx := context.Background()
 	ctx = authz.WithTestBypass(ctx)
 
@@ -901,10 +901,12 @@ func TestChatCompletionOrchestrator_Process_SameChannelRetryNextModel(t *testing
 			{
 				Channel:  bizChannel,
 				Priority: 0,
-				Models: []biz.ChannelModelEntry{
-					{RequestModel: "gpt-4", ActualModel: "gpt-4"},
-					{RequestModel: "gpt-4", ActualModel: "gpt-3.5-turbo"},
-				},
+				Models:   []biz.ChannelModelEntry{{RequestModel: "gpt-4", ActualModel: "gpt-4"}},
+			},
+			{
+				Channel:  bizChannel,
+				Priority: 0,
+				Models:   []biz.ChannelModelEntry{{RequestModel: "gpt-4", ActualModel: "gpt-3.5-turbo"}},
 			},
 		},
 	}

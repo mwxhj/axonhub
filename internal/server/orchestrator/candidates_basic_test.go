@@ -18,12 +18,12 @@ func TestDefaultChannelSelector_Select_SingleChannel(t *testing.T) {
 		SetType(channel.TypeOpenai).
 		SetName("Single Channel").
 		SetBaseURL("https://api.openai.com/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key"}).
 		SetSupportedModels([]string{"gpt-4"}).
 		SetDefaultTestModel("gpt-4").
 		SetStatus(channel.StatusEnabled).
 		Save(ctx)
 	require.NoError(t, err)
+	ch = attachAPIKeyCredentialForOrchestratorTest(t, ctx, client, ch, "test-key")
 
 	channelService := newTestChannelServiceForChannels(client)
 	systemService := newTestSystemService(client)
@@ -98,16 +98,16 @@ func TestDefaultChannelSelector_Select_ModelNotSupported(t *testing.T) {
 	ctx, client := setupTest(t)
 
 	// Create channel that doesn't support the requested model
-	_, err := client.Channel.Create().
+	limited, err := client.Channel.Create().
 		SetType(channel.TypeOpenai).
 		SetName("Limited Channel").
 		SetBaseURL("https://api.openai.com/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key"}).
 		SetSupportedModels([]string{"gpt-3.5-turbo"}).
 		SetDefaultTestModel("gpt-3.5-turbo").
 		SetStatus(channel.StatusEnabled).
 		Save(ctx)
 	require.NoError(t, err)
+	attachAPIKeyCredentialForOrchestratorTest(t, ctx, client, limited, "test-key")
 
 	channelService := newTestChannelServiceForChannels(client)
 	systemService := newTestSystemService(client)
@@ -153,12 +153,12 @@ func TestSpecifiedChannelSelector_Select_ValidChannel(t *testing.T) {
 		SetType(channel.TypeOpenai).
 		SetName("Test Channel").
 		SetBaseURL("https://api.openai.com/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key"}).
 		SetSupportedModels([]string{"gpt-4", "gpt-3.5-turbo"}).
 		SetDefaultTestModel("gpt-4").
 		SetStatus(channel.StatusDisabled). // Can be disabled for SpecifiedChannelSelector
 		Save(ctx)
 	require.NoError(t, err)
+	ch = attachAPIKeyCredentialForOrchestratorTest(t, ctx, client, ch, "test-key")
 
 	channelService := newTestChannelServiceForChannels(client)
 	selector := NewSpecifiedChannelSelector(channelService, objects.GUID{ID: ch.ID})
@@ -182,11 +182,11 @@ func TestSpecifiedChannelSelector_Select_ModelNotSupported(t *testing.T) {
 		SetType(channel.TypeOpenai).
 		SetName("Limited Channel").
 		SetBaseURL("https://api.openai.com/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key"}).
 		SetSupportedModels([]string{"gpt-3.5-turbo"}).
 		SetDefaultTestModel("gpt-3.5-turbo").
 		Save(ctx)
 	require.NoError(t, err)
+	ch = attachAPIKeyCredentialForOrchestratorTest(t, ctx, client, ch, "test-key")
 
 	channelService := newTestChannelServiceForChannels(client)
 	selector := NewSpecifiedChannelSelector(channelService, objects.GUID{ID: ch.ID})

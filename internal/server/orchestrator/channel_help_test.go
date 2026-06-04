@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,7 +12,9 @@ import (
 	"github.com/looplj/axonhub/internal/authz"
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/enttest"
+	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/objects"
 	"github.com/looplj/axonhub/internal/pkg/xcache"
 	"github.com/looplj/axonhub/internal/server/biz"
@@ -25,6 +28,7 @@ import (
 
 // newTestChannelServiceForChannels creates a minimal channel service for testing.
 func newTestChannelServiceForChannels(client *ent.Client) *biz.ChannelService {
+	backfillInlineAPIKeyCredentialsForOrchestratorTest(client)
 	systemService := newTestSystemService(client)
 
 	return biz.NewChannelService(biz.ChannelServiceParams{
@@ -97,6 +101,115 @@ func setupTest(t *testing.T) (context.Context, *ent.Client) {
 	return ctx, client
 }
 
+func attachAPIKeyCredentialForOrchestratorTest(
+	t *testing.T,
+	ctx context.Context,
+	client *ent.Client,
+	entChannel *ent.Channel,
+	apiKey string,
+) *ent.Channel {
+	t.Helper()
+
+	reloaded, err := ensureAPIKeyCredentialRefForOrchestratorTest(ctx, client, entChannel, apiKey)
+	require.NoError(t, err)
+
+	return reloaded
+}
+
+func backfillInlineAPIKeyCredentialsForOrchestratorTest(client *ent.Client) {
+	ctx := authz.WithTestBypass(context.Background())
+	channels, err := client.Channel.Query().All(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, entChannel := range channels {
+		keys := apiKeysFromInlineCredentialsForOrchestratorTest(entChannel.Credentials)
+		for _, apiKey := range keys {
+			if _, err := ensureAPIKeyCredentialRefForOrchestratorTest(ctx, client, entChannel, apiKey); err != nil {
+				panic(err)
+			}
+		}
+	}
+}
+
+func apiKeysFromInlineCredentialsForOrchestratorTest(credentials objects.ChannelCredentials) []string {
+	keys := make([]string, 0, 1+len(credentials.APIKeys))
+	if key := strings.TrimSpace(credentials.APIKey); key != "" {
+		keys = append(keys, key)
+	}
+	for _, key := range credentials.APIKeys {
+		if key = strings.TrimSpace(key); key != "" {
+			keys = append(keys, key)
+		}
+	}
+
+	return keys
+}
+
+func ensureAPIKeyCredentialRefForOrchestratorTest(
+	ctx context.Context,
+	client *ent.Client,
+	entChannel *ent.Channel,
+	apiKey string,
+) (*ent.Channel, error) {
+	secret := objects.UpstreamCredentialSecretFromAPIKey(apiKey)
+	fingerprint := biz.ChannelCredentialFingerprintForAPIKey(entChannel.Type.String(), entChannel.BaseURL, apiKey)
+	credential, err := client.UpstreamCredential.Query().
+		Where(upstreamcredential.FingerprintEQ(fingerprint)).
+		First(ctx)
+	if ent.IsNotFound(err) {
+		credential, err = client.UpstreamCredential.Create().
+			SetName(entChannel.Name + " credential").
+			SetProviderType(entChannel.Type.String()).
+			SetBaseURL(entChannel.BaseURL).
+			SetAuthKind(upstreamcredential.AuthKindAPIKey).
+			SetSecretKind(upstreamcredential.SecretKindAPIKey).
+			SetIssuerScope(biz.CredentialIssuerScope(entChannel.Type.String(), entChannel.BaseURL)).
+			SetKeyHint(biz.CredentialKeyHintForSecret(upstreamcredential.SecretKindAPIKey.String(), secret)).
+			SetSecretPayload(secret).
+			SetFingerprint(fingerprint).
+			SetSecretFingerprint(biz.CredentialSecretFingerprintForSecret(upstreamcredential.SecretKindAPIKey.String(), secret)).
+			SetStatus(upstreamcredential.StatusEnabled).
+			Save(ctx)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	exists, err := client.ChannelCredentialRef.Query().
+		Where(
+			channelcredentialref.ChannelIDEQ(entChannel.ID),
+			channelcredentialref.CredentialIDEQ(credential.ID),
+		).
+		Exist(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		_, err = client.ChannelCredentialRef.Create().
+			SetChannelID(entChannel.ID).
+			SetCredentialID(credential.ID).
+			SetEnabled(true).
+			Save(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	reloaded, err := client.Channel.Query().
+		Where(channel.IDEQ(entChannel.ID)).
+		WithCredentialRefs(func(q *ent.ChannelCredentialRefQuery) {
+			q.WithCredential()
+		}).
+		Only(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return reloaded, nil
+}
+
 // createTestChannels creates multiple test channels for testing.
 func createTestChannels(t *testing.T, ctx context.Context, client *ent.Client) []*ent.Channel {
 	t.Helper()
@@ -108,13 +221,13 @@ func createTestChannels(t *testing.T, ctx context.Context, client *ent.Client) [
 		SetType(channel.TypeOpenai).
 		SetName("High Weight Channel").
 		SetBaseURL("https://api.openai.com/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key-1"}).
 		SetSupportedModels([]string{"gpt-4", "gpt-3.5-turbo"}).
 		SetDefaultTestModel("gpt-4").
 		SetOrderingWeight(100).
 		SetStatus(channel.StatusEnabled).
 		Save(ctx)
 	require.NoError(t, err)
+	ch1 = attachAPIKeyCredentialForOrchestratorTest(t, ctx, client, ch1, "test-key-1")
 
 	channels = append(channels, ch1)
 
@@ -123,13 +236,13 @@ func createTestChannels(t *testing.T, ctx context.Context, client *ent.Client) [
 		SetType(channel.TypeOpenai).
 		SetName("Medium Weight Channel").
 		SetBaseURL("https://api.openai.com/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key-2"}).
 		SetSupportedModels([]string{"gpt-4", "gpt-3.5-turbo"}).
 		SetDefaultTestModel("gpt-4").
 		SetOrderingWeight(50).
 		SetStatus(channel.StatusEnabled).
 		Save(ctx)
 	require.NoError(t, err)
+	ch2 = attachAPIKeyCredentialForOrchestratorTest(t, ctx, client, ch2, "test-key-2")
 
 	channels = append(channels, ch2)
 
@@ -138,13 +251,13 @@ func createTestChannels(t *testing.T, ctx context.Context, client *ent.Client) [
 		SetType(channel.TypeOpenai).
 		SetName("Low Weight Channel").
 		SetBaseURL("https://api.openai.com/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key-3"}).
 		SetSupportedModels([]string{"gpt-4", "gpt-3.5-turbo"}).
 		SetDefaultTestModel("gpt-4").
 		SetOrderingWeight(25).
 		SetStatus(channel.StatusEnabled).
 		Save(ctx)
 	require.NoError(t, err)
+	ch3 = attachAPIKeyCredentialForOrchestratorTest(t, ctx, client, ch3, "test-key-3")
 
 	channels = append(channels, ch3)
 
@@ -153,13 +266,13 @@ func createTestChannels(t *testing.T, ctx context.Context, client *ent.Client) [
 		SetType(channel.TypeOpenai).
 		SetName("Disabled Channel").
 		SetBaseURL("https://api.openai.com/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key-4"}).
 		SetSupportedModels([]string{"gpt-4", "gpt-3.5-turbo"}).
 		SetDefaultTestModel("gpt-4").
 		SetOrderingWeight(75).
 		SetStatus(channel.StatusDisabled).
 		Save(ctx)
 	require.NoError(t, err)
+	ch4 = attachAPIKeyCredentialForOrchestratorTest(t, ctx, client, ch4, "test-key-4")
 
 	channels = append(channels, ch4)
 
@@ -359,16 +472,16 @@ func newTestOrchestrator(
 	channelService, requestService, systemService, usageLogService := setupTestServices(t, client)
 
 	orchestrator := &ChatCompletionOrchestrator{
-		channelSelector:   channelSelector,
-		Inbound:           openai.NewInboundTransformer(),
-		RequestService:    requestService,
-		ChannelService:    channelService,
-		PromptProvider:    &stubPromptProvider{},
-		SystemService:     systemService,
-		UsageLogService:   usageLogService,
-		PipelineFactory:   pipeline.NewFactory(executor),
-		ModelMapper:       NewModelMapper(),
-		channelLimiterManager:      NewChannelLimiterManager(),
+		channelSelector:       channelSelector,
+		Inbound:               openai.NewInboundTransformer(),
+		RequestService:        requestService,
+		ChannelService:        channelService,
+		PromptProvider:        &stubPromptProvider{},
+		SystemService:         systemService,
+		UsageLogService:       usageLogService,
+		PipelineFactory:       pipeline.NewFactory(executor),
+		ModelMapper:           NewModelMapper(),
+		channelLimiterManager: NewChannelLimiterManager(),
 		Middlewares: []pipeline.Middleware{
 			stream.EnsureUsage(),
 		},
