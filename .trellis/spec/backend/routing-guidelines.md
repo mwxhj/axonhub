@@ -49,14 +49,16 @@ Required runtime meaning:
 - Candidate channels still come from the existing profile, API key, model, priority, quota, and health eligibility rules.
 - Sticky-session must not cross priority tiers to preserve stickiness. It can only reorder eligible candidates inside the current retry/fallback tier.
 - First unbound selection starts from the existing load-balancer order for that tier, including priority and weight semantics. Do not add sticky-specific stable channel scoring or rendezvous hashing.
-- First unbound selection may apply local key-quota ratio balancing only after the normal sticky first choice lands on a credential with comparable local `CredentialQuotaScope` data. The balancing pool is limited to eligible credential views in the same priority tier, and chooses the lowest `used_amount / limit_amount` ratio for the current local daily window.
+- First unbound selection may apply local key-quota ratio balancing only after the normal sticky first choice lands on a primary channel that still has at least one comparable local `CredentialQuotaScope` credential view. The balancing pool is limited to eligible credential views in the same priority tier, and chooses the lowest `used_amount / limit_amount` ratio for the current local daily window.
 - A binding is created or refreshed only after an upstream request succeeds.
 - A selected target must not be written to the binding store before upstream success.
 - If the bound target fails and fallback succeeds, refresh the binding to the successful fallback target.
 - If all attempts fail, keep the previous binding until TTL expiry and return the real retry/upstream error.
 - Sticky-session may prefer the same credential across eligible same-priority channels, but it must not move to a lower-priority channel only to keep the credential.
 - If retry/fallback has already entered a lower-priority tier and that tier succeeds, binding may refresh to that successful target. The 5-minute TTL is what prevents permanent priority bypass.
-- Local key-quota ratio balancing must not treat credentials without comparable local quota data as `0%` or `100%`. If the normal first choice has no comparable local quota ratio, keep normal load-balancer behavior. If the normal first choice is in the local quota-managed pool, compare only local budget `CredentialQuotaScope` rows with valid positive limits, valid used amounts, daily reset policy, and a future reset time.
+- Local key-quota ratio balancing must not treat credentials without comparable local quota data as `0%` or `100%`. If the primary channel has no comparable local quota credential views, keep normal load-balancer behavior. If the primary channel is in the local quota-managed pool, compare only local budget `CredentialQuotaScope` rows with valid positive limits, valid used amounts, daily reset policy, and a future reset time.
+- Credential executability and local quota comparability are different checks. A credential view may remain executable while being excluded from local quota-ratio balancing because its local quota window is stale, auto-reset-due, provider-owned, non-daily, or otherwise non-comparable. That must not disqualify other comparable credentials on the same primary channel from quota-ratio first-bind balancing.
+- Sticky-session semantic states must stay explicit: binding hit, documented rebind policy, documented degrade path. Do not silently change from quota-aware rebind semantics to ordinary load balancing without a named contract and test coverage.
 - Provider quota status may still affect candidate or credential eligibility, but it must not be used as ratio input for sticky first-bind balancing.
 - When multiple credentials share a `quota_scope_id`, compare the shared scope once. After selecting that scope, choose the concrete credential using the existing credential selection order/seed behavior.
 
@@ -67,8 +69,9 @@ Required runtime meaning:
 | No qualified sticky key can be generated | Use normal load balancing. Do not create a binding. |
 | Binding exists and target is eligible in the current tier | Place that target first for the current attempt. |
 | Binding target is disabled, deleted, model-ineligible, quota-ineligible, or outside the current priority tier | Ignore the binding for this attempt. Normal routing continues. |
-| New sticky session normal first choice has no comparable local key quota ratio | Keep normal load-balancer behavior. Do not force it into the quota-managed pool. |
-| New sticky session normal first choice has comparable local daily key quota ratio | Reorder only comparable local quota-managed credential views in the same priority tier by lowest `used_amount / limit_amount`. |
+| New sticky session primary channel has no comparable local key quota views | Keep normal load-balancer behavior. Do not force it into the quota-managed pool. |
+| New sticky session primary channel has comparable local daily key quota views | Reorder only comparable local quota-managed credential views in the same priority tier by lowest `used_amount / limit_amount`. |
+| Seeded or preferred credential on the primary channel is stale/non-comparable, but sibling credentials on that same primary channel still have comparable local daily quota views | Still enter quota-ratio first-bind balancing using the comparable sibling views. Do not silently degrade to ordinary load balancing just because the seeded credential itself is stale. |
 | Same priority tier mixes local-quota and no-quota credentials | Balance only among comparable local-quota credentials after entering that pool; leave no-quota selections to normal load balancing. |
 | Comparable local quota data is missing, invalid, zero-limit, stale, provider-owned, or non-daily | Exclude that credential view from ratio balancing, while preserving existing eligibility behavior. |
 | Bound target returns network error, timeout, 5xx, empty response, retryable 429, or queue-full error | Let existing retry/fallback escape. Do not migrate on failed execution alone. |
@@ -100,6 +103,7 @@ When changing sticky-session or neighboring routing behavior, add or update test
 - No executable candidate returns an explicit routing/unavailable error instead of a raw middleware wrapper.
 - Credential-aware sticky routing keeps the same credential only among eligible same-tier candidates.
 - New sticky first-bind quota-ratio ordering chooses the lowest local daily `CredentialQuotaScope` ratio only inside the current priority tier.
+- Expired or stale seeded credential quota windows on the primary channel do not block quota-ratio first-bind if sibling credentials on that same channel still have comparable local daily quota data.
 - Mixed local-quota and no-quota sticky first-bind behavior preserves normal no-quota selection unless the normal first choice is already in the comparable local quota-managed pool.
 - Shared `quota_scope_id` credentials are compared as one local quota pool before choosing the concrete credential.
 - Missing, invalid, provider-owned, stale, non-daily, or zero-limit local quota data does not participate in sticky quota-ratio balancing.

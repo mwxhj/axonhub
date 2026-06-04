@@ -63,6 +63,10 @@ type PersistenceState struct {
 	StickyPreviousResponseID string
 	// StickyResponseMessage stores the completed assistant message when available for transcript-prefix binding.
 	StickyResponseMessage *llm.Message
+	// StickyRoutingSource describes which sticky routing semantic path selected the current primary target.
+	StickyRoutingSource string
+	// StickyRoutingDegradeReason explains why sticky routing left its primary rebind policy when known.
+	StickyRoutingDegradeReason string
 	// CurrentCredentialID stores the upstream credential row selected for the current attempt when known.
 	CurrentCredentialID int
 	// CurrentCredentialFingerprint stores the safe upstream credential identity selected for the current attempt.

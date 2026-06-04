@@ -799,6 +799,16 @@ type StickySessionRouter struct {
 	extractor StickyKeyExtractor
 }
 
+const (
+	stickyRoutingSourceBinding                     = "binding-hit"
+	stickyRoutingSourceQuotaRatioFirstBind         = "rebind-by-quota-ratio"
+	stickyRoutingSourceLoadBalancedNoCandidates    = "rebind-degraded-no-candidate"
+	stickyRoutingSourceLoadBalancedNoComparableKey = "rebind-degraded-normal-lb"
+
+	stickyRoutingDegradeNone              = ""
+	stickyRoutingDegradeNoComparableQuota = "no-comparable-local-quota"
+)
+
 func NewStickySessionRouter(store StickySessionStore, extractor StickyKeyExtractor) *StickySessionRouter {
 	return &StickySessionRouter{
 		store:     store,
@@ -818,6 +828,8 @@ func (r *StickySessionRouter) Order(ctx context.Context, req StickySessionOrderR
 		req.State.StickyResponseID = ""
 		req.State.StickyPreviousResponseID = ""
 		req.State.StickyResponseMessage = nil
+		req.State.StickyRoutingSource = ""
+		req.State.StickyRoutingDegradeReason = ""
 		req.State.PreferredCredentialID = 0
 		req.State.PreferredCredentialFingerprint = ""
 	}
@@ -852,9 +864,10 @@ func (r *StickySessionRouter) Order(ctx context.Context, req StickySessionOrderR
 
 	eligibleCandidates := r.eligibleCandidates(ctx, req)
 	primary, excludedChannelID, boundLookup, preferredTarget := r.boundCandidateForLookups(ctx, extraction.Lookups, req.Candidates, eligibleCandidates)
-	source := "binding"
+	source := stickyRoutingSourceBinding
+	degradeReason := stickyRoutingDegradeNone
 	if primary == nil {
-		primary, preferredTarget, source = stickyFirstBindCandidate(ctx, req, eligibleCandidates, extraction.Key)
+		primary, preferredTarget, source, degradeReason = stickyFirstBindCandidate(ctx, req, eligibleCandidates, extraction.Key)
 	}
 	if primary == nil {
 		return loadBalancedCandidates(ctx, req.Candidates, req.Request, req.LoadBalancer, stickyRetryPolicyProvider(req))
@@ -862,6 +875,8 @@ func (r *StickySessionRouter) Order(ctx context.Context, req StickySessionOrderR
 
 	ordered := stickyOrderedCandidates(ctx, req, primary, excludedChannelID)
 	if req.State != nil {
+		req.State.StickyRoutingSource = source
+		req.State.StickyRoutingDegradeReason = degradeReason
 		req.State.PreferredCredentialID = preferredTarget.CredentialID
 		req.State.PreferredCredentialFingerprint = preferredTarget.CredentialFingerprint
 	}
@@ -874,6 +889,7 @@ func (r *StickySessionRouter) Order(ctx context.Context, req StickySessionOrderR
 		}
 		log.Debug(ctx, "sticky-session ordered candidates",
 			log.String("source", source),
+			log.String("degrade_reason", degradeReason),
 			log.String("reason", reason),
 			log.String("sticky_kind", boundLookup.Kind),
 			log.Int("channel_id", ordered[0].Channel.ID),
@@ -1103,19 +1119,19 @@ func stickyFirstBindCandidate(
 	req StickySessionOrderRequest,
 	eligibleCandidates []*ChannelModelsCandidate,
 	stickyKey string,
-) (*ChannelModelsCandidate, StickySessionTarget, string) {
+) (*ChannelModelsCandidate, StickySessionTarget, string, string) {
 	ordered := loadBalancedCandidatesWithoutTracking(ctx, eligibleCandidates, req.Request, req.LoadBalancer, stickyRetryPolicyProvider(req))
 	if len(ordered) == 0 || ordered[0] == nil {
-		return nil, StickySessionTarget{}, "best-tier-load-balanced"
+		return nil, StickySessionTarget{}, stickyRoutingSourceLoadBalancedNoCandidates, stickyRoutingDegradeNone
 	}
 
 	primary := ordered[0]
 	baseTarget := stickyCandidatePreferredTarget(primary, stickyKey)
 	if balanced, target, ok := stickyQuotaRatioFirstBindCandidate(primary, baseTarget, eligibleCandidates, stickyKey); ok {
-		return balanced, target, "quota-ratio-first-bind"
+		return balanced, target, stickyRoutingSourceQuotaRatioFirstBind, stickyRoutingDegradeNone
 	}
 
-	return primary, StickySessionTarget{}, "best-tier-load-balanced"
+	return primary, StickySessionTarget{}, stickyRoutingSourceLoadBalancedNoComparableKey, stickyRoutingDegradeNoComparableQuota
 }
 
 func stickyQuotaRatioFirstBindCandidate(
@@ -1124,13 +1140,8 @@ func stickyQuotaRatioFirstBindCandidate(
 	eligibleCandidates []*ChannelModelsCandidate,
 	stickyKey string,
 ) (*ChannelModelsCandidate, StickySessionTarget, bool) {
-	baseView, ok := stickyTargetCredentialView(primary, preferredTarget)
-	if !ok {
-		return nil, StickySessionTarget{}, false
-	}
-
 	now := time.Now()
-	if _, ok := stickyLocalQuotaRatio(baseView, now); !ok {
+	if !stickyCandidateHasComparableLocalQuota(primary, preferredTarget, now) {
 		return nil, StickySessionTarget{}, false
 	}
 
@@ -1174,6 +1185,26 @@ func stickyQuotaRatioFirstBindCandidate(
 	}
 
 	return best.candidate, stickyTargetFromCredentialView(best.candidate, best.view), true
+}
+
+func stickyCandidateHasComparableLocalQuota(
+	candidate *ChannelModelsCandidate,
+	preferredTarget StickySessionTarget,
+	now time.Time,
+) bool {
+	if view, ok := stickyTargetCredentialView(candidate, preferredTarget); ok {
+		if _, ok := stickyLocalQuotaRatio(view, now); ok {
+			return true
+		}
+	}
+
+	for _, view := range stickyEnabledCredentialViews(candidate) {
+		if _, ok := stickyLocalQuotaRatio(view, now); ok {
+			return true
+		}
+	}
+
+	return false
 }
 
 func stickyCandidatePreferredTarget(candidate *ChannelModelsCandidate, stickyKey string) StickySessionTarget {
