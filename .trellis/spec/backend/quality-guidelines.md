@@ -15,6 +15,12 @@ The most important rule for routing, quota, fallback, and credential work is:
 - degradation may exist, but it must not silently change the meaning of the
   configured feature.
 
+Project note:
+
+- keep globally auto-loaded rule files short and high-signal;
+- place detailed backend design rules here instead of inflating `AGENTS.md`
+  with engineering textbook material or task-local decisions.
+
 ---
 
 ## Forbidden Patterns
@@ -58,6 +64,38 @@ Compatibility paths are allowed only when all of the following are true:
 ---
 
 ## Required Patterns
+
+### Required: Linus-style design discipline
+
+When reviewing or designing backend code, prefer the design discipline commonly
+associated with Linus Torvalds:
+
+1. data structures and data flow come before clever control flow;
+2. one structure should represent one layer of truth, not several time phases
+   mashed together;
+3. one feature/config name should correspond to one runtime meaning;
+4. solve the common case with the simplest correct model first, then add
+   narrowly scoped escape hatches only when reality forces them;
+5. if a path exists only to compensate for an earlier design weakness, treat
+   that as design debt, not as a new core abstraction.
+
+Applied to this project, that means:
+
+- do not let a single runtime object simultaneously act as candidate pool,
+  execution plan, retry queue, and success-memory state;
+- do not let selection-time logic absorb failure-recovery responsibilities;
+- do not let fallback behavior become the hidden definition of the primary
+  routing model;
+- do not preserve an abstraction whose only job is to hide that upstream
+  capability modeling, credential modeling, or request classification is weak.
+
+Review questions:
+
+- Is this structure representing one phase of truth, or several?
+- Is this branch expressing a real product/runtime concept, or compensating for
+  an earlier modeling failure?
+- If the fallback path were removed, would the primary design still make sense?
+- Is a new abstraction reducing actual complexity, or merely moving it around?
 
 ### Required: Strong semantic consistency
 
@@ -130,8 +168,12 @@ semantic features. The test must prove why that target was selected.
 
 Reviewers must check:
 
+- Does each major data structure represent one layer/time-phase of truth?
 - Does each user-facing strategy/config name still correspond to one stable
   contract?
+- Is any new abstraction removing complexity instead of hiding a bad boundary?
+- Is fallback being used as recovery for runtime unknowns, rather than as a
+  crutch for known modeling gaps?
 - Are fallback/degrade paths explicitly named and documented?
 - Are missing or stale prerequisite data treated as visible degradation instead
   of silent behavior drift?

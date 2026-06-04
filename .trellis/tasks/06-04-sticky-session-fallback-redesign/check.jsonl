@@ -1,0 +1,2 @@
+{"file":".trellis/spec/backend/routing-guidelines.md","reason":"Verify sticky-session implementation matches the documented routing contract."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Verify strategy semantics remain explicit and non-degrading."}

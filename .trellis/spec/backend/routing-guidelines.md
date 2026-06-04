@@ -4,6 +4,684 @@
 
 ---
 
+## Pre-Attempt Selection Contract
+
+### 1. Scope / Trigger
+
+Read this section before changing candidate selection, primary target choice,
+load-balancer ordering, sticky-session ordering, retry candidate preparation, or
+request-scoped execution target state.
+
+### 2. Contracts
+
+- Pre-call routing has two separate phases:
+  - feasible candidate construction from request facts and local hard state;
+  - primary decision from the feasible candidate set.
+- Feasible candidate construction keeps the full eligible candidate set. It
+  must not pre-truncate candidates based on retry count or fallback depth.
+- Primary decision chooses the first attempt only. It must not precompile a
+  retry/fallback queue.
+- Hard local state may affect eligibility before the primary decision, for
+  example disabled channels, disabled credentials, archived credentials, local
+  quota pause/disable, admission rejection, and circuit-breaker-open state.
+- Soft observations may affect ranking only, for example latency, recent
+  errors, load, and non-authoritative health observations.
+- Attempt errors are local to the attempt that produced them. They must not
+  rewrite another request's sticky binding or already-built execution target
+  unless the system first promotes them into explicit, observable hard local
+  state.
+- Once an `AttemptTarget` is built for a request, do not silently replace it
+  because another concurrent request changed soft observations. If the attempt
+  fails, retry/fallback handles recovery after the failure.
+- The primary decision must be explainable: normal rank first, sticky binding
+  hit, or sticky binding ignored with a concrete reason.
+
+### 3. Wrong vs Correct
+
+#### Wrong
+
+```text
+candidate set -> truncate to retry budget -> sticky reorders whole queue
+```
+
+This mixes selection with failure recovery before any attempt has failed.
+
+#### Correct
+
+```text
+known facts -> full feasible candidate set
+-> rank current tier
+-> primary decision
+-> build attempt target
+-> retry/fallback only after failure
+```
+
+This keeps selection, execution, and recovery in separate phases.
+
+---
+
+## Attempt Target Contract
+
+### 1. Scope / Trigger
+
+Read this section before changing outbound execution, credential selection,
+request execution snapshots, same-channel credential fallback, or provider auth
+adapters.
+
+### 2. Contracts
+
+- One attempt must be represented by one concrete `AttemptTarget`.
+- An `AttemptTarget` includes channel, model entry, API format/endpoint, and
+  credential identity.
+- The outbound execution layer consumes the `AttemptTarget`; it must not
+  silently select a different credential after the target has been built.
+- Same-channel credential fallback means moving from one concrete
+  `AttemptTarget` to another concrete `AttemptTarget` on the same channel with a
+  different credential.
+- Same-channel credential fallback is valid only when the provider/auth layer can
+  honor request-scoped credential targets and exclusions.
+- Providers whose credentials are bound during transformer construction must be
+  treated as not supporting automatic same-channel credential fallback until
+  they are migrated to request-scoped credential consumption.
+- Request execution, usage logging, sticky binding refresh, and fallback
+  diagnostics must be explainable from the concrete `AttemptTarget` and its
+  result.
+
+### 3. Wrong vs Correct
+
+#### Wrong
+
+```text
+primary decision -> channel
+-> outbound provider silently picks any eligible credential
+-> fallback guesses which credential failed
+```
+
+This keeps credential choice hidden inside execution and makes fallback
+ambiguous.
+
+#### Correct
+
+```text
+primary decision -> AttemptTarget(channel, model, api_format, credential)
+-> outbound executes exactly that target
+-> AttemptResult records the concrete target outcome
+-> fallback chooses the next concrete AttemptTarget
+```
+
+This makes retry, fallback, sticky binding, and observability operate on the
+same execution unit.
+
+---
+
+## Attempt Error Classification Contract
+
+### 1. Scope / Trigger
+
+Read this section before changing upstream error parsing, retry/fallback
+planning, model capability handling, request execution diagnostics, or any code
+that promotes an upstream failure into local routing state.
+
+D phase is classification only. It records what the failed attempt taught the
+system. It must not choose the next target, mutate sticky bindings, or silently
+disable a channel or credential.
+
+### 2. Signatures
+
+Required conceptual shape:
+
+```text
+AttemptFailure(
+  target: AttemptTarget,
+  user_visible_started: bool,
+  upstream_status: safe status/code/message,
+  class: AttemptFailureClass,
+  scope: AttemptFailureScope,
+  confidence: high | medium | low
+)
+```
+
+Required classes:
+
+- `selection_modeling_gap`: local facts were sufficient to exclude this target,
+  but A/B/C still selected it.
+- `runtime_capability_drift`: the target was locally feasible, but upstream
+  runtime state changed or was not knowable before the attempt.
+- `request_invalid`: the request is invalid for the configured system, for
+  example no feasible model/profile/API-format candidate exists.
+- `credential_auth`: the concrete credential is rejected or unauthorized.
+- `credential_quota_or_billing`: the concrete credential/account is blocked by
+  upstream quota, rate limit, billing, or similar runtime response.
+- `transient_transport`: network, timeout, connection reset, empty response, or
+  equivalent transport failure.
+- `upstream_capacity`: provider/proxy overload, queue-full, retryable 5xx, or
+  equivalent capacity failure.
+- `unknown_upstream`: upstream failed but the system cannot classify it with
+  useful confidence.
+
+Required scopes:
+
+- `request`
+- `credential`
+- `target`
+- `channel_model_api_format`
+- `channel`
+- `transport`
+- `unknown`
+
+### 3. Contracts
+
+- Classification must be based on the concrete `AttemptTarget` and the safe
+  upstream error returned by that attempt.
+- Classification must not hide a bad A/B/C model. If local facts already said a
+  target was impossible, the result is `selection_modeling_gap`, not normal
+  fallback.
+- `model not found` is not one universal class:
+  - if local model/API-format/channel facts should have excluded the target, it
+    is `selection_modeling_gap`;
+  - if the target was locally feasible and upstream dynamically withdrew the
+    model or changed proxy capability, it is `runtime_capability_drift`;
+  - if the request has no feasible configured candidate, it is
+    `request_invalid`.
+- Runtime capability drift is a real attempt failure, but it is not provider
+  quota and must not become durable provider quota state.
+- A single `runtime_capability_drift` or quota-like provider response must not
+  disable a whole channel or credential unless a separate explicit hard-state
+  mechanism promotes it with observable evidence.
+- D phase records `user_visible_started`. E phase uses that field to block
+  silent fallback after user-visible streaming output has started.
+- Unknown errors should stay visible as unknown. Do not broaden regex matching
+  until unrelated provider errors collapse into the same action.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required Classification |
+|-----------|-------------------------|
+| Local model binding/API format excludes the target but it was attempted | `selection_modeling_gap`, scope `target` or `channel_model_api_format`, high confidence. |
+| Upstream returns `model not found` for a locally feasible target | `runtime_capability_drift`, scope `channel_model_api_format` or `target`; do not mark provider quota. |
+| Request asks for a model/profile/API format with no feasible configured candidate | `request_invalid`, scope `request`. |
+| Upstream rejects the concrete key/token with auth or permission text/status | `credential_auth`, scope `credential` or `target`. |
+| Upstream returns quota, billing, rate-limit, or insufficient balance style error | `credential_quota_or_billing` when credential/account scoped; otherwise `upstream_capacity` or `unknown_upstream`. |
+| Network timeout, connection reset, EOF, empty response | `transient_transport`, scope `transport` or `target`. |
+| 5xx, overloaded, queue full, retry later | `upstream_capacity`, scope `channel` or `target`. |
+| Streaming already emitted user-visible tokens before failure | Keep the same class/scope and set `user_visible_started=true`. |
+
+### 5. Good / Base / Bad Cases
+
+- Good: `model not found` on a locally feasible target is recorded as
+  `runtime_capability_drift`, then recovery may try another feasible target
+  before output starts.
+- Good: a locally impossible target being selected is reported as
+  `selection_modeling_gap`, making the selection bug visible.
+- Base: unknown upstream text stays `unknown_upstream` and remains visible in
+  attempt diagnostics.
+- Bad: all `model not found` errors are silently treated as ordinary fallback
+  success paths.
+- Bad: quota-like provider text is persisted as provider quota product state.
+- Bad: error regexes classify broad provider text so aggressively that request
+  bugs look retryable.
+
+### 6. Tests Required
+
+When changing attempt error classification, add or update tests for:
+
+- `model not found` split into `selection_modeling_gap`,
+  `runtime_capability_drift`, and `request_invalid` based on local feasibility.
+- Provider quota-like responses are attempt failures, not provider quota state.
+- `user_visible_started=true` is preserved on classified streaming failures.
+- Broad or unknown upstream text remains visible as `unknown_upstream`.
+- Classification alone does not mutate sticky bindings, channel status, or
+  credential status.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```text
+upstream: model not found
+-> mark channel bad
+-> silently hop targets
+-> only show final success
+```
+
+This hides whether the real issue was bad local modeling, upstream drift, or a
+bad user request.
+
+#### Correct
+
+```text
+upstream: model not found
+-> compare with local feasibility facts
+-> classify as selection gap, runtime drift, or invalid request
+-> record failed AttemptTarget
+-> let fallback planning decide the next action
+```
+
+This keeps failure knowledge separate from recovery behavior.
+
+---
+
+## Recovery Action Planner Contract
+
+### 1. Scope / Trigger
+
+Read this section before changing fallback planning, same-target retry,
+same-channel credential fallback, same-priority fallback, lower-priority
+fallback, sticky target escape behavior, streaming failure handling, or retry
+attempt budgeting.
+
+E phase chooses the next recovery action after D has classified a failed
+attempt. It must not reinterpret the upstream error or mutate the failure
+classification.
+
+### 2. Signatures
+
+Required conceptual input:
+
+```text
+FallbackPlannerInput(
+  failure: AttemptFailure,
+  candidate_set: CandidateSet,
+  attempt_history: []AttemptResult,
+  policy: RecoveryPolicy,
+  request_state: cancellation/timeout/streaming state
+)
+```
+
+Required conceptual output:
+
+```text
+FallbackDecision(
+  action:
+    return_error
+    | retry_same_target
+    | fallback_same_channel_credential
+    | fallback_same_priority_target
+    | fallback_lower_priority,
+  next_target: AttemptTarget?,
+  reason: string,
+  exhausted_scope: string?
+)
+```
+
+### 3. Contracts
+
+- E phase consumes D phase classification. It must not reclassify the upstream
+  error, hide `selection_modeling_gap`, or convert provider quota-like text into
+  provider quota state.
+- E phase runs only after an `AttemptTarget` fails. A/B must not precompile a
+  fallback queue before any attempt has failed.
+- If the user canceled or the configured request timeout expired, return the
+  cancellation/timeout result. Do not keep fallback running.
+- If `user_visible_started=true`, return the streaming failure. Silent fallback
+  to another upstream target is forbidden after user-visible output starts.
+- `request_invalid` returns an error directly. It is not recoverable by trying
+  more targets.
+- `selection_modeling_gap` returns a visible routing/modeling error. It must not
+  be normalized into ordinary fallback success.
+- `runtime_capability_drift` should not retry the same target. It may fallback
+  to other A-feasible targets before output starts, staying in the same priority
+  tier until that tier is exhausted.
+- `credential_auth` and credential-scoped `credential_quota_or_billing` prefer
+  same-channel credential fallback when the provider/auth path supports
+  request-scoped credential targets and exclusions.
+- If same-channel credential fallback is not supported by the provider/auth
+  path, do not pretend it happened. Move to normal target fallback or return the
+  real failure if no target remains.
+- `transient_transport` may use minimal same-target retry when policy allows it,
+  but repeated same-target retry must not dominate recovery while other concrete
+  targets remain.
+- `upstream_capacity` usually falls back to another target. Same-target retry
+  should be rare and explicitly justified.
+- `unknown_upstream` should be conservative: keep the failed attempt visible,
+  avoid broad regex-driven action, and do not promote it into hard local state
+  without separate evidence.
+- Priority is a service contract. E must exhaust the current priority tier
+  before lower-priority fallback begins.
+- Every recovery action must produce a new concrete `AttemptTarget` or a direct
+  terminal result. The outbound layer must never receive an ambiguous channel
+  without the selected credential/model/API-format.
+
+### 4. Validation & Error Matrix
+
+| Failure / State | Required Recovery Action |
+|-----------------|--------------------------|
+| User canceled | `return_error`; surface cancellation. |
+| Configured request timeout expired | `return_error`; surface timeout. |
+| `user_visible_started=true` | `return_error`; no silent fallback. |
+| `request_invalid` | `return_error`; do not try more targets. |
+| `selection_modeling_gap` | `return_error` with visible routing/modeling diagnostics. |
+| `runtime_capability_drift` before output starts | Fallback to another A-feasible target; same priority before lower priority; no same-target retry. |
+| `credential_auth`, same channel has another eligible credential, provider supports request-scoped credentials | `fallback_same_channel_credential`. |
+| `credential_auth`, provider cannot honor request-scoped credential exclusions | Use normal target fallback or `return_error`; do not fake credential fallback. |
+| Credential-scoped `credential_quota_or_billing` | Prefer `fallback_same_channel_credential`, then same-priority target fallback, then lower-priority fallback after exhaustion. |
+| `transient_transport` | Minimal `retry_same_target` if allowed, then fallback. |
+| `upstream_capacity` | Prefer target fallback; same-target retry only with explicit justification. |
+| `unknown_upstream` | Conservative fallback if policy allows and no output started; preserve diagnostics. |
+
+### 5. Good / Base / Bad Cases
+
+- Good: upstream dynamically withdraws a model, D classifies
+  `runtime_capability_drift`, E tries another same-priority A-feasible target
+  before any streaming output starts.
+- Good: a key is rejected, same-channel credential fallback uses a different
+  concrete credential and request detail shows both attempts.
+- Good: all current-priority targets are exhausted, lower-priority fallback
+  begins, and the decision reason records the priority drop.
+- Base: a transport timeout gets one same-target retry, fails again, then
+  escapes to another concrete target.
+- Bad: a request with no feasible configured model is sprayed across every
+  channel.
+- Bad: a `selection_modeling_gap` is hidden behind final fallback success.
+- Bad: streaming output has begun and fallback switches to a different upstream
+  target.
+- Bad: same-channel credential fallback is claimed even though the provider auth
+  layer still binds credentials during transformer construction.
+
+### 6. Tests Required
+
+When changing recovery planning, add or update tests for:
+
+- `request_invalid` and `selection_modeling_gap` terminate without ordinary
+  fallback.
+- `runtime_capability_drift` avoids same-target retry and stays in the current
+  priority tier until exhausted.
+- Same-channel credential fallback only runs when request-scoped credential
+  targeting is supported.
+- Credential auth/quota failures prefer same-channel credential fallback before
+  cross-channel fallback when possible.
+- Lower-priority fallback starts only after current-priority exhaustion.
+- User cancellation, configured timeout, and `user_visible_started=true` stop
+  silent fallback.
+- Each fallback attempt builds a new concrete `AttemptTarget`.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```text
+failed attempt
+-> regex says maybe retryable
+-> prebuilt fallback queue picks any channel
+-> outbound silently chooses a credential
+```
+
+This lets recovery blur classification, priority, and credential identity.
+
+#### Correct
+
+```text
+failed AttemptTarget
+-> D classifies AttemptFailure
+-> E chooses one action from policy and remaining candidates
+-> next action is either terminal or a new concrete AttemptTarget
+```
+
+This keeps recovery explicit and testable.
+
+---
+
+## Post-Success Learning Contract
+
+### 1. Scope / Trigger
+
+Read this section before changing sticky binding refresh, request execution
+result persistence, soft routing observations, success/failure counters, latency
+learning, or any code that writes routing state after a request succeeds.
+
+F phase runs after recovery has reached a terminal success. It records what
+actually happened and writes only the small amount of routing state that is safe
+to learn from a successful attempt.
+
+### 2. Signatures
+
+Required conceptual input:
+
+```text
+PostSuccessLearningInput(
+  sticky_key: string?,
+  final_success: AttemptResult,
+  attempt_history: []AttemptResult,
+  fallback_decisions: []FallbackDecision
+)
+```
+
+Required conceptual output:
+
+```text
+PostSuccessLearningOutput(
+  sticky_binding_write: StickySessionBinding?,
+  execution_records: []AttemptExecutionRecord,
+  soft_observation_updates: []ObservationUpdate
+)
+```
+
+### 3. Contracts
+
+- Only a successful concrete `AttemptTarget` may refresh sticky binding.
+- Primary success refreshes sticky binding to the primary `AttemptTarget`.
+- Fallback success refreshes sticky binding to the final successful
+  `AttemptTarget`, not to the original failed target.
+- If all attempts fail, do not migrate, delete, or clear the old sticky binding.
+  Let the binding expire by TTL and return the real failure path.
+- Sticky binding target means successful `AttemptTarget` identity. It must not
+  collapse back to channel-only state when credential/model/API-format identity
+  is known.
+- Final success must not overwrite failed attempt history, failure
+  classifications, or fallback decisions. Operators must be able to see the
+  full path, not only the winner.
+- F may update soft observations such as latency, recent success/failure
+  counters, and non-authoritative health hints.
+- F must not promote one success or failure into durable hard state. Hard-state
+  promotion needs a separate explicit mechanism with observable evidence.
+- F must not write provider quota state. Provider quota-like upstream responses
+  remain attempt failures from D/E, not learned product state.
+- F must not rewrite the explanations produced by A/B/C/D/E. Learning happens
+  after the fact and cannot change why the request chose, failed, recovered, or
+  succeeded.
+
+### 4. Validation & Error Matrix
+
+| Result | Required Learning Behavior |
+|--------|----------------------------|
+| Primary target succeeds | Refresh sticky binding to the primary `AttemptTarget`; record the successful attempt. |
+| Fallback target succeeds | Refresh sticky binding to the final successful `AttemptTarget`; keep failed attempts visible. |
+| All attempts fail | Do not update sticky binding; keep old binding until TTL; return the failure. |
+| Stream starts and later fails | Do not treat it as success; do not silently fallback; do not refresh sticky to a failed target. |
+| Successful target has credential identity | Store/bind safe credential identity; do not downgrade to channel-only state. |
+| A failed attempt had quota-like provider text | Keep it as attempt failure diagnostics; do not write provider quota state. |
+| Soft observations are updated | Mark them as soft/ranking inputs, not hard eligibility facts. |
+
+### 5. Good / Base / Bad Cases
+
+- Good: primary target succeeds and sticky binding becomes
+  `stickyKey -> successful AttemptTarget`.
+- Good: target A fails, fallback target B succeeds, sticky binding refreshes to
+  B while request detail still shows A's failure.
+- Good: all targets fail and the previous sticky binding remains unchanged until
+  TTL expiry.
+- Base: no sticky key exists, the request records execution history but writes no
+  sticky binding.
+- Bad: fallback succeeds and the system rewrites history as if the primary
+  target succeeded.
+- Bad: one successful request permanently marks a channel healthy or capable.
+- Bad: a failed streaming response refreshes sticky binding because it emitted
+  some tokens.
+
+### 6. Tests Required
+
+When changing post-success learning, add or update tests for:
+
+- Sticky binding refreshes only after success.
+- Fallback success binds to the final successful `AttemptTarget`.
+- All-failed requests leave previous sticky binding unchanged.
+- Failed attempt history remains visible after final success.
+- Soft observation updates do not become hard eligibility state.
+- Provider quota-like failures are not persisted as provider quota state.
+- Streaming failure after user-visible output does not refresh sticky binding.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```text
+fallback succeeds
+-> overwrite attempt history with final target
+-> bind sticky to channel only
+-> mark failed target healthy because request eventually succeeded
+```
+
+This erases the route the request actually took and corrupts future selection.
+
+#### Correct
+
+```text
+fallback succeeds
+-> keep every AttemptResult and FallbackDecision
+-> bind sticky to the final successful AttemptTarget
+-> update only soft observations
+```
+
+This lets success improve locality without hiding failures.
+
+---
+
+## Routing Explainability Contract
+
+### 1. Scope / Trigger
+
+Read this section before changing request execution records, route diagnostics,
+request list/detail UI payloads, log/export fields, sticky/fallback telemetry,
+or any GraphQL/REST response that explains routing behavior.
+
+G phase is observability across the whole lifecycle. It does not choose targets,
+fallback, classify errors, or learn new routing state.
+
+### 2. Signatures
+
+Required conceptual diagnostic shape:
+
+```text
+RoutingTrace(
+  candidate_set_summary: CandidateSetSummary,
+  primary_decision: PrimaryDecision,
+  attempts: []AttemptTrace,
+  fallback_decisions: []FallbackDecision,
+  sticky_learning: PostSuccessLearningOutput?,
+  final_result: success | error | canceled | timeout | stream_interrupted
+)
+```
+
+Each `AttemptTrace` must be explainable from:
+
+```text
+AttemptTrace(
+  target: safe AttemptTarget identity,
+  result: success | failure,
+  failure: AttemptFailure?,
+  usage: safe usage/cost/latency summary
+)
+```
+
+### 3. Contracts
+
+- Explainability must cover the lifecycle:
+  - A: why candidates were feasible and which hard filters removed others;
+  - B: why the primary target was chosen;
+  - C: which concrete `AttemptTarget` was executed;
+  - D: how each failure was classified;
+  - E: why retry/fallback/direct error was chosen;
+  - F: whether sticky binding or soft observations were updated;
+  - final result: success, direct error, cancellation, timeout, or stream
+    interruption.
+- Request detail must preserve the full attempt chain. Final success must not
+  hide failed attempts.
+- Request list should show operator-useful labels only: channel name, credential
+  name/key hint, model/API format, status, usage, cost, latency, and concise
+  fallback status.
+- Debug-only identifiers such as fingerprints, `secret:v1:*`, raw refs, and
+  internal resource keys must not be primary list labels. If needed for
+  debugging, put them in structured detail/debug fields.
+- Raw secrets must never appear in GraphQL responses, logs, exports, tooltips,
+  or copy actions.
+- Error diagnostics must include project classifications (`AttemptFailureClass`,
+  scope, confidence) rather than only provider raw text.
+- Fallback success must be visible as fallback success. It must not look like a
+  single-attempt success.
+- Diagnostic data must be structured enough for tests and UI to consume; do not
+  rely on concatenated human strings as the only source of truth.
+
+### 4. Validation & Error Matrix
+
+| Situation | Required Explanation |
+|-----------|----------------------|
+| Candidate excluded before execution | Record hard filter reason in candidate summary. |
+| Sticky binding hit | Record sticky hit and the bound `AttemptTarget`. |
+| Sticky binding ignored | Record ignored reason such as disabled, model-ineligible, quota-ineligible, or outside current priority tier. |
+| Primary selected by normal ranking | Record rank/priority/weight reason without claiming sticky decided it. |
+| Attempt executes | Record safe channel/model/API-format/credential identity. |
+| Attempt fails | Record `AttemptFailure` class/scope/confidence and safe upstream status/message. |
+| Fallback runs | Record `FallbackDecision` action, next target, and reason. |
+| Fallback succeeds | Final result is success, with prior failed attempts still visible. |
+| Streaming output starts then fails | Final result is stream interruption; no silent fallback is shown. |
+
+### 5. Good / Base / Bad Cases
+
+- Good: request detail shows primary target A, `runtime_capability_drift`, a
+  same-priority fallback decision, final target B, and sticky refresh to B.
+- Good: request list shows `input(lite)` and a masked key hint, not
+  `secret:v1:*`.
+- Good: an operator can tell whether a request failed because it was invalid,
+  because local selection picked an impossible target, or because upstream
+  drifted after selection.
+- Base: single-attempt success records one primary decision and one successful
+  attempt.
+- Bad: final success hides the failed sticky target.
+- Bad: UI uses fingerprint/ref/debug strings as normal operator-facing labels.
+- Bad: request export includes raw upstream secrets or unmasked bearer tokens.
+- Bad: provider raw text is the only stored explanation for retry/fallback.
+
+### 6. Tests Required
+
+When changing routing observability, add or update tests for:
+
+- Request detail includes all attempts and fallback decisions.
+- Request list uses user-facing labels and masked key hints, not fingerprints or
+  raw refs as primary labels.
+- Failure classifications are persisted or exposed in structured fields.
+- Fallback success remains distinguishable from single-attempt success.
+- Streaming interruption shows no silent fallback after output started.
+- Copy/export paths apply the same masking rules as the UI.
+- Raw secrets never appear in API responses, logs, tooltips, or exports.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```text
+request row: success
+detail: channel=input, key=secret:v1:...
+debug text: provider said model not found, then ok
+```
+
+This is neither operator-friendly nor structurally useful.
+
+#### Correct
+
+```text
+request row: success via fallback
+detail:
+  primary: AttemptTarget A
+  failure: runtime_capability_drift
+  fallback: same-priority target B
+  final: success on AttemptTarget B
+  sticky: refreshed to B
+```
+
+This makes the route explainable without leaking credential internals.
+
+---
+
 ## Sticky Session Routing Contract
 
 ### 1. Scope / Trigger
@@ -46,21 +724,17 @@ Required runtime meaning:
 
 ### 3. Contracts
 
-- Candidate channels still come from the existing profile, API key, model, priority, quota, and health eligibility rules.
+- Candidate channels still come from the existing profile, API key, model, priority, local quota, and health eligibility rules.
 - Sticky-session must not cross priority tiers to preserve stickiness. It can only reorder eligible candidates inside the current retry/fallback tier.
 - First unbound selection starts from the existing load-balancer order for that tier, including priority and weight semantics. Do not add sticky-specific stable channel scoring or rendezvous hashing.
-- First unbound selection may apply local key-quota ratio balancing only after the normal sticky first choice lands on a primary channel that still has at least one comparable local `CredentialQuotaScope` credential view. The balancing pool is limited to eligible credential views in the same priority tier, and chooses the lowest `used_amount / limit_amount` ratio for the current local daily window.
+- First unbound selection must not apply sticky-specific quota-ratio balancing. If local quota balancing is needed later, expose it as a separate explicit routing policy or sub-policy.
 - A binding is created or refreshed only after an upstream request succeeds.
 - A selected target must not be written to the binding store before upstream success.
 - If the bound target fails and fallback succeeds, refresh the binding to the successful fallback target.
 - If all attempts fail, keep the previous binding until TTL expiry and return the real retry/upstream error.
 - Sticky-session may prefer the same credential across eligible same-priority channels, but it must not move to a lower-priority channel only to keep the credential.
 - If retry/fallback has already entered a lower-priority tier and that tier succeeds, binding may refresh to that successful target. The 5-minute TTL is what prevents permanent priority bypass.
-- Local key-quota ratio balancing must not treat credentials without comparable local quota data as `0%` or `100%`. If the primary channel has no comparable local quota credential views, keep normal load-balancer behavior. If the primary channel is in the local quota-managed pool, compare only local budget `CredentialQuotaScope` rows with valid positive limits, valid used amounts, daily reset policy, and a future reset time.
-- Credential executability and local quota comparability are different checks. A credential view may remain executable while being excluded from local quota-ratio balancing because its local quota window is stale, auto-reset-due, provider-owned, non-daily, or otherwise non-comparable. That must not disqualify other comparable credentials on the same primary channel from quota-ratio first-bind balancing.
-- Sticky-session semantic states must stay explicit: binding hit, documented rebind policy, documented degrade path. Do not silently change from quota-aware rebind semantics to ordinary load balancing without a named contract and test coverage.
-- Internal credential executability summaries may affect candidate or credential eligibility, but they must not be used as ratio input for sticky first-bind balancing.
-- When multiple credentials share a `quota_scope_id`, compare the shared scope once. After selecting that scope, choose the concrete credential using the existing credential selection order/seed behavior.
+- Sticky-session semantic states must stay explicit: binding hit, binding ignored, and normal first-bind. Do not silently change from sticky behavior to quota balancing or another routing policy under the same strategy name.
 
 ### 4. Validation & Error Matrix
 
@@ -69,11 +743,6 @@ Required runtime meaning:
 | No qualified sticky key can be generated | Use normal load balancing. Do not create a binding. |
 | Binding exists and target is eligible in the current tier | Place that target first for the current attempt. |
 | Binding target is disabled, deleted, model-ineligible, quota-ineligible, or outside the current priority tier | Ignore the binding for this attempt. Normal routing continues. |
-| New sticky session primary channel has no comparable local key quota views | Keep normal load-balancer behavior. Do not force it into the quota-managed pool. |
-| New sticky session primary channel has comparable local daily key quota views | Reorder only comparable local quota-managed credential views in the same priority tier by lowest `used_amount / limit_amount`. |
-| Seeded or preferred credential on the primary channel is stale/non-comparable, but sibling credentials on that same primary channel still have comparable local daily quota views | Still enter quota-ratio first-bind balancing using the comparable sibling views. Do not silently degrade to ordinary load balancing just because the seeded credential itself is stale. |
-| Same priority tier mixes local-quota and no-quota credentials | Balance only among comparable local-quota credentials after entering that pool; leave no-quota selections to normal load balancing. |
-| Comparable local quota data is missing, invalid, zero-limit, stale, provider-owned, or non-daily | Exclude that credential view from ratio balancing, while preserving existing eligibility behavior. |
 | Bound target returns network error, timeout, 5xx, empty response, retryable 429, or queue-full error | Let existing retry/fallback escape. Do not migrate on failed execution alone. |
 | Fallback target succeeds | Refresh binding to the successful target. |
 | All targets fail | Keep old binding until TTL. Return the real upstream/retry result. |
@@ -102,11 +771,7 @@ When changing sticky-session or neighboring routing behavior, add or update test
 - Sticky-session does not enable model circuit-breaker raw-request skip behavior.
 - No executable candidate returns an explicit routing/unavailable error instead of a raw middleware wrapper.
 - Credential-aware sticky routing keeps the same credential only among eligible same-tier candidates.
-- New sticky first-bind quota-ratio ordering chooses the lowest local daily `CredentialQuotaScope` ratio only inside the current priority tier.
-- Expired or stale seeded credential quota windows on the primary channel do not block quota-ratio first-bind if sibling credentials on that same channel still have comparable local daily quota data.
-- Mixed local-quota and no-quota sticky first-bind behavior preserves normal no-quota selection unless the normal first choice is already in the comparable local quota-managed pool.
-- Shared `quota_scope_id` credentials are compared as one local quota pool before choosing the concrete credential.
-- Missing, invalid, provider-owned, stale, non-daily, or zero-limit local quota data does not participate in sticky quota-ratio balancing.
+- Sticky first-bind does not perform quota-ratio balancing under the `sticky-session` strategy name.
 
 ### 7. Wrong vs Correct
 
@@ -310,7 +975,6 @@ quota_scope_status_snapshot
 credential_name_snapshot
 credential_key_hint
 credential_source
-credential_quota_status_snapshot
 ```
 
 `quota_scope_*` snapshot fields are safe key-local quota metadata for the credential used by that attempt. They must not be interpreted as channel quota or provider quota truth.
@@ -324,6 +988,7 @@ credential_quota_status_snapshot
 - Candidate quota filtering must narrow the executable credential views before outbound selection. A channel must not remain eligible because one key is available while the API-key provider can still select another exhausted or locally blocked key.
 - When outbound transformers hold API-key providers from the original channel snapshot, routing must pass a candidate-scoped credential allow-list through context so the provider can only choose credentials kept by the current candidate/quota decision.
 - In de-prioritize mode, channel ordering may keep exhausted channels in the candidate set, but if a channel has both exhausted and available credentials, the provider should still avoid the exhausted credential when an available credential exists.
+- Provider quota is not a credential execution model. Quota-like upstream responses are attempt errors and must not be snapshotted as provider quota state.
 
 ### 4. Validation & Error Matrix
 

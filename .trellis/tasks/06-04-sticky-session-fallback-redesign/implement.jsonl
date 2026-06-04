@@ -1,0 +1,2 @@
+{"file":".trellis/spec/backend/routing-guidelines.md","reason":"Sticky-session and retry/fallback contract for routing redesign."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Semantic consistency rule for strategy names and degradation behavior."}

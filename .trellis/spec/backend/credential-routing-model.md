@@ -23,7 +23,7 @@ ChannelCredentialRef = channel-to-credential binding
 CredentialQuotaScope = key/credential local budget quota
 ```
 
-Do not reintroduce channel-local budget quota or channel-level double quota. `CredentialQuotaScope` is the only quota product concept in this model, and it may affect only that credential view. If consumer/org/project budgeting is added later, design it outside this channel/credential contract.
+Do not reintroduce channel-local budget quota or channel-level double quota. `CredentialQuotaScope` is the only quota product concept in this model, and it may affect only that credential view. Provider quota is not a product or domain model; provider quota-like upstream responses are runtime attempt errors. If consumer/org/project budgeting is added later, design it outside this channel/credential contract.
 
 ---
 
@@ -62,7 +62,6 @@ UpstreamCredential.fingerprint
 UpstreamCredential.secret_fingerprint
 UpstreamCredential.key_hint
 UpstreamCredential.status
-UpstreamCredential.quota_status
 ```
 
 Supported secret payload shapes:
@@ -133,7 +132,8 @@ These APIs must stay attached to `UpstreamCredential` / key management. They mus
 - Runtime route availability is derived from `channel.status`, `ref.enabled`, `credential.status`, model/route eligibility, and credential/key-local quota state.
 - Runtime route availability must not consult channel-local quota. `CredentialQuotaScope` local budget state may filter only the affected credential view. A channel with another eligible credential remains routable.
 - `CredentialQuotaScope` local quota is a visible credential/key product concept.
-- `UpstreamCredential.quota_status` is an internal credential executability summary. It may remain in storage/runtime, but it is not a separate product quota model.
+- Provider quota must not exist as a durable product/domain model. Do not expose provider quota UI, route on provider quota state, or treat provider quota observation as local truth.
+- Provider quota-like upstream responses such as rate limits, insufficient quota, billing errors, or quota exceeded are runtime attempt errors. Classify them by scope for the current request and record them as execution diagnostics, not as provider quota state.
 - Legacy `Channel.credentials` may remain as migration compatibility storage. New product flows must create credentials and refs instead.
 - Legacy `Channel.disabled_api_keys` does not need semantic preservation. Backfill may ignore it; migrated refs default to enabled unless the credential itself is inactive for another reason.
 - Creating a credential with the same secret as an archived credential should reactivate/update the archived credential instead of returning a still-archived row.
@@ -160,6 +160,7 @@ These APIs must stay attached to `UpstreamCredential` / key management. They mus
 | Local quota scope is paused and `pause_until` is in the past | Treat the credential view as eligible pending reset/update. |
 | Local quota scope is disabled | Filter only that credential view from routing. |
 | Local quota reset is due for automatic reset policies | Do not keep the credential blocked only because the stored status has not been refreshed yet. |
+| Upstream returns quota/rate-limit/billing style error | Treat it as a runtime attempt error for retry/fallback/error reporting. Do not persist it as provider quota state. |
 
 ---
 
@@ -175,6 +176,7 @@ These APIs must stay attached to `UpstreamCredential` / key management. They mus
 - Bad: using `CredentialQuotaScope.status` to mark an entire channel unavailable when another bound credential is still usable.
 - Bad: storing OAuth JSON in `Channel.credentials.apiKey` after the credential model is available.
 - Bad: introducing a second visible quota concept alongside `CredentialQuotaScope`.
+- Bad: adding `ProviderQuotaStatus`, provider quota UI, or provider quota routing rules as if upstream quota were local truth.
 
 ---
 
@@ -193,6 +195,7 @@ When changing this contract, add or update tests for:
 - Credential local quota exhaustion/paused/disabled filters only the affected credential view and keeps the channel eligible when another credential remains selectable.
 - Credential local quota `warn` action does not filter the credential view.
 - Automatic local quota reset due dates allow the credential to be reconsidered instead of staying permanently blocked.
+- Provider quota-like upstream responses are stored and displayed as attempt errors, not as provider quota product state.
 - Frontend type checks ensure channel create/edit no longer requires or displays key/OAuth fields after migration.
 - Request/export/log tests verify raw secret and OAuth token material is masked or absent.
 

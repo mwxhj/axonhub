@@ -9,6 +9,9 @@ This file provides guidance to AI coding assistants when working with code in th
 1. Do NOT run lint or build commands unless explicitly requested by the user.
 2. Do NOT restart the development server — it's already started and managed.
 3. All summary files should be stored in `.agent/summary` directory if available.
+4. Default to Chinese in user-facing replies unless the user explicitly requests another language.
+5. Do not introduce silent fallbacks, mock success paths, or hidden degradation just to make something appear to work.
+6. Prefer surfacing real failures clearly; if a fallback or guardrail is truly required, make it explicit, documented, and user-approved.
 
 ## Configuration
 
@@ -80,6 +83,17 @@ All detailed rules are in `.agent/rules/`:
 | [e2e.md](.agent/rules/e2e.md) | `frontend/tests/**/*.ts` | E2E testing rules |
 | [docs.md](.agent/rules/docs.md) | `docs/**/*.md` | Documentation rules |
 | [workflows/add-channel.md](.agent/rules/workflows/add-channel.md) | Manual | Workflow for adding a new channel |
+
+## Rule Placement
+
+Keep this file short. Put only global red lines, stable environment facts, and
+navigation here.
+
+Move detailed engineering methodology into:
+
+- `.trellis/spec/` for backend/frontend design contracts and quality rules
+- `.agent/rules/` for language- or layer-specific coding rules
+- `.trellis/tasks/*/prd.md` for task-specific decisions
 <!-- TRELLIS:START -->
 # Trellis Instructions
 
