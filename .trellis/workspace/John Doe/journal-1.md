@@ -272,3 +272,36 @@ Added configurable credential local quota daily reset time, cleaned credential/r
 ### Next Steps
 
 - None - task complete
+
+
+## Session 9: Feature pruning hard-cut rollout
+
+**Date**: 2026-06-04
+**Task**: Feature pruning hard-cut rollout
+**Branch**: `unstable`
+
+### Summary
+
+Hard-cut legacy quota and routing surfaces, removed provider quota subsystem, narrowed GraphQL/UI exposure, and synced Trellis specs.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7f6ff5c` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
