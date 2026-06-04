@@ -33,8 +33,6 @@ type BackupProject struct {
 
 type BackupChannel struct {
 	ent.Channel
-
-	Credentials objects.ChannelCredentials `json:"credentials"`
 }
 
 type BackupUpstreamCredential struct {

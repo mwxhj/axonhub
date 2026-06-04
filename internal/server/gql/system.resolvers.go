@@ -56,16 +56,6 @@ func (r *mutationResolver) UpdateStoragePolicy(ctx context.Context, input biz.St
 	return true, nil
 }
 
-// UpdateRetryPolicy is the resolver for the updateRetryPolicy field.
-func (r *mutationResolver) UpdateRetryPolicy(ctx context.Context, input biz.RetryPolicy) (bool, error) {
-	err := r.systemService.SetRetryPolicy(ctx, &input)
-	if err != nil {
-		return false, fmt.Errorf("failed to update retry policy: %w", err)
-	}
-
-	return true, nil
-}
-
 // UpdateWebhookNotifierConfig is the resolver for the updateWebhookNotifierConfig field.
 func (r *mutationResolver) UpdateWebhookNotifierConfig(ctx context.Context, input biz.WebhookNotifierConfig) (bool, error) {
 	err := r.systemService.SetWebhookNotifierConfig(ctx, &input)
@@ -177,42 +167,6 @@ func (r *mutationResolver) UpdateVideoStorageSettings(ctx context.Context, input
 	}
 
 	r.videoWorker.Reschedule(ctx, r.scheduler)
-
-	return true, nil
-}
-
-// UpdateQuotaEnforcementSettings is the resolver for the updateQuotaEnforcementSettings field.
-func (r *mutationResolver) UpdateQuotaEnforcementSettings(ctx context.Context, input UpdateQuotaEnforcementSettingsInput) (bool, error) {
-	current, err := r.systemService.QuotaEnforcementSettings(ctx)
-	if err != nil {
-		return false, fmt.Errorf("failed to read current quota enforcement settings: %w", err)
-	}
-	newSettings := biz.QuotaEnforcementSettings{
-		Enabled: current.Enabled,
-		Mode:    current.Mode,
-	}
-	if input.Enabled != nil {
-		newSettings.Enabled = *input.Enabled
-	}
-	if input.Mode != nil {
-		newSettings.Mode = *input.Mode
-	}
-
-	err = r.systemService.SetQuotaEnforcementSettings(ctx, newSettings)
-	if err != nil {
-		return false, fmt.Errorf("failed to update quota enforcement settings: %w", err)
-	}
-
-	return true, nil
-}
-
-// CheckProviderQuotas is the resolver for the checkProviderQuotas field.
-func (r *mutationResolver) CheckProviderQuotas(ctx context.Context) (bool, error) {
-	if r.providerQuotaService == nil {
-		return false, fmt.Errorf("provider quota service is not available")
-	}
-
-	r.providerQuotaService.ManualCheck(ctx)
 
 	return true, nil
 }
@@ -365,11 +319,6 @@ func (r *queryResolver) StoragePolicy(ctx context.Context) (*biz.StoragePolicy, 
 	return r.systemService.StoragePolicy(ctx)
 }
 
-// RetryPolicy is the resolver for the retryPolicy field.
-func (r *queryResolver) RetryPolicy(ctx context.Context) (*biz.RetryPolicy, error) {
-	return r.systemService.RetryPolicy(ctx)
-}
-
 // WebhookNotifierConfig is the resolver for the webhookNotifierConfig field.
 func (r *queryResolver) WebhookNotifierConfig(ctx context.Context) (*biz.WebhookNotifierConfig, error) {
 	return r.systemService.WebhookNotifierConfig(ctx)
@@ -473,11 +422,6 @@ func (r *queryResolver) SystemGeneralSettings(ctx context.Context) (*biz.SystemG
 // VideoStorageSettings is the resolver for the videoStorageSettings field.
 func (r *queryResolver) VideoStorageSettings(ctx context.Context) (*biz.VideoStorageSettings, error) {
 	return r.systemService.VideoStorageSettings(ctx)
-}
-
-// QuotaEnforcementSettings is the resolver for the quotaEnforcementSettings field.
-func (r *queryResolver) QuotaEnforcementSettings(ctx context.Context) (*biz.QuotaEnforcementSettings, error) {
-	return r.systemService.QuotaEnforcementSettings(ctx)
 }
 
 // ProxyPresets is the resolver for the proxyPresets field.

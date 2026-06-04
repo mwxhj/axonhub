@@ -18,7 +18,6 @@ import (
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/objects"
 	"github.com/looplj/axonhub/internal/server/biz"
-	"github.com/looplj/axonhub/internal/server/biz/provider_quota"
 	"github.com/looplj/axonhub/llm"
 )
 
@@ -707,7 +706,6 @@ func loadBalancedCandidatesWithTracking(
 
 		// Apply load balancing to sort candidates within this priority group.
 		useStream := req.Stream != nil && *req.Stream
-		ctx = contextWithQuotaLimitType(ctx, string(provider_quota.RequestModality(req.Image != nil)))
 		var sortedCandidates []*ChannelModelsCandidate
 		if trackSelection {
 			sortedCandidates = loadBalancer.Sort(ctx, group, req.Model, useStream)

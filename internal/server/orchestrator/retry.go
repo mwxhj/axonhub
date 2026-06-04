@@ -88,21 +88,5 @@ func ExtractStatusCodeFromError(err error) int {
 }
 
 func deriveLoadBalancerStrategy(retryPolicy *biz.RetryPolicy, apiKey *ent.APIKey) string {
-	strategy := retryPolicy.LoadBalancerStrategy
-	if apiKey == nil {
-		return strategy
-	}
-
-	activeProfile := apiKey.GetActiveProfile()
-	if activeProfile == nil {
-		return strategy
-	}
-
-	if activeProfile.LoadBalanceStrategy == nil ||
-		*activeProfile.LoadBalanceStrategy == "" ||
-		*activeProfile.LoadBalanceStrategy == "system_default" {
-		return strategy
-	}
-
-	return *activeProfile.LoadBalanceStrategy
+	return retryPolicy.LoadBalancerStrategy
 }

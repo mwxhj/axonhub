@@ -163,21 +163,6 @@ type ChannelRateLimit {
   queueTimeoutMs: Int
 }
 
-type ChannelCredentials {
-  apiKey: String
-  apiKeys: [String!]
-  azure: AzureCredential
-  gcp: GCPCredential
-  oauth: OAuthCredentials
-}
-
-type DisabledAPIKey {
-  key: String!
-  disabledAt: Time!
-  errorCode: Int!
-  reason: String
-}
-
 type OAuthCredentials {
   accessToken: String
   refreshToken: String
@@ -195,14 +180,6 @@ type GCPCredential {
 
 type AzureCredential {
   apiVersion: String!
-}
-
-input ChannelCredentialsInput {
-  apiKey: String
-  apiKeys: [String!]
-  azure: AzureCredentialInput
-  gcp: GCPCredentialInput
-  oauth: OAuthCredentialsInput
 }
 
 input OAuthCredentialsInput {
@@ -315,13 +292,6 @@ input UpdateChannelCredentialRefInput {
   enabled: Boolean
 }
 
-type MigrateLegacyCredentialsPayload {
-  migratedChannels: Int!
-  createdCredentials: Int!
-  createdRefs: Int!
-  skippedChannels: Int!
-}
-
 input SignInInput {
   email: String!
   password: String!
@@ -343,22 +313,6 @@ type TestChannelPayload {
   success: Boolean!
   message: String
   error: String
-}
-
-type TestAPIKeyResult {
-  keyPrefix: String!
-  success: Boolean!
-  latency: Float!
-  error: String
-  disabled: Boolean!
-}
-
-type TestChannelAPIKeysPayload {
-  channelID: ID!
-  total: Int!
-  successCount: Int!
-  failedCount: Int!
-  results: [TestAPIKeyResult!]!
 }
 
 input BulkImportChannelItem {
@@ -425,7 +379,6 @@ input APIKeyProfileInput {
   channelTagsMatchMode: ChannelTagsMatchMode
   modelIDs: [String!]
   quota: APIKeyQuotaInput
-  loadBalanceStrategy: String
 }
 
 input UpdateProjectProfilesInput {
@@ -469,7 +422,6 @@ type APIKeyProfile {
   channelTagsMatchMode: ChannelTagsMatchMode
   modelIDs: [String!]
   quota: APIKeyQuota
-  loadBalanceStrategy: String
 }
 
 enum ChannelTagsMatchMode {
@@ -715,22 +667,6 @@ extend type Channel {
   allModelEntries: [ChannelModelEntry!]! @goField(forceResolver: true)
 
   """
-  Channel credentials, will be null if user can not access the the credentials
-  """
-  credentials: ChannelCredentials @goField(forceResolver: true)
-
-  """
-  Disabled API keys for this channel. Sensitive: will be null if user can not access.
-  """
-  disabledAPIKeys: [DisabledAPIKey!] @goField(forceResolver: true)
-
-  """
-  Backward-compatible aggregate provider quota status for channel quota badges.
-  Credential/resource-scoped rows are available through providerQuotaStatuses.
-  """
-  providerQuotaStatus: ProviderQuotaStatus @goField(forceResolver: true)
-
-  """
   Real-time per-channel concurrency limiter snapshot. Returns null when the channel
   has no MaxConcurrent configured (no admission control).
   """
@@ -863,11 +799,6 @@ type ClearChannelOverrideTemplatesPayload {
   channels: [Channel!]!
 }
 
-type DeleteDisabledAPIKeysPayload {
-  success: Boolean!
-  message: String
-}
-
 type Mutation {
   createChannel(input: CreateChannelInput!): Channel!
   bulkCreateChannels(input: BulkCreateChannelsInput!): [Channel!]!
@@ -881,21 +812,10 @@ type Mutation {
   bulkRecoverChannels(ids: [ID!]!): Boolean!
   bulkDeleteChannels(ids: [ID!]!): Boolean!
   testChannel(input: TestChannelInput!): TestChannelPayload!
-  testChannelAPIKeys(channelID: ID!, modelID: String): TestChannelAPIKeysPayload!
   bulkImportChannels(input: BulkImportChannelsInput!): BulkImportChannelsResult!
   bulkUpdateChannelOrdering(
     input: BulkUpdateChannelOrderingInput!
   ): BulkUpdateChannelOrderingResult!
-
-  # Channel API Key Management
-  disableChannelAPIKey(channelID: ID!, key: String!): Boolean!
-  enableChannelAPIKey(channelID: ID!, key: String!): Boolean!
-  enableAllChannelAPIKeys(channelID: ID!): Boolean!
-  enableSelectedChannelAPIKeys(channelID: ID!, keys: [String!]!): Boolean!
-  deleteDisabledChannelAPIKeys(
-    channelID: ID!
-    keys: [String!]!
-  ): DeleteDisabledAPIKeysPayload!
 
   # Upstream Credential Management
   createUpstreamCredential(input: CreateUpstreamCredentialInput!): UpstreamCredential!
@@ -920,7 +840,6 @@ type Mutation {
     input: UpdateChannelCredentialRefInput!
   ): ChannelCredentialRef!
   detachCredentialFromChannel(channelID: ID!, credentialID: ID!): Boolean!
-  migrateLegacyChannelCredentials: MigrateLegacyCredentialsPayload!
 
   createAPIKey(input: CreateAPIKeyInput!): APIKey!
   updateAPIKey(id: ID!, input: UpdateAPIKeyInput!): APIKey!

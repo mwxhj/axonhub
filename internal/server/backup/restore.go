@@ -108,9 +108,6 @@ func (svc *BackupService) restore(ctx context.Context, db *ent.Client, backupDat
 		if err := svc.restoreChannelCredentialRefs(ctx, db, backupData.ChannelCredentialRefs, channelIDMap, credentialIDMap, opts); err != nil {
 			return err
 		}
-		if err := svc.migrateRestoredLegacyChannelCredentials(ctx, db); err != nil {
-			return err
-		}
 	}
 
 	if opts.IncludeModelPrices {
@@ -623,8 +620,8 @@ func (svc *BackupService) restoreChannels(ctx context.Context, db *ent.Client, c
 				update := db.Channel.UpdateOneID(existing.ID).
 					SetNillableBaseURL(baseURL).
 					SetStatus(chData.Status).
-					SetCredentials(chData.Credentials).
-					SetDisabledAPIKeys(chData.DisabledAPIKeys).
+					SetCredentials(objects.ChannelCredentials{}).
+					ClearDisabledAPIKeys().
 					SetSupportedModels(chData.SupportedModels).
 					SetNillableAutoSyncSupportedModels(lo.ToPtr(chData.AutoSyncSupportedModels)).
 					SetAutoSyncModelPattern(chData.AutoSyncModelPattern).
@@ -654,8 +651,7 @@ func (svc *BackupService) restoreChannels(ctx context.Context, db *ent.Client, c
 				SetType(chData.Type).
 				SetNillableBaseURL(baseURL).
 				SetStatus(chData.Status).
-				SetCredentials(chData.Credentials).
-				SetDisabledAPIKeys(chData.DisabledAPIKeys).
+				SetCredentials(objects.ChannelCredentials{}).
 				SetSupportedModels(chData.SupportedModels).
 				SetNillableAutoSyncSupportedModels(lo.ToPtr(chData.AutoSyncSupportedModels)).
 				SetAutoSyncModelPattern(chData.AutoSyncModelPattern).
@@ -1071,18 +1067,6 @@ func restoreRefCredentialID(ctx context.Context, db *ent.Client, refData *Backup
 	}
 
 	return credential.ID, nil
-}
-
-func (svc *BackupService) migrateRestoredLegacyChannelCredentials(ctx context.Context, db *ent.Client) error {
-	migrationCtx := ent.NewContext(ctx, db)
-	credentialService := biz.NewUpstreamCredentialService(biz.UpstreamCredentialServiceParams{
-		Ent: db,
-	})
-	if _, err := credentialService.MigrateLegacyChannelCredentials(migrationCtx); err != nil {
-		return fmt.Errorf("failed to migrate restored legacy channel credentials: %w", err)
-	}
-
-	return nil
 }
 
 func (svc *BackupService) restoreModels(ctx context.Context, db *ent.Client, models []*BackupModel, opts RestoreOptions, channelIDMap map[int]int) error {

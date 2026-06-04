@@ -31,7 +31,6 @@ func NewChatCompletionOrchestrator(
 	promptProtectionRuleService *biz.PromptProtectionRuleService,
 	liveStreamRegistry *biz.LiveStreamRegistry,
 	channelLimiterManager *ChannelLimiterManager,
-	quotaProvider ProviderQuotaStatusProvider,
 ) *ChatCompletionOrchestrator {
 	rateLimitTracker := NewChannelRequestTracker()
 
@@ -47,7 +46,6 @@ func NewChatCompletionOrchestrator(
 	modelCircuitBreaker := biz.NewModelCircuitBreaker()
 
 	rateLimitStrategy := NewRateLimitAwareStrategy(rateLimitTracker, channelLimiterManager)
-	quotaStrategy := NewQuotaAwareStrategy(quotaProvider, systemService)
 
 	adaptiveLoadBalancer := NewLoadBalancer(systemService, channelService,
 		NewTraceAwareStrategy(requestService),
@@ -55,14 +53,13 @@ func NewChatCompletionOrchestrator(
 		NewWeightRoundRobinStrategy(channelService),
 		NewLatencyAwareStrategy(channelService),
 		rateLimitStrategy,
-		quotaStrategy,
 	)
 
 	failoverLoadBalancer := NewLoadBalancer(systemService, channelService,
-		NewWeightStrategy(), NewRandomStrategy(), rateLimitStrategy, quotaStrategy)
+		NewWeightStrategy(), NewRandomStrategy(), rateLimitStrategy)
 
 	circuitBreakerLoadBalancer := NewLoadBalancer(systemService, channelService,
-		NewWeightStrategy(), NewModelAwareCircuitBreakerStrategy(modelCircuitBreaker), rateLimitStrategy, quotaStrategy)
+		NewWeightStrategy(), NewModelAwareCircuitBreakerStrategy(modelCircuitBreaker), rateLimitStrategy)
 
 	stickySessionStore := NewStickySessionBindingStore(stickySessionBindingTTL)
 	stickySessionRouter := NewStickySessionRouter(stickySessionStore, NewDefaultStickyKeyExtractor())
@@ -93,7 +90,6 @@ func NewChatCompletionOrchestrator(
 		stickySessionStore:         stickySessionStore,
 		stickySessionRouter:        stickySessionRouter,
 		modelCircuitBreaker:        modelCircuitBreaker,
-		quotaProvider:              quotaProvider,
 		proxy:                      nil,
 	}
 }
@@ -132,8 +128,6 @@ type ChatCompletionOrchestrator struct {
 	rateLimitTracker *ChannelRequestTracker
 	// The model circuit breaker for circuit-breaker load balancing.
 	modelCircuitBreaker *biz.ModelCircuitBreaker
-	// The provider quota status provider for quota-aware load balancing and selection.
-	quotaProvider ProviderQuotaStatusProvider
 
 	// proxy is the proxy configuration for testing
 	// If set, it will override the channel's default proxy configuration
@@ -244,7 +238,7 @@ func (processor *ChatCompletionOrchestrator) Process(ctx context.Context, reques
 		applyAutoReasoningEffort(processor.SystemService),
 		checkApiKeyModelAccess(inbound),
 		applyModelMapping(inbound),
-		selectCandidates(inbound, processor.quotaProvider, processor.SystemService),
+		selectCandidates(inbound),
 		injectPrompts(inbound),
 		protectPrompts(inbound),
 		orderCandidates(inbound, strategy, processor.stickySessionRouter),

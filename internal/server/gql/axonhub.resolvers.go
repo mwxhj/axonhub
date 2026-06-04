@@ -15,12 +15,10 @@ import (
 	"github.com/looplj/axonhub/internal/ent/apikey"
 	"github.com/looplj/axonhub/internal/ent/channel"
 	"github.com/looplj/axonhub/internal/ent/project"
-	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/request"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/user"
 	"github.com/looplj/axonhub/internal/objects"
-	"github.com/looplj/axonhub/internal/scopes"
 	"github.com/looplj/axonhub/internal/server/biz"
 	"github.com/looplj/axonhub/llm/httpclient"
 	"github.com/samber/lo"
@@ -47,88 +45,6 @@ func (r *channelResolver) AllModelEntries(ctx context.Context, obj *ent.Channel)
 	result := lo.Values(entries)
 
 	return lo.ToSlicePtr(result), nil
-}
-
-// Credentials is the resolver for the credentials field.
-func (r *channelResolver) Credentials(ctx context.Context, obj *ent.Channel) (*objects.ChannelCredentials, error) {
-	hasScope := scopes.UserHasScope(ctx, scopes.ScopeWriteChannels)
-	if !hasScope {
-		return nil, nil
-	}
-
-	creds := obj.Credentials
-
-	if obj.Type == channel.TypeAntigravity || creds.IsOAuth() {
-		// For OAuth channels (e.g., antigravity, claudecode, codex), only return single API key.
-		// Clear APIKeys as OAuth only supports single credential.
-		creds.APIKeys = nil
-		return &creds, nil
-	}
-
-	// For non-OAuth channel types, use api keys array.
-	creds.APIKeys = creds.GetAllAPIKeys()
-	creds.APIKey = ""
-
-	return &creds, nil
-}
-
-// DisabledAPIKeys is the resolver for the disabledAPIKeys field.
-func (r *channelResolver) DisabledAPIKeys(ctx context.Context, obj *ent.Channel) ([]*objects.DisabledAPIKey, error) {
-	hasScope := scopes.UserHasScope(ctx, scopes.ScopeWriteChannels)
-	if !hasScope {
-		return nil, nil
-	}
-
-	if len(obj.DisabledAPIKeys) == 0 {
-		return []*objects.DisabledAPIKey{}, nil
-	}
-
-	return lo.ToSlicePtr(obj.DisabledAPIKeys), nil
-}
-
-// ProviderQuotaStatus is the resolver for the providerQuotaStatus field.
-// It returns null (not an error) when no quota status exists for the channel.
-func (r *channelResolver) ProviderQuotaStatus(ctx context.Context, obj *ent.Channel) (*ent.ProviderQuotaStatus, error) {
-	if obj == nil {
-		return nil, nil
-	}
-
-	scopeKey := biz.ProviderQuotaChannelScopeKey(obj.ID)
-	pqs, err := r.client.ProviderQuotaStatus.Query().
-		Where(
-			providerquotastatus.ScopeKey(scopeKey),
-		).
-		Order(ent.Desc(providerquotastatus.FieldUpdatedAt)).
-		First(ctx)
-	if ent.IsNotFound(err) {
-		legacy, legacyErr := r.client.ProviderQuotaStatus.Query().
-			Where(
-				providerquotastatus.ChannelID(obj.ID),
-				providerquotastatus.ScopeKey("channel"),
-			).
-			Order(ent.Desc(providerquotastatus.FieldUpdatedAt)).
-			First(ctx)
-		if legacyErr == nil {
-			return legacy, nil
-		}
-		if !ent.IsNotFound(legacyErr) {
-			return nil, legacyErr
-		}
-
-		statuses, allErr := r.client.ProviderQuotaStatus.Query().
-			Where(providerquotastatus.ChannelID(obj.ID)).
-			Order(ent.Desc(providerquotastatus.FieldUpdatedAt)).
-			All(ctx)
-		if allErr != nil {
-			return nil, allErr
-		}
-		if len(statuses) == 0 {
-			return nil, nil
-		}
-		return statuses[0], nil
-	}
-
-	return pqs, err
 }
 
 // LiveLimiterStats is the resolver for the liveLimiterStats field.
@@ -310,35 +226,6 @@ func (r *mutationResolver) TestChannel(ctx context.Context, input TestChannelInp
 	}, nil
 }
 
-// TestChannelAPIKeys is the resolver for the testChannelAPIKeys field.
-func (r *mutationResolver) TestChannelAPIKeys(ctx context.Context, channelID objects.GUID, modelID *string) (*TestChannelAPIKeysPayload, error) {
-	ctx = contexts.WithSource(ctx, request.SourceTest)
-
-	result, err := r.TestChannelOrchestrator.TestChannelAPIKeys(ctx, channelID, modelID, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to test channel API keys: %w", err)
-	}
-
-	apiKeyResults := make([]*TestAPIKeyResult, len(result.Results))
-	for i, r := range result.Results {
-		apiKeyResults[i] = &TestAPIKeyResult{
-			KeyPrefix: r.KeyPrefix,
-			Success:   r.Success,
-			Latency:   r.Latency,
-			Error:     r.Error,
-			Disabled:  r.Disabled,
-		}
-	}
-
-	return &TestChannelAPIKeysPayload{
-		ChannelID:    result.ChannelID,
-		Total:        result.Total,
-		SuccessCount: result.SuccessCount,
-		FailedCount:  result.FailedCount,
-		Results:      apiKeyResults,
-	}, nil
-}
-
 // BulkImportChannels is the resolver for the bulkImportChannels field.
 func (r *mutationResolver) BulkImportChannels(ctx context.Context, input BulkImportChannelsInput) (*biz.BulkImportChannelsResult, error) {
 	result, err := r.channelService.BulkImportChannels(ctx, input.Channels)
@@ -367,52 +254,6 @@ func (r *mutationResolver) BulkUpdateChannelOrdering(ctx context.Context, input 
 		Updated:  len(updatedChannels),
 		Channels: updatedChannels,
 	}, nil
-}
-
-// DisableChannelAPIKey is the resolver for the disableChannelAPIKey field.
-func (r *mutationResolver) DisableChannelAPIKey(ctx context.Context, channelID objects.GUID, key string) (bool, error) {
-	if err := r.channelService.DisableAPIKey(ctx, channelID.ID, key, 0, "Manually disabled by user"); err != nil {
-		return false, fmt.Errorf("failed to disable channel API key: %w", err)
-	}
-
-	return true, nil
-}
-
-// EnableChannelAPIKey is the resolver for the enableChannelAPIKey field.
-func (r *mutationResolver) EnableChannelAPIKey(ctx context.Context, channelID objects.GUID, key string) (bool, error) {
-	if err := r.channelService.EnableAPIKey(ctx, channelID.ID, key); err != nil {
-		return false, fmt.Errorf("failed to enable channel API key: %w", err)
-	}
-
-	return true, nil
-}
-
-// EnableAllChannelAPIKeys is the resolver for the enableAllChannelAPIKeys field.
-func (r *mutationResolver) EnableAllChannelAPIKeys(ctx context.Context, channelID objects.GUID) (bool, error) {
-	if err := r.channelService.EnableAllAPIKeys(ctx, channelID.ID); err != nil {
-		return false, fmt.Errorf("failed to enable all channel API keys: %w", err)
-	}
-
-	return true, nil
-}
-
-// EnableSelectedChannelAPIKeys is the resolver for the enableSelectedChannelAPIKeys field.
-func (r *mutationResolver) EnableSelectedChannelAPIKeys(ctx context.Context, channelID objects.GUID, keys []string) (bool, error) {
-	if err := r.channelService.EnableSelectedAPIKeys(ctx, channelID.ID, keys); err != nil {
-		return false, fmt.Errorf("failed to enable selected channel API keys: %w", err)
-	}
-
-	return true, nil
-}
-
-// DeleteDisabledChannelAPIKeys is the resolver for the deleteDisabledChannelAPIKeys field.
-func (r *mutationResolver) DeleteDisabledChannelAPIKeys(ctx context.Context, channelID objects.GUID, keys []string) (*biz.DeleteDisabledAPIKeysResult, error) {
-	result, err := r.channelService.DeleteDisabledAPIKeys(ctx, channelID.ID, keys)
-	if err != nil {
-		return nil, fmt.Errorf("failed to delete disabled channel API keys: %w", err)
-	}
-
-	return result, nil
 }
 
 // CreateUpstreamCredential is the resolver for the createUpstreamCredential field.
@@ -470,11 +311,6 @@ func (r *mutationResolver) UpdateChannelCredentialRef(ctx context.Context, id ob
 // DetachCredentialFromChannel is the resolver for the detachCredentialFromChannel field.
 func (r *mutationResolver) DetachCredentialFromChannel(ctx context.Context, channelID objects.GUID, credentialID objects.GUID) (bool, error) {
 	return r.upstreamCredentialService.DetachCredentialFromChannel(ctx, channelID.ID, credentialID.ID)
-}
-
-// MigrateLegacyChannelCredentials is the resolver for the migrateLegacyChannelCredentials field.
-func (r *mutationResolver) MigrateLegacyChannelCredentials(ctx context.Context) (*biz.MigrateLegacyCredentialsPayload, error) {
-	return r.upstreamCredentialService.MigrateLegacyChannelCredentials(ctx)
 }
 
 // CreateAPIKey is the resolver for the createAPIKey field.

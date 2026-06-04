@@ -81,21 +81,18 @@ type ChannelEdges struct {
 	ChannelModelPrices []*ChannelModelPrice `json:"channel_model_prices,omitempty"`
 	// CredentialRefs holds the value of the credential_refs edge.
 	CredentialRefs []*ChannelCredentialRef `json:"credential_refs,omitempty"`
-	// ProviderQuotaStatuses holds the value of the provider_quota_statuses edge.
-	ProviderQuotaStatuses []*ProviderQuotaStatus `json:"provider_quota_statuses,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [7]bool
+	loadedTypes [6]bool
 	// totalCount holds the count of the edges above.
-	totalCount [7]map[string]int
+	totalCount [6]map[string]int
 
-	namedRequests              map[string][]*Request
-	namedExecutions            map[string][]*RequestExecution
-	namedUsageLogs             map[string][]*UsageLog
-	namedChannelProbes         map[string][]*ChannelProbe
-	namedChannelModelPrices    map[string][]*ChannelModelPrice
-	namedCredentialRefs        map[string][]*ChannelCredentialRef
-	namedProviderQuotaStatuses map[string][]*ProviderQuotaStatus
+	namedRequests           map[string][]*Request
+	namedExecutions         map[string][]*RequestExecution
+	namedUsageLogs          map[string][]*UsageLog
+	namedChannelProbes      map[string][]*ChannelProbe
+	namedChannelModelPrices map[string][]*ChannelModelPrice
+	namedCredentialRefs     map[string][]*ChannelCredentialRef
 }
 
 // RequestsOrErr returns the Requests value or an error if the edge
@@ -150,15 +147,6 @@ func (e ChannelEdges) CredentialRefsOrErr() ([]*ChannelCredentialRef, error) {
 		return e.CredentialRefs, nil
 	}
 	return nil, &NotLoadedError{edge: "credential_refs"}
-}
-
-// ProviderQuotaStatusesOrErr returns the ProviderQuotaStatuses value or an error if the edge
-// was not loaded in eager-loading.
-func (e ChannelEdges) ProviderQuotaStatusesOrErr() ([]*ProviderQuotaStatus, error) {
-	if e.loadedTypes[6] {
-		return e.ProviderQuotaStatuses, nil
-	}
-	return nil, &NotLoadedError{edge: "provider_quota_statuses"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -382,11 +370,6 @@ func (_m *Channel) QueryChannelModelPrices() *ChannelModelPriceQuery {
 // QueryCredentialRefs queries the "credential_refs" edge of the Channel entity.
 func (_m *Channel) QueryCredentialRefs() *ChannelCredentialRefQuery {
 	return NewChannelClient(_m.config).QueryCredentialRefs(_m)
-}
-
-// QueryProviderQuotaStatuses queries the "provider_quota_statuses" edge of the Channel entity.
-func (_m *Channel) QueryProviderQuotaStatuses() *ProviderQuotaStatusQuery {
-	return NewChannelClient(_m.config).QueryProviderQuotaStatuses(_m)
 }
 
 // Update returns a builder for updating this Channel.
@@ -621,30 +604,6 @@ func (_m *Channel) appendNamedCredentialRefs(name string, edges ...*ChannelCrede
 		_m.Edges.namedCredentialRefs[name] = []*ChannelCredentialRef{}
 	} else {
 		_m.Edges.namedCredentialRefs[name] = append(_m.Edges.namedCredentialRefs[name], edges...)
-	}
-}
-
-// NamedProviderQuotaStatuses returns the ProviderQuotaStatuses named value or an error if the edge was not
-// loaded in eager-loading with this name.
-func (_m *Channel) NamedProviderQuotaStatuses(name string) ([]*ProviderQuotaStatus, error) {
-	if _m.Edges.namedProviderQuotaStatuses == nil {
-		return nil, &NotLoadedError{edge: name}
-	}
-	nodes, ok := _m.Edges.namedProviderQuotaStatuses[name]
-	if !ok {
-		return nil, &NotLoadedError{edge: name}
-	}
-	return nodes, nil
-}
-
-func (_m *Channel) appendNamedProviderQuotaStatuses(name string, edges ...*ProviderQuotaStatus) {
-	if _m.Edges.namedProviderQuotaStatuses == nil {
-		_m.Edges.namedProviderQuotaStatuses = make(map[string][]*ProviderQuotaStatus)
-	}
-	if len(edges) == 0 {
-		_m.Edges.namedProviderQuotaStatuses[name] = []*ProviderQuotaStatus{}
-	} else {
-		_m.Edges.namedProviderQuotaStatuses[name] = append(_m.Edges.namedProviderQuotaStatuses[name], edges...)
 	}
 }
 

@@ -1,6 +1,6 @@
 # Credential Routing Model
 
-> Product and implementation contract for channel-owned routing, credential-owned upstream identity, OAuth migration, and provider quota ownership.
+> Product and implementation contract for channel-owned routing, credential-owned upstream identity, OAuth migration, and credential-local quota ownership.
 
 ---
 
@@ -11,7 +11,7 @@ Read this spec before changing any of:
 - Channel create/update inputs, channel credential fields, channel import/export, or channel credential UI.
 - `UpstreamCredential`, `ChannelCredentialRef`, or credential archive/delete/restore behavior.
 - OAuth flows for Codex, Claude Code, GitHub Copilot, Antigravity, or future provider-auth flows.
-- Provider quota checks, provider quota cache loading, route availability, or quota UI.
+- Credential local quota, route availability, or quota UI.
 - Legacy channel credential migration/backfill code.
 
 The durable model is:
@@ -20,11 +20,10 @@ The durable model is:
 Channel = routing configuration
 UpstreamCredential = upstream identity and secret material
 ChannelCredentialRef = channel-to-credential binding
-ProviderQuotaStatus = key/credential upstream provider quota observation
 CredentialQuotaScope = key/credential local budget quota
 ```
 
-Do not reintroduce channel-local budget quota or channel-level double quota. `CredentialQuotaScope` is a credential/key-local quota product concept and may affect only that credential view. If consumer/org/project budgeting is added later, design it outside this channel/credential provider quota contract.
+Do not reintroduce channel-local budget quota or channel-level double quota. `CredentialQuotaScope` is the only quota product concept in this model, and it may affect only that credential view. If consumer/org/project budgeting is added later, design it outside this channel/credential contract.
 
 ---
 
@@ -87,24 +86,6 @@ ChannelCredentialRef.enabled
 ChannelCredentialRef.weight_override
 ```
 
-Provider quota observation model:
-
-```text
-ProviderQuotaStatus.provider_type
-ProviderQuotaStatus.scope_key
-ProviderQuotaStatus.credential_id
-ProviderQuotaStatus.credential_fingerprint
-ProviderQuotaStatus.secret_fingerprint
-ProviderQuotaStatus.resource_scope_key
-ProviderQuotaStatus.status
-ProviderQuotaStatus.ready
-ProviderQuotaStatus.quota_data
-ProviderQuotaStatus.next_reset_at
-ProviderQuotaStatus.next_check_at
-```
-
-`ProviderQuotaStatus.channel_id` is compatibility / last-observed routing metadata. It is not provider quota identity.
-
 GraphQL mutations that remain product-facing:
 
 ```graphql
@@ -149,10 +130,10 @@ These APIs must stay attached to `UpstreamCredential` / key management. They mus
 - `UpstreamCredential.secret_payload` is the durable owner of upstream secret material. Raw secret material must stay in sensitive storage and must never be returned by read APIs, logs, tooltips, exports, traces, request records, or UI tables.
 - OAuth is a credential secret kind. OAuth data for Codex, Claude Code, GitHub Copilot, Antigravity, and future OAuth providers must be imported into `UpstreamCredential`, not stored as channel inline credentials.
 - `ChannelCredentialRef` is the only durable binding layer between a route and upstream credentials.
-- Runtime route availability is derived from `channel.status`, `ref.enabled`, `credential.status`, model/route eligibility, credential/key-local quota, and credential/key provider quota readiness.
+- Runtime route availability is derived from `channel.status`, `ref.enabled`, `credential.status`, model/route eligibility, and credential/key-local quota state.
 - Runtime route availability must not consult channel-local quota. `CredentialQuotaScope` local budget state may filter only the affected credential view. A channel with another eligible credential remains routable.
-- Provider quota means upstream provider/key availability. It is stored on `ProviderQuotaStatus` and summarized on `UpstreamCredential.quota_status`.
-- `CredentialQuotaScope` local quota is a visible credential/key product concept. It is not provider quota truth and must not be merged into `ProviderQuotaStatus`.
+- `CredentialQuotaScope` local quota is a visible credential/key product concept.
+- `UpstreamCredential.quota_status` is an internal credential executability summary. It may remain in storage/runtime, but it is not a separate product quota model.
 - Legacy `Channel.credentials` may remain as migration compatibility storage. New product flows must create credentials and refs instead.
 - Legacy `Channel.disabled_api_keys` does not need semantic preservation. Backfill may ignore it; migrated refs default to enabled unless the credential itself is inactive for another reason.
 - Creating a credential with the same secret as an archived credential should reactivate/update the archived credential instead of returning a still-archived row.
@@ -173,8 +154,6 @@ These APIs must stay attached to `UpstreamCredential` / key management. They mus
 | Credential is archived but refs remain enabled | Route eligibility excludes the credential because `credential.status != enabled`. |
 | Archived credential is re-enabled | Existing refs can make the route available again without recreating bindings. |
 | Credential is deleted | Delete channel refs, soft-delete the credential, and reload channel routing state. |
-| Provider quota marks one credential exhausted | Only that credential/key becomes unavailable; the channel may remain eligible through other available credentials. |
-| Provider quota status is unavailable or unknown | Keep safe error/status metadata on credential/provider quota rows; do not overwrite unrelated credential statuses. |
 | Local quota scope is exhausted with action `warn` | Keep the credential routable and surface warning state. |
 | Local quota scope is exhausted with action `pause` or `disable` | Filter only that credential view from routing. Keep the channel eligible if another bound credential remains available. |
 | Local quota scope is paused and `pause_until` is in the future or absent | Filter only that credential view from routing. |
@@ -187,7 +166,6 @@ These APIs must stay attached to `UpstreamCredential` / key management. They mus
 ## 5. Good / Base / Bad Cases
 
 - Good: an OAuth flow completes for Codex and creates/updates an OAuth `UpstreamCredential`, then binds it to a Codex channel through `ChannelCredentialRef`.
-- Good: a channel has three credential refs; provider quota exhausts one key, and routing still uses the other two available credentials.
 - Good: a channel has three credential refs; key-local quota pauses one key, and routing still uses the other two available credentials.
 - Good: archiving a credential stops routing without deleting refs or request history.
 - Good: deleting a credential removes refs and lets the same secret be added again later.
@@ -196,8 +174,7 @@ These APIs must stay attached to `UpstreamCredential` / key management. They mus
 - Bad: adding new frontend fields that ask for API key or OAuth token inside the channel create/edit dialog.
 - Bad: using `CredentialQuotaScope.status` to mark an entire channel unavailable when another bound credential is still usable.
 - Bad: storing OAuth JSON in `Channel.credentials.apiKey` after the credential model is available.
-- Bad: provider quota writes only `channel_id -> exhausted`, disabling every key for that channel.
-- Bad: displaying key-local quota and provider quota as one generic quota badge.
+- Bad: introducing a second visible quota concept alongside `CredentialQuotaScope`.
 
 ---
 
@@ -213,7 +190,6 @@ When changing this contract, add or update tests for:
 - Runtime credential resolution prefers enabled refs and treats inline channel credentials only as compatibility fallback.
 - Archived credential refs are preserved but excluded from runtime routing.
 - Deleting a credential removes refs, soft-deletes the credential, and permits same-secret recreation.
-- Provider quota exhaustion for one credential does not disable unrelated credentials on the same channel.
 - Credential local quota exhaustion/paused/disabled filters only the affected credential view and keeps the channel eligible when another credential remains selectable.
 - Credential local quota `warn` action does not filter the credential view.
 - Automatic local quota reset due dates allow the credential to be reconsidered instead of staying permanently blocked.
@@ -229,8 +205,7 @@ When changing this contract, add or update tests for:
 ```text
 Channel.credentials.apiKey / oauth
 -> runtime provider chooses key from channel
--> provider quota writes channel exhausted
--> channel UI shows quota and key state
+-> channel UI shows a channel/quota/key state mashup
 ```
 
 #### Correct
@@ -239,8 +214,8 @@ Channel.credentials.apiKey / oauth
 UpstreamCredential.secret_payload
 -> ChannelCredentialRef binds credential to channel
 -> runtime chooses an eligible credential ref
--> ProviderQuotaStatus updates credential/key availability
--> channel UI explains route status through refs and credential/provider quota
+-> CredentialQuotaScope filters only the affected credential view
+-> channel UI explains route status through refs and credential-local quota
 ```
 
 #### Wrong
@@ -254,14 +229,6 @@ CredentialQuotaScope.status = exhausted
 
 ```text
 CredentialQuotaScope.status = exhausted for credential K1 with action pause
--> K1 unavailable
--> channel remains available if another bound credential is ready
-```
-
-#### Correct
-
-```text
-ProviderQuotaStatus.ready = false for credential K1
 -> K1 unavailable
 -> channel remains available if another bound credential is ready
 ```

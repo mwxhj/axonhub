@@ -16,7 +16,6 @@ type APIKeyProfileInput struct {
 	ChannelTagsMatchMode *ChannelTagsMatchMode `json:"channelTagsMatchMode,omitempty"`
 	ModelIDs             []string              `json:"modelIDs"`
 	Quota                *APIKeyQuotaInput     `json:"quota,omitempty"`
-	LoadBalanceStrategy  *string               `json:"loadBalanceStrategy,omitempty"`
 }
 
 // GetName returns APIKeyProfileInput.Name, and is useful for accessing the field via an interface.
@@ -41,9 +40,6 @@ func (v *APIKeyProfileInput) GetModelIDs() []string { return v.ModelIDs }
 
 // GetQuota returns APIKeyProfileInput.Quota, and is useful for accessing the field via an interface.
 func (v *APIKeyProfileInput) GetQuota() *APIKeyQuotaInput { return v.Quota }
-
-// GetLoadBalanceStrategy returns APIKeyProfileInput.LoadBalanceStrategy, and is useful for accessing the field via an interface.
-func (v *APIKeyProfileInput) GetLoadBalanceStrategy() *string { return v.LoadBalanceStrategy }
 
 type APIKeyQuotaCalendarDurationInput struct {
 	Unit APIKeyQuotaCalendarDurationUnit `json:"unit"`
@@ -248,7 +244,6 @@ type LoadApiKeyProfileTemplateLoadApiKeyProfileTemplateAPIKeyProfilesProfilesAPI
 	ChannelTags          []string                                                                                                          `json:"channelTags"`
 	ChannelTagsMatchMode *ChannelTagsMatchMode                                                                                             `json:"channelTagsMatchMode"`
 	ModelIDs             []string                                                                                                          `json:"modelIDs"`
-	LoadBalanceStrategy  *string                                                                                                           `json:"loadBalanceStrategy"`
 }
 
 // GetName returns LoadApiKeyProfileTemplateLoadApiKeyProfileTemplateAPIKeyProfilesProfilesAPIKeyProfile.Name, and is useful for accessing the field via an interface.
@@ -279,11 +274,6 @@ func (v *LoadApiKeyProfileTemplateLoadApiKeyProfileTemplateAPIKeyProfilesProfile
 // GetModelIDs returns LoadApiKeyProfileTemplateLoadApiKeyProfileTemplateAPIKeyProfilesProfilesAPIKeyProfile.ModelIDs, and is useful for accessing the field via an interface.
 func (v *LoadApiKeyProfileTemplateLoadApiKeyProfileTemplateAPIKeyProfilesProfilesAPIKeyProfile) GetModelIDs() []string {
 	return v.ModelIDs
-}
-
-// GetLoadBalanceStrategy returns LoadApiKeyProfileTemplateLoadApiKeyProfileTemplateAPIKeyProfilesProfilesAPIKeyProfile.LoadBalanceStrategy, and is useful for accessing the field via an interface.
-func (v *LoadApiKeyProfileTemplateLoadApiKeyProfileTemplateAPIKeyProfilesProfilesAPIKeyProfile) GetLoadBalanceStrategy() *string {
-	return v.LoadBalanceStrategy
 }
 
 // LoadApiKeyProfileTemplateLoadApiKeyProfileTemplateAPIKeyProfilesProfilesAPIKeyProfileModelMappingsModelMapping includes the requested fields of the GraphQL type ModelMapping.
@@ -394,7 +384,6 @@ type UpdateAPIKeyProfilesUpdateAPIKeyProfilesAPIKeyProfilesProfilesAPIKeyProfile
 	ChannelTags          []string                                                                                                `json:"channelTags"`
 	ChannelTagsMatchMode *ChannelTagsMatchMode                                                                                   `json:"channelTagsMatchMode"`
 	ModelIDs             []string                                                                                                `json:"modelIDs"`
-	LoadBalanceStrategy  *string                                                                                                 `json:"loadBalanceStrategy"`
 }
 
 // GetName returns UpdateAPIKeyProfilesUpdateAPIKeyProfilesAPIKeyProfilesProfilesAPIKeyProfile.Name, and is useful for accessing the field via an interface.
@@ -425,11 +414,6 @@ func (v *UpdateAPIKeyProfilesUpdateAPIKeyProfilesAPIKeyProfilesProfilesAPIKeyPro
 // GetModelIDs returns UpdateAPIKeyProfilesUpdateAPIKeyProfilesAPIKeyProfilesProfilesAPIKeyProfile.ModelIDs, and is useful for accessing the field via an interface.
 func (v *UpdateAPIKeyProfilesUpdateAPIKeyProfilesAPIKeyProfilesProfilesAPIKeyProfile) GetModelIDs() []string {
 	return v.ModelIDs
-}
-
-// GetLoadBalanceStrategy returns UpdateAPIKeyProfilesUpdateAPIKeyProfilesAPIKeyProfilesProfilesAPIKeyProfile.LoadBalanceStrategy, and is useful for accessing the field via an interface.
-func (v *UpdateAPIKeyProfilesUpdateAPIKeyProfilesAPIKeyProfilesProfilesAPIKeyProfile) GetLoadBalanceStrategy() *string {
-	return v.LoadBalanceStrategy
 }
 
 // UpdateAPIKeyProfilesUpdateAPIKeyProfilesAPIKeyProfilesProfilesAPIKeyProfileModelMappingsModelMapping includes the requested fields of the GraphQL type ModelMapping.
@@ -533,7 +517,6 @@ mutation LoadApiKeyProfileTemplate ($input: LoadApiKeyProfileTemplateInput!) {
 				channelTags
 				channelTagsMatchMode
 				modelIDs
-				loadBalanceStrategy
 			}
 		}
 	}
@@ -585,7 +568,6 @@ mutation UpdateAPIKeyProfiles ($id: ID!, $input: UpdateAPIKeyProfilesInput!) {
 				channelTags
 				channelTagsMatchMode
 				modelIDs
-				loadBalanceStrategy
 			}
 		}
 	}

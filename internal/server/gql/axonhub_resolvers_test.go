@@ -234,11 +234,6 @@ func TestQueryResolver_CredentialQuotaScopeResolvers(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, scope.ID, usageScope.ID)
 
-	providerQuotaResolver := &providerQuotaStatusResolver{resolver.Resolver}
-	providerQuotaScopeGUID, err := providerQuotaResolver.QuotaScopeID(ctx, &ent.ProviderQuotaStatus{QuotaScopeID: scope.ID})
-	require.NoError(t, err)
-	require.Equal(t, ent.TypeCredentialQuotaScope, providerQuotaScopeGUID.Type)
-	require.Equal(t, scope.ID, providerQuotaScopeGUID.ID)
 }
 
 func TestGraphQLArchiveUpstreamCredentialMutation(t *testing.T) {
@@ -294,12 +289,6 @@ func TestGraphQLArchiveUpstreamCredentialMutation(t *testing.T) {
 						}
 					}
 				}
-				providerQuotaStatuses {
-					id
-					status
-					ready
-					providerType
-				}
 				secretSummary {
 					kind
 					providerType
@@ -340,12 +329,6 @@ func TestGraphQLArchiveUpstreamCredentialMutation(t *testing.T) {
 						} `json:"node"`
 					} `json:"edges"`
 				} `json:"channelRefs"`
-				ProviderQuotaStatuses []struct {
-					ID           string `json:"id"`
-					Status       string `json:"status"`
-					Ready        bool   `json:"ready"`
-					ProviderType string `json:"providerType"`
-				} `json:"providerQuotaStatuses"`
 			} `json:"archiveUpstreamCredential"`
 		} `json:"data"`
 		Errors []struct {
@@ -359,7 +342,6 @@ func TestGraphQLArchiveUpstreamCredentialMutation(t *testing.T) {
 	require.Equal(t, 1, payload.Data.ArchiveUpstreamCredential.ChannelRefs.TotalCount)
 	require.Len(t, payload.Data.ArchiveUpstreamCredential.ChannelRefs.Edges, 1)
 	require.True(t, payload.Data.ArchiveUpstreamCredential.ChannelRefs.Edges[0].Node.Enabled)
-	require.Empty(t, payload.Data.ArchiveUpstreamCredential.ProviderQuotaStatuses)
 
 	reloadedRef, err := client.ChannelCredentialRef.Query().
 		Where(channelcredentialref.ID(ref.ID)).
@@ -587,9 +569,7 @@ func TestGraphQLCreateUpstreamCredentialMutation(t *testing.T) {
 			createUpstreamCredential(input: $input) {
 				id
 				name
-				keyHint
 				quotaScopeID
-				secretFingerprint
 				quotaScope {
 					id
 					name
@@ -601,8 +581,6 @@ func TestGraphQLCreateUpstreamCredentialMutation(t *testing.T) {
 					warningThresholdPercent
 					overLimitAction
 				}
-				quotaStatus
-				fingerprint
 				status
 				remark
 				createdAt
@@ -617,12 +595,6 @@ func TestGraphQLCreateUpstreamCredentialMutation(t *testing.T) {
 							enabled
 						}
 					}
-				}
-				providerQuotaStatuses {
-					id
-					status
-					ready
-					providerType
 				}
 				secretSummary {
 					kind
@@ -715,22 +687,14 @@ func TestGraphQLCreateUpstreamCredentialMutation(t *testing.T) {
 			var payload struct {
 				Data struct {
 					CreateUpstreamCredential struct {
-						ID                string          `json:"id"`
-						Name              string          `json:"name"`
-						KeyHint           string          `json:"keyHint"`
-						QuotaScopeID      *string         `json:"quotaScopeID"`
-						SecretFingerprint *string         `json:"secretFingerprint"`
-						QuotaScope        json.RawMessage `json:"quotaScope"`
-						Status            string          `json:"status"`
+						ID           string          `json:"id"`
+						Name         string          `json:"name"`
+						QuotaScopeID *string         `json:"quotaScopeID"`
+						QuotaScope   json.RawMessage `json:"quotaScope"`
+						Status       string          `json:"status"`
 						ChannelRefs       struct {
 							TotalCount int `json:"totalCount"`
 						} `json:"channelRefs"`
-						ProviderQuotaStatuses []struct {
-							ID           string `json:"id"`
-							Status       string `json:"status"`
-							Ready        bool   `json:"ready"`
-							ProviderType string `json:"providerType"`
-						} `json:"providerQuotaStatuses"`
 						SecretSummary struct {
 							Kind         string  `json:"kind"`
 							ProviderType *string `json:"providerType"`
@@ -745,11 +709,8 @@ func TestGraphQLCreateUpstreamCredentialMutation(t *testing.T) {
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &payload))
 			require.Empty(t, payload.Errors, rec.Body.String())
 			require.NotEmpty(t, payload.Data.CreateUpstreamCredential.ID)
-			require.NotEmpty(t, payload.Data.CreateUpstreamCredential.KeyHint)
-			require.NotNil(t, payload.Data.CreateUpstreamCredential.SecretFingerprint)
 			require.Equal(t, "enabled", payload.Data.CreateUpstreamCredential.Status)
 			require.Equal(t, 0, payload.Data.CreateUpstreamCredential.ChannelRefs.TotalCount)
-			require.Empty(t, payload.Data.CreateUpstreamCredential.ProviderQuotaStatuses)
 			require.Equal(t, tt.wantKind, payload.Data.CreateUpstreamCredential.SecretSummary.Kind)
 			if tt.wantProvider != "" {
 				require.Equal(t, tt.wantProvider, stringValue(payload.Data.CreateUpstreamCredential.SecretSummary.ProviderType))

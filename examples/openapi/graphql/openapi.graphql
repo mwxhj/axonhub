@@ -22,7 +22,6 @@ type APIKeyProfile {
   channelTagsMatchMode: ChannelTagsMatchMode
   modelIDs: [String!]
   quota: APIKeyQuota
-  loadBalanceStrategy: String
 }
 
 type APIKeyQuota {
@@ -88,7 +87,6 @@ input APIKeyProfileInput {
   channelTagsMatchMode: ChannelTagsMatchMode
   modelIDs: [String!]
   quota: APIKeyQuotaInput
-  loadBalanceStrategy: String
 }
 
 input APIKeyQuotaInput {

@@ -2,7 +2,6 @@ package biz
 
 import (
 	"context"
-	"sync"
 	"testing"
 	"time"
 
@@ -11,6 +10,8 @@ import (
 	"github.com/looplj/axonhub/internal/authz"
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/channel"
+	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
+	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/enttest"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/objects"
@@ -21,21 +22,16 @@ import (
 
 func newTestChannelService(client *ent.Client) *ChannelService {
 	mockSysSvc := &SystemService{
-		AbstractService: &AbstractService{
-			db: client,
-		},
-		Cache: xcache.NewFromConfig[ent.System](xcache.Config{Mode: xcache.ModeMemory}),
+		AbstractService: &AbstractService{db: client},
+		Cache:           xcache.NewFromConfig[ent.System](xcache.Config{Mode: xcache.ModeMemory}),
 	}
 
 	svc := &ChannelService{
-		AbstractService: &AbstractService{
-			db: client,
-		},
+		AbstractService:       &AbstractService{db: client},
 		SystemService:         mockSysSvc,
 		WebhookNotifier:       NewWebhookNotifier(mockSysSvc, httpclient.NewHttpClient()),
 		channelPerfMetrics:    make(map[int]*channelMetrics),
 		channelErrorCounts:    make(map[int]map[int]int),
-		apiKeyErrorCounts:     make(map[int]map[string]map[int]int),
 		credentialErrorCounts: make(map[string]map[int]int),
 		perfWindowSeconds:     600,
 	}
@@ -51,18 +47,14 @@ func newTestChannelService(client *ent.Client) *ChannelService {
 	return svc
 }
 
-func createTestChannelWithAPIKeys(t *testing.T, client *ent.Client, ctx context.Context, name string, apiKeys []string) *ent.Channel {
+func createAutoDisableTestChannel(t *testing.T, client *ent.Client, ctx context.Context, name string) *ent.Channel {
 	t.Helper()
-
-	creds := objects.ChannelCredentials{
-		APIKeys: apiKeys,
-	}
 
 	ch, err := client.Channel.Create().
 		SetName(name).
 		SetType(channel.TypeOpenai).
 		SetBaseURL("https://api.openai.com").
-		SetCredentials(creds).
+		SetCredentials(objects.ChannelCredentials{}).
 		SetSupportedModels([]string{"gpt-4"}).
 		SetDefaultTestModel("gpt-4").
 		SetStatus(channel.StatusEnabled).
@@ -72,7 +64,60 @@ func createTestChannelWithAPIKeys(t *testing.T, client *ent.Client, ctx context.
 	return ch
 }
 
-func TestChannelService_checkAndHandleAPIKeyError(t *testing.T) {
+func attachTestCredential(
+	t *testing.T,
+	client *ent.Client,
+	ctx context.Context,
+	ch *ent.Channel,
+	key string,
+) *ent.UpstreamCredential {
+	t.Helper()
+
+	secret := objects.UpstreamCredentialSecretFromAPIKey(key)
+	secretFingerprint := CredentialSecretFingerprintForSecret(channelCredentialAuthKindAPIKey, secret)
+	credential, err := client.UpstreamCredential.Create().
+		SetName("credential-" + key).
+		SetProviderType(channel.TypeOpenai.String()).
+		SetBaseURL(ch.BaseURL).
+		SetAuthKind(upstreamcredential.AuthKindAPIKey).
+		SetSecretKind(upstreamcredential.SecretKindAPIKey).
+		SetIssuerScope("openai").
+		SetKeyHint(CredentialKeyHintForSecret(channelCredentialAuthKindAPIKey, secret)).
+		SetSecretPayload(secret).
+		SetFingerprint(ChannelCredentialFingerprintForAPIKey(ch.Type.String(), ch.BaseURL, key)).
+		SetSecretFingerprint(secretFingerprint).
+		SetStatus(upstreamcredential.StatusEnabled).
+		Save(ctx)
+	require.NoError(t, err)
+
+	_, err = client.ChannelCredentialRef.Create().
+		SetChannelID(ch.ID).
+		SetCredentialID(credential.ID).
+		SetEnabled(true).
+		Save(ctx)
+	require.NoError(t, err)
+
+	return credential
+}
+
+func attachExistingCredentialToChannel(
+	t *testing.T,
+	client *ent.Client,
+	ctx context.Context,
+	ch *ent.Channel,
+	credential *ent.UpstreamCredential,
+) {
+	t.Helper()
+
+	_, err := client.ChannelCredentialRef.Create().
+		SetChannelID(ch.ID).
+		SetCredentialID(credential.ID).
+		SetEnabled(true).
+		Save(ctx)
+	require.NoError(t, err)
+}
+
+func TestChannelService_checkAndHandleCredentialError(t *testing.T) {
 	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
 	defer client.Close()
 
@@ -81,9 +126,8 @@ func TestChannelService_checkAndHandleAPIKeyError(t *testing.T) {
 	ctx = authz.WithTestBypass(ctx)
 
 	svc := newTestChannelService(client)
-
-	// Create a channel with multiple API keys
-	ch := createTestChannelWithAPIKeys(t, client, ctx, "test-channel", []string{"key1", "key2", "key3"})
+	ch := createAutoDisableTestChannel(t, client, ctx, "test-channel")
+	credential := attachTestCredential(t, client, ctx, ch, "key1")
 
 	tests := []struct {
 		name             string
@@ -96,74 +140,68 @@ func TestChannelService_checkAndHandleAPIKeyError(t *testing.T) {
 			name: "first error - should not disable",
 			policy: &RetryPolicy{
 				AutoDisableChannel: AutoDisableChannel{
-					Enabled: true,
-					Statuses: []AutoDisableChannelStatus{
-						{Status: 401, Times: 3},
-					},
+					Enabled:  true,
+					Statuses: []AutoDisableChannelStatus{{Status: 401, Times: 3}},
 				},
 			},
 			perf: &PerformanceRecord{
-				ChannelID:          ch.ID,
-				APIKey:             "key1",
-				ResponseStatusCode: 401,
-				Success:            false,
+				ChannelID:             ch.ID,
+				CredentialID:          credential.ID,
+				CredentialFingerprint: credential.Fingerprint,
+				ResponseStatusCode:    401,
+				Success:               false,
 			},
 			expectedDisabled: false,
 			setupFunc: func() {
-				svc.apiKeyErrorCounts = make(map[int]map[string]map[int]int)
+				svc.credentialErrorCounts = make(map[string]map[int]int)
 			},
 		},
 		{
 			name: "second error - should not disable",
 			policy: &RetryPolicy{
 				AutoDisableChannel: AutoDisableChannel{
-					Enabled: true,
-					Statuses: []AutoDisableChannelStatus{
-						{Status: 401, Times: 3},
-					},
+					Enabled:  true,
+					Statuses: []AutoDisableChannelStatus{{Status: 401, Times: 3}},
 				},
 			},
 			perf: &PerformanceRecord{
-				ChannelID:          ch.ID,
-				APIKey:             "key1",
-				ResponseStatusCode: 401,
-				Success:            false,
+				ChannelID:             ch.ID,
+				CredentialID:          credential.ID,
+				CredentialFingerprint: credential.Fingerprint,
+				ResponseStatusCode:    401,
+				Success:               false,
 			},
 			expectedDisabled: false,
 			setupFunc: func() {
-				svc.apiKeyErrorCounts = map[int]map[string]map[int]int{
-					ch.ID: {"key1": {401: 1}},
+				svc.credentialErrorCounts = map[string]map[int]int{
+					credentialErrorIdentity(&PerformanceRecord{CredentialID: credential.ID}): {401: 1},
 				}
 			},
 		},
 		{
-			name: "third error - should disable API key",
+			name: "third error - should disable credential",
 			policy: &RetryPolicy{
 				AutoDisableChannel: AutoDisableChannel{
-					Enabled: true,
-					Statuses: []AutoDisableChannelStatus{
-						{Status: 401, Times: 3},
-					},
+					Enabled:  true,
+					Statuses: []AutoDisableChannelStatus{{Status: 401, Times: 3}},
 				},
 			},
 			perf: &PerformanceRecord{
-				ChannelID:          ch.ID,
-				APIKey:             "key1",
-				ResponseStatusCode: 401,
-				Success:            false,
+				ChannelID:             ch.ID,
+				CredentialID:          credential.ID,
+				CredentialFingerprint: credential.Fingerprint,
+				ResponseStatusCode:    401,
+				Success:               false,
 			},
 			expectedDisabled: true,
 			setupFunc: func() {
-				// Reset channel state first
-				_, err := client.Channel.UpdateOneID(ch.ID).
-					SetDisabledAPIKeys([]objects.DisabledAPIKey{}).
-					SetStatus(channel.StatusEnabled).
-					ClearErrorMessage().
+				_, err := client.UpstreamCredential.UpdateOneID(credential.ID).
+					SetStatus(upstreamcredential.StatusEnabled).
 					Save(ctx)
 				require.NoError(t, err)
 
-				svc.apiKeyErrorCounts = map[int]map[string]map[int]int{
-					ch.ID: {"key1": {401: 2}},
+				svc.credentialErrorCounts = map[string]map[int]int{
+					credentialErrorIdentity(&PerformanceRecord{CredentialID: credential.ID}): {401: 2},
 				}
 			},
 		},
@@ -171,45 +209,21 @@ func TestChannelService_checkAndHandleAPIKeyError(t *testing.T) {
 			name: "different status code - should not disable",
 			policy: &RetryPolicy{
 				AutoDisableChannel: AutoDisableChannel{
-					Enabled: true,
-					Statuses: []AutoDisableChannelStatus{
-						{Status: 401, Times: 3},
-					},
+					Enabled:  true,
+					Statuses: []AutoDisableChannelStatus{{Status: 401, Times: 3}},
 				},
 			},
 			perf: &PerformanceRecord{
-				ChannelID:          ch.ID,
-				APIKey:             "key1",
-				ResponseStatusCode: 500,
-				Success:            false,
+				ChannelID:             ch.ID,
+				CredentialID:          credential.ID,
+				CredentialFingerprint: credential.Fingerprint,
+				ResponseStatusCode:    500,
+				Success:               false,
 			},
 			expectedDisabled: false,
 			setupFunc: func() {
-				svc.apiKeyErrorCounts = map[int]map[string]map[int]int{
-					ch.ID: {"key1": {401: 2}},
-				}
-			},
-		},
-		{
-			name: "different API key - should not disable",
-			policy: &RetryPolicy{
-				AutoDisableChannel: AutoDisableChannel{
-					Enabled: true,
-					Statuses: []AutoDisableChannelStatus{
-						{Status: 401, Times: 3},
-					},
-				},
-			},
-			perf: &PerformanceRecord{
-				ChannelID:          ch.ID,
-				APIKey:             "key2",
-				ResponseStatusCode: 401,
-				Success:            false,
-			},
-			expectedDisabled: false,
-			setupFunc: func() {
-				svc.apiKeyErrorCounts = map[int]map[string]map[int]int{
-					ch.ID: {"key1": {401: 2}},
+				svc.credentialErrorCounts = map[string]map[int]int{
+					credentialErrorIdentity(&PerformanceRecord{CredentialID: credential.ID}): {401: 2},
 				}
 			},
 		},
@@ -217,25 +231,25 @@ func TestChannelService_checkAndHandleAPIKeyError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.setupFunc != nil {
-				tt.setupFunc()
-			}
+			_, err := client.UpstreamCredential.UpdateOneID(credential.ID).
+				SetStatus(upstreamcredential.StatusEnabled).
+				Save(ctx)
+			require.NoError(t, err)
 
-			result := svc.checkAndHandleAPIKeyError(ctx, tt.perf, tt.policy)
+			tt.setupFunc()
+			result := svc.checkAndHandleCredentialError(ctx, tt.perf, tt.policy)
 			require.Equal(t, tt.expectedDisabled, result)
 
+			updatedCredential, err := client.UpstreamCredential.Get(ctx, credential.ID)
+			require.NoError(t, err)
 			if tt.expectedDisabled {
-				// Verify API key is disabled
-				updatedCh, err := client.Channel.Get(ctx, ch.ID)
-				require.NoError(t, err)
-				require.Len(t, updatedCh.DisabledAPIKeys, 1)
-				require.Equal(t, tt.perf.APIKey, updatedCh.DisabledAPIKeys[0].Key)
-
-				// Verify error counts are cleared for this API key
-				svc.apiKeyErrorCountsLock.Lock()
-				_, exists := svc.apiKeyErrorCounts[ch.ID][tt.perf.APIKey]
-				svc.apiKeyErrorCountsLock.Unlock()
+				require.Equal(t, upstreamcredential.StatusDisabled, updatedCredential.Status)
+				svc.credentialErrorCountsLock.Lock()
+				_, exists := svc.credentialErrorCounts[credentialErrorIdentity(tt.perf)]
+				svc.credentialErrorCountsLock.Unlock()
 				require.False(t, exists)
+			} else {
+				require.Equal(t, upstreamcredential.StatusEnabled, updatedCredential.Status)
 			}
 		})
 	}
@@ -250,9 +264,7 @@ func TestChannelService_checkAndHandleChannelError(t *testing.T) {
 	ctx = authz.WithTestBypass(ctx)
 
 	svc := newTestChannelService(client)
-
-	// Create a channel without API keys (single key scenario)
-	ch := createTestChannelWithAPIKeys(t, client, ctx, "test-channel-no-keys", []string{})
+	ch := createAutoDisableTestChannel(t, client, ctx, "test-channel-no-credentials")
 
 	tests := []struct {
 		name             string
@@ -265,10 +277,8 @@ func TestChannelService_checkAndHandleChannelError(t *testing.T) {
 			name: "first error - should not disable",
 			policy: &RetryPolicy{
 				AutoDisableChannel: AutoDisableChannel{
-					Enabled: true,
-					Statuses: []AutoDisableChannelStatus{
-						{Status: 401, Times: 2},
-					},
+					Enabled:  true,
+					Statuses: []AutoDisableChannelStatus{{Status: 401, Times: 2}},
 				},
 			},
 			perf: &PerformanceRecord{
@@ -279,7 +289,6 @@ func TestChannelService_checkAndHandleChannelError(t *testing.T) {
 			expectedDisabled: false,
 			setupFunc: func() {
 				svc.channelErrorCounts = make(map[int]map[int]int)
-				// Reset channel status
 				_, err := client.Channel.UpdateOneID(ch.ID).
 					SetStatus(channel.StatusEnabled).
 					ClearErrorMessage().
@@ -291,10 +300,8 @@ func TestChannelService_checkAndHandleChannelError(t *testing.T) {
 			name: "second error - should disable channel",
 			policy: &RetryPolicy{
 				AutoDisableChannel: AutoDisableChannel{
-					Enabled: true,
-					Statuses: []AutoDisableChannelStatus{
-						{Status: 401, Times: 2},
-					},
+					Enabled:  true,
+					Statuses: []AutoDisableChannelStatus{{Status: 401, Times: 2}},
 				},
 			},
 			perf: &PerformanceRecord{
@@ -304,7 +311,6 @@ func TestChannelService_checkAndHandleChannelError(t *testing.T) {
 			},
 			expectedDisabled: true,
 			setupFunc: func() {
-				// Reset channel status
 				_, err := client.Channel.UpdateOneID(ch.ID).
 					SetStatus(channel.StatusEnabled).
 					ClearErrorMessage().
@@ -320,28 +326,16 @@ func TestChannelService_checkAndHandleChannelError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.setupFunc != nil {
-				tt.setupFunc()
-			}
-
+			tt.setupFunc()
 			result := svc.checkAndHandleChannelError(ctx, tt.perf, tt.policy)
 			require.Equal(t, tt.expectedDisabled, result)
 
 			if tt.expectedDisabled {
-				// Give goroutine time to complete (markChannelUnavailable uses xcontext.DetachWithTimeout)
 				time.Sleep(100 * time.Millisecond)
-
-				// Verify channel is disabled
 				updatedCh, err := client.Channel.Get(ctx, ch.ID)
 				require.NoError(t, err)
 				require.Equal(t, channel.StatusDisabled, updatedCh.Status)
 				require.NotNil(t, updatedCh.ErrorMessage)
-
-				// Verify error counts are cleared
-				svc.channelErrorCountsLock.Lock()
-				_, exists := svc.channelErrorCounts[ch.ID]
-				svc.channelErrorCountsLock.Unlock()
-				require.False(t, exists)
 			}
 		})
 	}
@@ -358,10 +352,11 @@ func TestChannelService_markChannelUnavailable_RefreshesStaleLocalCacheWhenAlrea
 	svc := newTestChannelService(client)
 	defer svc.enabledChannelsCache.Stop()
 
-	ch := createTestChannelWithAPIKeys(t, client, ctx, "stale-cache-channel", []string{"key1"})
+	ch := createAutoDisableTestChannel(t, client, ctx, "stale-cache-channel")
+	attachTestCredential(t, client, ctx, ch, "cache-key")
 
 	require.NoError(t, svc.enabledChannelsCache.Load(ctx, true))
-	require.NotNil(t, svc.GetEnabledChannel(ch.ID), "precondition: local cache should contain enabled channel")
+	require.NotNil(t, svc.GetEnabledChannel(ch.ID))
 
 	_, err := client.Channel.UpdateOneID(ch.ID).
 		SetStatus(channel.StatusDisabled).
@@ -371,42 +366,7 @@ func TestChannelService_markChannelUnavailable_RefreshesStaleLocalCacheWhenAlrea
 
 	svc.markChannelUnavailable(ctx, ch.ID, 401, 2, 2)
 
-	require.Nil(t, svc.GetEnabledChannel(ch.ID), "local cache should be refreshed even when DB row was already disabled")
-}
-
-func TestChannelService_DisableAllAPIKeysDisablesChannel(t *testing.T) {
-	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
-	defer client.Close()
-
-	ctx := context.Background()
-	ctx = ent.NewContext(ctx, client)
-	ctx = authz.WithTestBypass(ctx)
-
-	svc := newTestChannelService(client)
-
-	// Create a channel with 2 API keys
-	ch := createTestChannelWithAPIKeys(t, client, ctx, "test-channel-2-keys", []string{"key1", "key2"})
-
-	// Disable first key
-	err := svc.DisableAPIKey(ctx, ch.ID, "key1", 401, "Test reason 1")
-	require.NoError(t, err)
-
-	// Verify channel is still enabled
-	updatedCh, err := client.Channel.Get(ctx, ch.ID)
-	require.NoError(t, err)
-	require.Equal(t, channel.StatusEnabled, updatedCh.Status)
-	require.Len(t, updatedCh.DisabledAPIKeys, 1)
-
-	// Disable second key - should disable the entire channel
-	err = svc.DisableAPIKey(ctx, ch.ID, "key2", 401, "Test reason 2")
-	require.NoError(t, err)
-
-	// Verify channel is now disabled
-	updatedCh, err = client.Channel.Get(ctx, ch.ID)
-	require.NoError(t, err)
-	require.Equal(t, channel.StatusDisabled, updatedCh.Status)
-	require.Len(t, updatedCh.DisabledAPIKeys, 2)
-	require.NotNil(t, updatedCh.ErrorMessage)
+	require.Nil(t, svc.GetEnabledChannel(ch.ID))
 }
 
 func TestChannelService_SuccessClearsErrorCounts(t *testing.T) {
@@ -418,40 +378,37 @@ func TestChannelService_SuccessClearsErrorCounts(t *testing.T) {
 	ctx = authz.WithTestBypass(ctx)
 
 	svc := newTestChannelService(client)
+	ch := createAutoDisableTestChannel(t, client, ctx, "test-channel")
+	credential := attachTestCredential(t, client, ctx, ch, "key1")
 
-	ch := createTestChannelWithAPIKeys(t, client, ctx, "test-channel", []string{"key1"})
-
-	// Set up some error counts
 	svc.channelErrorCounts = map[int]map[int]int{
 		ch.ID: {401: 2, 500: 1},
 	}
-	svc.apiKeyErrorCounts = map[int]map[string]map[int]int{
-		ch.ID: {"key1": {401: 2}},
+	svc.credentialErrorCounts = map[string]map[int]int{
+		credentialErrorIdentity(&PerformanceRecord{CredentialID: credential.ID}): {401: 2},
 	}
 
-	// Record a successful request
 	perf := &PerformanceRecord{
-		ChannelID:        ch.ID,
-		APIKey:           "key1",
-		Success:          true,
-		RequestCompleted: true,
-		EndTime:          time.Now(),
+		ChannelID:             ch.ID,
+		CredentialID:          credential.ID,
+		CredentialFingerprint: credential.Fingerprint,
+		Success:               true,
+		RequestCompleted:      true,
+		EndTime:               time.Now(),
 	}
 
 	svc.IncrementChannelSelection(ch.ID)
 	svc.RecordPerformance(ctx, perf)
 
-	// Verify channel error counts are cleared
 	svc.channelErrorCountsLock.Lock()
 	_, channelExists := svc.channelErrorCounts[ch.ID]
 	svc.channelErrorCountsLock.Unlock()
 	require.False(t, channelExists)
 
-	// Verify API key error counts are cleared
-	svc.apiKeyErrorCountsLock.Lock()
-	_, keyExists := svc.apiKeyErrorCounts[ch.ID]["key1"]
-	svc.apiKeyErrorCountsLock.Unlock()
-	require.False(t, keyExists)
+	svc.credentialErrorCountsLock.Lock()
+	_, credentialExists := svc.credentialErrorCounts[credentialErrorIdentity(perf)]
+	svc.credentialErrorCountsLock.Unlock()
+	require.False(t, credentialExists)
 }
 
 func TestChannelService_MultipleStatusCodes(t *testing.T) {
@@ -463,8 +420,8 @@ func TestChannelService_MultipleStatusCodes(t *testing.T) {
 	ctx = authz.WithTestBypass(ctx)
 
 	svc := newTestChannelService(client)
-
-	ch := createTestChannelWithAPIKeys(t, client, ctx, "test-channel", []string{"key1", "key2"})
+	ch := createAutoDisableTestChannel(t, client, ctx, "test-channel")
+	credential := attachTestCredential(t, client, ctx, ch, "key1")
 
 	policy := &RetryPolicy{
 		AutoDisableChannel: AutoDisableChannel{
@@ -476,48 +433,66 @@ func TestChannelService_MultipleStatusCodes(t *testing.T) {
 		},
 	}
 
-	// Test 401 - needs 2 times
-	svc.apiKeyErrorCounts = map[int]map[string]map[int]int{
-		ch.ID: {"key1": {401: 1}},
+	svc.credentialErrorCounts = map[string]map[int]int{
+		credentialErrorIdentity(&PerformanceRecord{CredentialID: credential.ID}): {401: 1},
 	}
 
 	perf401 := &PerformanceRecord{
-		ChannelID:          ch.ID,
-		APIKey:             "key1",
-		ResponseStatusCode: 401,
-		Success:            false,
+		ChannelID:             ch.ID,
+		CredentialID:          credential.ID,
+		CredentialFingerprint: credential.Fingerprint,
+		ResponseStatusCode:    401,
+		Success:               false,
 	}
+	require.True(t, svc.checkAndHandleCredentialError(ctx, perf401, policy))
 
-	result := svc.checkAndHandleAPIKeyError(ctx, perf401, policy)
-	require.True(t, result)
-
-	// Reset for 403 test
-	_, err := client.Channel.UpdateOneID(ch.ID).
-		SetDisabledAPIKeys([]objects.DisabledAPIKey{}).
+	_, err := client.UpstreamCredential.UpdateOneID(credential.ID).
+		SetStatus(upstreamcredential.StatusEnabled).
 		Save(ctx)
 	require.NoError(t, err)
 
-	svc.apiKeyErrorCounts = make(map[int]map[string]map[int]int)
+	svc.credentialErrorCounts = make(map[string]map[int]int)
 
-	// Test 403 - needs only 1 time
 	perf403 := &PerformanceRecord{
-		ChannelID:          ch.ID,
-		APIKey:             "key2",
-		ResponseStatusCode: 403,
-		Success:            false,
+		ChannelID:             ch.ID,
+		CredentialID:          credential.ID,
+		CredentialFingerprint: credential.Fingerprint,
+		ResponseStatusCode:    403,
+		Success:               false,
 	}
+	require.True(t, svc.checkAndHandleCredentialError(ctx, perf403, policy))
 
-	result = svc.checkAndHandleAPIKeyError(ctx, perf403, policy)
-	require.True(t, result)
-
-	// Verify key2 is disabled
-	updatedCh, err := client.Channel.Get(ctx, ch.ID)
+	updatedCredential, err := client.UpstreamCredential.Get(ctx, credential.ID)
 	require.NoError(t, err)
-	require.Len(t, updatedCh.DisabledAPIKeys, 1)
-	require.Equal(t, "key2", updatedCh.DisabledAPIKeys[0].Key)
+	require.Equal(t, upstreamcredential.StatusDisabled, updatedCredential.Status)
 }
 
-func TestChannelService_ConcurrentErrorTracking(t *testing.T) {
+func TestChannelService_DisableCredentialIDIdempotent(t *testing.T) {
+	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
+	defer client.Close()
+
+	ctx := context.Background()
+	ctx = ent.NewContext(ctx, client)
+	ctx = authz.WithTestBypass(ctx)
+
+	svc := newTestChannelService(client)
+	ch := createAutoDisableTestChannel(t, client, ctx, "test-channel")
+	credential := attachTestCredential(t, client, ctx, ch, "key1")
+
+	affected, err := svc.DisableCredentialID(ctx, credential.ID, 401, "Reason 1")
+	require.NoError(t, err)
+	require.Equal(t, 1, affected)
+
+	affected, err = svc.DisableCredentialID(ctx, credential.ID, 401, "Reason 2")
+	require.NoError(t, err)
+	require.Equal(t, 1, affected)
+
+	updatedCredential, err := client.UpstreamCredential.Get(ctx, credential.ID)
+	require.NoError(t, err)
+	require.Equal(t, upstreamcredential.StatusDisabled, updatedCredential.Status)
+}
+
+func TestChannelService_DisableCredentialIDNotFound(t *testing.T) {
 	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
 	defer client.Close()
 
@@ -527,50 +502,12 @@ func TestChannelService_ConcurrentErrorTracking(t *testing.T) {
 
 	svc := newTestChannelService(client)
 
-	ch := createTestChannelWithAPIKeys(t, client, ctx, "test-channel", []string{"key1", "key2", "key3"})
-
-	policy := &RetryPolicy{
-		AutoDisableChannel: AutoDisableChannel{
-			Enabled: true,
-			Statuses: []AutoDisableChannelStatus{
-				{Status: 401, Times: 5},
-			},
-		},
-	}
-
-	// Simulate concurrent error reporting
-	var wg sync.WaitGroup
-
-	numGoroutines := 10
-
-	for i := range numGoroutines {
-		wg.Add(1)
-
-		go func(idx int) {
-			defer wg.Done()
-
-			perf := &PerformanceRecord{
-				ChannelID:          ch.ID,
-				APIKey:             "key1",
-				ResponseStatusCode: 401,
-				Success:            false,
-			}
-			svc.checkAndHandleAPIKeyError(ctx, perf, policy)
-		}(i)
-	}
-
-	wg.Wait()
-
-	// Verify counts are tracked correctly (should be at least 5 to trigger disable)
-	// The key should be disabled since we had 10 errors and threshold is 5
-	updatedCh, err := client.Channel.Get(ctx, ch.ID)
+	affected, err := svc.DisableCredentialID(ctx, 99999, 401, "Reason")
 	require.NoError(t, err)
-
-	// Should have disabled key1
-	require.GreaterOrEqual(t, len(updatedCh.DisabledAPIKeys), 1)
+	require.Equal(t, 0, affected)
 }
 
-func TestChannelService_DisableAPIKeyIdempotent(t *testing.T) {
+func TestChannelService_DisableCredentialIDEmptyID(t *testing.T) {
 	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
 	defer client.Close()
 
@@ -580,93 +517,9 @@ func TestChannelService_DisableAPIKeyIdempotent(t *testing.T) {
 
 	svc := newTestChannelService(client)
 
-	ch := createTestChannelWithAPIKeys(t, client, ctx, "test-channel", []string{"key1", "key2"})
-
-	// Disable key1 first time
-	err := svc.DisableAPIKey(ctx, ch.ID, "key1", 401, "Reason 1")
-	require.NoError(t, err)
-
-	// Disable key1 second time - should be idempotent
-	err = svc.DisableAPIKey(ctx, ch.ID, "key1", 401, "Reason 2")
-	require.NoError(t, err)
-
-	// Verify only one entry
-	updatedCh, err := client.Channel.Get(ctx, ch.ID)
-	require.NoError(t, err)
-	require.Len(t, updatedCh.DisabledAPIKeys, 1)
-}
-
-func TestChannelService_DisableAPIKeyNotFound(t *testing.T) {
-	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
-	defer client.Close()
-
-	ctx := context.Background()
-	ctx = ent.NewContext(ctx, client)
-	ctx = authz.WithTestBypass(ctx)
-
-	svc := newTestChannelService(client)
-
-	ch := createTestChannelWithAPIKeys(t, client, ctx, "test-channel", []string{"key1", "key2"})
-
-	// Try to disable a key that doesn't exist - should be ignored
-	err := svc.DisableAPIKey(ctx, ch.ID, "nonexistent-key", 401, "Reason")
-	require.NoError(t, err)
-
-	// Verify no keys are disabled
-	updatedCh, err := client.Channel.Get(ctx, ch.ID)
-	require.NoError(t, err)
-	require.Len(t, updatedCh.DisabledAPIKeys, 0)
-}
-
-func TestChannelService_DisableAPIKeyEmptyKey(t *testing.T) {
-	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
-	defer client.Close()
-
-	ctx := context.Background()
-	ctx = ent.NewContext(ctx, client)
-	ctx = authz.WithTestBypass(ctx)
-
-	svc := newTestChannelService(client)
-
-	ch := createTestChannelWithAPIKeys(t, client, ctx, "test-channel", []string{"key1"})
-
-	// Try to disable an empty key - should return error
-	err := svc.DisableAPIKey(ctx, ch.ID, "", 401, "Reason")
+	affected, err := svc.DisableCredentialID(ctx, 0, 401, "Reason")
 	require.Error(t, err)
-}
-
-func TestChannelService_DisableCredentialFingerprintDisablesAllReferences(t *testing.T) {
-	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
-	defer client.Close()
-
-	ctx := context.Background()
-	ctx = ent.NewContext(ctx, client)
-	ctx = authz.WithTestBypass(ctx)
-
-	svc := newTestChannelService(client)
-
-	sharedKey := "shared-upstream-key"
-	ch1 := createTestChannelWithAPIKeys(t, client, ctx, "channel-one", []string{sharedKey, "unique-1"})
-	ch2 := createTestChannelWithAPIKeys(t, client, ctx, "channel-two", []string{sharedKey, "unique-2"})
-	ch3 := createTestChannelWithAPIKeys(t, client, ctx, "channel-three", []string{"unique-3"})
-
-	fingerprint := ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://api.openai.com", sharedKey)
-	affected, err := svc.DisableCredentialFingerprint(ctx, fingerprint, 401, "bad credential")
-	require.NoError(t, err)
-	require.Equal(t, 2, affected)
-
-	updated1, err := client.Channel.Get(ctx, ch1.ID)
-	require.NoError(t, err)
-	updated2, err := client.Channel.Get(ctx, ch2.ID)
-	require.NoError(t, err)
-	updated3, err := client.Channel.Get(ctx, ch3.ID)
-	require.NoError(t, err)
-
-	require.Contains(t, disabledAPIKeyNames(updated1.DisabledAPIKeys), sharedKey)
-	require.Contains(t, disabledAPIKeyNames(updated2.DisabledAPIKeys), sharedKey)
-	require.NotContains(t, disabledAPIKeyNames(updated3.DisabledAPIKeys), sharedKey)
-	require.NotContains(t, disabledAPIKeyNames(updated1.DisabledAPIKeys), "unique-1")
-	require.NotContains(t, disabledAPIKeyNames(updated2.DisabledAPIKeys), "unique-2")
+	require.Equal(t, 0, affected)
 }
 
 func TestChannelService_CheckAndHandleCredentialErrorOnlyForCredentialScopedStatuses(t *testing.T) {
@@ -678,11 +531,10 @@ func TestChannelService_CheckAndHandleCredentialErrorOnlyForCredentialScopedStat
 	ctx = authz.WithTestBypass(ctx)
 
 	svc := newTestChannelService(client)
-
-	sharedKey := "shared-upstream-key"
-	ch1 := createTestChannelWithAPIKeys(t, client, ctx, "channel-one", []string{sharedKey})
-	ch2 := createTestChannelWithAPIKeys(t, client, ctx, "channel-two", []string{sharedKey})
-	fingerprint := ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://api.openai.com", sharedKey)
+	ch1 := createAutoDisableTestChannel(t, client, ctx, "channel-one")
+	ch2 := createAutoDisableTestChannel(t, client, ctx, "channel-two")
+	credential := attachTestCredential(t, client, ctx, ch1, "shared-upstream-key")
+	attachExistingCredentialToChannel(t, client, ctx, ch2, credential)
 
 	policy := &RetryPolicy{
 		AutoDisableChannel: AutoDisableChannel{
@@ -696,35 +548,29 @@ func TestChannelService_CheckAndHandleCredentialErrorOnlyForCredentialScopedStat
 
 	transient := &PerformanceRecord{
 		ChannelID:             ch1.ID,
-		APIKey:                sharedKey,
-		CredentialFingerprint: fingerprint,
+		CredentialID:          credential.ID,
+		CredentialFingerprint: credential.Fingerprint,
 		ResponseStatusCode:    500,
 		Success:               false,
 	}
 	require.False(t, svc.checkAndHandleCredentialError(ctx, transient, policy))
 
-	updated1, err := client.Channel.Get(ctx, ch1.ID)
+	updated1, err := client.UpstreamCredential.Get(ctx, credential.ID)
 	require.NoError(t, err)
-	updated2, err := client.Channel.Get(ctx, ch2.ID)
-	require.NoError(t, err)
-	require.Empty(t, updated1.DisabledAPIKeys)
-	require.Empty(t, updated2.DisabledAPIKeys)
+	require.Equal(t, upstreamcredential.StatusEnabled, updated1.Status)
 
 	authFailure := &PerformanceRecord{
 		ChannelID:             ch1.ID,
-		APIKey:                sharedKey,
-		CredentialFingerprint: fingerprint,
+		CredentialID:          credential.ID,
+		CredentialFingerprint: credential.Fingerprint,
 		ResponseStatusCode:    401,
 		Success:               false,
 	}
 	require.True(t, svc.checkAndHandleCredentialError(ctx, authFailure, policy))
 
-	updated1, err = client.Channel.Get(ctx, ch1.ID)
+	updated1, err = client.UpstreamCredential.Get(ctx, credential.ID)
 	require.NoError(t, err)
-	updated2, err = client.Channel.Get(ctx, ch2.ID)
-	require.NoError(t, err)
-	require.Contains(t, disabledAPIKeyNames(updated1.DisabledAPIKeys), sharedKey)
-	require.Contains(t, disabledAPIKeyNames(updated2.DisabledAPIKeys), sharedKey)
+	require.Equal(t, upstreamcredential.StatusDisabled, updated1.Status)
 }
 
 func TestChannelService_CheckAndHandleCredentialErrorDisablesUpstreamCredentialID(t *testing.T) {
@@ -736,23 +582,8 @@ func TestChannelService_CheckAndHandleCredentialErrorDisablesUpstreamCredentialI
 	ctx = authz.WithTestBypass(ctx)
 
 	svc := newTestChannelService(client)
-
-	ch := createTestChannelWithAPIKeys(t, client, ctx, "channel-one", []string{"legacy-key"})
-	fingerprint := ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://api.openai.com", "first-class-key")
-	credential, err := client.UpstreamCredential.Create().
-		SetName("shared credential").
-		SetProviderType(channel.TypeOpenai.String()).
-		SetBaseURL("https://api.openai.com").
-		SetAuthKind(upstreamcredential.AuthKindAPIKey).
-		SetSecretPayload(objects.UpstreamCredentialSecretFromAPIKey("first-class-key")).
-		SetFingerprint(fingerprint).
-		Save(ctx)
-	require.NoError(t, err)
-	_, err = client.ChannelCredentialRef.Create().
-		SetChannelID(ch.ID).
-		SetCredentialID(credential.ID).
-		Save(ctx)
-	require.NoError(t, err)
+	ch := createAutoDisableTestChannel(t, client, ctx, "channel-one")
+	credential := attachTestCredential(t, client, ctx, ch, "first-class-key")
 
 	policy := &RetryPolicy{
 		AutoDisableChannel: AutoDisableChannel{
@@ -763,7 +594,7 @@ func TestChannelService_CheckAndHandleCredentialErrorDisablesUpstreamCredentialI
 	perf := &PerformanceRecord{
 		ChannelID:             ch.ID,
 		CredentialID:          credential.ID,
-		CredentialFingerprint: fingerprint,
+		CredentialFingerprint: credential.Fingerprint,
 		ResponseStatusCode:    401,
 		Success:               false,
 	}
@@ -774,16 +605,68 @@ func TestChannelService_CheckAndHandleCredentialErrorDisablesUpstreamCredentialI
 	require.NoError(t, err)
 	require.Equal(t, upstreamcredential.StatusDisabled, updatedCredential.Status)
 
-	updatedChannel, err := client.Channel.Get(ctx, ch.ID)
+	refs, err := client.ChannelCredentialRef.Query().
+		Where(channelcredentialref.ChannelIDEQ(ch.ID)).
+		All(ctx)
 	require.NoError(t, err)
-	require.Empty(t, updatedChannel.DisabledAPIKeys)
-	require.Equal(t, channel.StatusEnabled, updatedChannel.Status)
+	require.Len(t, refs, 1)
+	require.True(t, refs[0].Enabled)
 }
 
-func disabledAPIKeyNames(keys []objects.DisabledAPIKey) []string {
-	names := make([]string, 0, len(keys))
-	for _, key := range keys {
-		names = append(names, key.Key)
-	}
-	return names
+func TestChannelService_ReloadedChannelExcludesDisabledCredential(t *testing.T) {
+	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
+	defer client.Close()
+
+	ctx := context.Background()
+	ctx = ent.NewContext(ctx, client)
+	ctx = authz.WithTestBypass(ctx)
+
+	svc := newTestChannelService(client)
+	defer svc.enabledChannelsCache.Stop()
+
+	ch := createAutoDisableTestChannel(t, client, ctx, "quota-channel")
+	secret := objects.UpstreamCredentialSecretFromAPIKey("quota-key")
+	secretFingerprint := CredentialSecretFingerprintForSecret(channelCredentialAuthKindAPIKey, secret)
+	quotaScope, err := client.CredentialQuotaScope.Create().
+		SetName("budget").
+		SetStatus(credentialquotascope.StatusAvailable).
+		SetUnit(credentialquotascope.UnitToken).
+		SetLimitAmount("100").
+		SetUsedAmount("0").
+		Save(ctx)
+	require.NoError(t, err)
+
+	credential, err := client.UpstreamCredential.Create().
+		SetName("quota credential").
+		SetProviderType(channel.TypeOpenai.String()).
+		SetBaseURL(ch.BaseURL).
+		SetAuthKind(upstreamcredential.AuthKindAPIKey).
+		SetSecretKind(upstreamcredential.SecretKindAPIKey).
+		SetIssuerScope("openai").
+		SetKeyHint(CredentialKeyHintForSecret(channelCredentialAuthKindAPIKey, secret)).
+		SetSecretPayload(secret).
+		SetFingerprint(ChannelCredentialFingerprintForAPIKey(ch.Type.String(), ch.BaseURL, "quota-key")).
+		SetSecretFingerprint(secretFingerprint).
+		SetQuotaScopeID(quotaScope.ID).
+		SetStatus(upstreamcredential.StatusEnabled).
+		Save(ctx)
+	require.NoError(t, err)
+
+	_, err = client.ChannelCredentialRef.Create().
+		SetChannelID(ch.ID).
+		SetCredentialID(credential.ID).
+		SetEnabled(true).
+		Save(ctx)
+	require.NoError(t, err)
+
+	require.NoError(t, svc.enabledChannelsCache.Load(ctx, true))
+	cached := svc.GetEnabledChannel(ch.ID)
+	require.NotNil(t, cached)
+	require.Len(t, cached.CredentialViews(), 1)
+
+	_, err = svc.DisableCredentialID(ctx, credential.ID, 401, "disable for test")
+	require.NoError(t, err)
+
+	require.NoError(t, svc.enabledChannelsCache.Load(ctx, true))
+	require.Nil(t, svc.GetEnabledChannel(ch.ID))
 }

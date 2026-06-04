@@ -7,15 +7,13 @@ import { AboutSettings } from './about-settings';
 import { BrandSettings } from './brand-settings';
 import { DiagnosticsSettings } from './diagnostics-settings';
 import { GeneralSettings } from './general-settings';
-import { QuotaSettings } from './quota-settings';
-import { RetrySettings } from './retry-settings';
 import { StorageSettings } from './storage-settings';
 import { BackupSettings } from './backup-settings';
 import { ProxyPresetsSettings } from './proxy-presets-settings';
 import { WebhookSettings } from './webhook-settings';
 import { usePermissions } from '@/hooks/usePermissions';
 
-type SystemTabKey = 'general' | 'brand' | 'storage' | 'retry' | 'webhook' | 'proxy' | 'quota' | 'backup' | 'diagnostics' | 'about';
+type SystemTabKey = 'general' | 'brand' | 'storage' | 'webhook' | 'proxy' | 'backup' | 'diagnostics' | 'about';
 
 interface SystemSettingsTabsProps {
   initialTab?: SystemTabKey;
@@ -59,9 +57,6 @@ export function SystemSettingsTabs({ initialTab }: SystemSettingsTabsProps) {
         <TabsTrigger value='brand' data-value='brand'>
           {t('system.tabs.brand')}
         </TabsTrigger>
-        <TabsTrigger value='retry' data-value='retry'>
-          {t('system.tabs.retry')}
-        </TabsTrigger>
         <TabsTrigger value='webhook' data-value='webhook'>
           {t('system.tabs.webhook')}
         </TabsTrigger>
@@ -70,9 +65,6 @@ export function SystemSettingsTabs({ initialTab }: SystemSettingsTabsProps) {
         </TabsTrigger>
         <TabsTrigger value='proxy' data-value='proxy'>
           {t('system.tabs.proxy')}
-        </TabsTrigger>
-        <TabsTrigger value='quota' data-value='quota'>
-          {t('system.tabs.quota')}
         </TabsTrigger>
         {isOwner && (
           <TabsTrigger value='diagnostics' data-value='diagnostics'>
@@ -98,17 +90,11 @@ export function SystemSettingsTabs({ initialTab }: SystemSettingsTabsProps) {
         <TabsContent value='storage' className='mt-0 p-0'>
           <StorageSettings />
         </TabsContent>
-        <TabsContent value='retry' className='mt-0 p-0'>
-          <RetrySettings />
-        </TabsContent>
         <TabsContent value='webhook' className='mt-0 p-0'>
           <WebhookSettings />
         </TabsContent>
         <TabsContent value='proxy' className='mt-0 p-0'>
           <ProxyPresetsSettings />
-        </TabsContent>
-        <TabsContent value='quota' className='mt-0 p-0'>
-          <QuotaSettings />
         </TabsContent>
         {isOwner && (
           <TabsContent value='diagnostics' className='mt-0 p-0'>

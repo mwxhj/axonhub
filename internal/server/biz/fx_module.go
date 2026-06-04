@@ -31,7 +31,6 @@ var Module = fx.Module("biz",
 	fx.Provide(NewPromptService),
 	fx.Provide(NewPromptProtectionRuleService),
 	fx.Provide(NewQuotaService),
-	fx.Provide(NewProviderQuotaService),
 	fx.Provide(NewOIDCService),
 	fx.Provide(NewAPIKeyProfileTemplateService),
 	fx.Invoke(func(lc fx.Lifecycle, svc *APIKeyService) {
@@ -104,13 +103,6 @@ var Module = fx.Module("biz",
 			OnStop: func(ctx context.Context) error {
 				svc.Stop()
 				return nil
-			},
-		})
-	}),
-	fx.Invoke(func(lc fx.Lifecycle, svc *ProviderQuotaService, s *scheduler.Scheduler) {
-		lc.Append(fx.Hook{
-			OnStart: func(ctx context.Context) error {
-				return svc.RegisterScheduledTasks(ctx, s)
 			},
 		})
 	}),

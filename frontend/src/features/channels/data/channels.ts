@@ -26,8 +26,6 @@ import {
   ChannelModelPrice,
   SaveChannelModelPriceInput,
   channelModelPriceSchema,
-  TestChannelAPIKeysPayload,
-  testChannelAPIKeysPayloadSchema,
 } from './schema';
 
 const QUERY_CHANNEL_NAMES_QUERY = `
@@ -325,24 +323,6 @@ const TEST_CHANNEL_MUTATION = `
   }
 `;
 
-const TEST_CHANNEL_API_KEYS_MUTATION = `
-  mutation TestChannelAPIKeys($channelID: ID!, $modelID: String) {
-    testChannelAPIKeys(channelID: $channelID, modelID: $modelID) {
-      channelID
-      total
-      successCount
-      failedCount
-      results {
-        keyPrefix
-        success
-        latency
-        error
-        disabled
-      }
-    }
-  }
-`;
-
 const BULK_IMPORT_CHANNELS_MUTATION = `
   mutation BulkImportChannels($input: BulkImportChannelsInput!) {
     bulkImportChannels(input: $input) {
@@ -393,56 +373,6 @@ const BULK_IMPORT_CHANNELS_MUTATION = `
           }
           passThroughUserAgent
           passThroughBody
-        }
-      }
-    }
-  }
-`;
-
-// Channel API Key Management Mutations
-const DISABLE_CHANNEL_API_KEY_MUTATION = `
-  mutation DisableChannelAPIKey($channelID: ID!, $key: String!) {
-    disableChannelAPIKey(channelID: $channelID, key: $key)
-  }
-`;
-
-const ENABLE_CHANNEL_API_KEY_MUTATION = `
-  mutation EnableChannelAPIKey($channelID: ID!, $key: String!) {
-    enableChannelAPIKey(channelID: $channelID, key: $key)
-  }
-`;
-
-const ENABLE_ALL_CHANNEL_API_KEYS_MUTATION = `
-  mutation EnableAllChannelAPIKeys($channelID: ID!) {
-    enableAllChannelAPIKeys(channelID: $channelID)
-  }
-`;
-
-const ENABLE_SELECTED_CHANNEL_API_KEYS_MUTATION = `
-  mutation EnableSelectedChannelAPIKeys($channelID: ID!, $keys: [String!]!) {
-    enableSelectedChannelAPIKeys(channelID: $channelID, keys: $keys)
-  }
-`;
-
-const DELETE_DISABLED_CHANNEL_API_KEYS_MUTATION = `
-  mutation DeleteDisabledChannelAPIKeys($channelID: ID!, $keys: [String!]!) {
-    deleteDisabledChannelAPIKeys(channelID: $channelID, keys: $keys) {
-      success
-      message
-    }
-  }
-`;
-
-const GET_CHANNEL_DISABLED_API_KEYS_QUERY = `
-  query GetChannelDisabledAPIKeys($id: ID!) {
-    node(id: $id) {
-      ... on Channel {
-        id
-        disabledAPIKeys {
-          key
-          disabledAt
-          errorCode
-          reason
         }
       }
     }
@@ -651,15 +581,6 @@ const QUERY_CHANNELS_QUERY = `
           policies {
             stream
           }
-          credentials {
-            apiKey
-            apiKeys
-            gcp {
-              region
-              projectID
-              jsonData
-            }
-          }
           supportedModels
           autoSyncSupportedModels
           autoSyncModelPattern
@@ -731,12 +652,6 @@ const QUERY_CHANNELS_QUERY = `
             path
             baseURL
             transport
-          }
-          disabledAPIKeys {
-            key
-            disabledAt
-            errorCode
-            reason
           }
           liveLimiterStats {
             inFlight
@@ -1249,41 +1164,6 @@ export function useTestChannel(options?: { silent?: boolean }) {
   });
 }
 
-export function useTestChannelAPIKeys(options?: { silent?: boolean }) {
-  const { t } = useTranslation();
-  const { handleError } = useErrorHandler();
-  const silent = options?.silent ?? false;
-
-  return useMutation({
-    mutationFn: async ({ channelID, modelID }: { channelID: string; modelID?: string }) => {
-      try {
-        const data = await graphqlRequest<{ testChannelAPIKeys: TestChannelAPIKeysPayload }>(TEST_CHANNEL_API_KEYS_MUTATION, {
-          channelID,
-          modelID,
-        });
-        return testChannelAPIKeysPayloadSchema.parse(data.testChannelAPIKeys);
-      } catch (error) {
-        if (!silent) {
-          handleError(error, { context: 'Test Channel API Keys' });
-        }
-        throw error;
-      }
-    },
-    onSuccess: (data) => {
-      if (silent) {
-        return;
-      }
-
-      if (data.failedCount === 0) {
-        toast.success(t('channels.dialogs.testAPIKeys.successSummary', { success: data.successCount, total: data.total }));
-        return;
-      }
-
-      toast.error(t('channels.dialogs.testAPIKeys.successSummary', { success: data.successCount, total: data.total }));
-    },
-  });
-}
-
 export function useBulkImportChannels() {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
@@ -1559,170 +1439,5 @@ export function useChannelProbeData(channelIDs: string[], options?: { enabled?: 
     },
     enabled: channelIDs.length > 0 && options?.enabled !== false,
     staleTime: 1 * 60 * 1000, // 1 minute
-  });
-}
-
-// Channel Disabled API Keys Hooks
-export function useChannelDisabledAPIKeys(channelId: string, options?: { enabled?: boolean }) {
-  const { handleError } = useErrorHandler();
-  const { t } = useTranslation();
-
-  return useQuery({
-    queryKey: ['channelDisabledAPIKeys', channelId],
-    queryFn: async () => {
-      try {
-        const data = await graphqlRequest<{
-          node: {
-            id: string;
-            disabledAPIKeys: Array<{
-              key: string;
-              disabledAt: string;
-              errorCode: number;
-              reason?: string | null;
-            }>;
-          };
-        }>(GET_CHANNEL_DISABLED_API_KEYS_QUERY, { id: channelId });
-        return data.node?.disabledAPIKeys || [];
-      } catch (error) {
-        handleError(error, t('common.errors.internalServerError'));
-        return [];
-      }
-    },
-    enabled: !!channelId && options?.enabled !== false,
-  });
-}
-
-export function useDisableChannelAPIKey() {
-  const queryClient = useQueryClient();
-  const { t } = useTranslation();
-  const { handleError } = useErrorHandler();
-
-  return useMutation({
-    mutationFn: async ({ channelID, key }: { channelID: string; key: string }) => {
-      try {
-        const data = await graphqlRequest<{ disableChannelAPIKey: boolean }>(DISABLE_CHANNEL_API_KEY_MUTATION, {
-          channelID,
-          key,
-        });
-        return data.disableChannelAPIKey;
-      } catch (error) {
-        handleError(error, { context: 'Disable Channel API Key' });
-        throw error;
-      }
-    },
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['channelDisabledAPIKeys', variables.channelID] });
-      queryClient.invalidateQueries({ queryKey: ['channels'] });
-      toast.success(t('channels.messages.disableAPIKeySuccess'));
-    },
-  });
-}
-
-export function useEnableChannelAPIKey() {
-  const queryClient = useQueryClient();
-  const { t } = useTranslation();
-  const { handleError } = useErrorHandler();
-
-  return useMutation({
-    mutationFn: async ({ channelID, key }: { channelID: string; key: string }) => {
-      try {
-        const data = await graphqlRequest<{ enableChannelAPIKey: boolean }>(ENABLE_CHANNEL_API_KEY_MUTATION, {
-          channelID,
-          key,
-        });
-        return data.enableChannelAPIKey;
-      } catch (error) {
-        handleError(error, { context: 'Enable Channel API Key' });
-        throw error;
-      }
-    },
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['channelDisabledAPIKeys', variables.channelID] });
-      queryClient.invalidateQueries({ queryKey: ['channels'] });
-      toast.success(t('channels.messages.enableAPIKeySuccess'));
-    },
-  });
-}
-
-export function useEnableAllChannelAPIKeys() {
-  const queryClient = useQueryClient();
-  const { t } = useTranslation();
-  const { handleError } = useErrorHandler();
-
-  return useMutation({
-    mutationFn: async ({ channelID }: { channelID: string }) => {
-      try {
-        const data = await graphqlRequest<{ enableAllChannelAPIKeys: boolean }>(ENABLE_ALL_CHANNEL_API_KEYS_MUTATION, {
-          channelID,
-        });
-        return data.enableAllChannelAPIKeys;
-      } catch (error) {
-        handleError(error, { context: 'Enable All Channel API Keys' });
-        throw error;
-      }
-    },
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['channelDisabledAPIKeys', variables.channelID] });
-      queryClient.invalidateQueries({ queryKey: ['channels'] });
-      toast.success(t('channels.messages.enableAllAPIKeysSuccess'));
-    },
-  });
-}
-
-export function useEnableSelectedChannelAPIKeys() {
-  const queryClient = useQueryClient();
-  const { t } = useTranslation();
-  const { handleError } = useErrorHandler();
-
-  return useMutation({
-    mutationFn: async ({ channelID, keys }: { channelID: string; keys: string[] }) => {
-      try {
-        const data = await graphqlRequest<{ enableSelectedChannelAPIKeys: boolean }>(ENABLE_SELECTED_CHANNEL_API_KEYS_MUTATION, {
-          channelID,
-          keys,
-        });
-        return data.enableSelectedChannelAPIKeys;
-      } catch (error) {
-        handleError(error, { context: 'Enable Selected API Keys' });
-        throw error;
-      }
-    },
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['channelDisabledAPIKeys', variables.channelID] });
-      queryClient.invalidateQueries({ queryKey: ['channels'] });
-      toast.success(t('channels.messages.enableSelectedAPIKeysSuccess'));
-    },
-  });
-}
-
-export function useDeleteDisabledChannelAPIKeys() {
-  const queryClient = useQueryClient();
-  const { t } = useTranslation();
-  const { handleError } = useErrorHandler();
-
-  return useMutation({
-    mutationFn: async ({ channelID, keys }: { channelID: string; keys: string[] }) => {
-      try {
-        const data = await graphqlRequest<{ deleteDisabledChannelAPIKeys: { success: boolean; message?: string } }>(
-          DELETE_DISABLED_CHANNEL_API_KEYS_MUTATION,
-          { channelID, keys }
-        );
-        return data.deleteDisabledChannelAPIKeys;
-      } catch (error) {
-        handleError(error, { context: 'Delete Disabled API Keys' });
-        throw error;
-      }
-    },
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['channelDisabledAPIKeys', variables.channelID] });
-      queryClient.invalidateQueries({ queryKey: ['channels'] });
-
-      // Show appropriate message based on the result
-      if (data.message === 'ONE_KEY_PRESERVED') {
-        toast.success(t('channels.messages.deleteDisabledAPIKeysPreserved'));
-      } else {
-        toast.success(t('channels.messages.deleteDisabledAPIKeysSuccess'));
-      }
-    },
   });
 }

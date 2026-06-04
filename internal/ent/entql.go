@@ -19,7 +19,6 @@ import (
 	"github.com/looplj/axonhub/internal/ent/project"
 	"github.com/looplj/axonhub/internal/ent/prompt"
 	"github.com/looplj/axonhub/internal/ent/promptprotectionrule"
-	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/request"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
 	"github.com/looplj/axonhub/internal/ent/role"
@@ -40,7 +39,7 @@ import (
 
 // schemaGraph holds a representation of ent/schema at runtime.
 var schemaGraph = func() *sqlgraph.Schema {
-	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 27)}
+	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 26)}
 	graph.Nodes[0] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   apikey.Table,
@@ -390,35 +389,6 @@ var schemaGraph = func() *sqlgraph.Schema {
 	}
 	graph.Nodes[15] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
-			Table:   providerquotastatus.Table,
-			Columns: providerquotastatus.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
-				Column: providerquotastatus.FieldID,
-			},
-		},
-		Type: "ProviderQuotaStatus",
-		Fields: map[string]*sqlgraph.FieldSpec{
-			providerquotastatus.FieldCreatedAt:             {Type: field.TypeTime, Column: providerquotastatus.FieldCreatedAt},
-			providerquotastatus.FieldUpdatedAt:             {Type: field.TypeTime, Column: providerquotastatus.FieldUpdatedAt},
-			providerquotastatus.FieldDeletedAt:             {Type: field.TypeInt, Column: providerquotastatus.FieldDeletedAt},
-			providerquotastatus.FieldChannelID:             {Type: field.TypeInt, Column: providerquotastatus.FieldChannelID},
-			providerquotastatus.FieldScopeKey:              {Type: field.TypeString, Column: providerquotastatus.FieldScopeKey},
-			providerquotastatus.FieldCredentialID:          {Type: field.TypeInt, Column: providerquotastatus.FieldCredentialID},
-			providerquotastatus.FieldCredentialFingerprint: {Type: field.TypeString, Column: providerquotastatus.FieldCredentialFingerprint},
-			providerquotastatus.FieldSecretFingerprint:     {Type: field.TypeString, Column: providerquotastatus.FieldSecretFingerprint},
-			providerquotastatus.FieldResourceScopeKey:      {Type: field.TypeString, Column: providerquotastatus.FieldResourceScopeKey},
-			providerquotastatus.FieldQuotaScopeID:          {Type: field.TypeInt, Column: providerquotastatus.FieldQuotaScopeID},
-			providerquotastatus.FieldProviderType:          {Type: field.TypeEnum, Column: providerquotastatus.FieldProviderType},
-			providerquotastatus.FieldStatus:                {Type: field.TypeEnum, Column: providerquotastatus.FieldStatus},
-			providerquotastatus.FieldQuotaData:             {Type: field.TypeJSON, Column: providerquotastatus.FieldQuotaData},
-			providerquotastatus.FieldNextResetAt:           {Type: field.TypeTime, Column: providerquotastatus.FieldNextResetAt},
-			providerquotastatus.FieldReady:                 {Type: field.TypeBool, Column: providerquotastatus.FieldReady},
-			providerquotastatus.FieldNextCheckAt:           {Type: field.TypeTime, Column: providerquotastatus.FieldNextCheckAt},
-		},
-	}
-	graph.Nodes[16] = &sqlgraph.Node{
-		NodeSpec: sqlgraph.NodeSpec{
 			Table:   request.Table,
 			Columns: request.Columns,
 			ID: &sqlgraph.FieldSpec{
@@ -456,7 +426,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			request.FieldContentSavedAt:             {Type: field.TypeTime, Column: request.FieldContentSavedAt},
 		},
 	}
-	graph.Nodes[17] = &sqlgraph.Node{
+	graph.Nodes[16] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   requestexecution.Table,
 			Columns: requestexecution.Columns,
@@ -500,7 +470,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			requestexecution.FieldRequestHeaders:                {Type: field.TypeJSON, Column: requestexecution.FieldRequestHeaders},
 		},
 	}
-	graph.Nodes[18] = &sqlgraph.Node{
+	graph.Nodes[17] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   role.Table,
 			Columns: role.Columns,
@@ -520,7 +490,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			role.FieldScopes:    {Type: field.TypeJSON, Column: role.FieldScopes},
 		},
 	}
-	graph.Nodes[19] = &sqlgraph.Node{
+	graph.Nodes[18] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   system.Table,
 			Columns: system.Columns,
@@ -538,7 +508,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			system.FieldValue:     {Type: field.TypeString, Column: system.FieldValue},
 		},
 	}
-	graph.Nodes[20] = &sqlgraph.Node{
+	graph.Nodes[19] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   thread.Table,
 			Columns: thread.Columns,
@@ -555,7 +525,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			thread.FieldThreadID:  {Type: field.TypeString, Column: thread.FieldThreadID},
 		},
 	}
-	graph.Nodes[21] = &sqlgraph.Node{
+	graph.Nodes[20] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   trace.Table,
 			Columns: trace.Columns,
@@ -573,7 +543,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			trace.FieldThreadID:  {Type: field.TypeInt, Column: trace.FieldThreadID},
 		},
 	}
-	graph.Nodes[22] = &sqlgraph.Node{
+	graph.Nodes[21] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   upstreamcredential.Table,
 			Columns: upstreamcredential.Columns,
@@ -605,7 +575,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			upstreamcredential.FieldRemark:            {Type: field.TypeString, Column: upstreamcredential.FieldRemark},
 		},
 	}
-	graph.Nodes[23] = &sqlgraph.Node{
+	graph.Nodes[22] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   usagelog.Table,
 			Columns: usagelog.Columns,
@@ -653,7 +623,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			usagelog.FieldCostPriceReferenceID:               {Type: field.TypeString, Column: usagelog.FieldCostPriceReferenceID},
 		},
 	}
-	graph.Nodes[24] = &sqlgraph.Node{
+	graph.Nodes[23] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   user.Table,
 			Columns: user.Columns,
@@ -678,7 +648,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			user.FieldScopes:         {Type: field.TypeJSON, Column: user.FieldScopes},
 		},
 	}
-	graph.Nodes[25] = &sqlgraph.Node{
+	graph.Nodes[24] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   userproject.Table,
 			Columns: userproject.Columns,
@@ -697,7 +667,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			userproject.FieldScopes:    {Type: field.TypeJSON, Column: userproject.FieldScopes},
 		},
 	}
-	graph.Nodes[26] = &sqlgraph.Node{
+	graph.Nodes[25] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   userrole.Table,
 			Columns: userrole.Columns,
@@ -835,18 +805,6 @@ var schemaGraph = func() *sqlgraph.Schema {
 		"ChannelCredentialRef",
 	)
 	graph.MustAddE(
-		"provider_quota_statuses",
-		&sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   channel.ProviderQuotaStatusesTable,
-			Columns: []string{channel.ProviderQuotaStatusesColumn},
-			Bidi:    false,
-		},
-		"Channel",
-		"ProviderQuotaStatus",
-	)
-	graph.MustAddE(
 		"channel",
 		&sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -941,18 +899,6 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 		"CredentialQuotaScope",
 		"UpstreamCredential",
-	)
-	graph.MustAddE(
-		"provider_quota_statuses",
-		&sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   credentialquotascope.ProviderQuotaStatusesTable,
-			Columns: []string{credentialquotascope.ProviderQuotaStatusesColumn},
-			Bidi:    false,
-		},
-		"CredentialQuotaScope",
-		"ProviderQuotaStatus",
 	)
 	graph.MustAddE(
 		"executions",
@@ -1145,42 +1091,6 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 		"Prompt",
 		"Project",
-	)
-	graph.MustAddE(
-		"channel",
-		&sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   providerquotastatus.ChannelTable,
-			Columns: []string{providerquotastatus.ChannelColumn},
-			Bidi:    false,
-		},
-		"ProviderQuotaStatus",
-		"Channel",
-	)
-	graph.MustAddE(
-		"credential",
-		&sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   providerquotastatus.CredentialTable,
-			Columns: []string{providerquotastatus.CredentialColumn},
-			Bidi:    false,
-		},
-		"ProviderQuotaStatus",
-		"UpstreamCredential",
-	)
-	graph.MustAddE(
-		"quota_scope",
-		&sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   providerquotastatus.QuotaScopeTable,
-			Columns: []string{providerquotastatus.QuotaScopeColumn},
-			Bidi:    false,
-		},
-		"ProviderQuotaStatus",
-		"CredentialQuotaScope",
 	)
 	graph.MustAddE(
 		"api_key",
@@ -1457,18 +1367,6 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 		"UpstreamCredential",
 		"UsageLog",
-	)
-	graph.MustAddE(
-		"provider_quota_statuses",
-		&sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   upstreamcredential.ProviderQuotaStatusesTable,
-			Columns: []string{upstreamcredential.ProviderQuotaStatusesColumn},
-			Bidi:    false,
-		},
-		"UpstreamCredential",
-		"ProviderQuotaStatus",
 	)
 	graph.MustAddE(
 		"quota_scope",
@@ -2138,20 +2036,6 @@ func (f *ChannelFilter) WhereHasCredentialRefsWith(preds ...predicate.ChannelCre
 	})))
 }
 
-// WhereHasProviderQuotaStatuses applies a predicate to check if query has an edge provider_quota_statuses.
-func (f *ChannelFilter) WhereHasProviderQuotaStatuses() {
-	f.Where(entql.HasEdge("provider_quota_statuses"))
-}
-
-// WhereHasProviderQuotaStatusesWith applies a predicate to check if query has an edge provider_quota_statuses with a given conditions (other predicates).
-func (f *ChannelFilter) WhereHasProviderQuotaStatusesWith(preds ...predicate.ProviderQuotaStatus) {
-	f.Where(entql.HasEdgeWith("provider_quota_statuses", sqlgraph.WrapFunc(func(s *sql.Selector) {
-		for _, p := range preds {
-			p(s)
-		}
-	})))
-}
-
 // addPredicate implements the predicateAdder interface.
 func (_q *ChannelCredentialRefQuery) addPredicate(pred func(s *sql.Selector)) {
 	_q.predicates = append(_q.predicates, pred)
@@ -2778,20 +2662,6 @@ func (f *CredentialQuotaScopeFilter) WhereHasCredentials() {
 // WhereHasCredentialsWith applies a predicate to check if query has an edge credentials with a given conditions (other predicates).
 func (f *CredentialQuotaScopeFilter) WhereHasCredentialsWith(preds ...predicate.UpstreamCredential) {
 	f.Where(entql.HasEdgeWith("credentials", sqlgraph.WrapFunc(func(s *sql.Selector) {
-		for _, p := range preds {
-			p(s)
-		}
-	})))
-}
-
-// WhereHasProviderQuotaStatuses applies a predicate to check if query has an edge provider_quota_statuses.
-func (f *CredentialQuotaScopeFilter) WhereHasProviderQuotaStatuses() {
-	f.Where(entql.HasEdge("provider_quota_statuses"))
-}
-
-// WhereHasProviderQuotaStatusesWith applies a predicate to check if query has an edge provider_quota_statuses with a given conditions (other predicates).
-func (f *CredentialQuotaScopeFilter) WhereHasProviderQuotaStatusesWith(preds ...predicate.ProviderQuotaStatus) {
-	f.Where(entql.HasEdgeWith("provider_quota_statuses", sqlgraph.WrapFunc(func(s *sql.Selector) {
 		for _, p := range preds {
 			p(s)
 		}
@@ -3548,168 +3418,6 @@ func (f *PromptProtectionRuleFilter) WhereSettings(p entql.BytesP) {
 }
 
 // addPredicate implements the predicateAdder interface.
-func (_q *ProviderQuotaStatusQuery) addPredicate(pred func(s *sql.Selector)) {
-	_q.predicates = append(_q.predicates, pred)
-}
-
-// Filter returns a Filter implementation to apply filters on the ProviderQuotaStatusQuery builder.
-func (_q *ProviderQuotaStatusQuery) Filter() *ProviderQuotaStatusFilter {
-	return &ProviderQuotaStatusFilter{config: _q.config, predicateAdder: _q}
-}
-
-// addPredicate implements the predicateAdder interface.
-func (m *ProviderQuotaStatusMutation) addPredicate(pred func(s *sql.Selector)) {
-	m.predicates = append(m.predicates, pred)
-}
-
-// Filter returns an entql.Where implementation to apply filters on the ProviderQuotaStatusMutation builder.
-func (m *ProviderQuotaStatusMutation) Filter() *ProviderQuotaStatusFilter {
-	return &ProviderQuotaStatusFilter{config: m.config, predicateAdder: m}
-}
-
-// ProviderQuotaStatusFilter provides a generic filtering capability at runtime for ProviderQuotaStatusQuery.
-type ProviderQuotaStatusFilter struct {
-	predicateAdder
-	config
-}
-
-// Where applies the entql predicate on the query filter.
-func (f *ProviderQuotaStatusFilter) Where(p entql.P) {
-	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[15].Type, p, s); err != nil {
-			s.AddError(err)
-		}
-	})
-}
-
-// WhereID applies the entql int predicate on the id field.
-func (f *ProviderQuotaStatusFilter) WhereID(p entql.IntP) {
-	f.Where(p.Field(providerquotastatus.FieldID))
-}
-
-// WhereCreatedAt applies the entql time.Time predicate on the created_at field.
-func (f *ProviderQuotaStatusFilter) WhereCreatedAt(p entql.TimeP) {
-	f.Where(p.Field(providerquotastatus.FieldCreatedAt))
-}
-
-// WhereUpdatedAt applies the entql time.Time predicate on the updated_at field.
-func (f *ProviderQuotaStatusFilter) WhereUpdatedAt(p entql.TimeP) {
-	f.Where(p.Field(providerquotastatus.FieldUpdatedAt))
-}
-
-// WhereDeletedAt applies the entql int predicate on the deleted_at field.
-func (f *ProviderQuotaStatusFilter) WhereDeletedAt(p entql.IntP) {
-	f.Where(p.Field(providerquotastatus.FieldDeletedAt))
-}
-
-// WhereChannelID applies the entql int predicate on the channel_id field.
-func (f *ProviderQuotaStatusFilter) WhereChannelID(p entql.IntP) {
-	f.Where(p.Field(providerquotastatus.FieldChannelID))
-}
-
-// WhereScopeKey applies the entql string predicate on the scope_key field.
-func (f *ProviderQuotaStatusFilter) WhereScopeKey(p entql.StringP) {
-	f.Where(p.Field(providerquotastatus.FieldScopeKey))
-}
-
-// WhereCredentialID applies the entql int predicate on the credential_id field.
-func (f *ProviderQuotaStatusFilter) WhereCredentialID(p entql.IntP) {
-	f.Where(p.Field(providerquotastatus.FieldCredentialID))
-}
-
-// WhereCredentialFingerprint applies the entql string predicate on the credential_fingerprint field.
-func (f *ProviderQuotaStatusFilter) WhereCredentialFingerprint(p entql.StringP) {
-	f.Where(p.Field(providerquotastatus.FieldCredentialFingerprint))
-}
-
-// WhereSecretFingerprint applies the entql string predicate on the secret_fingerprint field.
-func (f *ProviderQuotaStatusFilter) WhereSecretFingerprint(p entql.StringP) {
-	f.Where(p.Field(providerquotastatus.FieldSecretFingerprint))
-}
-
-// WhereResourceScopeKey applies the entql string predicate on the resource_scope_key field.
-func (f *ProviderQuotaStatusFilter) WhereResourceScopeKey(p entql.StringP) {
-	f.Where(p.Field(providerquotastatus.FieldResourceScopeKey))
-}
-
-// WhereQuotaScopeID applies the entql int predicate on the quota_scope_id field.
-func (f *ProviderQuotaStatusFilter) WhereQuotaScopeID(p entql.IntP) {
-	f.Where(p.Field(providerquotastatus.FieldQuotaScopeID))
-}
-
-// WhereProviderType applies the entql string predicate on the provider_type field.
-func (f *ProviderQuotaStatusFilter) WhereProviderType(p entql.StringP) {
-	f.Where(p.Field(providerquotastatus.FieldProviderType))
-}
-
-// WhereStatus applies the entql string predicate on the status field.
-func (f *ProviderQuotaStatusFilter) WhereStatus(p entql.StringP) {
-	f.Where(p.Field(providerquotastatus.FieldStatus))
-}
-
-// WhereQuotaData applies the entql json.RawMessage predicate on the quota_data field.
-func (f *ProviderQuotaStatusFilter) WhereQuotaData(p entql.BytesP) {
-	f.Where(p.Field(providerquotastatus.FieldQuotaData))
-}
-
-// WhereNextResetAt applies the entql time.Time predicate on the next_reset_at field.
-func (f *ProviderQuotaStatusFilter) WhereNextResetAt(p entql.TimeP) {
-	f.Where(p.Field(providerquotastatus.FieldNextResetAt))
-}
-
-// WhereReady applies the entql bool predicate on the ready field.
-func (f *ProviderQuotaStatusFilter) WhereReady(p entql.BoolP) {
-	f.Where(p.Field(providerquotastatus.FieldReady))
-}
-
-// WhereNextCheckAt applies the entql time.Time predicate on the next_check_at field.
-func (f *ProviderQuotaStatusFilter) WhereNextCheckAt(p entql.TimeP) {
-	f.Where(p.Field(providerquotastatus.FieldNextCheckAt))
-}
-
-// WhereHasChannel applies a predicate to check if query has an edge channel.
-func (f *ProviderQuotaStatusFilter) WhereHasChannel() {
-	f.Where(entql.HasEdge("channel"))
-}
-
-// WhereHasChannelWith applies a predicate to check if query has an edge channel with a given conditions (other predicates).
-func (f *ProviderQuotaStatusFilter) WhereHasChannelWith(preds ...predicate.Channel) {
-	f.Where(entql.HasEdgeWith("channel", sqlgraph.WrapFunc(func(s *sql.Selector) {
-		for _, p := range preds {
-			p(s)
-		}
-	})))
-}
-
-// WhereHasCredential applies a predicate to check if query has an edge credential.
-func (f *ProviderQuotaStatusFilter) WhereHasCredential() {
-	f.Where(entql.HasEdge("credential"))
-}
-
-// WhereHasCredentialWith applies a predicate to check if query has an edge credential with a given conditions (other predicates).
-func (f *ProviderQuotaStatusFilter) WhereHasCredentialWith(preds ...predicate.UpstreamCredential) {
-	f.Where(entql.HasEdgeWith("credential", sqlgraph.WrapFunc(func(s *sql.Selector) {
-		for _, p := range preds {
-			p(s)
-		}
-	})))
-}
-
-// WhereHasQuotaScope applies a predicate to check if query has an edge quota_scope.
-func (f *ProviderQuotaStatusFilter) WhereHasQuotaScope() {
-	f.Where(entql.HasEdge("quota_scope"))
-}
-
-// WhereHasQuotaScopeWith applies a predicate to check if query has an edge quota_scope with a given conditions (other predicates).
-func (f *ProviderQuotaStatusFilter) WhereHasQuotaScopeWith(preds ...predicate.CredentialQuotaScope) {
-	f.Where(entql.HasEdgeWith("quota_scope", sqlgraph.WrapFunc(func(s *sql.Selector) {
-		for _, p := range preds {
-			p(s)
-		}
-	})))
-}
-
-// addPredicate implements the predicateAdder interface.
 func (_q *RequestQuery) addPredicate(pred func(s *sql.Selector)) {
 	_q.predicates = append(_q.predicates, pred)
 }
@@ -3738,7 +3446,7 @@ type RequestFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *RequestFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[16].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[15].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -4006,7 +3714,7 @@ type RequestExecutionFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *RequestExecutionFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[17].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[16].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -4271,7 +3979,7 @@ type RoleFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *RoleFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[18].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[17].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -4388,7 +4096,7 @@ type SystemFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *SystemFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[19].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[18].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -4453,7 +4161,7 @@ type ThreadFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *ThreadFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[20].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[19].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -4541,7 +4249,7 @@ type TraceFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *TraceFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[21].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[20].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -4648,7 +4356,7 @@ type UpstreamCredentialFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *UpstreamCredentialFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[22].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[21].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -4796,20 +4504,6 @@ func (f *UpstreamCredentialFilter) WhereHasUsageLogsWith(preds ...predicate.Usag
 	})))
 }
 
-// WhereHasProviderQuotaStatuses applies a predicate to check if query has an edge provider_quota_statuses.
-func (f *UpstreamCredentialFilter) WhereHasProviderQuotaStatuses() {
-	f.Where(entql.HasEdge("provider_quota_statuses"))
-}
-
-// WhereHasProviderQuotaStatusesWith applies a predicate to check if query has an edge provider_quota_statuses with a given conditions (other predicates).
-func (f *UpstreamCredentialFilter) WhereHasProviderQuotaStatusesWith(preds ...predicate.ProviderQuotaStatus) {
-	f.Where(entql.HasEdgeWith("provider_quota_statuses", sqlgraph.WrapFunc(func(s *sql.Selector) {
-		for _, p := range preds {
-			p(s)
-		}
-	})))
-}
-
 // WhereHasQuotaScope applies a predicate to check if query has an edge quota_scope.
 func (f *UpstreamCredentialFilter) WhereHasQuotaScope() {
 	f.Where(entql.HasEdge("quota_scope"))
@@ -4853,7 +4547,7 @@ type UsageLogFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *UsageLogFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[23].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[22].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -5138,7 +4832,7 @@ type UserFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *UserFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[24].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[23].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -5336,7 +5030,7 @@ type UserProjectFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *UserProjectFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[25].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[24].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})
@@ -5434,7 +5128,7 @@ type UserRoleFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *UserRoleFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[26].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[25].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})

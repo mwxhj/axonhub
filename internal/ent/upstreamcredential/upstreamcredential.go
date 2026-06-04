@@ -62,8 +62,6 @@ const (
 	EdgeExecutions = "executions"
 	// EdgeUsageLogs holds the string denoting the usage_logs edge name in mutations.
 	EdgeUsageLogs = "usage_logs"
-	// EdgeProviderQuotaStatuses holds the string denoting the provider_quota_statuses edge name in mutations.
-	EdgeProviderQuotaStatuses = "provider_quota_statuses"
 	// EdgeQuotaScope holds the string denoting the quota_scope edge name in mutations.
 	EdgeQuotaScope = "quota_scope"
 	// Table holds the table name of the upstreamcredential in the database.
@@ -89,13 +87,6 @@ const (
 	UsageLogsInverseTable = "usage_logs"
 	// UsageLogsColumn is the table column denoting the usage_logs relation/edge.
 	UsageLogsColumn = "credential_id"
-	// ProviderQuotaStatusesTable is the table that holds the provider_quota_statuses relation/edge.
-	ProviderQuotaStatusesTable = "provider_quota_status"
-	// ProviderQuotaStatusesInverseTable is the table name for the ProviderQuotaStatus entity.
-	// It exists in this package in order to avoid circular dependency with the "providerquotastatus" package.
-	ProviderQuotaStatusesInverseTable = "provider_quota_status"
-	// ProviderQuotaStatusesColumn is the table column denoting the provider_quota_statuses relation/edge.
-	ProviderQuotaStatusesColumn = "credential_id"
 	// QuotaScopeTable is the table that holds the quota_scope relation/edge.
 	QuotaScopeTable = "upstream_credentials"
 	// QuotaScopeInverseTable is the table name for the CredentialQuotaScope entity.
@@ -405,20 +396,6 @@ func ByUsageLogs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
-// ByProviderQuotaStatusesCount orders the results by provider_quota_statuses count.
-func ByProviderQuotaStatusesCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newProviderQuotaStatusesStep(), opts...)
-	}
-}
-
-// ByProviderQuotaStatuses orders the results by provider_quota_statuses terms.
-func ByProviderQuotaStatuses(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newProviderQuotaStatusesStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
 // ByQuotaScopeField orders the results by quota_scope field.
 func ByQuotaScopeField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -444,13 +421,6 @@ func newUsageLogsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(UsageLogsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, UsageLogsTable, UsageLogsColumn),
-	)
-}
-func newProviderQuotaStatusesStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ProviderQuotaStatusesInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, ProviderQuotaStatusesTable, ProviderQuotaStatusesColumn),
 	)
 }
 func newQuotaScopeStep() *sqlgraph.Step {

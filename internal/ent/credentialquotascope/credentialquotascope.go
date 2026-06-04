@@ -54,8 +54,6 @@ const (
 	FieldRemark = "remark"
 	// EdgeCredentials holds the string denoting the credentials edge name in mutations.
 	EdgeCredentials = "credentials"
-	// EdgeProviderQuotaStatuses holds the string denoting the provider_quota_statuses edge name in mutations.
-	EdgeProviderQuotaStatuses = "provider_quota_statuses"
 	// EdgeExecutions holds the string denoting the executions edge name in mutations.
 	EdgeExecutions = "executions"
 	// EdgeUsageLogs holds the string denoting the usage_logs edge name in mutations.
@@ -69,13 +67,6 @@ const (
 	CredentialsInverseTable = "upstream_credentials"
 	// CredentialsColumn is the table column denoting the credentials relation/edge.
 	CredentialsColumn = "quota_scope_id"
-	// ProviderQuotaStatusesTable is the table that holds the provider_quota_statuses relation/edge.
-	ProviderQuotaStatusesTable = "provider_quota_status"
-	// ProviderQuotaStatusesInverseTable is the table name for the ProviderQuotaStatus entity.
-	// It exists in this package in order to avoid circular dependency with the "providerquotastatus" package.
-	ProviderQuotaStatusesInverseTable = "provider_quota_status"
-	// ProviderQuotaStatusesColumn is the table column denoting the provider_quota_statuses relation/edge.
-	ProviderQuotaStatusesColumn = "quota_scope_id"
 	// ExecutionsTable is the table that holds the executions relation/edge.
 	ExecutionsTable = "request_executions"
 	// ExecutionsInverseTable is the table name for the RequestExecution entity.
@@ -406,20 +397,6 @@ func ByCredentials(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
-// ByProviderQuotaStatusesCount orders the results by provider_quota_statuses count.
-func ByProviderQuotaStatusesCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newProviderQuotaStatusesStep(), opts...)
-	}
-}
-
-// ByProviderQuotaStatuses orders the results by provider_quota_statuses terms.
-func ByProviderQuotaStatuses(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newProviderQuotaStatusesStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
-
 // ByExecutionsCount orders the results by executions count.
 func ByExecutionsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -452,13 +429,6 @@ func newCredentialsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CredentialsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, CredentialsTable, CredentialsColumn),
-	)
-}
-func newProviderQuotaStatusesStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ProviderQuotaStatusesInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, ProviderQuotaStatusesTable, ProviderQuotaStatusesColumn),
 	)
 }
 func newExecutionsStep() *sqlgraph.Step {

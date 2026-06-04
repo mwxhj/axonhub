@@ -11,13 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCredentialsContext } from '../context/credentials-context';
 import { useUpstreamCredentialDetail } from '../data/credentials';
-import type {
-  CredentialExecution,
-  CredentialRef,
-  CredentialUsageLog,
-  ProviderQuotaStatus,
-  UpstreamCredentialDetail,
-} from '../data/schema';
+import type { CredentialExecution, CredentialRef, CredentialUsageLog, UpstreamCredentialDetail } from '../data/schema';
 
 function dateLabel(value?: Date | string | null) {
   if (!value) {
@@ -53,14 +47,6 @@ function usageLogs(credential: UpstreamCredentialDetail): CredentialUsageLog[] {
   return credential.usageLogs?.edges?.map((edge) => edge.node).filter((item): item is CredentialUsageLog => Boolean(item)) ?? [];
 }
 
-function providerQuotaStatuses(credential: UpstreamCredentialDetail): ProviderQuotaStatus[] {
-  return credential.providerQuotaStatuses ?? [];
-}
-
-function providerQuotaStatusLabel(status: string | null | undefined, t: TFunction) {
-  return status ? t(`credentials.providerQuota.status.${status}`, { defaultValue: status }) : t('credentials.providerQuota.status.unknown');
-}
-
 function localQuotaBlocksRouting(credential: UpstreamCredentialDetail) {
   const scope = credential.quotaScope;
   if (!scope?.status) {
@@ -91,7 +77,7 @@ function localQuotaBlocksRouting(credential: UpstreamCredentialDetail) {
   return false;
 }
 
-function routingAvailabilityKey(credential: UpstreamCredentialDetail, refs: CredentialRef[], providerStatuses: ProviderQuotaStatus[]) {
+function routingAvailabilityKey(credential: UpstreamCredentialDetail, refs: CredentialRef[]) {
   if (credential.status === 'archived') {
     return 'archived';
   }
@@ -103,9 +89,6 @@ function routingAvailabilityKey(credential: UpstreamCredentialDetail, refs: Cred
   }
   if (localQuotaBlocksRouting(credential)) {
     return 'blockedLocalQuota';
-  }
-  if (providerStatuses.some((status) => !status.ready || status.status === 'exhausted')) {
-    return 'blockedProviderQuota';
   }
 
   return 'selectable';
@@ -132,10 +115,9 @@ export function CredentialDetailDialog() {
 
   const refs = credential ? channelRefs(credential) : [];
   const enabledRefs = refs.filter((ref) => ref.enabled);
-  const providerStatuses = credential ? providerQuotaStatuses(credential) : [];
   const recentExecutions = credential ? executions(credential) : [];
   const recentUsageLogs = credential ? usageLogs(credential) : [];
-  const routingKey = credential ? routingAvailabilityKey(credential, refs, providerStatuses) : 'selectable';
+  const routingKey = credential ? routingAvailabilityKey(credential, refs) : 'selectable';
 
   return (
     <Dialog open={isOpen} onOpenChange={(nextOpen) => (nextOpen ? setOpen('detail') : close())}>
@@ -177,10 +159,6 @@ export function CredentialDetailDialog() {
                 <div className='grid gap-4 rounded-md border p-3 md:grid-cols-3'>
                   <Field label={t('credentials.fields.status')} value={t(`credentials.status.${credential.status}`)} />
                   <Field label={t('credentials.columns.channels')} value={`${enabledRefs.length} / ${refs.length}`} />
-                  <Field
-                    label={t('credentials.columns.providerQuota')}
-                    value={providerStatuses.length || t('credentials.providerQuota.empty')}
-                  />
                   <Field label={t('credentials.detail.routingAvailability')} value={t(`credentials.routingAvailability.${routingKey}`)} />
                   <Field label={t('common.columns.updatedAt')} value={dateLabel(credential.updatedAt)} />
                 </div>
@@ -251,29 +229,6 @@ export function CredentialDetailDialog() {
                 </section>
 
                 <section className='space-y-3 rounded-md border p-3'>
-                  <h4 className='text-sm font-medium'>{t('credentials.providerQuota.title')}</h4>
-                  {providerStatuses.length > 0 ? (
-                    <div className='space-y-3'>
-                      {providerStatuses.map((status) => (
-                        <div key={status.id} className='grid gap-3 border-t pt-3 first:border-t-0 first:pt-0 md:grid-cols-3'>
-                          <Field label={t('credentials.providerQuota.provider')} value={status.providerType} />
-                          <Field label={t('credentials.fields.status')} value={providerQuotaStatusLabel(status.status, t)} />
-                          <Field
-                            label={t('credentials.providerQuota.ready')}
-                            value={status.ready ? t('credentials.common.yes') : t('credentials.common.no')}
-                          />
-                          <Field label={t('credentials.providerQuota.nextResetAt')} value={dateLabel(status.nextResetAt)} />
-                          <Field label={t('credentials.providerQuota.nextCheckAt')} value={dateLabel(status.nextCheckAt)} />
-                          <Field label={t('common.columns.updatedAt')} value={dateLabel(status.updatedAt)} />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className='text-muted-foreground text-sm'>{t('credentials.providerQuota.empty')}</div>
-                  )}
-                </section>
-
-                <section className='space-y-3 rounded-md border p-3'>
                   <div className='flex flex-wrap items-center justify-between gap-2'>
                     <h4 className='text-sm font-medium'>{t('credentials.detail.routingAvailability')}</h4>
                     <Badge variant={routingKey === 'selectable' ? 'default' : 'secondary'}>
@@ -286,14 +241,6 @@ export function CredentialDetailDialog() {
                     <Field
                       label={t('credentials.detail.localQuotaBlocksRouting')}
                       value={localQuotaBlocksRouting(credential) ? t('credentials.common.yes') : t('credentials.common.no')}
-                    />
-                    <Field
-                      label={t('credentials.detail.providerQuotaBlocksRouting')}
-                      value={
-                        providerStatuses.some((status) => !status.ready || status.status === 'exhausted')
-                          ? t('credentials.common.yes')
-                          : t('credentials.common.no')
-                      }
                     />
                   </div>
                 </section>

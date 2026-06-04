@@ -13,7 +13,6 @@ import (
 	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/predicate"
-	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/objects"
@@ -120,13 +119,6 @@ type UpdateCredentialQuotaScopeInput struct {
 	Source                  *credentialquotascope.Source
 	LastError               *string
 	Remark                  *string
-}
-
-type MigrateLegacyCredentialsPayload struct {
-	MigratedChannels   int
-	CreatedCredentials int
-	CreatedRefs        int
-	SkippedChannels    int
 }
 
 type BackfillCredentialSecretFingerprintsPayload struct {
@@ -434,12 +426,6 @@ func (svc *UpstreamCredentialService) DeleteUpstreamCredential(ctx context.Conte
 			Where(channelcredentialref.CredentialID(id)).
 			Exec(ctx); err != nil {
 			return fmt.Errorf("failed to delete credential channel refs: %w", err)
-		}
-
-		if _, err := client.ProviderQuotaStatus.Delete().
-			Where(providerquotastatus.CredentialID(id)).
-			Exec(ctx); err != nil {
-			return fmt.Errorf("failed to delete credential provider quota statuses: %w", err)
 		}
 
 		if err := client.UpstreamCredential.DeleteOneID(id).Exec(ctx); err != nil {
@@ -1106,60 +1092,6 @@ func (svc *UpstreamCredentialService) DetachCredentialFromChannel(ctx context.Co
 	return true, nil
 }
 
-func (svc *UpstreamCredentialService) MigrateLegacyChannelCredentials(ctx context.Context) (*MigrateLegacyCredentialsPayload, error) {
-	channels, err := svc.entFromContext(ctx).Channel.Query().
-		WithCredentialRefs().
-		All(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query channels: %w", err)
-	}
-
-	payload := &MigrateLegacyCredentialsPayload{}
-
-	for _, ch := range channels {
-		if ch == nil {
-			continue
-		}
-
-		views := legacyCredentialViews(ch)
-		if len(views) == 0 {
-			payload.SkippedChannels++
-			continue
-		}
-
-		channelMigrated := false
-		for idx, view := range views {
-			credential, created, err := svc.findOrCreateCredentialForChannel(ctx, ch, view, idx)
-			if err != nil {
-				return payload, err
-			}
-			if created {
-				payload.CreatedCredentials++
-			}
-
-			refCreated, err := svc.ensureChannelCredentialRef(ctx, ch.ID, credential.ID)
-			if err != nil {
-				return payload, err
-			}
-			if refCreated {
-				payload.CreatedRefs++
-			}
-
-			channelMigrated = channelMigrated || created || refCreated
-		}
-
-		if channelMigrated {
-			payload.MigratedChannels++
-		}
-	}
-
-	if payload.MigratedChannels > 0 || payload.CreatedCredentials > 0 || payload.CreatedRefs > 0 {
-		svc.reloadChannels()
-	}
-
-	return payload, nil
-}
-
 func (svc *UpstreamCredentialService) RunStartupMigration(ctx context.Context) {
 	if svc == nil {
 		return
@@ -1184,22 +1116,6 @@ func (svc *UpstreamCredentialService) RunStartupMigration(ctx context.Context) {
 		)
 	}
 
-	payload, err := svc.MigrateLegacyChannelCredentials(ctx)
-	if err != nil {
-		log.Warn(ctx, "failed to migrate legacy channel credentials",
-			log.Cause(err),
-		)
-		return
-	}
-	if payload == nil || (payload.MigratedChannels == 0 && payload.CreatedCredentials == 0 && payload.CreatedRefs == 0) {
-		return
-	}
-
-	log.Info(ctx, "migrated legacy channel credentials",
-		log.Int("migrated_channels", payload.MigratedChannels),
-		log.Int("created_credentials", payload.CreatedCredentials),
-		log.Int("created_refs", payload.CreatedRefs),
-	)
 }
 
 func (svc *UpstreamCredentialService) BackfillCredentialSecretFingerprints(ctx context.Context) (*BackfillCredentialSecretFingerprintsPayload, error) {
@@ -1395,11 +1311,7 @@ func defaultCredentialName(ch *ent.Channel, view ChannelCredentialView, idx int)
 		authKind = upstreamcredential.AuthKindAPIKey.String()
 	}
 
-	if len(ch.Credentials.GetAllAPIKeys()) > 1 {
-		return fmt.Sprintf("%s %s %d", ch.Name, authKind, idx+1)
-	}
-
-	return fmt.Sprintf("%s %s", ch.Name, authKind)
+	return fmt.Sprintf("%s %s %d", ch.Name, authKind, idx+1)
 }
 
 func legacyCredentialStatus(ch *ent.Channel, view ChannelCredentialView) upstreamcredential.Status {
@@ -1501,11 +1413,11 @@ func channelWithResolvedCredentials(ch *ent.Channel) *ent.Channel {
 
 	views := credentialViewsFromRefs(ch)
 	if len(views) == 0 {
-		return ch
+		return nil
 	}
 
 	clone := *ch
-	clone.Credentials = credentialsFromViews(views, ch.Credentials)
+	clone.Credentials = credentialsFromViews(views, objects.ChannelCredentials{})
 
 	return &clone
 }
@@ -1516,7 +1428,7 @@ func channelCredentialViews(ch *ent.Channel) []ChannelCredentialView {
 		return dedupeCredentialViews(views)
 	}
 
-	return legacyCredentialViews(ch)
+	return nil
 }
 
 func providerTypeForChannel(ch *ent.Channel) string {

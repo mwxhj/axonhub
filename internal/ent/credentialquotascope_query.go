@@ -15,7 +15,6 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/predicate"
-	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
@@ -24,20 +23,18 @@ import (
 // CredentialQuotaScopeQuery is the builder for querying CredentialQuotaScope entities.
 type CredentialQuotaScopeQuery struct {
 	config
-	ctx                            *QueryContext
-	order                          []credentialquotascope.OrderOption
-	inters                         []Interceptor
-	predicates                     []predicate.CredentialQuotaScope
-	withCredentials                *UpstreamCredentialQuery
-	withProviderQuotaStatuses      *ProviderQuotaStatusQuery
-	withExecutions                 *RequestExecutionQuery
-	withUsageLogs                  *UsageLogQuery
-	loadTotal                      []func(context.Context, []*CredentialQuotaScope) error
-	modifiers                      []func(*sql.Selector)
-	withNamedCredentials           map[string]*UpstreamCredentialQuery
-	withNamedProviderQuotaStatuses map[string]*ProviderQuotaStatusQuery
-	withNamedExecutions            map[string]*RequestExecutionQuery
-	withNamedUsageLogs             map[string]*UsageLogQuery
+	ctx                  *QueryContext
+	order                []credentialquotascope.OrderOption
+	inters               []Interceptor
+	predicates           []predicate.CredentialQuotaScope
+	withCredentials      *UpstreamCredentialQuery
+	withExecutions       *RequestExecutionQuery
+	withUsageLogs        *UsageLogQuery
+	loadTotal            []func(context.Context, []*CredentialQuotaScope) error
+	modifiers            []func(*sql.Selector)
+	withNamedCredentials map[string]*UpstreamCredentialQuery
+	withNamedExecutions  map[string]*RequestExecutionQuery
+	withNamedUsageLogs   map[string]*UsageLogQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -89,28 +86,6 @@ func (_q *CredentialQuotaScopeQuery) QueryCredentials() *UpstreamCredentialQuery
 			sqlgraph.From(credentialquotascope.Table, credentialquotascope.FieldID, selector),
 			sqlgraph.To(upstreamcredential.Table, upstreamcredential.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, credentialquotascope.CredentialsTable, credentialquotascope.CredentialsColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryProviderQuotaStatuses chains the current query on the "provider_quota_statuses" edge.
-func (_q *CredentialQuotaScopeQuery) QueryProviderQuotaStatuses() *ProviderQuotaStatusQuery {
-	query := (&ProviderQuotaStatusClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(credentialquotascope.Table, credentialquotascope.FieldID, selector),
-			sqlgraph.To(providerquotastatus.Table, providerquotastatus.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, credentialquotascope.ProviderQuotaStatusesTable, credentialquotascope.ProviderQuotaStatusesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -349,15 +324,14 @@ func (_q *CredentialQuotaScopeQuery) Clone() *CredentialQuotaScopeQuery {
 		return nil
 	}
 	return &CredentialQuotaScopeQuery{
-		config:                    _q.config,
-		ctx:                       _q.ctx.Clone(),
-		order:                     append([]credentialquotascope.OrderOption{}, _q.order...),
-		inters:                    append([]Interceptor{}, _q.inters...),
-		predicates:                append([]predicate.CredentialQuotaScope{}, _q.predicates...),
-		withCredentials:           _q.withCredentials.Clone(),
-		withProviderQuotaStatuses: _q.withProviderQuotaStatuses.Clone(),
-		withExecutions:            _q.withExecutions.Clone(),
-		withUsageLogs:             _q.withUsageLogs.Clone(),
+		config:          _q.config,
+		ctx:             _q.ctx.Clone(),
+		order:           append([]credentialquotascope.OrderOption{}, _q.order...),
+		inters:          append([]Interceptor{}, _q.inters...),
+		predicates:      append([]predicate.CredentialQuotaScope{}, _q.predicates...),
+		withCredentials: _q.withCredentials.Clone(),
+		withExecutions:  _q.withExecutions.Clone(),
+		withUsageLogs:   _q.withUsageLogs.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -373,17 +347,6 @@ func (_q *CredentialQuotaScopeQuery) WithCredentials(opts ...func(*UpstreamCrede
 		opt(query)
 	}
 	_q.withCredentials = query
-	return _q
-}
-
-// WithProviderQuotaStatuses tells the query-builder to eager-load the nodes that are connected to
-// the "provider_quota_statuses" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *CredentialQuotaScopeQuery) WithProviderQuotaStatuses(opts ...func(*ProviderQuotaStatusQuery)) *CredentialQuotaScopeQuery {
-	query := (&ProviderQuotaStatusClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withProviderQuotaStatuses = query
 	return _q
 }
 
@@ -493,9 +456,8 @@ func (_q *CredentialQuotaScopeQuery) sqlAll(ctx context.Context, hooks ...queryH
 	var (
 		nodes       = []*CredentialQuotaScope{}
 		_spec       = _q.querySpec()
-		loadedTypes = [4]bool{
+		loadedTypes = [3]bool{
 			_q.withCredentials != nil,
-			_q.withProviderQuotaStatuses != nil,
 			_q.withExecutions != nil,
 			_q.withUsageLogs != nil,
 		}
@@ -530,15 +492,6 @@ func (_q *CredentialQuotaScopeQuery) sqlAll(ctx context.Context, hooks ...queryH
 			return nil, err
 		}
 	}
-	if query := _q.withProviderQuotaStatuses; query != nil {
-		if err := _q.loadProviderQuotaStatuses(ctx, query, nodes,
-			func(n *CredentialQuotaScope) { n.Edges.ProviderQuotaStatuses = []*ProviderQuotaStatus{} },
-			func(n *CredentialQuotaScope, e *ProviderQuotaStatus) {
-				n.Edges.ProviderQuotaStatuses = append(n.Edges.ProviderQuotaStatuses, e)
-			}); err != nil {
-			return nil, err
-		}
-	}
 	if query := _q.withExecutions; query != nil {
 		if err := _q.loadExecutions(ctx, query, nodes,
 			func(n *CredentialQuotaScope) { n.Edges.Executions = []*RequestExecution{} },
@@ -557,13 +510,6 @@ func (_q *CredentialQuotaScopeQuery) sqlAll(ctx context.Context, hooks ...queryH
 		if err := _q.loadCredentials(ctx, query, nodes,
 			func(n *CredentialQuotaScope) { n.appendNamedCredentials(name) },
 			func(n *CredentialQuotaScope, e *UpstreamCredential) { n.appendNamedCredentials(name, e) }); err != nil {
-			return nil, err
-		}
-	}
-	for name, query := range _q.withNamedProviderQuotaStatuses {
-		if err := _q.loadProviderQuotaStatuses(ctx, query, nodes,
-			func(n *CredentialQuotaScope) { n.appendNamedProviderQuotaStatuses(name) },
-			func(n *CredentialQuotaScope, e *ProviderQuotaStatus) { n.appendNamedProviderQuotaStatuses(name, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -617,36 +563,6 @@ func (_q *CredentialQuotaScopeQuery) loadCredentials(ctx context.Context, query 
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "quota_scope_id" returned %v for node %v`, *fk, n.ID)
-		}
-		assign(node, n)
-	}
-	return nil
-}
-func (_q *CredentialQuotaScopeQuery) loadProviderQuotaStatuses(ctx context.Context, query *ProviderQuotaStatusQuery, nodes []*CredentialQuotaScope, init func(*CredentialQuotaScope), assign func(*CredentialQuotaScope, *ProviderQuotaStatus)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[int]*CredentialQuotaScope)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
-	}
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(providerquotastatus.FieldQuotaScopeID)
-	}
-	query.Where(predicate.ProviderQuotaStatus(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(credentialquotascope.ProviderQuotaStatusesColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.QuotaScopeID
-		node, ok := nodeids[fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "quota_scope_id" returned %v for node %v`, fk, n.ID)
 		}
 		assign(node, n)
 	}
@@ -817,20 +733,6 @@ func (_q *CredentialQuotaScopeQuery) WithNamedCredentials(name string, opts ...f
 		_q.withNamedCredentials = make(map[string]*UpstreamCredentialQuery)
 	}
 	_q.withNamedCredentials[name] = query
-	return _q
-}
-
-// WithNamedProviderQuotaStatuses tells the query-builder to eager-load the nodes that are connected to the "provider_quota_statuses"
-// edge with the given name. The optional arguments are used to configure the query builder of the edge.
-func (_q *CredentialQuotaScopeQuery) WithNamedProviderQuotaStatuses(name string, opts ...func(*ProviderQuotaStatusQuery)) *CredentialQuotaScopeQuery {
-	query := (&ProviderQuotaStatusClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	if _q.withNamedProviderQuotaStatuses == nil {
-		_q.withNamedProviderQuotaStatuses = make(map[string]*ProviderQuotaStatusQuery)
-	}
-	_q.withNamedProviderQuotaStatuses[name] = query
 	return _q
 }
 

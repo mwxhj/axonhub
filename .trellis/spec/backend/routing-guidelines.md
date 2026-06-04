@@ -12,10 +12,10 @@ Read this section before changing any of:
 
 - Channel candidate selection, priority, weight, retry, fallback, or load-balancing strategy.
 - Sticky-session key extraction, binding store, TTL, or target migration.
-- Credential-aware routing, provider quota accounting, or channel/key dedupe.
+- Credential-aware routing, route observability snapshots, or channel/key dedupe.
 - Model circuit-breaker middleware or any raw-request middleware that can skip a candidate.
 
-For channel credential ownership, OAuth migration, provider quota ownership, channel-local quota removal, and credential/key-local quota behavior, read [Credential Routing Model](./credential-routing-model.md) first.
+For channel credential ownership, OAuth migration, channel-local quota removal, and credential/key-local quota behavior, read [Credential Routing Model](./credential-routing-model.md) first.
 
 Sticky-session exists to preserve upstream cache locality. It is not a health-management system and must not replace the existing retry/fallback path.
 
@@ -59,7 +59,7 @@ Required runtime meaning:
 - Local key-quota ratio balancing must not treat credentials without comparable local quota data as `0%` or `100%`. If the primary channel has no comparable local quota credential views, keep normal load-balancer behavior. If the primary channel is in the local quota-managed pool, compare only local budget `CredentialQuotaScope` rows with valid positive limits, valid used amounts, daily reset policy, and a future reset time.
 - Credential executability and local quota comparability are different checks. A credential view may remain executable while being excluded from local quota-ratio balancing because its local quota window is stale, auto-reset-due, provider-owned, non-daily, or otherwise non-comparable. That must not disqualify other comparable credentials on the same primary channel from quota-ratio first-bind balancing.
 - Sticky-session semantic states must stay explicit: binding hit, documented rebind policy, documented degrade path. Do not silently change from quota-aware rebind semantics to ordinary load balancing without a named contract and test coverage.
-- Provider quota status may still affect candidate or credential eligibility, but it must not be used as ratio input for sticky first-bind balancing.
+- Internal credential executability summaries may affect candidate or credential eligibility, but they must not be used as ratio input for sticky first-bind balancing.
 - When multiple credentials share a `quota_scope_id`, compare the shared scope once. After selecting that scope, choose the concrete credential using the existing credential selection order/seed behavior.
 
 ### 4. Validation & Error Matrix
@@ -283,17 +283,17 @@ This keeps fallback conservative, observable, and subordinate to user intent.
 
 ---
 
-## Credential / Provider Quota Execution Observability
+## Credential Execution Observability
 
 ### 1. Scope / Trigger
 
 Read this section before changing:
 
 - Channel credential resolution, legacy credential adapters, or upstream API-key providers.
-- `RequestExecution`, `UsageLog`, provider quota status, legacy quota-scope snapshot fields, or request log UI fields.
+- `RequestExecution`, `UsageLog`, legacy quota-scope snapshot fields, or request log UI fields.
 - Any route that can retry/fallback across multiple channels or credentials.
 
-The execution target is `channel + credential + resource scope + model`. Request records must show the safe credential identity used by each attempt, while provider quota status must be tracked at credential/key granularity instead of only at channel granularity. `CredentialQuotaScope` is credential/key-local quota, not channel quota or provider quota identity.
+The execution target is `channel + credential + resource scope + model`. Request records must show the safe credential identity used by each attempt. `CredentialQuotaScope` is credential/key-local quota, not channel quota.
 
 ### 2. Signatures
 
@@ -315,32 +315,11 @@ credential_quota_status_snapshot
 
 `quota_scope_*` snapshot fields are safe key-local quota metadata for the credential used by that attempt. They must not be interpreted as channel quota or provider quota truth.
 
-Required provider quota target metadata:
-
-```text
-scope_key
-channel_id
-credential_id
-credential_fingerprint
-secret_fingerprint
-resource_scope_key
-quota_scope_id
-status
-ready
-quota_data
-```
-
-`quota_scope_id` may exist as metadata on provider quota rows. It is not provider quota identity and must not merge local quota with provider quota status.
-
 ### 3. Contracts
 
-- `credential_key_hint`, fingerprints, and resource scope are safe operator identifiers. Raw upstream secrets must never be stored in request records, GraphQL responses, logs, tooltips, or exports.
+- `credential_key_hint`, fingerprints, and resource scope are internal correlation fields. Raw upstream secrets must never be stored in request records, GraphQL responses, logs, tooltips, or exports.
 - Runtime credential selection must write context values before `CreateRequestExecution`, so every retry attempt records the credential actually used by that attempt.
 - Request list UI may show the latest execution credential, but request detail must show the credential for every execution attempt.
-- Provider quota checks for multiple API keys must update credential-level cache/status for each checked key and store per-key summaries in aggregate quota data.
-- Provider quota row identity is `provider_type + scope_key`; `channel_id` is last-observed metadata. Startup migrations must backfill legacy `scope_key="channel"` rows with a channel ID to `channel:<id>` before loading provider quota cache.
-- Provider quota cache loads must be deterministic when old duplicate rows exist: read rows in ascending `updated_at`/ID order so the newest provider/scope observation overwrites older cache entries.
-- Provider quota status should update `UpstreamCredential.quota_status` and credential/key-target `ProviderQuotaStatus` rows. Do not update `CredentialQuotaScope` as provider quota truth.
 - `CredentialQuotaScope` is credential/key-local quota. Runtime routing may use it to filter the affected credential view, but must not mark the entire channel unavailable while another credential view remains eligible.
 - Candidate quota filtering must narrow the executable credential views before outbound selection. A channel must not remain eligible because one key is available while the API-key provider can still select another exhausted or locally blocked key.
 - When outbound transformers hold API-key providers from the original channel snapshot, routing must pass a candidate-scoped credential allow-list through context so the provider can only choose credentials kept by the current candidate/quota decision.
@@ -354,7 +333,6 @@ quota_data
 | Credential selected from legacy inline channel key | Persist safe key hint/fingerprint/resource scope and source `legacy`; never persist the raw key. |
 | Request retries across credentials | Create one `RequestExecution` per attempt and snapshot that attempt's credential, not only the final channel. |
 | Credential is renamed, archived, or deleted later | Old request records remain readable from snapshots. |
-| Provider quota check fails for one key | Mark that credential observation unknown/unready, retain safe error, and do not overwrite unrelated credential status. |
 | Local quota scope is exhausted with action `warn` | Keep that credential selectable and snapshot the local quota state. |
 | Local quota scope is exhausted with action `pause` or `disable` | Remove only that credential view from executable candidates. Keep the channel eligible when another credential view remains. |
 | Local quota scope is paused or disabled | Remove only that credential view from executable candidates unless the pause has expired or an automatic reset is due. |
@@ -362,10 +340,10 @@ quota_data
 ### 5. Good / Base / Bad Cases
 
 - Good: channel A uses credential K1, retry falls back to channel B using K2, and request detail shows K1 on attempt 1 and K2 on attempt 2.
-- Good: a provider checker sees K1 exhausted and K2 available on the same channel; K1 is skipped while K2 remains eligible.
+- Good: a local quota evaluation sees K1 paused and K2 available on the same channel; K1 is skipped while K2 remains eligible.
 - Base: no selected credential is known; request execution fields stay empty and normal channel observability still works.
 - Bad: request list shows a channel API key raw value or any unmasked bearer token.
-- Bad: provider quota writes only `channel_id -> exhausted`, disabling every credential on that channel even when only one upstream key is exhausted.
+- Bad: request UI falls back to key hints, fingerprints, or credential source strings as default operator-facing labels.
 
 ### 6. Tests Required
 
@@ -373,12 +351,7 @@ When changing credential/quota observability, add or update tests for:
 
 - `CreateRequestExecution` stores credential/resource/quota snapshots from context.
 - `UsageLog` stores the same safe credential/resource/quota identity from context without persisting raw secrets.
-- Provider quota status updates credential/key observations and cache entries for the selected target.
-- Provider quota status does not use `CredentialQuotaScope` local quota as provider quota truth.
 - Credential local quota filters only the affected credential view, not unrelated credentials on the same channel.
-- Provider quota startup migration rewrites legacy `scope_key="channel"` rows with channel IDs to `channel:<id>` before cache load.
-- Provider quota cache load keeps the latest row when duplicate provider/scope rows exist.
-- Provider quota aggregate rows clear stale credential target metadata when the row returns to channel-level aggregate status.
 - Same-channel multi-key routing where K1 is exhausted and K2 is available keeps the channel eligible but constrains the API-key provider to K2.
 - Same-channel all-key-exhausted routing filters the channel in exhausted-only mode and reports quota exhaustion when no executable candidates remain.
 - Frontend request list/detail queries include the snapshot fields used by the UI.
@@ -388,7 +361,7 @@ When changing credential/quota observability, add or update tests for:
 #### Wrong
 
 ```text
-provider quota check -> update channel status only -> request UI shows channel/api key
+runtime chooses credential but UI falls back to channel/api key fragments
 ```
 
 #### Correct
@@ -396,8 +369,7 @@ provider quota check -> update channel status only -> request UI shows channel/a
 ```text
 credential resolver -> context safe credential target
 -> request execution / usage log snapshot
--> provider quota updates credential/key provider status
--> request UI displays credential name + key hint + source + provider quota status
+-> request UI displays credential name and request outcome
 ```
 
 ---
@@ -439,7 +411,7 @@ updateUpstreamCredentialStatus(id: ID!, status: UpstreamCredentialStatus!): Upst
 - Creating a credential with a secret that matches an archived credential should reactivate/update the archived credential instead of returning a still-archived row unchanged.
 - Delete is the irreversible product action for credential management: remove channel refs, soft-delete the credential, reload channel routing state, and allow the same secret to be added again.
 - Archive does not wipe `secret_payload` unless a future explicit wipe action is added.
-- Provider quota status is credential/key provider state. `CredentialQuotaScope` may explain key-local quota filtering, but archive/delete route availability must be explained by credential status and refs.
+- `CredentialQuotaScope` may explain key-local quota filtering, but archive/delete route availability must be explained by credential status and refs.
 
 ### 4. Validation & Error Matrix
 
@@ -455,7 +427,7 @@ updateUpstreamCredentialStatus(id: ID!, status: UpstreamCredentialStatus!): Upst
 
 - Good: archive action tells the operator routing stops, refs are preserved for restore, and history remains visible.
 - Good: delete action tells the operator refs are removed and the same secret can be added again.
-- Base: credential has no provider quota observation; routing still derives from channel status, ref status, credential status, model eligibility, and provider quota when known.
+- Base: credential has no local quota scope; routing still derives from channel status, ref status, credential status, and model eligibility.
 - Bad: frontend displays `quotaScope.status || credential.quotaStatus` as one generic quota badge.
 - Bad: archive is only reachable by a generic status dropdown with no side-effect confirmation.
 - Bad: deleting a credential only sets `status=archived`, leaving refs in place and preventing same-secret recreation.
@@ -468,7 +440,7 @@ When changing this contract, add or update tests for:
 - Runtime credential views excluding archived credentials even when refs remain enabled.
 - Archived same-secret create reactivating the credential.
 - `deleteUpstreamCredential` removing refs, soft-deleting credential, and allowing same-secret recreation.
-- Frontend type checks for archive/delete/restore actions and provider quota display fields.
+- Frontend type checks for archive/delete/restore actions and quota display fields.
 
 ### 7. Wrong vs Correct
 

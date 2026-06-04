@@ -125,10 +125,6 @@ func (CredentialQuotaScope) Edges() []ent.Edge {
 				entgql.Skip(entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
 				entgql.RelayConnection(),
 			),
-		edge.To("provider_quota_statuses", ProviderQuotaStatus.Type).
-			Annotations(
-				entgql.Skip(entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
-			),
 		edge.To("executions", RequestExecution.Type).
 			Annotations(
 				entgql.Skip(entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),

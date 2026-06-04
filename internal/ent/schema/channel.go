@@ -105,7 +105,11 @@ func (Channel) Fields() []ent.Field {
 				entgql.Skip(entgql.SkipMutationCreateInput),
 				entgql.OrderField("STATUS"),
 			),
-		field.JSON("credentials", objects.ChannelCredentials{}).Sensitive(),
+		field.JSON("credentials", objects.ChannelCredentials{}).
+			Sensitive().
+			Annotations(
+				entgql.Skip(entgql.SkipAll),
+			),
 		field.JSON("disabled_api_keys", []objects.DisabledAPIKey{}).
 			Default([]objects.DisabledAPIKey{}).
 			Optional().
@@ -181,10 +185,6 @@ func (Channel) Edges() []ent.Edge {
 			Annotations(
 				entgql.Skip(entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
 				entgql.RelayConnection(),
-			),
-		edge.To("provider_quota_statuses", ProviderQuotaStatus.Type).
-			Annotations(
-				entgql.Skip(entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
 			),
 	}
 }

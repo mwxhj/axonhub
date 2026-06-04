@@ -13,7 +13,6 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
-	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
@@ -323,21 +322,6 @@ func (_c *UpstreamCredentialCreate) AddUsageLogs(v ...*UsageLog) *UpstreamCreden
 	return _c.AddUsageLogIDs(ids...)
 }
 
-// AddProviderQuotaStatusIDs adds the "provider_quota_statuses" edge to the ProviderQuotaStatus entity by IDs.
-func (_c *UpstreamCredentialCreate) AddProviderQuotaStatusIDs(ids ...int) *UpstreamCredentialCreate {
-	_c.mutation.AddProviderQuotaStatusIDs(ids...)
-	return _c
-}
-
-// AddProviderQuotaStatuses adds the "provider_quota_statuses" edges to the ProviderQuotaStatus entity.
-func (_c *UpstreamCredentialCreate) AddProviderQuotaStatuses(v ...*ProviderQuotaStatus) *UpstreamCredentialCreate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddProviderQuotaStatusIDs(ids...)
-}
-
 // SetQuotaScope sets the "quota_scope" edge to the CredentialQuotaScope entity.
 func (_c *UpstreamCredentialCreate) SetQuotaScope(v *CredentialQuotaScope) *UpstreamCredentialCreate {
 	return _c.SetQuotaScopeID(v.ID)
@@ -640,22 +624,6 @@ func (_c *UpstreamCredentialCreate) createSpec() (*UpstreamCredential, *sqlgraph
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.ProviderQuotaStatusesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   upstreamcredential.ProviderQuotaStatusesTable,
-			Columns: []string{upstreamcredential.ProviderQuotaStatusesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerquotastatus.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

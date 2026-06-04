@@ -469,7 +469,31 @@ func TestUsageLogService_CreateUsageLog_WithPriceReferenceID(t *testing.T) {
 		SetBaseURL("https://api.openai.com/v1").
 		SetSupportedModels([]string{"gpt-4"}).
 		SetDefaultTestModel("gpt-4").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key"}).
+		SetCredentials(objects.ChannelCredentials{}).
+		Save(ctx)
+	require.NoError(t, err)
+
+	secret := objects.UpstreamCredentialSecretFromAPIKey("test-key")
+	secretFingerprint := CredentialSecretFingerprintForSecret(channelCredentialAuthKindAPIKey, secret)
+	credential, err := client.UpstreamCredential.Create().
+		SetName("test-credential").
+		SetProviderType(channel.TypeOpenai.String()).
+		SetBaseURL("https://api.openai.com/v1").
+		SetAuthKind(upstreamcredential.AuthKindAPIKey).
+		SetSecretKind(upstreamcredential.SecretKindAPIKey).
+		SetIssuerScope("openai").
+		SetKeyHint(CredentialKeyHintForSecret(channelCredentialAuthKindAPIKey, secret)).
+		SetSecretPayload(secret).
+		SetFingerprint(ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://api.openai.com/v1", "test-key")).
+		SetSecretFingerprint(secretFingerprint).
+		SetStatus(upstreamcredential.StatusEnabled).
+		Save(ctx)
+	require.NoError(t, err)
+
+	_, err = client.ChannelCredentialRef.Create().
+		SetChannelID(ch.ID).
+		SetCredentialID(credential.ID).
+		SetEnabled(true).
 		Save(ctx)
 	require.NoError(t, err)
 
@@ -515,8 +539,16 @@ func TestUsageLogService_CreateUsageLog_WithPriceReferenceID(t *testing.T) {
 	})
 	channelService := NewChannelServiceForTest(client)
 
+	reloaded, err := client.Channel.Query().
+		Where(channel.IDEQ(ch.ID)).
+		WithCredentialRefs(func(q *ent.ChannelCredentialRefQuery) {
+			q.WithCredential()
+		}).
+		Only(ctx)
+	require.NoError(t, err)
+
 	// Preload the channel with model prices
-	enabledCh, err := channelService.buildChannelWithTransformer(ch)
+	enabledCh, err := channelService.buildChannelWithTransformer(reloaded)
 	require.NoError(t, err)
 	channelService.preloadModelPrices(ctx, enabledCh)
 
@@ -582,7 +614,31 @@ func TestUsageLogService_CreateUsageLog_WithCachedTokens(t *testing.T) {
 		SetBaseURL("https://api.openai.com/v1").
 		SetSupportedModels([]string{"gpt-4"}).
 		SetDefaultTestModel("gpt-4").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key"}).
+		SetCredentials(objects.ChannelCredentials{}).
+		Save(ctx)
+	require.NoError(t, err)
+
+	secret := objects.UpstreamCredentialSecretFromAPIKey("test-key")
+	secretFingerprint := CredentialSecretFingerprintForSecret(channelCredentialAuthKindAPIKey, secret)
+	credential, err := client.UpstreamCredential.Create().
+		SetName("test-credential").
+		SetProviderType(channel.TypeOpenai.String()).
+		SetBaseURL("https://api.openai.com/v1").
+		SetAuthKind(upstreamcredential.AuthKindAPIKey).
+		SetSecretKind(upstreamcredential.SecretKindAPIKey).
+		SetIssuerScope("openai").
+		SetKeyHint(CredentialKeyHintForSecret(channelCredentialAuthKindAPIKey, secret)).
+		SetSecretPayload(secret).
+		SetFingerprint(ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://api.openai.com/v1", "test-key")).
+		SetSecretFingerprint(secretFingerprint).
+		SetStatus(upstreamcredential.StatusEnabled).
+		Save(ctx)
+	require.NoError(t, err)
+
+	_, err = client.ChannelCredentialRef.Create().
+		SetChannelID(ch.ID).
+		SetCredentialID(credential.ID).
+		SetEnabled(true).
 		Save(ctx)
 	require.NoError(t, err)
 
@@ -638,8 +694,16 @@ func TestUsageLogService_CreateUsageLog_WithCachedTokens(t *testing.T) {
 	})
 	channelService := NewChannelServiceForTest(client)
 
+	reloaded, err := client.Channel.Query().
+		Where(channel.IDEQ(ch.ID)).
+		WithCredentialRefs(func(q *ent.ChannelCredentialRefQuery) {
+			q.WithCredential()
+		}).
+		Only(ctx)
+	require.NoError(t, err)
+
 	// Preload the channel with model prices
-	enabledCh, err := channelService.buildChannelWithTransformer(ch)
+	enabledCh, err := channelService.buildChannelWithTransformer(reloaded)
 	require.NoError(t, err)
 	channelService.preloadModelPrices(ctx, enabledCh)
 

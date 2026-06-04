@@ -12,10 +12,9 @@ type APIKeyProfiles struct {
 }
 
 type APIKeyProfile struct {
-	Name                string         `json:"name"`
-	ModelMappings       []ModelMapping `json:"modelMappings"`
-	Quota               *APIKeyQuota   `json:"quota,omitempty"`
-	LoadBalanceStrategy *string        `json:"loadBalanceStrategy,omitempty"`
+	Name          string         `json:"name"`
+	ModelMappings []ModelMapping `json:"modelMappings"`
+	Quota         *APIKeyQuota   `json:"quota,omitempty"`
 
 	ChannelIDs           []int                `json:"channelIDs,omitempty"`
 	ChannelTags          []string             `json:"channelTags,omitempty"`
@@ -124,10 +123,6 @@ func (p *APIKeyProfile) Clone() *APIKeyProfile {
 	if len(p.ModelIDs) > 0 {
 		cp.ModelIDs = make([]string, len(p.ModelIDs))
 		copy(cp.ModelIDs, p.ModelIDs)
-	}
-	if p.LoadBalanceStrategy != nil {
-		s := *p.LoadBalanceStrategy
-		cp.LoadBalanceStrategy = &s
 	}
 	return &cp
 }

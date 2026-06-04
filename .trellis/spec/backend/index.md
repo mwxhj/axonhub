@@ -12,9 +12,9 @@ This directory contains guidelines for backend development. Fill in each file wi
 
 ## Pre-Development Checklist
 
-Before changing backend routing, load balancing, retry/fallback, provider quota, credential handling, or circuit-breaker behavior:
+Before changing backend routing, load balancing, retry/fallback, credential handling, or circuit-breaker behavior:
 
-- [ ] Read [Credential Routing Model](./credential-routing-model.md) before changing channel credentials, upstream credentials, OAuth, or provider quota behavior.
+- [ ] Read [Credential Routing Model](./credential-routing-model.md) before changing channel credentials, upstream credentials, OAuth, or credential quota/routing behavior.
 - [ ] Read [Routing Guidelines](./routing-guidelines.md), especially the sticky-session routing contract.
 - [ ] Confirm whether the change can affect priority tiers, weight semantics, retry/fallback, or upstream cache locality.
 - [ ] Confirm sticky-session writes happen only after upstream success and never from candidate selection alone.
@@ -28,7 +28,7 @@ Before changing backend routing, load balancing, retry/fallback, provider quota,
 |-------|-------------|--------|
 | [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
 | [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations, GraphQL transaction client usage | Active |
-| [Credential Routing Model](./credential-routing-model.md) | Channel routing-only model, credential-owned secrets/OAuth, provider quota ownership, legacy migration | Active |
+| [Credential Routing Model](./credential-routing-model.md) | Channel routing-only model, credential-owned secrets/OAuth, credential-local quota, legacy migration | Active |
 | [Error Handling](./error-handling.md) | Error types, handling strategies | To fill |
 | [Routing Guidelines](./routing-guidelines.md) | Channel routing, sticky-session, retry/fallback, credential/quota contracts | Active |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |

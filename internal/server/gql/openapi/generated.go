@@ -59,7 +59,6 @@ type ComplexityRoot struct {
 		ChannelIDs           func(childComplexity int) int
 		ChannelTags          func(childComplexity int) int
 		ChannelTagsMatchMode func(childComplexity int) int
-		LoadBalanceStrategy  func(childComplexity int) int
 		ModelIDs             func(childComplexity int) int
 		ModelMappings        func(childComplexity int) int
 		Name                 func(childComplexity int) int
@@ -182,12 +181,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.APIKeyProfile.ChannelTagsMatchMode(childComplexity), true
-	case "APIKeyProfile.loadBalanceStrategy":
-		if e.complexity.APIKeyProfile.LoadBalanceStrategy == nil {
-			break
-		}
-
-		return e.complexity.APIKeyProfile.LoadBalanceStrategy(childComplexity), true
 	case "APIKeyProfile.modelIDs":
 		if e.complexity.APIKeyProfile.ModelIDs == nil {
 			break
@@ -940,35 +933,6 @@ func (ec *executionContext) fieldContext_APIKeyProfile_quota(_ context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _APIKeyProfile_loadBalanceStrategy(ctx context.Context, field graphql.CollectedField, obj *objects.APIKeyProfile) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_APIKeyProfile_loadBalanceStrategy,
-		func(ctx context.Context) (any, error) {
-			return obj.LoadBalanceStrategy, nil
-		},
-		nil,
-		ec.marshalOString2ᚖstring,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_APIKeyProfile_loadBalanceStrategy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "APIKeyProfile",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _APIKeyProfiles_activeProfile(ctx context.Context, field graphql.CollectedField, obj *objects.APIKeyProfiles) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -1036,8 +1000,6 @@ func (ec *executionContext) fieldContext_APIKeyProfiles_profiles(_ context.Conte
 				return ec.fieldContext_APIKeyProfile_modelIDs(ctx, field)
 			case "quota":
 				return ec.fieldContext_APIKeyProfile_quota(ctx, field)
-			case "loadBalanceStrategy":
-				return ec.fieldContext_APIKeyProfile_loadBalanceStrategy(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type APIKeyProfile", field.Name)
 		},
@@ -3131,7 +3093,7 @@ func (ec *executionContext) unmarshalInputAPIKeyProfileInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "modelMappings", "channelIDs", "channelTags", "channelTagsMatchMode", "modelIDs", "quota", "loadBalanceStrategy"}
+	fieldsInOrder := [...]string{"name", "modelMappings", "channelIDs", "channelTags", "channelTagsMatchMode", "modelIDs", "quota"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -3187,13 +3149,6 @@ func (ec *executionContext) unmarshalInputAPIKeyProfileInput(ctx context.Context
 				return it, err
 			}
 			it.Quota = data
-		case "loadBalanceStrategy":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("loadBalanceStrategy"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.LoadBalanceStrategy = data
 		}
 	}
 
@@ -3541,8 +3496,6 @@ func (ec *executionContext) _APIKeyProfile(ctx context.Context, sel ast.Selectio
 			out.Values[i] = ec._APIKeyProfile_modelIDs(ctx, field, obj)
 		case "quota":
 			out.Values[i] = ec._APIKeyProfile_quota(ctx, field, obj)
-		case "loadBalanceStrategy":
-			out.Values[i] = ec._APIKeyProfile_loadBalanceStrategy(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

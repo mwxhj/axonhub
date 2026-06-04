@@ -79,9 +79,6 @@ type Channel struct {
 	// from first-class credential refs, or legacy inline channel credentials
 	// when refs are absent.
 	cachedCredentialViews []ChannelCredentialView
-
-	// cachedDisabledKeySet caches disabled key lookup set for O(1) check
-	cachedDisabledKeySet map[string]struct{}
 }
 
 type ChannelServiceParams struct {
@@ -104,7 +101,6 @@ func NewChannelService(params ChannelServiceParams) *ChannelService {
 		httpClient:            params.HttpClient,
 		channelPerfMetrics:    make(map[int]*channelMetrics),
 		channelErrorCounts:    make(map[int]map[int]int),
-		apiKeyErrorCounts:     make(map[int]map[string]map[int]int),
 		credentialErrorCounts: make(map[string]map[int]int),
 		perfCh:                make(chan *PerformanceRecord, 1024),
 	}
@@ -181,11 +177,6 @@ type ChannelService struct {
 	// channelID -> statusCode -> count
 	channelErrorCounts     map[int]map[int]int
 	channelErrorCountsLock sync.Mutex
-
-	// apiKeyErrorCounts stores the error counts for each API key and status code
-	// channelID -> apiKey -> statusCode -> count
-	apiKeyErrorCounts     map[int]map[string]map[int]int
-	apiKeyErrorCountsLock sync.Mutex
 
 	// credentialErrorCounts stores credential-scoped error counts by safe fingerprint.
 	// credentialFingerprint -> statusCode -> count
@@ -571,7 +562,7 @@ func (svc *ChannelService) createChannel(ctx context.Context, input ent.CreateCh
 		SetNillableBaseURL(input.BaseURL).
 		SetNillableRemark(input.Remark).
 		SetName(input.Name).
-		SetCredentials(input.Credentials).
+		SetCredentials(objects.ChannelCredentials{}).
 		SetSupportedModels(input.SupportedModels).
 		SetManualModels(input.ManualModels).
 		SetDefaultTestModel(input.DefaultTestModel).
@@ -689,10 +680,6 @@ func (svc *ChannelService) UpdateChannel(ctx context.Context, id int, input *ent
 		mut.SetPolicies(*input.Policies)
 	}
 
-	if input.Credentials != nil {
-		mut.SetCredentials(*input.Credentials)
-	}
-
 	if input.Remark != nil {
 		mut.SetRemark(*input.Remark)
 	}
@@ -801,10 +788,4 @@ func (svc *ChannelService) DeleteChannel(ctx context.Context, id int) error {
 // GetEnabledAPIKeys returns cached enabled API keys.
 func (c *Channel) GetEnabledAPIKeys() []string {
 	return c.cachedEnabledAPIKeys
-}
-
-// IsAPIKeyDisabled checks if a key is disabled (O(1) lookup).
-func (c *Channel) IsAPIKeyDisabled(key string) bool {
-	_, ok := c.cachedDisabledKeySet[key]
-	return ok
 }

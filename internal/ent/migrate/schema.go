@@ -529,99 +529,6 @@ var (
 			},
 		},
 	}
-	// ProviderQuotaStatusColumns holds the columns for the "provider_quota_status" table.
-	ProviderQuotaStatusColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "created_at", Type: field.TypeTime, Default: schema.Expr("CURRENT_TIMESTAMP")},
-		{Name: "updated_at", Type: field.TypeTime, Default: schema.Expr("CURRENT_TIMESTAMP")},
-		{Name: "deleted_at", Type: field.TypeInt, Default: 0},
-		{Name: "scope_key", Type: field.TypeString, Size: 640, Default: "channel"},
-		{Name: "credential_fingerprint", Type: field.TypeString, Nullable: true, Size: 128},
-		{Name: "secret_fingerprint", Type: field.TypeString, Nullable: true, Size: 128},
-		{Name: "resource_scope_key", Type: field.TypeString, Nullable: true, Size: 512},
-		{Name: "provider_type", Type: field.TypeEnum, Enums: []string{"claudecode", "codex", "github_copilot", "nanogpt", "wafer", "synthetic", "neuralwatt"}},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"available", "warning", "exhausted", "unknown"}},
-		{Name: "quota_data", Type: field.TypeJSON},
-		{Name: "next_reset_at", Type: field.TypeTime, Nullable: true},
-		{Name: "ready", Type: field.TypeBool, Default: true},
-		{Name: "next_check_at", Type: field.TypeTime},
-		{Name: "channel_id", Type: field.TypeInt, Nullable: true},
-		{Name: "quota_scope_id", Type: field.TypeInt, Nullable: true},
-		{Name: "credential_id", Type: field.TypeInt, Nullable: true},
-	}
-	// ProviderQuotaStatusTable holds the schema information for the "provider_quota_status" table.
-	ProviderQuotaStatusTable = &schema.Table{
-		Name:       "provider_quota_status",
-		Columns:    ProviderQuotaStatusColumns,
-		PrimaryKey: []*schema.Column{ProviderQuotaStatusColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "provider_quota_status_channels_provider_quota_statuses",
-				Columns:    []*schema.Column{ProviderQuotaStatusColumns[14]},
-				RefColumns: []*schema.Column{ChannelsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
-				Symbol:     "provider_quota_status_credential_quota_scopes_provider_quota_statuses",
-				Columns:    []*schema.Column{ProviderQuotaStatusColumns[15]},
-				RefColumns: []*schema.Column{CredentialQuotaScopesColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
-				Symbol:     "provider_quota_status_upstream_credentials_provider_quota_statuses",
-				Columns:    []*schema.Column{ProviderQuotaStatusColumns[16]},
-				RefColumns: []*schema.Column{UpstreamCredentialsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "provider_quota_status_by_provider_scope",
-				Unique:  false,
-				Columns: []*schema.Column{ProviderQuotaStatusColumns[8], ProviderQuotaStatusColumns[4]},
-			},
-			{
-				Name:    "providerquotastatus_credential_id",
-				Unique:  false,
-				Columns: []*schema.Column{ProviderQuotaStatusColumns[16]},
-			},
-			{
-				Name:    "providerquotastatus_credential_fingerprint",
-				Unique:  false,
-				Columns: []*schema.Column{ProviderQuotaStatusColumns[5]},
-			},
-			{
-				Name:    "providerquotastatus_secret_fingerprint",
-				Unique:  false,
-				Columns: []*schema.Column{ProviderQuotaStatusColumns[6]},
-			},
-			{
-				Name:    "providerquotastatus_resource_scope_key",
-				Unique:  false,
-				Columns: []*schema.Column{ProviderQuotaStatusColumns[7]},
-			},
-			{
-				Name:    "providerquotastatus_quota_scope_id",
-				Unique:  false,
-				Columns: []*schema.Column{ProviderQuotaStatusColumns[15]},
-			},
-			{
-				Name:    "providerquotastatus_channel_id",
-				Unique:  false,
-				Columns: []*schema.Column{ProviderQuotaStatusColumns[14]},
-			},
-			{
-				Name:    "provider_quota_status_by_channel_credential_resource",
-				Unique:  false,
-				Columns: []*schema.Column{ProviderQuotaStatusColumns[14], ProviderQuotaStatusColumns[16], ProviderQuotaStatusColumns[7]},
-			},
-			{
-				Name:    "providerquotastatus_next_check_at",
-				Unique:  false,
-				Columns: []*schema.Column{ProviderQuotaStatusColumns[13]},
-			},
-		},
-	}
 	// RequestsColumns holds the columns for the "requests" table.
 	RequestsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -1320,7 +1227,6 @@ var (
 		ProjectsTable,
 		PromptsTable,
 		PromptProtectionRulesTable,
-		ProviderQuotaStatusTable,
 		RequestsTable,
 		RequestExecutionsTable,
 		RolesTable,
@@ -1347,9 +1253,6 @@ func init() {
 	ChannelOverrideTemplatesTable.ForeignKeys[0].RefTable = UsersTable
 	ChannelProbesTable.ForeignKeys[0].RefTable = ChannelsTable
 	OidcIdentitiesTable.ForeignKeys[0].RefTable = UsersTable
-	ProviderQuotaStatusTable.ForeignKeys[0].RefTable = ChannelsTable
-	ProviderQuotaStatusTable.ForeignKeys[1].RefTable = CredentialQuotaScopesTable
-	ProviderQuotaStatusTable.ForeignKeys[2].RefTable = UpstreamCredentialsTable
 	RequestsTable.ForeignKeys[0].RefTable = APIKeysTable
 	RequestsTable.ForeignKeys[1].RefTable = ChannelsTable
 	RequestsTable.ForeignKeys[2].RefTable = DataStoragesTable

@@ -25,7 +25,6 @@ type JinaHandlersParams struct {
 	HttpClient      *httpclient.HttpClient
 	LiveStreamRegistry *biz.LiveStreamRegistry
 	ChannelLimiterManager       *orchestrator.ChannelLimiterManager
-	ProviderQuotaStatusProvider orchestrator.ProviderQuotaStatusProvider
 }
 
 func NewJinaHandlers(params JinaHandlersParams) *JinaHandlers {
@@ -44,7 +43,6 @@ func NewJinaHandlers(params JinaHandlersParams) *JinaHandlers {
 				params.PromptProtectionRuleService,
 				params.LiveStreamRegistry,
 				params.ChannelLimiterManager,
-				params.ProviderQuotaStatusProvider,
 			),
 		},
 		EmbeddingHandlers: &ChatCompletionHandlers{
@@ -61,7 +59,6 @@ func NewJinaHandlers(params JinaHandlersParams) *JinaHandlers {
 				params.PromptProtectionRuleService,
 				params.LiveStreamRegistry,
 				params.ChannelLimiterManager,
-				params.ProviderQuotaStatusProvider,
 			),
 		},
 	}

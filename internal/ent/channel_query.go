@@ -18,7 +18,6 @@ import (
 	"github.com/looplj/axonhub/internal/ent/channelmodelprice"
 	"github.com/looplj/axonhub/internal/ent/channelprobe"
 	"github.com/looplj/axonhub/internal/ent/predicate"
-	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/request"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
@@ -27,26 +26,24 @@ import (
 // ChannelQuery is the builder for querying Channel entities.
 type ChannelQuery struct {
 	config
-	ctx                            *QueryContext
-	order                          []channel.OrderOption
-	inters                         []Interceptor
-	predicates                     []predicate.Channel
-	withRequests                   *RequestQuery
-	withExecutions                 *RequestExecutionQuery
-	withUsageLogs                  *UsageLogQuery
-	withChannelProbes              *ChannelProbeQuery
-	withChannelModelPrices         *ChannelModelPriceQuery
-	withCredentialRefs             *ChannelCredentialRefQuery
-	withProviderQuotaStatuses      *ProviderQuotaStatusQuery
-	loadTotal                      []func(context.Context, []*Channel) error
-	modifiers                      []func(*sql.Selector)
-	withNamedRequests              map[string]*RequestQuery
-	withNamedExecutions            map[string]*RequestExecutionQuery
-	withNamedUsageLogs             map[string]*UsageLogQuery
-	withNamedChannelProbes         map[string]*ChannelProbeQuery
-	withNamedChannelModelPrices    map[string]*ChannelModelPriceQuery
-	withNamedCredentialRefs        map[string]*ChannelCredentialRefQuery
-	withNamedProviderQuotaStatuses map[string]*ProviderQuotaStatusQuery
+	ctx                         *QueryContext
+	order                       []channel.OrderOption
+	inters                      []Interceptor
+	predicates                  []predicate.Channel
+	withRequests                *RequestQuery
+	withExecutions              *RequestExecutionQuery
+	withUsageLogs               *UsageLogQuery
+	withChannelProbes           *ChannelProbeQuery
+	withChannelModelPrices      *ChannelModelPriceQuery
+	withCredentialRefs          *ChannelCredentialRefQuery
+	loadTotal                   []func(context.Context, []*Channel) error
+	modifiers                   []func(*sql.Selector)
+	withNamedRequests           map[string]*RequestQuery
+	withNamedExecutions         map[string]*RequestExecutionQuery
+	withNamedUsageLogs          map[string]*UsageLogQuery
+	withNamedChannelProbes      map[string]*ChannelProbeQuery
+	withNamedChannelModelPrices map[string]*ChannelModelPriceQuery
+	withNamedCredentialRefs     map[string]*ChannelCredentialRefQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -208,28 +205,6 @@ func (_q *ChannelQuery) QueryCredentialRefs() *ChannelCredentialRefQuery {
 			sqlgraph.From(channel.Table, channel.FieldID, selector),
 			sqlgraph.To(channelcredentialref.Table, channelcredentialref.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, channel.CredentialRefsTable, channel.CredentialRefsColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
-}
-
-// QueryProviderQuotaStatuses chains the current query on the "provider_quota_statuses" edge.
-func (_q *ChannelQuery) QueryProviderQuotaStatuses() *ProviderQuotaStatusQuery {
-	query := (&ProviderQuotaStatusClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(channel.Table, channel.FieldID, selector),
-			sqlgraph.To(providerquotastatus.Table, providerquotastatus.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, channel.ProviderQuotaStatusesTable, channel.ProviderQuotaStatusesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -424,18 +399,17 @@ func (_q *ChannelQuery) Clone() *ChannelQuery {
 		return nil
 	}
 	return &ChannelQuery{
-		config:                    _q.config,
-		ctx:                       _q.ctx.Clone(),
-		order:                     append([]channel.OrderOption{}, _q.order...),
-		inters:                    append([]Interceptor{}, _q.inters...),
-		predicates:                append([]predicate.Channel{}, _q.predicates...),
-		withRequests:              _q.withRequests.Clone(),
-		withExecutions:            _q.withExecutions.Clone(),
-		withUsageLogs:             _q.withUsageLogs.Clone(),
-		withChannelProbes:         _q.withChannelProbes.Clone(),
-		withChannelModelPrices:    _q.withChannelModelPrices.Clone(),
-		withCredentialRefs:        _q.withCredentialRefs.Clone(),
-		withProviderQuotaStatuses: _q.withProviderQuotaStatuses.Clone(),
+		config:                 _q.config,
+		ctx:                    _q.ctx.Clone(),
+		order:                  append([]channel.OrderOption{}, _q.order...),
+		inters:                 append([]Interceptor{}, _q.inters...),
+		predicates:             append([]predicate.Channel{}, _q.predicates...),
+		withRequests:           _q.withRequests.Clone(),
+		withExecutions:         _q.withExecutions.Clone(),
+		withUsageLogs:          _q.withUsageLogs.Clone(),
+		withChannelProbes:      _q.withChannelProbes.Clone(),
+		withChannelModelPrices: _q.withChannelModelPrices.Clone(),
+		withCredentialRefs:     _q.withCredentialRefs.Clone(),
 		// clone intermediate query.
 		sql:       _q.sql.Clone(),
 		path:      _q.path,
@@ -506,17 +480,6 @@ func (_q *ChannelQuery) WithCredentialRefs(opts ...func(*ChannelCredentialRefQue
 		opt(query)
 	}
 	_q.withCredentialRefs = query
-	return _q
-}
-
-// WithProviderQuotaStatuses tells the query-builder to eager-load the nodes that are connected to
-// the "provider_quota_statuses" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *ChannelQuery) WithProviderQuotaStatuses(opts ...func(*ProviderQuotaStatusQuery)) *ChannelQuery {
-	query := (&ProviderQuotaStatusClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withProviderQuotaStatuses = query
 	return _q
 }
 
@@ -604,14 +567,13 @@ func (_q *ChannelQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Chan
 	var (
 		nodes       = []*Channel{}
 		_spec       = _q.querySpec()
-		loadedTypes = [7]bool{
+		loadedTypes = [6]bool{
 			_q.withRequests != nil,
 			_q.withExecutions != nil,
 			_q.withUsageLogs != nil,
 			_q.withChannelProbes != nil,
 			_q.withChannelModelPrices != nil,
 			_q.withCredentialRefs != nil,
-			_q.withProviderQuotaStatuses != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -679,15 +641,6 @@ func (_q *ChannelQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Chan
 			return nil, err
 		}
 	}
-	if query := _q.withProviderQuotaStatuses; query != nil {
-		if err := _q.loadProviderQuotaStatuses(ctx, query, nodes,
-			func(n *Channel) { n.Edges.ProviderQuotaStatuses = []*ProviderQuotaStatus{} },
-			func(n *Channel, e *ProviderQuotaStatus) {
-				n.Edges.ProviderQuotaStatuses = append(n.Edges.ProviderQuotaStatuses, e)
-			}); err != nil {
-			return nil, err
-		}
-	}
 	for name, query := range _q.withNamedRequests {
 		if err := _q.loadRequests(ctx, query, nodes,
 			func(n *Channel) { n.appendNamedRequests(name) },
@@ -727,13 +680,6 @@ func (_q *ChannelQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Chan
 		if err := _q.loadCredentialRefs(ctx, query, nodes,
 			func(n *Channel) { n.appendNamedCredentialRefs(name) },
 			func(n *Channel, e *ChannelCredentialRef) { n.appendNamedCredentialRefs(name, e) }); err != nil {
-			return nil, err
-		}
-	}
-	for name, query := range _q.withNamedProviderQuotaStatuses {
-		if err := _q.loadProviderQuotaStatuses(ctx, query, nodes,
-			func(n *Channel) { n.appendNamedProviderQuotaStatuses(name) },
-			func(n *Channel, e *ProviderQuotaStatus) { n.appendNamedProviderQuotaStatuses(name, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -925,36 +871,6 @@ func (_q *ChannelQuery) loadCredentialRefs(ctx context.Context, query *ChannelCr
 	}
 	return nil
 }
-func (_q *ChannelQuery) loadProviderQuotaStatuses(ctx context.Context, query *ProviderQuotaStatusQuery, nodes []*Channel, init func(*Channel), assign func(*Channel, *ProviderQuotaStatus)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[int]*Channel)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
-		if init != nil {
-			init(nodes[i])
-		}
-	}
-	if len(query.ctx.Fields) > 0 {
-		query.ctx.AppendFieldOnce(providerquotastatus.FieldChannelID)
-	}
-	query.Where(predicate.ProviderQuotaStatus(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(channel.ProviderQuotaStatusesColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		fk := n.ChannelID
-		node, ok := nodeids[fk]
-		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "channel_id" returned %v for node %v`, fk, n.ID)
-		}
-		assign(node, n)
-	}
-	return nil
-}
 
 func (_q *ChannelQuery) sqlCount(ctx context.Context) (int, error) {
 	_spec := _q.querySpec()
@@ -1130,20 +1046,6 @@ func (_q *ChannelQuery) WithNamedCredentialRefs(name string, opts ...func(*Chann
 		_q.withNamedCredentialRefs = make(map[string]*ChannelCredentialRefQuery)
 	}
 	_q.withNamedCredentialRefs[name] = query
-	return _q
-}
-
-// WithNamedProviderQuotaStatuses tells the query-builder to eager-load the nodes that are connected to the "provider_quota_statuses"
-// edge with the given name. The optional arguments are used to configure the query builder of the edge.
-func (_q *ChannelQuery) WithNamedProviderQuotaStatuses(name string, opts ...func(*ProviderQuotaStatusQuery)) *ChannelQuery {
-	query := (&ProviderQuotaStatusClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	if _q.withNamedProviderQuotaStatuses == nil {
-		_q.withNamedProviderQuotaStatuses = make(map[string]*ProviderQuotaStatusQuery)
-	}
-	_q.withNamedProviderQuotaStatuses[name] = query
 	return _q
 }
 

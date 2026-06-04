@@ -33,10 +33,11 @@ func TestOpenAICompatibleChannel_BuildChannelWithOutbounds(t *testing.T) {
 		SetName("Vercel Multi Endpoint Channel").
 		SetType(channel.TypeVercel).
 		SetBaseURL("https://ai-gateway.vercel.sh/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key"}).
+		SetCredentials(objects.ChannelCredentials{}).
 		SetSupportedModels([]string{"gpt-4o-mini"}).
 		SetDefaultTestModel("gpt-4o-mini").
 		SaveX(ctx)
+	entChannel = attachAPIKeyCredentialForTest(t, ctx, client, entChannel, "test-key")
 
 	channelSvc := NewChannelServiceForTest(client)
 
@@ -77,10 +78,11 @@ func TestAtlasCloudChannel_BuildChannelWithOutbounds(t *testing.T) {
 		SetName("AtlasCloud Channel").
 		SetType(channel.TypeAtlascloud).
 		SetBaseURL("https://api.atlascloud.ai/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key"}).
+		SetCredentials(objects.ChannelCredentials{}).
 		SetSupportedModels([]string{"deepseek-v3"}).
 		SetDefaultTestModel("deepseek-v3").
 		SaveX(ctx)
+	entChannel = attachAPIKeyCredentialForTest(t, ctx, client, entChannel, "test-key")
 
 	channelSvc := NewChannelServiceForTest(client)
 
@@ -109,7 +111,7 @@ func TestOpenAIResponsesEndpoint_InheritsWebSocketTransportFromBaseURL(t *testin
 		SetName("Responses WebSocket Channel").
 		SetType(channel.TypeOpenaiResponses).
 		SetBaseURL("wss://api.openai.com/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key"}).
+		SetCredentials(objects.ChannelCredentials{}).
 		SetSupportedModels([]string{"gpt-5"}).
 		SetDefaultTestModel("gpt-5").
 		SetEndpoints([]objects.ChannelEndpoint{{
@@ -117,6 +119,7 @@ func TestOpenAIResponsesEndpoint_InheritsWebSocketTransportFromBaseURL(t *testin
 			Path:      "/custom/responses",
 		}}).
 		SaveX(ctx)
+	entChannel = attachAPIKeyCredentialForTest(t, ctx, client, entChannel, "test-key")
 
 	channelSvc := NewChannelServiceForTest(client)
 
@@ -143,13 +146,7 @@ func TestCodexOAuthWebSocketEndpointBuildsWithoutAPIKey(t *testing.T) {
 		SetName("Codex OAuth WebSocket Channel").
 		SetType(channel.TypeCodex).
 		SetBaseURL("wss://chatgpt.com/backend-api/codex#").
-		SetCredentials(objects.ChannelCredentials{
-			OAuth: &objects.OAuthCredentials{
-				AccessToken:  "access-token",
-				RefreshToken: "refresh-token",
-				ExpiresAt:    time.Now().Add(time.Hour),
-			},
-		}).
+		SetCredentials(objects.ChannelCredentials{}).
 		SetSupportedModels([]string{"gpt-5.5"}).
 		SetDefaultTestModel("gpt-5.5").
 		SetEndpoints([]objects.ChannelEndpoint{{
@@ -157,6 +154,13 @@ func TestCodexOAuthWebSocketEndpointBuildsWithoutAPIKey(t *testing.T) {
 			Transport: objects.ChannelEndpointTransportWebSocket,
 		}}).
 		SaveX(ctx)
+	entChannel = attachOAuthCredentialForTest(t, ctx, client, entChannel, objects.UpstreamCredentialSecret{
+		OAuth: &objects.OAuthCredentials{
+			AccessToken:  "access-token",
+			RefreshToken: "refresh-token",
+			ExpiresAt:    time.Now().Add(time.Hour),
+		},
+	})
 
 	channelSvc := NewChannelServiceForTest(client)
 

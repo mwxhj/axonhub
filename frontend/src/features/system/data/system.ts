@@ -90,36 +90,6 @@ const UPDATE_STORAGE_POLICY_MUTATION = `
   }
 `;
 
-const RETRY_POLICY_QUERY = `
-  query RetryPolicy {
-    retryPolicy {
-      maxChannelRetries
-      maxSingleChannelRetries
-      retryDelayMs
-      loadBalancerStrategy
-      enabled
-      emptyResponseDetection
-      upstreamErrorPolicy {
-        mode
-        customMessage
-      }
-      autoDisableChannel {
-        enabled
-        statuses {
-          status
-          times
-        }
-      }
-    }
-  }
-`;
-
-const UPDATE_RETRY_POLICY_MUTATION = `
-  mutation UpdateRetryPolicy($input: UpdateRetryPolicyInput!) {
-    updateRetryPolicy(input: $input)
-  }
-`;
-
 const WEBHOOK_NOTIFIER_CONFIG_QUERY = `
   query WebhookNotifierConfig {
     webhookNotifierConfig {
@@ -327,22 +297,6 @@ export interface WebhookNotifierConfig {
   subscriptions: WebhookSubscription[];
 }
 
-export interface AutoDisableChannel {
-  enabled: boolean;
-  statuses: AutoDisableChannelStatus[];
-}
-
-export interface RetryPolicy {
-  maxChannelRetries: number;
-  maxSingleChannelRetries: number;
-  retryDelayMs: number;
-  loadBalancerStrategy: string;
-  enabled: boolean;
-  autoDisableChannel: AutoDisableChannel;
-  emptyResponseDetection: boolean;
-  upstreamErrorPolicy: UpstreamErrorPolicy;
-}
-
 export interface UpstreamErrorPolicy {
   mode: string;
   customMessage: string;
@@ -351,22 +305,6 @@ export interface UpstreamErrorPolicy {
 export interface AutoDisableChannelStatusInput {
   status: number;
   times: number;
-}
-
-export interface AutoDisableChannelInput {
-  enabled?: boolean;
-  statuses?: AutoDisableChannelStatusInput[];
-}
-
-export interface RetryPolicyInput {
-  maxChannelRetries?: number;
-  maxSingleChannelRetries?: number;
-  retryDelayMs?: number;
-  loadBalancerStrategy?: string;
-  enabled?: boolean;
-  autoDisableChannel?: AutoDisableChannelInput;
-  emptyResponseDetection?: boolean;
-  upstreamErrorPolicy?: Partial<UpstreamErrorPolicy>;
 }
 
 export interface UpdateDefaultDataStorageInput {
@@ -524,41 +462,6 @@ export function usePreviewGcCleanup() {
     mutationFn: async (input: TriggerGcCleanupInput) => {
       const data = await graphqlRequest<{ previewGcCleanup: GcCleanupPreviewItem[] }>(PREVIEW_GC_CLEANUP_QUERY, { input });
       return data.previewGcCleanup;
-    },
-  });
-}
-
-export function useRetryPolicy() {
-  const { handleError } = useErrorHandler();
-
-  return useQuery({
-    queryKey: ['retryPolicy'],
-    queryFn: async () => {
-      try {
-        const data = await graphqlRequest<{ retryPolicy: RetryPolicy }>(RETRY_POLICY_QUERY);
-        return data.retryPolicy;
-      } catch (error) {
-        handleError(error, i18n.t('common.errors.internalServerError'));
-        throw error;
-      }
-    },
-  });
-}
-
-export function useUpdateRetryPolicy() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (input: RetryPolicyInput) => {
-      const data = await graphqlRequest<{ updateRetryPolicy: boolean }>(UPDATE_RETRY_POLICY_MUTATION, { input });
-      return data.updateRetryPolicy;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['retryPolicy'] });
-      toast.success(i18n.t('common.success.systemUpdated'));
-    },
-    onError: () => {
-      toast.error(i18n.t('common.errors.systemUpdateFailed'));
     },
   });
 }
@@ -1559,68 +1462,6 @@ export function useUpdatePassThroughSettings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['passThroughSettings'] });
-      toast.success(i18n.t('common.success.systemUpdated'));
-    },
-    onError: () => {
-      toast.error(i18n.t('common.errors.systemUpdateFailed'));
-    },
-  });
-}
-
-const QUOTA_ENFORCEMENT_SETTINGS_QUERY = `
-  query QuotaEnforcementSettings {
-    quotaEnforcementSettings {
-      enabled
-      mode
-    }
-  }
-`;
-
-const UPDATE_QUOTA_ENFORCEMENT_SETTINGS_MUTATION = `
-  mutation UpdateQuotaEnforcementSettings($input: UpdateQuotaEnforcementSettingsInput!) {
-    updateQuotaEnforcementSettings(input: $input)
-  }
-`;
-
-export type QuotaEnforcementMode = 'EXHAUSTED_ONLY' | 'DE_PRIORITIZE';
-
-export interface QuotaEnforcementSettings {
-  enabled: boolean;
-  mode: QuotaEnforcementMode;
-}
-
-export interface UpdateQuotaEnforcementSettingsInput {
-  enabled?: boolean;
-  mode?: QuotaEnforcementMode;
-}
-
-export function useQuotaEnforcementSettings() {
-  const { handleError } = useErrorHandler();
-
-  return useQuery({
-    queryKey: ['quotaEnforcementSettings'],
-    queryFn: async () => {
-      try {
-        const data = await graphqlRequest<{ quotaEnforcementSettings: QuotaEnforcementSettings }>(QUOTA_ENFORCEMENT_SETTINGS_QUERY);
-        return data.quotaEnforcementSettings;
-      } catch (error) {
-        handleError(error, i18n.t('common.errors.internalServerError'));
-        throw error;
-      }
-    },
-  });
-}
-
-export function useUpdateQuotaEnforcementSettings() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (input: UpdateQuotaEnforcementSettingsInput) => {
-      const data = await graphqlRequest<{ updateQuotaEnforcementSettings: boolean }>(UPDATE_QUOTA_ENFORCEMENT_SETTINGS_MUTATION, { input });
-      return data.updateQuotaEnforcementSettings;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['quotaEnforcementSettings'] });
       toast.success(i18n.t('common.success.systemUpdated'));
     },
     onError: () => {

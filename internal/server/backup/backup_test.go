@@ -502,42 +502,42 @@ func TestBackupService_Backup_IncludesUpstreamCredentialsAndRefs(t *testing.T) {
 	require.Equal(t, fingerprint, backupData.ChannelCredentialRefs[0].CredentialFingerprint)
 }
 
-func TestBackupService_Restore_LegacyChannelCredentialsMigratesToCredentialRefs(t *testing.T) {
+func TestBackupService_Restore_LegacyChannelCredentialsAreIgnored(t *testing.T) {
 	client, service, ctx := setupBackupTest(t)
 	defer client.Close()
 
-	backupData := BackupData{
-		Version: BackupVersion,
-		Channels: []*BackupChannel{
+	data := []byte(`{
+		"version":"` + BackupVersion + `",
+		"channels":[
 			{
-				Channel: ent.Channel{
-					ID:               10,
-					Name:             "Legacy Credential Channel",
-					Type:             channel.TypeOpenai,
-					BaseURL:          "https://api.openai.com/v1",
-					Status:           channel.StatusEnabled,
-					SupportedModels:  []string{"gpt-4"},
-					DefaultTestModel: "gpt-4",
-				},
-				Credentials: objects.ChannelCredentials{APIKey: "legacy-key"},
-			},
-		},
-	}
-	data, err := json.Marshal(backupData)
-	require.NoError(t, err)
+				"id":10,
+				"name":"Legacy Credential Channel",
+				"type":"openai",
+				"base_url":"https://api.openai.com/v1",
+				"status":"enabled",
+				"supported_models":["gpt-4"],
+				"default_test_model":"gpt-4",
+				"credentials":{"apiKey":"legacy-key"}
+			}
+		]
+	}`)
 
-	err = service.Restore(ctx, data, RestoreOptions{
+	err := service.Restore(ctx, data, RestoreOptions{
 		IncludeChannels:         true,
 		ChannelConflictStrategy: ConflictStrategyOverwrite,
 	})
 	require.NoError(t, err)
 
+	restoredChannel, err := client.Channel.Query().Where(channel.Name("Legacy Credential Channel")).Only(ctx)
+	require.NoError(t, err)
+	require.Empty(t, restoredChannel.Credentials.GetAllAPIKeys())
+
 	credentialCount, err := client.UpstreamCredential.Query().Count(ctx)
 	require.NoError(t, err)
 	refCount, err := client.ChannelCredentialRef.Query().Count(ctx)
 	require.NoError(t, err)
-	require.Equal(t, 1, credentialCount)
-	require.Equal(t, 1, refCount)
+	require.Zero(t, credentialCount)
+	require.Zero(t, refCount)
 }
 
 func TestBackupService_Restore_FirstClassCredentialRefs(t *testing.T) {
@@ -556,10 +556,10 @@ func TestBackupService_Restore_FirstClassCredentialRefs(t *testing.T) {
 					Type:             channel.TypeOpenai,
 					BaseURL:          "https://api.openai.com/v1",
 					Status:           channel.StatusEnabled,
+					Credentials:      objects.ChannelCredentials{},
 					SupportedModels:  []string{"gpt-4"},
 					DefaultTestModel: "gpt-4",
 				},
-				Credentials: objects.ChannelCredentials{},
 			},
 		},
 		CredentialQuotaScopes: []*BackupCredentialQuotaScope{

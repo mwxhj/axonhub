@@ -25,7 +25,6 @@ import (
 	"github.com/looplj/axonhub/internal/ent/project"
 	"github.com/looplj/axonhub/internal/ent/prompt"
 	"github.com/looplj/axonhub/internal/ent/promptprotectionrule"
-	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/request"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
 	"github.com/looplj/axonhub/internal/ent/role"
@@ -822,19 +821,6 @@ func (_q *ChannelQuery) collectField(ctx context.Context, oneNode bool, opCtx *g
 				query = pager.applyOrder(query)
 			}
 			_q.WithNamedCredentialRefs(alias, func(wq *ChannelCredentialRefQuery) {
-				*wq = *query
-			})
-
-		case "providerQuotaStatuses":
-			var (
-				alias = field.Alias
-				path  = append(path, alias)
-				query = (&ProviderQuotaStatusClient{config: _q.config}).Query()
-			)
-			if err := query.collectField(ctx, false, opCtx, field, path, mayAddCondition(satisfies, providerquotastatusImplementors)...); err != nil {
-				return err
-			}
-			_q.WithNamedProviderQuotaStatuses(alias, func(wq *ProviderQuotaStatusQuery) {
 				*wq = *query
 			})
 		case "createdAt":
@@ -1782,19 +1768,6 @@ func (_q *CredentialQuotaScopeQuery) collectField(ctx context.Context, oneNode b
 				*wq = *query
 			})
 
-		case "providerQuotaStatuses":
-			var (
-				alias = field.Alias
-				path  = append(path, alias)
-				query = (&ProviderQuotaStatusClient{config: _q.config}).Query()
-			)
-			if err := query.collectField(ctx, false, opCtx, field, path, mayAddCondition(satisfies, providerquotastatusImplementors)...); err != nil {
-				return err
-			}
-			_q.WithNamedProviderQuotaStatuses(alias, func(wq *ProviderQuotaStatusQuery) {
-				*wq = *query
-			})
-
 		case "executions":
 			var (
 				alias = field.Alias
@@ -1838,10 +1811,10 @@ func (_q *CredentialQuotaScopeQuery) collectField(ctx context.Context, oneNode b
 						}
 						for i := range nodes {
 							n := m[nodes[i].ID]
-							if nodes[i].Edges.totalCount[2] == nil {
-								nodes[i].Edges.totalCount[2] = make(map[string]int)
+							if nodes[i].Edges.totalCount[1] == nil {
+								nodes[i].Edges.totalCount[1] = make(map[string]int)
 							}
-							nodes[i].Edges.totalCount[2][alias] = n
+							nodes[i].Edges.totalCount[1][alias] = n
 						}
 						return nil
 					})
@@ -1849,10 +1822,10 @@ func (_q *CredentialQuotaScopeQuery) collectField(ctx context.Context, oneNode b
 					_q.loadTotal = append(_q.loadTotal, func(_ context.Context, nodes []*CredentialQuotaScope) error {
 						for i := range nodes {
 							n := len(nodes[i].Edges.Executions)
-							if nodes[i].Edges.totalCount[2] == nil {
-								nodes[i].Edges.totalCount[2] = make(map[string]int)
+							if nodes[i].Edges.totalCount[1] == nil {
+								nodes[i].Edges.totalCount[1] = make(map[string]int)
 							}
-							nodes[i].Edges.totalCount[2][alias] = n
+							nodes[i].Edges.totalCount[1][alias] = n
 						}
 						return nil
 					})
@@ -1927,10 +1900,10 @@ func (_q *CredentialQuotaScopeQuery) collectField(ctx context.Context, oneNode b
 						}
 						for i := range nodes {
 							n := m[nodes[i].ID]
-							if nodes[i].Edges.totalCount[3] == nil {
-								nodes[i].Edges.totalCount[3] = make(map[string]int)
+							if nodes[i].Edges.totalCount[2] == nil {
+								nodes[i].Edges.totalCount[2] = make(map[string]int)
 							}
-							nodes[i].Edges.totalCount[3][alias] = n
+							nodes[i].Edges.totalCount[2][alias] = n
 						}
 						return nil
 					})
@@ -1938,10 +1911,10 @@ func (_q *CredentialQuotaScopeQuery) collectField(ctx context.Context, oneNode b
 					_q.loadTotal = append(_q.loadTotal, func(_ context.Context, nodes []*CredentialQuotaScope) error {
 						for i := range nodes {
 							n := len(nodes[i].Edges.UsageLogs)
-							if nodes[i].Edges.totalCount[3] == nil {
-								nodes[i].Edges.totalCount[3] = make(map[string]int)
+							if nodes[i].Edges.totalCount[2] == nil {
+								nodes[i].Edges.totalCount[2] = make(map[string]int)
 							}
-							nodes[i].Edges.totalCount[3][alias] = n
+							nodes[i].Edges.totalCount[2][alias] = n
 						}
 						return nil
 					})
@@ -4059,210 +4032,6 @@ func newPromptProtectionRulePaginateArgs(rv map[string]any) *promptprotectionrul
 }
 
 // CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
-func (_q *ProviderQuotaStatusQuery) CollectFields(ctx context.Context, satisfies ...string) (*ProviderQuotaStatusQuery, error) {
-	fc := graphql.GetFieldContext(ctx)
-	if fc == nil {
-		return _q, nil
-	}
-	if err := _q.collectField(ctx, false, graphql.GetOperationContext(ctx), fc.Field, nil, satisfies...); err != nil {
-		return nil, err
-	}
-	return _q, nil
-}
-
-func (_q *ProviderQuotaStatusQuery) collectField(ctx context.Context, oneNode bool, opCtx *graphql.OperationContext, collected graphql.CollectedField, path []string, satisfies ...string) error {
-	path = append([]string(nil), path...)
-	var (
-		unknownSeen    bool
-		fieldSeen      = make(map[string]struct{}, len(providerquotastatus.Columns))
-		selectedFields = []string{providerquotastatus.FieldID}
-	)
-	for _, field := range graphql.CollectFields(opCtx, collected.Selections, satisfies) {
-		switch field.Name {
-
-		case "channel":
-			var (
-				alias = field.Alias
-				path  = append(path, alias)
-				query = (&ChannelClient{config: _q.config}).Query()
-			)
-			if err := query.collectField(ctx, oneNode, opCtx, field, path, mayAddCondition(satisfies, channelImplementors)...); err != nil {
-				return err
-			}
-			_q.withChannel = query
-			if _, ok := fieldSeen[providerquotastatus.FieldChannelID]; !ok {
-				selectedFields = append(selectedFields, providerquotastatus.FieldChannelID)
-				fieldSeen[providerquotastatus.FieldChannelID] = struct{}{}
-			}
-
-		case "credential":
-			var (
-				alias = field.Alias
-				path  = append(path, alias)
-				query = (&UpstreamCredentialClient{config: _q.config}).Query()
-			)
-			if err := query.collectField(ctx, oneNode, opCtx, field, path, mayAddCondition(satisfies, upstreamcredentialImplementors)...); err != nil {
-				return err
-			}
-			_q.withCredential = query
-			if _, ok := fieldSeen[providerquotastatus.FieldCredentialID]; !ok {
-				selectedFields = append(selectedFields, providerquotastatus.FieldCredentialID)
-				fieldSeen[providerquotastatus.FieldCredentialID] = struct{}{}
-			}
-
-		case "quotaScope":
-			var (
-				alias = field.Alias
-				path  = append(path, alias)
-				query = (&CredentialQuotaScopeClient{config: _q.config}).Query()
-			)
-			if err := query.collectField(ctx, oneNode, opCtx, field, path, mayAddCondition(satisfies, credentialquotascopeImplementors)...); err != nil {
-				return err
-			}
-			_q.withQuotaScope = query
-			if _, ok := fieldSeen[providerquotastatus.FieldQuotaScopeID]; !ok {
-				selectedFields = append(selectedFields, providerquotastatus.FieldQuotaScopeID)
-				fieldSeen[providerquotastatus.FieldQuotaScopeID] = struct{}{}
-			}
-		case "createdAt":
-			if _, ok := fieldSeen[providerquotastatus.FieldCreatedAt]; !ok {
-				selectedFields = append(selectedFields, providerquotastatus.FieldCreatedAt)
-				fieldSeen[providerquotastatus.FieldCreatedAt] = struct{}{}
-			}
-		case "updatedAt":
-			if _, ok := fieldSeen[providerquotastatus.FieldUpdatedAt]; !ok {
-				selectedFields = append(selectedFields, providerquotastatus.FieldUpdatedAt)
-				fieldSeen[providerquotastatus.FieldUpdatedAt] = struct{}{}
-			}
-		case "channelID":
-			if _, ok := fieldSeen[providerquotastatus.FieldChannelID]; !ok {
-				selectedFields = append(selectedFields, providerquotastatus.FieldChannelID)
-				fieldSeen[providerquotastatus.FieldChannelID] = struct{}{}
-			}
-		case "scopeKey":
-			if _, ok := fieldSeen[providerquotastatus.FieldScopeKey]; !ok {
-				selectedFields = append(selectedFields, providerquotastatus.FieldScopeKey)
-				fieldSeen[providerquotastatus.FieldScopeKey] = struct{}{}
-			}
-		case "credentialID":
-			if _, ok := fieldSeen[providerquotastatus.FieldCredentialID]; !ok {
-				selectedFields = append(selectedFields, providerquotastatus.FieldCredentialID)
-				fieldSeen[providerquotastatus.FieldCredentialID] = struct{}{}
-			}
-		case "credentialFingerprint":
-			if _, ok := fieldSeen[providerquotastatus.FieldCredentialFingerprint]; !ok {
-				selectedFields = append(selectedFields, providerquotastatus.FieldCredentialFingerprint)
-				fieldSeen[providerquotastatus.FieldCredentialFingerprint] = struct{}{}
-			}
-		case "secretFingerprint":
-			if _, ok := fieldSeen[providerquotastatus.FieldSecretFingerprint]; !ok {
-				selectedFields = append(selectedFields, providerquotastatus.FieldSecretFingerprint)
-				fieldSeen[providerquotastatus.FieldSecretFingerprint] = struct{}{}
-			}
-		case "resourceScopeKey":
-			if _, ok := fieldSeen[providerquotastatus.FieldResourceScopeKey]; !ok {
-				selectedFields = append(selectedFields, providerquotastatus.FieldResourceScopeKey)
-				fieldSeen[providerquotastatus.FieldResourceScopeKey] = struct{}{}
-			}
-		case "quotaScopeID":
-			if _, ok := fieldSeen[providerquotastatus.FieldQuotaScopeID]; !ok {
-				selectedFields = append(selectedFields, providerquotastatus.FieldQuotaScopeID)
-				fieldSeen[providerquotastatus.FieldQuotaScopeID] = struct{}{}
-			}
-		case "providerType":
-			if _, ok := fieldSeen[providerquotastatus.FieldProviderType]; !ok {
-				selectedFields = append(selectedFields, providerquotastatus.FieldProviderType)
-				fieldSeen[providerquotastatus.FieldProviderType] = struct{}{}
-			}
-		case "status":
-			if _, ok := fieldSeen[providerquotastatus.FieldStatus]; !ok {
-				selectedFields = append(selectedFields, providerquotastatus.FieldStatus)
-				fieldSeen[providerquotastatus.FieldStatus] = struct{}{}
-			}
-		case "quotaData":
-			if _, ok := fieldSeen[providerquotastatus.FieldQuotaData]; !ok {
-				selectedFields = append(selectedFields, providerquotastatus.FieldQuotaData)
-				fieldSeen[providerquotastatus.FieldQuotaData] = struct{}{}
-			}
-		case "nextResetAt":
-			if _, ok := fieldSeen[providerquotastatus.FieldNextResetAt]; !ok {
-				selectedFields = append(selectedFields, providerquotastatus.FieldNextResetAt)
-				fieldSeen[providerquotastatus.FieldNextResetAt] = struct{}{}
-			}
-		case "ready":
-			if _, ok := fieldSeen[providerquotastatus.FieldReady]; !ok {
-				selectedFields = append(selectedFields, providerquotastatus.FieldReady)
-				fieldSeen[providerquotastatus.FieldReady] = struct{}{}
-			}
-		case "nextCheckAt":
-			if _, ok := fieldSeen[providerquotastatus.FieldNextCheckAt]; !ok {
-				selectedFields = append(selectedFields, providerquotastatus.FieldNextCheckAt)
-				fieldSeen[providerquotastatus.FieldNextCheckAt] = struct{}{}
-			}
-		case "id":
-		case "__typename":
-		default:
-			unknownSeen = true
-		}
-	}
-	if !unknownSeen {
-		_q.Select(selectedFields...)
-	}
-	return nil
-}
-
-type providerquotastatusPaginateArgs struct {
-	first, last   *int
-	after, before *Cursor
-	opts          []ProviderQuotaStatusPaginateOption
-}
-
-func newProviderQuotaStatusPaginateArgs(rv map[string]any) *providerquotastatusPaginateArgs {
-	args := &providerquotastatusPaginateArgs{}
-	if rv == nil {
-		return args
-	}
-	if v := rv[firstField]; v != nil {
-		args.first = v.(*int)
-	}
-	if v := rv[lastField]; v != nil {
-		args.last = v.(*int)
-	}
-	if v := rv[afterField]; v != nil {
-		args.after = v.(*Cursor)
-	}
-	if v := rv[beforeField]; v != nil {
-		args.before = v.(*Cursor)
-	}
-	if v, ok := rv[orderByField]; ok {
-		switch v := v.(type) {
-		case map[string]any:
-			var (
-				err1, err2 error
-				order      = &ProviderQuotaStatusOrder{Field: &ProviderQuotaStatusOrderField{}, Direction: entgql.OrderDirectionAsc}
-			)
-			if d, ok := v[directionField]; ok {
-				err1 = order.Direction.UnmarshalGQL(d)
-			}
-			if f, ok := v[fieldField]; ok {
-				err2 = order.Field.UnmarshalGQL(f)
-			}
-			if err1 == nil && err2 == nil {
-				args.opts = append(args.opts, WithProviderQuotaStatusOrder(order))
-			}
-		case *ProviderQuotaStatusOrder:
-			if v != nil {
-				args.opts = append(args.opts, WithProviderQuotaStatusOrder(v))
-			}
-		}
-	}
-	if v, ok := rv[whereField].(*ProviderQuotaStatusWhereInput); ok {
-		args.opts = append(args.opts, WithProviderQuotaStatusFilter(v.Filter))
-	}
-	return args
-}
-
-// CollectFields tells the query-builder to eagerly load connected nodes by resolver context.
 func (_q *RequestQuery) CollectFields(ctx context.Context, satisfies ...string) (*RequestQuery, error) {
 	fc := graphql.GetFieldContext(ctx)
 	if fc == nil {
@@ -4870,21 +4639,6 @@ func (_q *RequestExecutionQuery) collectField(ctx context.Context, oneNode bool,
 				selectedFields = append(selectedFields, requestexecution.FieldModelID)
 				fieldSeen[requestexecution.FieldModelID] = struct{}{}
 			}
-		case "credentialFingerprint":
-			if _, ok := fieldSeen[requestexecution.FieldCredentialFingerprint]; !ok {
-				selectedFields = append(selectedFields, requestexecution.FieldCredentialFingerprint)
-				fieldSeen[requestexecution.FieldCredentialFingerprint] = struct{}{}
-			}
-		case "secretFingerprint":
-			if _, ok := fieldSeen[requestexecution.FieldSecretFingerprint]; !ok {
-				selectedFields = append(selectedFields, requestexecution.FieldSecretFingerprint)
-				fieldSeen[requestexecution.FieldSecretFingerprint] = struct{}{}
-			}
-		case "resourceScopeKey":
-			if _, ok := fieldSeen[requestexecution.FieldResourceScopeKey]; !ok {
-				selectedFields = append(selectedFields, requestexecution.FieldResourceScopeKey)
-				fieldSeen[requestexecution.FieldResourceScopeKey] = struct{}{}
-			}
 		case "quotaScopeID":
 			if _, ok := fieldSeen[requestexecution.FieldQuotaScopeID]; !ok {
 				selectedFields = append(selectedFields, requestexecution.FieldQuotaScopeID)
@@ -4904,16 +4658,6 @@ func (_q *RequestExecutionQuery) collectField(ctx context.Context, oneNode bool,
 			if _, ok := fieldSeen[requestexecution.FieldCredentialNameSnapshot]; !ok {
 				selectedFields = append(selectedFields, requestexecution.FieldCredentialNameSnapshot)
 				fieldSeen[requestexecution.FieldCredentialNameSnapshot] = struct{}{}
-			}
-		case "credentialKeyHint":
-			if _, ok := fieldSeen[requestexecution.FieldCredentialKeyHint]; !ok {
-				selectedFields = append(selectedFields, requestexecution.FieldCredentialKeyHint)
-				fieldSeen[requestexecution.FieldCredentialKeyHint] = struct{}{}
-			}
-		case "credentialSource":
-			if _, ok := fieldSeen[requestexecution.FieldCredentialSource]; !ok {
-				selectedFields = append(selectedFields, requestexecution.FieldCredentialSource)
-				fieldSeen[requestexecution.FieldCredentialSource] = struct{}{}
 			}
 		case "credentialQuotaStatusSnapshot":
 			if _, ok := fieldSeen[requestexecution.FieldCredentialQuotaStatusSnapshot]; !ok {
@@ -6183,19 +5927,6 @@ func (_q *UpstreamCredentialQuery) collectField(ctx context.Context, oneNode boo
 				*wq = *query
 			})
 
-		case "providerQuotaStatuses":
-			var (
-				alias = field.Alias
-				path  = append(path, alias)
-				query = (&ProviderQuotaStatusClient{config: _q.config}).Query()
-			)
-			if err := query.collectField(ctx, false, opCtx, field, path, mayAddCondition(satisfies, providerquotastatusImplementors)...); err != nil {
-				return err
-			}
-			_q.WithNamedProviderQuotaStatuses(alias, func(wq *ProviderQuotaStatusQuery) {
-				*wq = *query
-			})
-
 		case "quotaScope":
 			var (
 				alias = field.Alias
@@ -6225,35 +5956,15 @@ func (_q *UpstreamCredentialQuery) collectField(ctx context.Context, oneNode boo
 				selectedFields = append(selectedFields, upstreamcredential.FieldName)
 				fieldSeen[upstreamcredential.FieldName] = struct{}{}
 			}
-		case "keyHint":
-			if _, ok := fieldSeen[upstreamcredential.FieldKeyHint]; !ok {
-				selectedFields = append(selectedFields, upstreamcredential.FieldKeyHint)
-				fieldSeen[upstreamcredential.FieldKeyHint] = struct{}{}
-			}
 		case "quotaScopeID":
 			if _, ok := fieldSeen[upstreamcredential.FieldQuotaScopeID]; !ok {
 				selectedFields = append(selectedFields, upstreamcredential.FieldQuotaScopeID)
 				fieldSeen[upstreamcredential.FieldQuotaScopeID] = struct{}{}
 			}
-		case "fingerprint":
-			if _, ok := fieldSeen[upstreamcredential.FieldFingerprint]; !ok {
-				selectedFields = append(selectedFields, upstreamcredential.FieldFingerprint)
-				fieldSeen[upstreamcredential.FieldFingerprint] = struct{}{}
-			}
-		case "secretFingerprint":
-			if _, ok := fieldSeen[upstreamcredential.FieldSecretFingerprint]; !ok {
-				selectedFields = append(selectedFields, upstreamcredential.FieldSecretFingerprint)
-				fieldSeen[upstreamcredential.FieldSecretFingerprint] = struct{}{}
-			}
 		case "status":
 			if _, ok := fieldSeen[upstreamcredential.FieldStatus]; !ok {
 				selectedFields = append(selectedFields, upstreamcredential.FieldStatus)
 				fieldSeen[upstreamcredential.FieldStatus] = struct{}{}
-			}
-		case "quotaStatus":
-			if _, ok := fieldSeen[upstreamcredential.FieldQuotaStatus]; !ok {
-				selectedFields = append(selectedFields, upstreamcredential.FieldQuotaStatus)
-				fieldSeen[upstreamcredential.FieldQuotaStatus] = struct{}{}
 			}
 		case "lastError":
 			if _, ok := fieldSeen[upstreamcredential.FieldLastError]; !ok {
@@ -6464,21 +6175,6 @@ func (_q *UsageLogQuery) collectField(ctx context.Context, oneNode bool, opCtx *
 				selectedFields = append(selectedFields, usagelog.FieldModelID)
 				fieldSeen[usagelog.FieldModelID] = struct{}{}
 			}
-		case "credentialFingerprint":
-			if _, ok := fieldSeen[usagelog.FieldCredentialFingerprint]; !ok {
-				selectedFields = append(selectedFields, usagelog.FieldCredentialFingerprint)
-				fieldSeen[usagelog.FieldCredentialFingerprint] = struct{}{}
-			}
-		case "secretFingerprint":
-			if _, ok := fieldSeen[usagelog.FieldSecretFingerprint]; !ok {
-				selectedFields = append(selectedFields, usagelog.FieldSecretFingerprint)
-				fieldSeen[usagelog.FieldSecretFingerprint] = struct{}{}
-			}
-		case "resourceScopeKey":
-			if _, ok := fieldSeen[usagelog.FieldResourceScopeKey]; !ok {
-				selectedFields = append(selectedFields, usagelog.FieldResourceScopeKey)
-				fieldSeen[usagelog.FieldResourceScopeKey] = struct{}{}
-			}
 		case "quotaScopeID":
 			if _, ok := fieldSeen[usagelog.FieldQuotaScopeID]; !ok {
 				selectedFields = append(selectedFields, usagelog.FieldQuotaScopeID)
@@ -6498,16 +6194,6 @@ func (_q *UsageLogQuery) collectField(ctx context.Context, oneNode bool, opCtx *
 			if _, ok := fieldSeen[usagelog.FieldCredentialNameSnapshot]; !ok {
 				selectedFields = append(selectedFields, usagelog.FieldCredentialNameSnapshot)
 				fieldSeen[usagelog.FieldCredentialNameSnapshot] = struct{}{}
-			}
-		case "credentialKeyHint":
-			if _, ok := fieldSeen[usagelog.FieldCredentialKeyHint]; !ok {
-				selectedFields = append(selectedFields, usagelog.FieldCredentialKeyHint)
-				fieldSeen[usagelog.FieldCredentialKeyHint] = struct{}{}
-			}
-		case "credentialSource":
-			if _, ok := fieldSeen[usagelog.FieldCredentialSource]; !ok {
-				selectedFields = append(selectedFields, usagelog.FieldCredentialSource)
-				fieldSeen[usagelog.FieldCredentialSource] = struct{}{}
 			}
 		case "credentialQuotaStatusSnapshot":
 			if _, ok := fieldSeen[usagelog.FieldCredentialQuotaStatusSnapshot]; !ok {

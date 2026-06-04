@@ -72,57 +72,6 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               },
             },
             {
-              element: '[data-value="retry"]',
-              popover: {
-                title: t('system.onboarding.steps.retryPolicy.title'),
-                description: t('system.onboarding.steps.retryPolicy.description'),
-                side: 'bottom',
-                align: 'center',
-              },
-              onHighlighted: () => {
-                // Switch to retry tab using URL navigation for more reliable tab switching
-                setTimeout(() => {
-                  navigate({ to: '/system', search: { tab: 'retry' } });
-                }, 300);
-              },
-            },
-            {
-              element: '#retry-enabled-switch',
-              popover: {
-                title: t('system.onboarding.steps.retryEnabled.title'),
-                description: t('system.onboarding.steps.retryEnabled.description'),
-                side: 'right',
-                align: 'start',
-              },
-            },
-            {
-              element: '#retry-max-retries',
-              popover: {
-                title: t('system.onboarding.steps.retryMaxRetries.title'),
-                description: t('system.onboarding.steps.retryMaxRetries.description'),
-                side: 'right',
-                align: 'start',
-              },
-            },
-            {
-              element: '#max-single-channel-retries',
-              popover: {
-                title: t('system.onboarding.steps.retrySingleChannel.title'),
-                description: t('system.onboarding.steps.retrySingleChannel.description'),
-                side: 'right',
-                align: 'start',
-              },
-            },
-            {
-              element: '#retry-delay',
-              popover: {
-                title: t('system.onboarding.steps.retryDelay.title'),
-                description: t('system.onboarding.steps.retryDelay.description'),
-                side: 'right',
-                align: 'start',
-              },
-            },
-            {
               popover: {
                 title: t('system.onboarding.steps.autoDisableIntro.title'),
                 description: t('system.onboarding.steps.autoDisableIntro.description'),

@@ -9,7 +9,6 @@ import (
 
 	"github.com/looplj/axonhub/internal/contexts"
 	"github.com/looplj/axonhub/internal/log"
-	"github.com/looplj/axonhub/internal/objects"
 )
 
 // traceStickyLRUSize is the default LRU cache size for trace-to-key mappings.
@@ -41,22 +40,10 @@ func NewTraceStickyKeyProvider(channel *Channel) *TraceStickyKeyProvider {
 
 func (p *TraceStickyKeyProvider) Get(ctx context.Context) string {
 	enabled := p.enabledAPIKeyCredentialViews()
-	var constrained bool
-	enabled, constrained = filterAllowedCredentialViews(ctx, enabled)
-	var excluded bool
-	enabled, excluded = filterExcludedCredentialViews(ctx, enabled)
+	enabled, _ = filterAllowedCredentialViews(ctx, enabled)
+	enabled, _ = filterExcludedCredentialViews(ctx, enabled)
 	if len(enabled) == 0 {
-		if constrained || excluded || p.hasCredentialViewSource() {
-			return ""
-		}
-		allKeys := p.channel.Credentials.GetAllAPIKeys()
-		if len(allKeys) == 0 {
-			return ""
-		}
-
-		selectedKey := allKeys[0]
-		p.storeSelectedLegacyKey(ctx, selectedKey)
-		return selectedKey
+		return ""
 	}
 
 	if len(enabled) == 1 {
@@ -107,10 +94,6 @@ func (p *TraceStickyKeyProvider) enabledAPIKeyCredentialViews() []ChannelCredent
 
 	if len(p.channel.cachedCredentialViews) > 0 {
 		return enabledAPIKeyCredentialViews(p.channel.cachedCredentialViews)
-	}
-
-	if p.channel.cachedEnabledAPIKeys != nil {
-		return legacyCredentialViewsForAPIKeys(p.channel, p.channel.cachedEnabledAPIKeys)
 	}
 
 	return enabledAPIKeyCredentialViews(p.channel.enabledCredentialViews())
@@ -300,20 +283,6 @@ func (p *TraceStickyKeyProvider) storeSelectedCredential(ctx context.Context, se
 	contexts.WithChannelCredentialIdentity(ctx, selected.SecretFingerprint, selected.ResourceScopeKey)
 	contexts.WithChannelCredentialMetadata(ctx, selected.Name, selected.KeyHint, selected.Source, selected.QuotaStatus)
 	contexts.WithChannelCredentialQuotaScope(ctx, selected.QuotaScopeID, selected.QuotaScopeName, selected.QuotaScopeStatus)
-}
-
-func (p *TraceStickyKeyProvider) storeSelectedLegacyKey(ctx context.Context, selectedKey string) {
-	secret := objects.UpstreamCredentialSecretFromAPIKey(selectedKey)
-	secretFingerprint := CredentialSecretFingerprintForSecret(channelCredentialAuthKindAPIKey, secret)
-	contexts.WithChannelCredential(ctx, 0, selectedKey, p.channel.CredentialFingerprintForAPIKey(selectedKey))
-	contexts.WithChannelCredentialIdentity(ctx, secretFingerprint, ChannelCredentialResourceScopeKey(p.channel.Channel, secretFingerprint))
-	contexts.WithChannelCredentialMetadata(
-		ctx,
-		"",
-		CredentialKeyHintForSecret(channelCredentialAuthKindAPIKey, objects.UpstreamCredentialSecretFromAPIKey(selectedKey)),
-		ChannelCredentialSourceLegacy,
-		"",
-	)
 }
 
 // rendezvousSelect picks a key using Highest Random Weight (Rendezvous) hashing.

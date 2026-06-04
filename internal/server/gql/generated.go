@@ -27,7 +27,6 @@ import (
 	"github.com/looplj/axonhub/internal/ent/project"
 	"github.com/looplj/axonhub/internal/ent/prompt"
 	"github.com/looplj/axonhub/internal/ent/promptprotectionrule"
-	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/request"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
 	"github.com/looplj/axonhub/internal/ent/role"
@@ -83,7 +82,6 @@ type ResolverRoot interface {
 	Project() ProjectResolver
 	Prompt() PromptResolver
 	PromptProtectionRule() PromptProtectionRuleResolver
-	ProviderQuotaStatus() ProviderQuotaStatusResolver
 	Query() QueryResolver
 	Request() RequestResolver
 	RequestExecution() RequestExecutionResolver
@@ -136,7 +134,6 @@ type ComplexityRoot struct {
 		ChannelIDs           func(childComplexity int) int
 		ChannelTags          func(childComplexity int) int
 		ChannelTagsMatchMode func(childComplexity int) int
-		LoadBalanceStrategy  func(childComplexity int) int
 		ModelIDs             func(childComplexity int) int
 		ModelMappings        func(childComplexity int) int
 		Name                 func(childComplexity int) int
@@ -239,16 +236,6 @@ type ComplexityRoot struct {
 		RetentionDays      func(childComplexity int) int
 	}
 
-	AutoDisableAPIKey struct {
-		Enabled  func(childComplexity int) int
-		Statuses func(childComplexity int) int
-	}
-
-	AutoDisableAPIKeyStatus struct {
-		Status func(childComplexity int) int
-		Times  func(childComplexity int) int
-	}
-
 	AutoDisableChannel struct {
 		Enabled  func(childComplexity int) int
 		Statuses func(childComplexity int) int
@@ -303,10 +290,8 @@ type ComplexityRoot struct {
 		ChannelProbes           func(childComplexity int) int
 		CreatedAt               func(childComplexity int) int
 		CredentialRefs          func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.ChannelCredentialRefOrder, where *ent.ChannelCredentialRefWhereInput) int
-		Credentials             func(childComplexity int) int
 		DefaultEndpoints        func(childComplexity int) int
 		DefaultTestModel        func(childComplexity int) int
-		DisabledAPIKeys         func(childComplexity int) int
 		Endpoints               func(childComplexity int) int
 		ErrorMessage            func(childComplexity int) int
 		Executions              func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.RequestExecutionOrder, where *ent.RequestExecutionWhereInput) int
@@ -316,8 +301,6 @@ type ComplexityRoot struct {
 		Name                    func(childComplexity int) int
 		OrderingWeight          func(childComplexity int) int
 		Policies                func(childComplexity int) int
-		ProviderQuotaStatus     func(childComplexity int) int
-		ProviderQuotaStatuses   func(childComplexity int) int
 		Remark                  func(childComplexity int) int
 		Requests                func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.RequestOrder, where *ent.RequestWhereInput) int
 		Settings                func(childComplexity int) int
@@ -355,14 +338,6 @@ type ComplexityRoot struct {
 	ChannelCredentialRefEdge struct {
 		Cursor func(childComplexity int) int
 		Node   func(childComplexity int) int
-	}
-
-	ChannelCredentials struct {
-		APIKey  func(childComplexity int) int
-		APIKeys func(childComplexity int) int
-		Azure   func(childComplexity int) int
-		GCP     func(childComplexity int) int
-		OAuth   func(childComplexity int) int
 	}
 
 	ChannelEdge struct {
@@ -621,7 +596,6 @@ type ComplexityRoot struct {
 		Name                    func(childComplexity int) int
 		OverLimitAction         func(childComplexity int) int
 		PauseUntil              func(childComplexity int) int
-		ProviderQuotaStatuses   func(childComplexity int) int
 		Remark                  func(childComplexity int) int
 		ResetAt                 func(childComplexity int) int
 		ResetPolicy             func(childComplexity int) int
@@ -693,21 +667,9 @@ type ComplexityRoot struct {
 		WebDAV    func(childComplexity int) int
 	}
 
-	DeleteDisabledAPIKeysPayload struct {
-		Message func(childComplexity int) int
-		Success func(childComplexity int) int
-	}
-
 	DeveloperModelSettings struct {
 		Associations func(childComplexity int) int
 		Developer    func(childComplexity int) int
-	}
-
-	DisabledAPIKey struct {
-		DisabledAt func(childComplexity int) int
-		ErrorCode  func(childComplexity int) int
-		Key        func(childComplexity int) int
-		Reason     func(childComplexity int) int
 	}
 
 	ExcludeAssociation struct {
@@ -789,13 +751,6 @@ type ComplexityRoot struct {
 		Success func(childComplexity int) int
 		Token   func(childComplexity int) int
 		User    func(childComplexity int) int
-	}
-
-	MigrateLegacyCredentialsPayload struct {
-		CreatedCredentials func(childComplexity int) int
-		CreatedRefs        func(childComplexity int) int
-		MigratedChannels   func(childComplexity int) int
-		SkippedChannels    func(childComplexity int) int
 	}
 
 	Model struct {
@@ -964,7 +919,6 @@ type ComplexityRoot struct {
 		BulkImportChannels                   func(childComplexity int, input BulkImportChannelsInput) int
 		BulkRecoverChannels                  func(childComplexity int, ids []*objects.GUID) int
 		BulkUpdateChannelOrdering            func(childComplexity int, input BulkUpdateChannelOrderingInput) int
-		CheckProviderQuotas                  func(childComplexity int) int
 		ClearCache                           func(childComplexity int, input ClearCacheInput) int
 		ClearChannelOverrideTemplates        func(childComplexity int, input ClearChannelOverrideTemplatesInput) int
 		CompleteAutoDisableChannelOnboarding func(childComplexity int, input CompleteAutoDisableChannelOnboardingInput) int
@@ -986,7 +940,6 @@ type ComplexityRoot struct {
 		DeleteAPIKeyProfileTemplate          func(childComplexity int, id objects.GUID) int
 		DeleteChannel                        func(childComplexity int, id objects.GUID) int
 		DeleteChannelOverrideTemplate        func(childComplexity int, id objects.GUID) int
-		DeleteDisabledChannelAPIKeys         func(childComplexity int, channelID objects.GUID, keys []string) int
 		DeleteModel                          func(childComplexity int, id objects.GUID) int
 		DeleteProject                        func(childComplexity int, id objects.GUID) int
 		DeletePrompt                         func(childComplexity int, id objects.GUID) int
@@ -996,12 +949,7 @@ type ComplexityRoot struct {
 		DeleteUpstreamCredential             func(childComplexity int, id objects.GUID) int
 		DeleteUser                           func(childComplexity int, id objects.GUID) int
 		DetachCredentialFromChannel          func(childComplexity int, channelID objects.GUID, credentialID objects.GUID) int
-		DisableChannelAPIKey                 func(childComplexity int, channelID objects.GUID, key string) int
-		EnableAllChannelAPIKeys              func(childComplexity int, channelID objects.GUID) int
-		EnableChannelAPIKey                  func(childComplexity int, channelID objects.GUID, key string) int
-		EnableSelectedChannelAPIKeys         func(childComplexity int, channelID objects.GUID, keys []string) int
 		LoadAPIKeyProfileTemplate            func(childComplexity int, input LoadAPIKeyProfileTemplateInput) int
-		MigrateLegacyChannelCredentials      func(childComplexity int) int
 		PreviewPromptProtectionRule          func(childComplexity int, input PromptProtectionRulePreviewInput) int
 		RemoveUserFromProject                func(childComplexity int, input RemoveUserFromProjectInput) int
 		Restore                              func(childComplexity int, file graphql.Upload, input backup.RestoreOptions) int
@@ -1012,7 +960,6 @@ type ComplexityRoot struct {
 		SaveProxyPreset                      func(childComplexity int, input biz.ProxyPreset) int
 		SyncChannelModels                    func(childComplexity int, channelID objects.GUID, pattern *string) int
 		TestChannel                          func(childComplexity int, input TestChannelInput) int
-		TestChannelAPIKeys                   func(childComplexity int, channelID objects.GUID, modelID *string) int
 		TriggerAutoBackup                    func(childComplexity int) int
 		TriggerGcCleanup                     func(childComplexity int, input gc.TriggerGcCleanupInput) int
 		UnlinkOIDCIdentity                   func(childComplexity int, id objects.GUID) int
@@ -1042,8 +989,6 @@ type ComplexityRoot struct {
 		UpdatePromptProtectionRule           func(childComplexity int, id objects.GUID, input ent.UpdatePromptProtectionRuleInput) int
 		UpdatePromptProtectionRuleStatus     func(childComplexity int, id objects.GUID, status promptprotectionrule.Status) int
 		UpdatePromptStatus                   func(childComplexity int, id objects.GUID, status prompt.Status) int
-		UpdateQuotaEnforcementSettings       func(childComplexity int, input UpdateQuotaEnforcementSettingsInput) int
-		UpdateRetryPolicy                    func(childComplexity int, input biz.RetryPolicy) int
 		UpdateRole                           func(childComplexity int, id objects.GUID, input ent.UpdateRoleInput) int
 		UpdateStoragePolicy                  func(childComplexity int, input biz.StoragePolicy) int
 		UpdateSystemChannelSettings          func(childComplexity int, input biz.SystemChannelSettings) int
@@ -1267,28 +1212,6 @@ type ComplexityRoot struct {
 		VariantCode func(childComplexity int) int
 	}
 
-	ProviderQuotaStatus struct {
-		Channel               func(childComplexity int) int
-		ChannelID             func(childComplexity int) int
-		CreatedAt             func(childComplexity int) int
-		Credential            func(childComplexity int) int
-		CredentialFingerprint func(childComplexity int) int
-		CredentialID          func(childComplexity int) int
-		ID                    func(childComplexity int) int
-		NextCheckAt           func(childComplexity int) int
-		NextResetAt           func(childComplexity int) int
-		ProviderType          func(childComplexity int) int
-		QuotaData             func(childComplexity int) int
-		QuotaScope            func(childComplexity int) int
-		QuotaScopeID          func(childComplexity int) int
-		Ready                 func(childComplexity int) int
-		ResourceScopeKey      func(childComplexity int) int
-		ScopeKey              func(childComplexity int) int
-		SecretFingerprint     func(childComplexity int) int
-		Status                func(childComplexity int) int
-		UpdatedAt             func(childComplexity int) int
-	}
-
 	ProxyConfig struct {
 		Password func(childComplexity int) int
 		Type     func(childComplexity int) int
@@ -1351,13 +1274,11 @@ type ComplexityRoot struct {
 		QueryModelChannelConnections func(childComplexity int, associations []*objects.ModelAssociation) int
 		QueryModels                  func(childComplexity int, input QueryModelsInput) int
 		QueryUnassociatedChannels    func(childComplexity int) int
-		QuotaEnforcementSettings     func(childComplexity int) int
 		RequestStats                 func(childComplexity int) int
 		RequestStatsByAPIKey         func(childComplexity int, timeWindow *string) int
 		RequestStatsByChannel        func(childComplexity int, timeWindow *string) int
 		RequestStatsByModel          func(childComplexity int, timeWindow *string) int
 		Requests                     func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.RequestOrder, where *ent.RequestWhereInput) int
-		RetryPolicy                  func(childComplexity int) int
 		Roles                        func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.RoleOrder, where *ent.RoleWhereInput) int
 		StoragePolicy                func(childComplexity int) int
 		SystemChannelSettings        func(childComplexity int) int
@@ -1379,11 +1300,6 @@ type ComplexityRoot struct {
 		Users                        func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.UserOrder, where *ent.UserWhereInput) int
 		VideoStorageSettings         func(childComplexity int) int
 		WebhookNotifierConfig        func(childComplexity int) int
-	}
-
-	QuotaEnforcementSettings struct {
-		Enabled func(childComplexity int) int
-		Mode    func(childComplexity int) int
 	}
 
 	RegexAssociation struct {
@@ -1444,12 +1360,9 @@ type ComplexityRoot struct {
 		ChannelID                     func(childComplexity int) int
 		CreatedAt                     func(childComplexity int) int
 		Credential                    func(childComplexity int) int
-		CredentialFingerprint         func(childComplexity int) int
 		CredentialID                  func(childComplexity int) int
-		CredentialKeyHint             func(childComplexity int) int
 		CredentialNameSnapshot        func(childComplexity int) int
 		CredentialQuotaStatusSnapshot func(childComplexity int) int
-		CredentialSource              func(childComplexity int) int
 		DataStorage                   func(childComplexity int) int
 		DataStorageID                 func(childComplexity int) int
 		ErrorMessage                  func(childComplexity int) int
@@ -1469,11 +1382,9 @@ type ComplexityRoot struct {
 		RequestBody                   func(childComplexity int) int
 		RequestHeaders                func(childComplexity int) int
 		RequestID                     func(childComplexity int) int
-		ResourceScopeKey              func(childComplexity int) int
 		ResponseBody                  func(childComplexity int) int
 		ResponseChunks                func(childComplexity int) int
 		ResponseStatusCode            func(childComplexity int) int
-		SecretFingerprint             func(childComplexity int) int
 		Status                        func(childComplexity int) int
 		Stream                        func(childComplexity int) int
 		UpdatedAt                     func(childComplexity int) int
@@ -1524,17 +1435,6 @@ type ComplexityRoot struct {
 	RestorePayload struct {
 		Message func(childComplexity int) int
 		Success func(childComplexity int) int
-	}
-
-	RetryPolicy struct {
-		AutoDisableChannel      func(childComplexity int) int
-		EmptyResponseDetection  func(childComplexity int) int
-		Enabled                 func(childComplexity int) int
-		LoadBalancerStrategy    func(childComplexity int) int
-		MaxChannelRetries       func(childComplexity int) int
-		MaxSingleChannelRetries func(childComplexity int) int
-		RetryDelayMs            func(childComplexity int) int
-		UpstreamErrorPolicy     func(childComplexity int) int
 	}
 
 	Role struct {
@@ -1721,22 +1621,6 @@ type ComplexityRoot struct {
 		Version   func(childComplexity int) int
 	}
 
-	TestAPIKeyResult struct {
-		Disabled  func(childComplexity int) int
-		Error     func(childComplexity int) int
-		KeyPrefix func(childComplexity int) int
-		Latency   func(childComplexity int) int
-		Success   func(childComplexity int) int
-	}
-
-	TestChannelAPIKeysPayload struct {
-		ChannelID    func(childComplexity int) int
-		FailedCount  func(childComplexity int) int
-		Results      func(childComplexity int) int
-		SuccessCount func(childComplexity int) int
-		Total        func(childComplexity int) int
-	}
-
 	TestChannelPayload struct {
 		Error   func(childComplexity int) int
 		Latency func(childComplexity int) int
@@ -1874,24 +1758,19 @@ type ComplexityRoot struct {
 	}
 
 	UpstreamCredential struct {
-		ChannelRefs           func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.ChannelCredentialRefOrder, where *ent.ChannelCredentialRefWhereInput) int
-		CreatedAt             func(childComplexity int) int
-		Executions            func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.RequestExecutionOrder, where *ent.RequestExecutionWhereInput) int
-		Fingerprint           func(childComplexity int) int
-		ID                    func(childComplexity int) int
-		KeyHint               func(childComplexity int) int
-		LastError             func(childComplexity int) int
-		Name                  func(childComplexity int) int
-		ProviderQuotaStatuses func(childComplexity int) int
-		QuotaScope            func(childComplexity int) int
-		QuotaScopeID          func(childComplexity int) int
-		QuotaStatus           func(childComplexity int) int
-		Remark                func(childComplexity int) int
-		SecretFingerprint     func(childComplexity int) int
-		SecretSummary         func(childComplexity int) int
-		Status                func(childComplexity int) int
-		UpdatedAt             func(childComplexity int) int
-		UsageLogs             func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.UsageLogOrder, where *ent.UsageLogWhereInput) int
+		ChannelRefs   func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.ChannelCredentialRefOrder, where *ent.ChannelCredentialRefWhereInput) int
+		CreatedAt     func(childComplexity int) int
+		Executions    func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.RequestExecutionOrder, where *ent.RequestExecutionWhereInput) int
+		ID            func(childComplexity int) int
+		LastError     func(childComplexity int) int
+		Name          func(childComplexity int) int
+		QuotaScope    func(childComplexity int) int
+		QuotaScopeID  func(childComplexity int) int
+		Remark        func(childComplexity int) int
+		SecretSummary func(childComplexity int) int
+		Status        func(childComplexity int) int
+		UpdatedAt     func(childComplexity int) int
+		UsageLogs     func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.UsageLogOrder, where *ent.UsageLogWhereInput) int
 	}
 
 	UpstreamCredentialConnection struct {
@@ -1930,12 +1809,9 @@ type ComplexityRoot struct {
 		CostPriceReferenceID               func(childComplexity int) int
 		CreatedAt                          func(childComplexity int) int
 		Credential                         func(childComplexity int) int
-		CredentialFingerprint              func(childComplexity int) int
 		CredentialID                       func(childComplexity int) int
-		CredentialKeyHint                  func(childComplexity int) int
 		CredentialNameSnapshot             func(childComplexity int) int
 		CredentialQuotaStatusSnapshot      func(childComplexity int) int
-		CredentialSource                   func(childComplexity int) int
 		Format                             func(childComplexity int) int
 		ID                                 func(childComplexity int) int
 		ModelID                            func(childComplexity int) int
@@ -1953,8 +1829,6 @@ type ComplexityRoot struct {
 		QuotaScopeStatusSnapshot           func(childComplexity int) int
 		Request                            func(childComplexity int) int
 		RequestID                          func(childComplexity int) int
-		ResourceScopeKey                   func(childComplexity int) int
-		SecretFingerprint                  func(childComplexity int) int
 		Source                             func(childComplexity int) int
 		TotalCost                          func(childComplexity int) int
 		TotalTokens                        func(childComplexity int) int
@@ -2124,9 +1998,6 @@ type ChannelResolver interface {
 
 	DefaultEndpoints(ctx context.Context, obj *ent.Channel) ([]*objects.ChannelEndpoint, error)
 	AllModelEntries(ctx context.Context, obj *ent.Channel) ([]*biz.ChannelModelEntry, error)
-	Credentials(ctx context.Context, obj *ent.Channel) (*objects.ChannelCredentials, error)
-	DisabledAPIKeys(ctx context.Context, obj *ent.Channel) ([]*objects.DisabledAPIKey, error)
-	ProviderQuotaStatus(ctx context.Context, obj *ent.Channel) (*ent.ProviderQuotaStatus, error)
 	LiveLimiterStats(ctx context.Context, obj *ent.Channel) (*ChannelLimiterStats, error)
 }
 type ChannelCredentialRefResolver interface {
@@ -2192,14 +2063,8 @@ type MutationResolver interface {
 	BulkRecoverChannels(ctx context.Context, ids []*objects.GUID) (bool, error)
 	BulkDeleteChannels(ctx context.Context, ids []*objects.GUID) (bool, error)
 	TestChannel(ctx context.Context, input TestChannelInput) (*TestChannelPayload, error)
-	TestChannelAPIKeys(ctx context.Context, channelID objects.GUID, modelID *string) (*TestChannelAPIKeysPayload, error)
 	BulkImportChannels(ctx context.Context, input BulkImportChannelsInput) (*biz.BulkImportChannelsResult, error)
 	BulkUpdateChannelOrdering(ctx context.Context, input BulkUpdateChannelOrderingInput) (*BulkUpdateChannelOrderingResult, error)
-	DisableChannelAPIKey(ctx context.Context, channelID objects.GUID, key string) (bool, error)
-	EnableChannelAPIKey(ctx context.Context, channelID objects.GUID, key string) (bool, error)
-	EnableAllChannelAPIKeys(ctx context.Context, channelID objects.GUID) (bool, error)
-	EnableSelectedChannelAPIKeys(ctx context.Context, channelID objects.GUID, keys []string) (bool, error)
-	DeleteDisabledChannelAPIKeys(ctx context.Context, channelID objects.GUID, keys []string) (*biz.DeleteDisabledAPIKeysResult, error)
 	CreateUpstreamCredential(ctx context.Context, input biz.CreateUpstreamCredentialInput) (*ent.UpstreamCredential, error)
 	UpdateUpstreamCredential(ctx context.Context, id objects.GUID, input biz.UpdateUpstreamCredentialInput) (*ent.UpstreamCredential, error)
 	CreateCredentialQuotaScope(ctx context.Context, input biz.CreateCredentialQuotaScopeInput) (*ent.CredentialQuotaScope, error)
@@ -2211,7 +2076,6 @@ type MutationResolver interface {
 	AttachCredentialToChannel(ctx context.Context, input biz.AttachCredentialToChannelInput) (*ent.ChannelCredentialRef, error)
 	UpdateChannelCredentialRef(ctx context.Context, id objects.GUID, input biz.UpdateChannelCredentialRefInput) (*ent.ChannelCredentialRef, error)
 	DetachCredentialFromChannel(ctx context.Context, channelID objects.GUID, credentialID objects.GUID) (bool, error)
-	MigrateLegacyChannelCredentials(ctx context.Context) (*biz.MigrateLegacyCredentialsPayload, error)
 	CreateAPIKey(ctx context.Context, input ent.CreateAPIKeyInput) (*ent.APIKey, error)
 	UpdateAPIKey(ctx context.Context, id objects.GUID, input ent.UpdateAPIKeyInput) (*ent.APIKey, error)
 	UpdateAPIKeyStatus(ctx context.Context, id objects.GUID, status apikey.Status) (*ent.APIKey, error)
@@ -2253,7 +2117,6 @@ type MutationResolver interface {
 	UnlinkOIDCIdentity(ctx context.Context, id objects.GUID) (bool, error)
 	UpdateBrandSettings(ctx context.Context, input UpdateBrandSettingsInput) (bool, error)
 	UpdateStoragePolicy(ctx context.Context, input biz.StoragePolicy) (bool, error)
-	UpdateRetryPolicy(ctx context.Context, input biz.RetryPolicy) (bool, error)
 	UpdateWebhookNotifierConfig(ctx context.Context, input biz.WebhookNotifierConfig) (bool, error)
 	UpdateSystemModelSettings(ctx context.Context, input biz.SystemModelSettings) (bool, error)
 	UpdateDefaultDataStorage(ctx context.Context, input UpdateDefaultDataStorageInput) (bool, error)
@@ -2263,8 +2126,6 @@ type MutationResolver interface {
 	UpdateSystemChannelSettings(ctx context.Context, input biz.SystemChannelSettings) (bool, error)
 	UpdateSystemGeneralSettings(ctx context.Context, input biz.SystemGeneralSettings) (bool, error)
 	UpdateVideoStorageSettings(ctx context.Context, input biz.VideoStorageSettings) (bool, error)
-	UpdateQuotaEnforcementSettings(ctx context.Context, input UpdateQuotaEnforcementSettingsInput) (bool, error)
-	CheckProviderQuotas(ctx context.Context) (bool, error)
 	TriggerGcCleanup(ctx context.Context, input gc.TriggerGcCleanupInput) (bool, error)
 	SaveProxyPreset(ctx context.Context, input biz.ProxyPreset) (bool, error)
 	DeleteProxyPreset(ctx context.Context, url string) (bool, error)
@@ -2316,15 +2177,6 @@ type PromptResolver interface {
 }
 type PromptProtectionRuleResolver interface {
 	ID(ctx context.Context, obj *ent.PromptProtectionRule) (*objects.GUID, error)
-}
-type ProviderQuotaStatusResolver interface {
-	ID(ctx context.Context, obj *ent.ProviderQuotaStatus) (*objects.GUID, error)
-
-	ChannelID(ctx context.Context, obj *ent.ProviderQuotaStatus) (*objects.GUID, error)
-
-	CredentialID(ctx context.Context, obj *ent.ProviderQuotaStatus) (*objects.GUID, error)
-
-	QuotaScopeID(ctx context.Context, obj *ent.ProviderQuotaStatus) (*objects.GUID, error)
 }
 type QueryResolver interface {
 	Node(ctx context.Context, id objects.GUID) (ent.Noder, error)
@@ -2381,7 +2233,6 @@ type QueryResolver interface {
 	SystemStatus(ctx context.Context) (*SystemStatus, error)
 	BrandSettings(ctx context.Context) (*BrandSettings, error)
 	StoragePolicy(ctx context.Context) (*biz.StoragePolicy, error)
-	RetryPolicy(ctx context.Context) (*biz.RetryPolicy, error)
 	WebhookNotifierConfig(ctx context.Context) (*biz.WebhookNotifierConfig, error)
 	SystemModelSettings(ctx context.Context) (*biz.SystemModelSettings, error)
 	DefaultDataStorageID(ctx context.Context) (*objects.GUID, error)
@@ -2391,7 +2242,6 @@ type QueryResolver interface {
 	SystemChannelSettings(ctx context.Context) (*biz.SystemChannelSettings, error)
 	SystemGeneralSettings(ctx context.Context) (*biz.SystemGeneralSettings, error)
 	VideoStorageSettings(ctx context.Context) (*biz.VideoStorageSettings, error)
-	QuotaEnforcementSettings(ctx context.Context) (*biz.QuotaEnforcementSettings, error)
 	ProxyPresets(ctx context.Context) ([]*biz.ProxyPreset, error)
 	UserAgentPassThroughSettings(ctx context.Context) (*UserAgentPassThroughSettings, error)
 	PassThroughSettings(ctx context.Context) (*PassThroughSettings, error)
@@ -2674,12 +2524,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.APIKeyProfile.ChannelTagsMatchMode(childComplexity), true
-	case "APIKeyProfile.loadBalanceStrategy":
-		if e.complexity.APIKeyProfile.LoadBalanceStrategy == nil {
-			break
-		}
-
-		return e.complexity.APIKeyProfile.LoadBalanceStrategy(childComplexity), true
 	case "APIKeyProfile.modelIDs":
 		if e.complexity.APIKeyProfile.ModelIDs == nil {
 			break
@@ -3043,32 +2887,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.AutoBackupSettings.RetentionDays(childComplexity), true
 
-	case "AutoDisableAPIKey.enabled":
-		if e.complexity.AutoDisableAPIKey.Enabled == nil {
-			break
-		}
-
-		return e.complexity.AutoDisableAPIKey.Enabled(childComplexity), true
-	case "AutoDisableAPIKey.statuses":
-		if e.complexity.AutoDisableAPIKey.Statuses == nil {
-			break
-		}
-
-		return e.complexity.AutoDisableAPIKey.Statuses(childComplexity), true
-
-	case "AutoDisableAPIKeyStatus.status":
-		if e.complexity.AutoDisableAPIKeyStatus.Status == nil {
-			break
-		}
-
-		return e.complexity.AutoDisableAPIKeyStatus.Status(childComplexity), true
-	case "AutoDisableAPIKeyStatus.times":
-		if e.complexity.AutoDisableAPIKeyStatus.Times == nil {
-			break
-		}
-
-		return e.complexity.AutoDisableAPIKeyStatus.Times(childComplexity), true
-
 	case "AutoDisableChannel.enabled":
 		if e.complexity.AutoDisableChannel.Enabled == nil {
 			break
@@ -3256,12 +3074,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Channel.CredentialRefs(childComplexity, args["after"].(*entgql.Cursor[int]), args["first"].(*int), args["before"].(*entgql.Cursor[int]), args["last"].(*int), args["orderBy"].(*ent.ChannelCredentialRefOrder), args["where"].(*ent.ChannelCredentialRefWhereInput)), true
-	case "Channel.credentials":
-		if e.complexity.Channel.Credentials == nil {
-			break
-		}
-
-		return e.complexity.Channel.Credentials(childComplexity), true
 	case "Channel.defaultEndpoints":
 		if e.complexity.Channel.DefaultEndpoints == nil {
 			break
@@ -3274,12 +3086,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Channel.DefaultTestModel(childComplexity), true
-	case "Channel.disabledAPIKeys":
-		if e.complexity.Channel.DisabledAPIKeys == nil {
-			break
-		}
-
-		return e.complexity.Channel.DisabledAPIKeys(childComplexity), true
 	case "Channel.endpoints":
 		if e.complexity.Channel.Endpoints == nil {
 			break
@@ -3339,18 +3145,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Channel.Policies(childComplexity), true
-	case "Channel.providerQuotaStatus":
-		if e.complexity.Channel.ProviderQuotaStatus == nil {
-			break
-		}
-
-		return e.complexity.Channel.ProviderQuotaStatus(childComplexity), true
-	case "Channel.providerQuotaStatuses":
-		if e.complexity.Channel.ProviderQuotaStatuses == nil {
-			break
-		}
-
-		return e.complexity.Channel.ProviderQuotaStatuses(childComplexity), true
 	case "Channel.remark":
 		if e.complexity.Channel.Remark == nil {
 			break
@@ -3515,37 +3309,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ChannelCredentialRefEdge.Node(childComplexity), true
-
-	case "ChannelCredentials.apiKey":
-		if e.complexity.ChannelCredentials.APIKey == nil {
-			break
-		}
-
-		return e.complexity.ChannelCredentials.APIKey(childComplexity), true
-	case "ChannelCredentials.apiKeys":
-		if e.complexity.ChannelCredentials.APIKeys == nil {
-			break
-		}
-
-		return e.complexity.ChannelCredentials.APIKeys(childComplexity), true
-	case "ChannelCredentials.azure":
-		if e.complexity.ChannelCredentials.Azure == nil {
-			break
-		}
-
-		return e.complexity.ChannelCredentials.Azure(childComplexity), true
-	case "ChannelCredentials.gcp":
-		if e.complexity.ChannelCredentials.GCP == nil {
-			break
-		}
-
-		return e.complexity.ChannelCredentials.GCP(childComplexity), true
-	case "ChannelCredentials.oauth":
-		if e.complexity.ChannelCredentials.OAuth == nil {
-			break
-		}
-
-		return e.complexity.ChannelCredentials.OAuth(childComplexity), true
 
 	case "ChannelEdge.cursor":
 		if e.complexity.ChannelEdge.Cursor == nil {
@@ -4492,12 +4255,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.CredentialQuotaScope.PauseUntil(childComplexity), true
-	case "CredentialQuotaScope.providerQuotaStatuses":
-		if e.complexity.CredentialQuotaScope.ProviderQuotaStatuses == nil {
-			break
-		}
-
-		return e.complexity.CredentialQuotaScope.ProviderQuotaStatuses(childComplexity), true
 	case "CredentialQuotaScope.remark":
 		if e.complexity.CredentialQuotaScope.Remark == nil {
 			break
@@ -4792,19 +4549,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.DataStorageSettings.WebDAV(childComplexity), true
 
-	case "DeleteDisabledAPIKeysPayload.message":
-		if e.complexity.DeleteDisabledAPIKeysPayload.Message == nil {
-			break
-		}
-
-		return e.complexity.DeleteDisabledAPIKeysPayload.Message(childComplexity), true
-	case "DeleteDisabledAPIKeysPayload.success":
-		if e.complexity.DeleteDisabledAPIKeysPayload.Success == nil {
-			break
-		}
-
-		return e.complexity.DeleteDisabledAPIKeysPayload.Success(childComplexity), true
-
 	case "DeveloperModelSettings.associations":
 		if e.complexity.DeveloperModelSettings.Associations == nil {
 			break
@@ -4817,31 +4561,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.DeveloperModelSettings.Developer(childComplexity), true
-
-	case "DisabledAPIKey.disabledAt":
-		if e.complexity.DisabledAPIKey.DisabledAt == nil {
-			break
-		}
-
-		return e.complexity.DisabledAPIKey.DisabledAt(childComplexity), true
-	case "DisabledAPIKey.errorCode":
-		if e.complexity.DisabledAPIKey.ErrorCode == nil {
-			break
-		}
-
-		return e.complexity.DisabledAPIKey.ErrorCode(childComplexity), true
-	case "DisabledAPIKey.key":
-		if e.complexity.DisabledAPIKey.Key == nil {
-			break
-		}
-
-		return e.complexity.DisabledAPIKey.Key(childComplexity), true
-	case "DisabledAPIKey.reason":
-		if e.complexity.DisabledAPIKey.Reason == nil {
-			break
-		}
-
-		return e.complexity.DisabledAPIKey.Reason(childComplexity), true
 
 	case "ExcludeAssociation.channelIds":
 		if e.complexity.ExcludeAssociation.ChannelIds == nil {
@@ -5124,31 +4843,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.InitializeSystemPayload.User(childComplexity), true
-
-	case "MigrateLegacyCredentialsPayload.createdCredentials":
-		if e.complexity.MigrateLegacyCredentialsPayload.CreatedCredentials == nil {
-			break
-		}
-
-		return e.complexity.MigrateLegacyCredentialsPayload.CreatedCredentials(childComplexity), true
-	case "MigrateLegacyCredentialsPayload.createdRefs":
-		if e.complexity.MigrateLegacyCredentialsPayload.CreatedRefs == nil {
-			break
-		}
-
-		return e.complexity.MigrateLegacyCredentialsPayload.CreatedRefs(childComplexity), true
-	case "MigrateLegacyCredentialsPayload.migratedChannels":
-		if e.complexity.MigrateLegacyCredentialsPayload.MigratedChannels == nil {
-			break
-		}
-
-		return e.complexity.MigrateLegacyCredentialsPayload.MigratedChannels(childComplexity), true
-	case "MigrateLegacyCredentialsPayload.skippedChannels":
-		if e.complexity.MigrateLegacyCredentialsPayload.SkippedChannels == nil {
-			break
-		}
-
-		return e.complexity.MigrateLegacyCredentialsPayload.SkippedChannels(childComplexity), true
 
 	case "Model.associatedChannelCount":
 		if e.complexity.Model.AssociatedChannelCount == nil {
@@ -5940,12 +5634,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.BulkUpdateChannelOrdering(childComplexity, args["input"].(BulkUpdateChannelOrderingInput)), true
-	case "Mutation.checkProviderQuotas":
-		if e.complexity.Mutation.CheckProviderQuotas == nil {
-			break
-		}
-
-		return e.complexity.Mutation.CheckProviderQuotas(childComplexity), true
 	case "Mutation.clearCache":
 		if e.complexity.Mutation.ClearCache == nil {
 			break
@@ -6177,17 +5865,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.DeleteChannelOverrideTemplate(childComplexity, args["id"].(objects.GUID)), true
-	case "Mutation.deleteDisabledChannelAPIKeys":
-		if e.complexity.Mutation.DeleteDisabledChannelAPIKeys == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_deleteDisabledChannelAPIKeys_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.DeleteDisabledChannelAPIKeys(childComplexity, args["channelID"].(objects.GUID), args["keys"].([]string)), true
 	case "Mutation.deleteModel":
 		if e.complexity.Mutation.DeleteModel == nil {
 			break
@@ -6287,50 +5964,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.DetachCredentialFromChannel(childComplexity, args["channelID"].(objects.GUID), args["credentialID"].(objects.GUID)), true
-	case "Mutation.disableChannelAPIKey":
-		if e.complexity.Mutation.DisableChannelAPIKey == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_disableChannelAPIKey_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.DisableChannelAPIKey(childComplexity, args["channelID"].(objects.GUID), args["key"].(string)), true
-	case "Mutation.enableAllChannelAPIKeys":
-		if e.complexity.Mutation.EnableAllChannelAPIKeys == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_enableAllChannelAPIKeys_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.EnableAllChannelAPIKeys(childComplexity, args["channelID"].(objects.GUID)), true
-	case "Mutation.enableChannelAPIKey":
-		if e.complexity.Mutation.EnableChannelAPIKey == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_enableChannelAPIKey_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.EnableChannelAPIKey(childComplexity, args["channelID"].(objects.GUID), args["key"].(string)), true
-	case "Mutation.enableSelectedChannelAPIKeys":
-		if e.complexity.Mutation.EnableSelectedChannelAPIKeys == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_enableSelectedChannelAPIKeys_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.EnableSelectedChannelAPIKeys(childComplexity, args["channelID"].(objects.GUID), args["keys"].([]string)), true
 	case "Mutation.loadApiKeyProfileTemplate":
 		if e.complexity.Mutation.LoadAPIKeyProfileTemplate == nil {
 			break
@@ -6342,12 +5975,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.LoadAPIKeyProfileTemplate(childComplexity, args["input"].(LoadAPIKeyProfileTemplateInput)), true
-	case "Mutation.migrateLegacyChannelCredentials":
-		if e.complexity.Mutation.MigrateLegacyChannelCredentials == nil {
-			break
-		}
-
-		return e.complexity.Mutation.MigrateLegacyChannelCredentials(childComplexity), true
 	case "Mutation.previewPromptProtectionRule":
 		if e.complexity.Mutation.PreviewPromptProtectionRule == nil {
 			break
@@ -6458,17 +6085,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.TestChannel(childComplexity, args["input"].(TestChannelInput)), true
-	case "Mutation.testChannelAPIKeys":
-		if e.complexity.Mutation.TestChannelAPIKeys == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_testChannelAPIKeys_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.TestChannelAPIKeys(childComplexity, args["channelID"].(objects.GUID), args["modelID"].(*string)), true
 	case "Mutation.triggerAutoBackup":
 		if e.complexity.Mutation.TriggerAutoBackup == nil {
 			break
@@ -6783,28 +6399,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.UpdatePromptStatus(childComplexity, args["id"].(objects.GUID), args["status"].(prompt.Status)), true
-	case "Mutation.updateQuotaEnforcementSettings":
-		if e.complexity.Mutation.UpdateQuotaEnforcementSettings == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_updateQuotaEnforcementSettings_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.UpdateQuotaEnforcementSettings(childComplexity, args["input"].(UpdateQuotaEnforcementSettingsInput)), true
-	case "Mutation.updateRetryPolicy":
-		if e.complexity.Mutation.UpdateRetryPolicy == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_updateRetryPolicy_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.UpdateRetryPolicy(childComplexity, args["input"].(biz.RetryPolicy)), true
 	case "Mutation.updateRole":
 		if e.complexity.Mutation.UpdateRole == nil {
 			break
@@ -7749,121 +7343,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.PromptWriteCacheVariant.VariantCode(childComplexity), true
 
-	case "ProviderQuotaStatus.channel":
-		if e.complexity.ProviderQuotaStatus.Channel == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.Channel(childComplexity), true
-	case "ProviderQuotaStatus.channelID":
-		if e.complexity.ProviderQuotaStatus.ChannelID == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.ChannelID(childComplexity), true
-	case "ProviderQuotaStatus.createdAt":
-		if e.complexity.ProviderQuotaStatus.CreatedAt == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.CreatedAt(childComplexity), true
-	case "ProviderQuotaStatus.credential":
-		if e.complexity.ProviderQuotaStatus.Credential == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.Credential(childComplexity), true
-	case "ProviderQuotaStatus.credentialFingerprint":
-		if e.complexity.ProviderQuotaStatus.CredentialFingerprint == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.CredentialFingerprint(childComplexity), true
-	case "ProviderQuotaStatus.credentialID":
-		if e.complexity.ProviderQuotaStatus.CredentialID == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.CredentialID(childComplexity), true
-	case "ProviderQuotaStatus.id":
-		if e.complexity.ProviderQuotaStatus.ID == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.ID(childComplexity), true
-	case "ProviderQuotaStatus.nextCheckAt":
-		if e.complexity.ProviderQuotaStatus.NextCheckAt == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.NextCheckAt(childComplexity), true
-	case "ProviderQuotaStatus.nextResetAt":
-		if e.complexity.ProviderQuotaStatus.NextResetAt == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.NextResetAt(childComplexity), true
-	case "ProviderQuotaStatus.providerType":
-		if e.complexity.ProviderQuotaStatus.ProviderType == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.ProviderType(childComplexity), true
-	case "ProviderQuotaStatus.quotaData":
-		if e.complexity.ProviderQuotaStatus.QuotaData == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.QuotaData(childComplexity), true
-	case "ProviderQuotaStatus.quotaScope":
-		if e.complexity.ProviderQuotaStatus.QuotaScope == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.QuotaScope(childComplexity), true
-	case "ProviderQuotaStatus.quotaScopeID":
-		if e.complexity.ProviderQuotaStatus.QuotaScopeID == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.QuotaScopeID(childComplexity), true
-	case "ProviderQuotaStatus.ready":
-		if e.complexity.ProviderQuotaStatus.Ready == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.Ready(childComplexity), true
-	case "ProviderQuotaStatus.resourceScopeKey":
-		if e.complexity.ProviderQuotaStatus.ResourceScopeKey == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.ResourceScopeKey(childComplexity), true
-	case "ProviderQuotaStatus.scopeKey":
-		if e.complexity.ProviderQuotaStatus.ScopeKey == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.ScopeKey(childComplexity), true
-	case "ProviderQuotaStatus.secretFingerprint":
-		if e.complexity.ProviderQuotaStatus.SecretFingerprint == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.SecretFingerprint(childComplexity), true
-	case "ProviderQuotaStatus.status":
-		if e.complexity.ProviderQuotaStatus.Status == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.Status(childComplexity), true
-	case "ProviderQuotaStatus.updatedAt":
-		if e.complexity.ProviderQuotaStatus.UpdatedAt == nil {
-			break
-		}
-
-		return e.complexity.ProviderQuotaStatus.UpdatedAt(childComplexity), true
-
 	case "ProxyConfig.password":
 		if e.complexity.ProxyConfig.Password == nil {
 			break
@@ -8356,12 +7835,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.QueryUnassociatedChannels(childComplexity), true
-	case "Query.quotaEnforcementSettings":
-		if e.complexity.Query.QuotaEnforcementSettings == nil {
-			break
-		}
-
-		return e.complexity.Query.QuotaEnforcementSettings(childComplexity), true
 	case "Query.requestStats":
 		if e.complexity.Query.RequestStats == nil {
 			break
@@ -8412,12 +7885,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.Requests(childComplexity, args["after"].(*entgql.Cursor[int]), args["first"].(*int), args["before"].(*entgql.Cursor[int]), args["last"].(*int), args["orderBy"].(*ent.RequestOrder), args["where"].(*ent.RequestWhereInput)), true
-	case "Query.retryPolicy":
-		if e.complexity.Query.RetryPolicy == nil {
-			break
-		}
-
-		return e.complexity.Query.RetryPolicy(childComplexity), true
 	case "Query.roles":
 		if e.complexity.Query.Roles == nil {
 			break
@@ -8594,19 +8061,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.WebhookNotifierConfig(childComplexity), true
-
-	case "QuotaEnforcementSettings.enabled":
-		if e.complexity.QuotaEnforcementSettings.Enabled == nil {
-			break
-		}
-
-		return e.complexity.QuotaEnforcementSettings.Enabled(childComplexity), true
-	case "QuotaEnforcementSettings.mode":
-		if e.complexity.QuotaEnforcementSettings.Mode == nil {
-			break
-		}
-
-		return e.complexity.QuotaEnforcementSettings.Mode(childComplexity), true
 
 	case "RegexAssociation.exclude":
 		if e.complexity.RegexAssociation.Exclude == nil {
@@ -8892,24 +8346,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.RequestExecution.Credential(childComplexity), true
-	case "RequestExecution.credentialFingerprint":
-		if e.complexity.RequestExecution.CredentialFingerprint == nil {
-			break
-		}
-
-		return e.complexity.RequestExecution.CredentialFingerprint(childComplexity), true
 	case "RequestExecution.credentialID":
 		if e.complexity.RequestExecution.CredentialID == nil {
 			break
 		}
 
 		return e.complexity.RequestExecution.CredentialID(childComplexity), true
-	case "RequestExecution.credentialKeyHint":
-		if e.complexity.RequestExecution.CredentialKeyHint == nil {
-			break
-		}
-
-		return e.complexity.RequestExecution.CredentialKeyHint(childComplexity), true
 	case "RequestExecution.credentialNameSnapshot":
 		if e.complexity.RequestExecution.CredentialNameSnapshot == nil {
 			break
@@ -8922,12 +8364,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.RequestExecution.CredentialQuotaStatusSnapshot(childComplexity), true
-	case "RequestExecution.credentialSource":
-		if e.complexity.RequestExecution.CredentialSource == nil {
-			break
-		}
-
-		return e.complexity.RequestExecution.CredentialSource(childComplexity), true
 	case "RequestExecution.dataStorage":
 		if e.complexity.RequestExecution.DataStorage == nil {
 			break
@@ -9042,12 +8478,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.RequestExecution.RequestID(childComplexity), true
-	case "RequestExecution.resourceScopeKey":
-		if e.complexity.RequestExecution.ResourceScopeKey == nil {
-			break
-		}
-
-		return e.complexity.RequestExecution.ResourceScopeKey(childComplexity), true
 	case "RequestExecution.responseBody":
 		if e.complexity.RequestExecution.ResponseBody == nil {
 			break
@@ -9066,12 +8496,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.RequestExecution.ResponseStatusCode(childComplexity), true
-	case "RequestExecution.secretFingerprint":
-		if e.complexity.RequestExecution.SecretFingerprint == nil {
-			break
-		}
-
-		return e.complexity.RequestExecution.SecretFingerprint(childComplexity), true
 	case "RequestExecution.status":
 		if e.complexity.RequestExecution.Status == nil {
 			break
@@ -9236,55 +8660,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.RestorePayload.Success(childComplexity), true
-
-	case "RetryPolicy.autoDisableChannel":
-		if e.complexity.RetryPolicy.AutoDisableChannel == nil {
-			break
-		}
-
-		return e.complexity.RetryPolicy.AutoDisableChannel(childComplexity), true
-	case "RetryPolicy.emptyResponseDetection":
-		if e.complexity.RetryPolicy.EmptyResponseDetection == nil {
-			break
-		}
-
-		return e.complexity.RetryPolicy.EmptyResponseDetection(childComplexity), true
-	case "RetryPolicy.enabled":
-		if e.complexity.RetryPolicy.Enabled == nil {
-			break
-		}
-
-		return e.complexity.RetryPolicy.Enabled(childComplexity), true
-	case "RetryPolicy.loadBalancerStrategy":
-		if e.complexity.RetryPolicy.LoadBalancerStrategy == nil {
-			break
-		}
-
-		return e.complexity.RetryPolicy.LoadBalancerStrategy(childComplexity), true
-	case "RetryPolicy.maxChannelRetries":
-		if e.complexity.RetryPolicy.MaxChannelRetries == nil {
-			break
-		}
-
-		return e.complexity.RetryPolicy.MaxChannelRetries(childComplexity), true
-	case "RetryPolicy.maxSingleChannelRetries":
-		if e.complexity.RetryPolicy.MaxSingleChannelRetries == nil {
-			break
-		}
-
-		return e.complexity.RetryPolicy.MaxSingleChannelRetries(childComplexity), true
-	case "RetryPolicy.retryDelayMs":
-		if e.complexity.RetryPolicy.RetryDelayMs == nil {
-			break
-		}
-
-		return e.complexity.RetryPolicy.RetryDelayMs(childComplexity), true
-	case "RetryPolicy.upstreamErrorPolicy":
-		if e.complexity.RetryPolicy.UpstreamErrorPolicy == nil {
-			break
-		}
-
-		return e.complexity.RetryPolicy.UpstreamErrorPolicy(childComplexity), true
 
 	case "Role.createdAt":
 		if e.complexity.Role.CreatedAt == nil {
@@ -9902,68 +9277,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.SystemVersion.Version(childComplexity), true
 
-	case "TestAPIKeyResult.disabled":
-		if e.complexity.TestAPIKeyResult.Disabled == nil {
-			break
-		}
-
-		return e.complexity.TestAPIKeyResult.Disabled(childComplexity), true
-	case "TestAPIKeyResult.error":
-		if e.complexity.TestAPIKeyResult.Error == nil {
-			break
-		}
-
-		return e.complexity.TestAPIKeyResult.Error(childComplexity), true
-	case "TestAPIKeyResult.keyPrefix":
-		if e.complexity.TestAPIKeyResult.KeyPrefix == nil {
-			break
-		}
-
-		return e.complexity.TestAPIKeyResult.KeyPrefix(childComplexity), true
-	case "TestAPIKeyResult.latency":
-		if e.complexity.TestAPIKeyResult.Latency == nil {
-			break
-		}
-
-		return e.complexity.TestAPIKeyResult.Latency(childComplexity), true
-	case "TestAPIKeyResult.success":
-		if e.complexity.TestAPIKeyResult.Success == nil {
-			break
-		}
-
-		return e.complexity.TestAPIKeyResult.Success(childComplexity), true
-
-	case "TestChannelAPIKeysPayload.channelID":
-		if e.complexity.TestChannelAPIKeysPayload.ChannelID == nil {
-			break
-		}
-
-		return e.complexity.TestChannelAPIKeysPayload.ChannelID(childComplexity), true
-	case "TestChannelAPIKeysPayload.failedCount":
-		if e.complexity.TestChannelAPIKeysPayload.FailedCount == nil {
-			break
-		}
-
-		return e.complexity.TestChannelAPIKeysPayload.FailedCount(childComplexity), true
-	case "TestChannelAPIKeysPayload.results":
-		if e.complexity.TestChannelAPIKeysPayload.Results == nil {
-			break
-		}
-
-		return e.complexity.TestChannelAPIKeysPayload.Results(childComplexity), true
-	case "TestChannelAPIKeysPayload.successCount":
-		if e.complexity.TestChannelAPIKeysPayload.SuccessCount == nil {
-			break
-		}
-
-		return e.complexity.TestChannelAPIKeysPayload.SuccessCount(childComplexity), true
-	case "TestChannelAPIKeysPayload.total":
-		if e.complexity.TestChannelAPIKeysPayload.Total == nil {
-			break
-		}
-
-		return e.complexity.TestChannelAPIKeysPayload.Total(childComplexity), true
-
 	case "TestChannelPayload.error":
 		if e.complexity.TestChannelPayload.Error == nil {
 			break
@@ -10529,24 +9842,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.UpstreamCredential.Executions(childComplexity, args["after"].(*entgql.Cursor[int]), args["first"].(*int), args["before"].(*entgql.Cursor[int]), args["last"].(*int), args["orderBy"].(*ent.RequestExecutionOrder), args["where"].(*ent.RequestExecutionWhereInput)), true
-	case "UpstreamCredential.fingerprint":
-		if e.complexity.UpstreamCredential.Fingerprint == nil {
-			break
-		}
-
-		return e.complexity.UpstreamCredential.Fingerprint(childComplexity), true
 	case "UpstreamCredential.id":
 		if e.complexity.UpstreamCredential.ID == nil {
 			break
 		}
 
 		return e.complexity.UpstreamCredential.ID(childComplexity), true
-	case "UpstreamCredential.keyHint":
-		if e.complexity.UpstreamCredential.KeyHint == nil {
-			break
-		}
-
-		return e.complexity.UpstreamCredential.KeyHint(childComplexity), true
 	case "UpstreamCredential.lastError":
 		if e.complexity.UpstreamCredential.LastError == nil {
 			break
@@ -10559,12 +9860,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.UpstreamCredential.Name(childComplexity), true
-	case "UpstreamCredential.providerQuotaStatuses":
-		if e.complexity.UpstreamCredential.ProviderQuotaStatuses == nil {
-			break
-		}
-
-		return e.complexity.UpstreamCredential.ProviderQuotaStatuses(childComplexity), true
 	case "UpstreamCredential.quotaScope":
 		if e.complexity.UpstreamCredential.QuotaScope == nil {
 			break
@@ -10577,24 +9872,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.UpstreamCredential.QuotaScopeID(childComplexity), true
-	case "UpstreamCredential.quotaStatus":
-		if e.complexity.UpstreamCredential.QuotaStatus == nil {
-			break
-		}
-
-		return e.complexity.UpstreamCredential.QuotaStatus(childComplexity), true
 	case "UpstreamCredential.remark":
 		if e.complexity.UpstreamCredential.Remark == nil {
 			break
 		}
 
 		return e.complexity.UpstreamCredential.Remark(childComplexity), true
-	case "UpstreamCredential.secretFingerprint":
-		if e.complexity.UpstreamCredential.SecretFingerprint == nil {
-			break
-		}
-
-		return e.complexity.UpstreamCredential.SecretFingerprint(childComplexity), true
 	case "UpstreamCredential.secretSummary":
 		if e.complexity.UpstreamCredential.SecretSummary == nil {
 			break
@@ -10767,24 +10050,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.UsageLog.Credential(childComplexity), true
-	case "UsageLog.credentialFingerprint":
-		if e.complexity.UsageLog.CredentialFingerprint == nil {
-			break
-		}
-
-		return e.complexity.UsageLog.CredentialFingerprint(childComplexity), true
 	case "UsageLog.credentialID":
 		if e.complexity.UsageLog.CredentialID == nil {
 			break
 		}
 
 		return e.complexity.UsageLog.CredentialID(childComplexity), true
-	case "UsageLog.credentialKeyHint":
-		if e.complexity.UsageLog.CredentialKeyHint == nil {
-			break
-		}
-
-		return e.complexity.UsageLog.CredentialKeyHint(childComplexity), true
 	case "UsageLog.credentialNameSnapshot":
 		if e.complexity.UsageLog.CredentialNameSnapshot == nil {
 			break
@@ -10797,12 +10068,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.UsageLog.CredentialQuotaStatusSnapshot(childComplexity), true
-	case "UsageLog.credentialSource":
-		if e.complexity.UsageLog.CredentialSource == nil {
-			break
-		}
-
-		return e.complexity.UsageLog.CredentialSource(childComplexity), true
 	case "UsageLog.format":
 		if e.complexity.UsageLog.Format == nil {
 			break
@@ -10905,18 +10170,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.UsageLog.RequestID(childComplexity), true
-	case "UsageLog.resourceScopeKey":
-		if e.complexity.UsageLog.ResourceScopeKey == nil {
-			break
-		}
-
-		return e.complexity.UsageLog.ResourceScopeKey(childComplexity), true
-	case "UsageLog.secretFingerprint":
-		if e.complexity.UsageLog.SecretFingerprint == nil {
-			break
-		}
-
-		return e.complexity.UsageLog.SecretFingerprint(childComplexity), true
 	case "UsageLog.source":
 		if e.complexity.UsageLog.Source == nil {
 			break
@@ -11561,7 +10814,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputBulkUpdateChannelOrderingInput,
 		ec.unmarshalInputChannelCredentialRefOrder,
 		ec.unmarshalInputChannelCredentialRefWhereInput,
-		ec.unmarshalInputChannelCredentialsInput,
 		ec.unmarshalInputChannelEndpointInput,
 		ec.unmarshalInputChannelModelAssociationInput,
 		ec.unmarshalInputChannelModelPriceOrder,
@@ -11658,8 +10910,6 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputPromptSettingsInput,
 		ec.unmarshalInputPromptWhereInput,
 		ec.unmarshalInputPromptWriteCacheVariantInput,
-		ec.unmarshalInputProviderQuotaStatusOrder,
-		ec.unmarshalInputProviderQuotaStatusWhereInput,
 		ec.unmarshalInputProxyConfigInput,
 		ec.unmarshalInputQueryChannelInput,
 		ec.unmarshalInputQueryModelsInput,
@@ -11713,9 +10963,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputUpdateProjectUserInput,
 		ec.unmarshalInputUpdatePromptInput,
 		ec.unmarshalInputUpdatePromptProtectionRuleInput,
-		ec.unmarshalInputUpdateQuotaEnforcementSettingsInput,
 		ec.unmarshalInputUpdateRequestInput,
-		ec.unmarshalInputUpdateRetryPolicyInput,
 		ec.unmarshalInputUpdateRoleInput,
 		ec.unmarshalInputUpdateStoragePolicyInput,
 		ec.unmarshalInputUpdateSystemChannelSettingsInput,
@@ -12778,22 +12026,6 @@ func (ec *executionContext) field_Mutation_deleteChannel_args(ctx context.Contex
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_deleteDisabledChannelAPIKeys_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "channelID", ec.unmarshalNID2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID)
-	if err != nil {
-		return nil, err
-	}
-	args["channelID"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "keys", ec.unmarshalNString2ᚕstringᚄ)
-	if err != nil {
-		return nil, err
-	}
-	args["keys"] = arg1
-	return args, nil
-}
-
 func (ec *executionContext) field_Mutation_deleteModel_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -12895,65 +12127,6 @@ func (ec *executionContext) field_Mutation_detachCredentialFromChannel_args(ctx 
 		return nil, err
 	}
 	args["credentialID"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_disableChannelAPIKey_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "channelID", ec.unmarshalNID2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID)
-	if err != nil {
-		return nil, err
-	}
-	args["channelID"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "key", ec.unmarshalNString2string)
-	if err != nil {
-		return nil, err
-	}
-	args["key"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_enableAllChannelAPIKeys_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "channelID", ec.unmarshalNID2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID)
-	if err != nil {
-		return nil, err
-	}
-	args["channelID"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_enableChannelAPIKey_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "channelID", ec.unmarshalNID2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID)
-	if err != nil {
-		return nil, err
-	}
-	args["channelID"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "key", ec.unmarshalNString2string)
-	if err != nil {
-		return nil, err
-	}
-	args["key"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_enableSelectedChannelAPIKeys_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "channelID", ec.unmarshalNID2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID)
-	if err != nil {
-		return nil, err
-	}
-	args["channelID"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "keys", ec.unmarshalNString2ᚕstringᚄ)
-	if err != nil {
-		return nil, err
-	}
-	args["keys"] = arg1
 	return args, nil
 }
 
@@ -13084,22 +12257,6 @@ func (ec *executionContext) field_Mutation_syncChannelModels_args(ctx context.Co
 		return nil, err
 	}
 	args["pattern"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_testChannelAPIKeys_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "channelID", ec.unmarshalNID2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID)
-	if err != nil {
-		return nil, err
-	}
-	args["channelID"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "modelID", ec.unmarshalOString2ᚖstring)
-	if err != nil {
-		return nil, err
-	}
-	args["modelID"] = arg1
 	return args, nil
 }
 
@@ -13519,28 +12676,6 @@ func (ec *executionContext) field_Mutation_updatePrompt_args(ctx context.Context
 		return nil, err
 	}
 	args["input"] = arg1
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_updateQuotaEnforcementSettings_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNUpdateQuotaEnforcementSettingsInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐUpdateQuotaEnforcementSettingsInput)
-	if err != nil {
-		return nil, err
-	}
-	args["input"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_updateRetryPolicy_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNUpdateRetryPolicyInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐRetryPolicy)
-	if err != nil {
-		return nil, err
-	}
-	args["input"] = arg0
 	return args, nil
 }
 
@@ -16519,35 +15654,6 @@ func (ec *executionContext) fieldContext_APIKeyProfile_quota(_ context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _APIKeyProfile_loadBalanceStrategy(ctx context.Context, field graphql.CollectedField, obj *objects.APIKeyProfile) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_APIKeyProfile_loadBalanceStrategy,
-		func(ctx context.Context) (any, error) {
-			return obj.LoadBalanceStrategy, nil
-		},
-		nil,
-		ec.marshalOString2ᚖstring,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_APIKeyProfile_loadBalanceStrategy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "APIKeyProfile",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _APIKeyProfileQuotaUsage_profileName(ctx context.Context, field graphql.CollectedField, obj *APIKeyProfileQuotaUsage) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -16900,8 +16006,6 @@ func (ec *executionContext) fieldContext_APIKeyProfileTemplate_profile(_ context
 				return ec.fieldContext_APIKeyProfile_modelIDs(ctx, field)
 			case "quota":
 				return ec.fieldContext_APIKeyProfile_quota(ctx, field)
-			case "loadBalanceStrategy":
-				return ec.fieldContext_APIKeyProfile_loadBalanceStrategy(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type APIKeyProfile", field.Name)
 		},
@@ -17220,8 +16324,6 @@ func (ec *executionContext) fieldContext_APIKeyProfiles_profiles(_ context.Conte
 				return ec.fieldContext_APIKeyProfile_modelIDs(ctx, field)
 			case "quota":
 				return ec.fieldContext_APIKeyProfile_quota(ctx, field)
-			case "loadBalanceStrategy":
-				return ec.fieldContext_APIKeyProfile_loadBalanceStrategy(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type APIKeyProfile", field.Name)
 		},
@@ -18000,18 +17102,10 @@ func (ec *executionContext) fieldContext_ApplyChannelOverrideTemplatePayload_cha
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -18335,128 +17429,6 @@ func (ec *executionContext) fieldContext_AutoBackupSettings_lastBackupError(_ co
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _AutoDisableAPIKey_enabled(ctx context.Context, field graphql.CollectedField, obj *AutoDisableAPIKey) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_AutoDisableAPIKey_enabled,
-		func(ctx context.Context) (any, error) {
-			return obj.Enabled, nil
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_AutoDisableAPIKey_enabled(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "AutoDisableAPIKey",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _AutoDisableAPIKey_statuses(ctx context.Context, field graphql.CollectedField, obj *AutoDisableAPIKey) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_AutoDisableAPIKey_statuses,
-		func(ctx context.Context) (any, error) {
-			return obj.Statuses, nil
-		},
-		nil,
-		ec.marshalNAutoDisableAPIKeyStatus2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐAutoDisableAPIKeyStatusᚄ,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_AutoDisableAPIKey_statuses(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "AutoDisableAPIKey",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "status":
-				return ec.fieldContext_AutoDisableAPIKeyStatus_status(ctx, field)
-			case "times":
-				return ec.fieldContext_AutoDisableAPIKeyStatus_times(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type AutoDisableAPIKeyStatus", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _AutoDisableAPIKeyStatus_status(ctx context.Context, field graphql.CollectedField, obj *AutoDisableAPIKeyStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_AutoDisableAPIKeyStatus_status,
-		func(ctx context.Context) (any, error) {
-			return obj.Status, nil
-		},
-		nil,
-		ec.marshalNInt2int,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_AutoDisableAPIKeyStatus_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "AutoDisableAPIKeyStatus",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _AutoDisableAPIKeyStatus_times(ctx context.Context, field graphql.CollectedField, obj *AutoDisableAPIKeyStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_AutoDisableAPIKeyStatus_times,
-		func(ctx context.Context) (any, error) {
-			return obj.Times, nil
-		},
-		nil,
-		ec.marshalNInt2int,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_AutoDisableAPIKeyStatus_times(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "AutoDisableAPIKeyStatus",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -19035,18 +18007,10 @@ func (ec *executionContext) fieldContext_BulkImportChannelsResult_channels(_ con
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -19188,18 +18152,10 @@ func (ec *executionContext) fieldContext_BulkUpdateChannelOrderingResult_channel
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -20094,75 +19050,6 @@ func (ec *executionContext) fieldContext_Channel_credentialRefs(ctx context.Cont
 	return fc, nil
 }
 
-func (ec *executionContext) _Channel_providerQuotaStatuses(ctx context.Context, field graphql.CollectedField, obj *ent.Channel) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Channel_providerQuotaStatuses,
-		func(ctx context.Context) (any, error) {
-			return obj.ProviderQuotaStatuses(ctx)
-		},
-		nil,
-		ec.marshalOProviderQuotaStatus2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusᚄ,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_Channel_providerQuotaStatuses(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Channel",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_ProviderQuotaStatus_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_ProviderQuotaStatus_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_ProviderQuotaStatus_updatedAt(ctx, field)
-			case "channelID":
-				return ec.fieldContext_ProviderQuotaStatus_channelID(ctx, field)
-			case "scopeKey":
-				return ec.fieldContext_ProviderQuotaStatus_scopeKey(ctx, field)
-			case "credentialID":
-				return ec.fieldContext_ProviderQuotaStatus_credentialID(ctx, field)
-			case "credentialFingerprint":
-				return ec.fieldContext_ProviderQuotaStatus_credentialFingerprint(ctx, field)
-			case "secretFingerprint":
-				return ec.fieldContext_ProviderQuotaStatus_secretFingerprint(ctx, field)
-			case "resourceScopeKey":
-				return ec.fieldContext_ProviderQuotaStatus_resourceScopeKey(ctx, field)
-			case "quotaScopeID":
-				return ec.fieldContext_ProviderQuotaStatus_quotaScopeID(ctx, field)
-			case "providerType":
-				return ec.fieldContext_ProviderQuotaStatus_providerType(ctx, field)
-			case "status":
-				return ec.fieldContext_ProviderQuotaStatus_status(ctx, field)
-			case "quotaData":
-				return ec.fieldContext_ProviderQuotaStatus_quotaData(ctx, field)
-			case "nextResetAt":
-				return ec.fieldContext_ProviderQuotaStatus_nextResetAt(ctx, field)
-			case "ready":
-				return ec.fieldContext_ProviderQuotaStatus_ready(ctx, field)
-			case "nextCheckAt":
-				return ec.fieldContext_ProviderQuotaStatus_nextCheckAt(ctx, field)
-			case "channel":
-				return ec.fieldContext_ProviderQuotaStatus_channel(ctx, field)
-			case "credential":
-				return ec.fieldContext_ProviderQuotaStatus_credential(ctx, field)
-			case "quotaScope":
-				return ec.fieldContext_ProviderQuotaStatus_quotaScope(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type ProviderQuotaStatus", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Channel_defaultEndpoints(ctx context.Context, field graphql.CollectedField, obj *ent.Channel) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -20234,155 +19121,6 @@ func (ec *executionContext) fieldContext_Channel_allModelEntries(_ context.Conte
 				return ec.fieldContext_ChannelModelEntry_source(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ChannelModelEntry", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Channel_credentials(ctx context.Context, field graphql.CollectedField, obj *ent.Channel) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Channel_credentials,
-		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Channel().Credentials(ctx, obj)
-		},
-		nil,
-		ec.marshalOChannelCredentials2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐChannelCredentials,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_Channel_credentials(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Channel",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "apiKey":
-				return ec.fieldContext_ChannelCredentials_apiKey(ctx, field)
-			case "apiKeys":
-				return ec.fieldContext_ChannelCredentials_apiKeys(ctx, field)
-			case "azure":
-				return ec.fieldContext_ChannelCredentials_azure(ctx, field)
-			case "gcp":
-				return ec.fieldContext_ChannelCredentials_gcp(ctx, field)
-			case "oauth":
-				return ec.fieldContext_ChannelCredentials_oauth(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type ChannelCredentials", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Channel_disabledAPIKeys(ctx context.Context, field graphql.CollectedField, obj *ent.Channel) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Channel_disabledAPIKeys,
-		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Channel().DisabledAPIKeys(ctx, obj)
-		},
-		nil,
-		ec.marshalODisabledAPIKey2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐDisabledAPIKeyᚄ,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_Channel_disabledAPIKeys(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Channel",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "key":
-				return ec.fieldContext_DisabledAPIKey_key(ctx, field)
-			case "disabledAt":
-				return ec.fieldContext_DisabledAPIKey_disabledAt(ctx, field)
-			case "errorCode":
-				return ec.fieldContext_DisabledAPIKey_errorCode(ctx, field)
-			case "reason":
-				return ec.fieldContext_DisabledAPIKey_reason(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type DisabledAPIKey", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Channel_providerQuotaStatus(ctx context.Context, field graphql.CollectedField, obj *ent.Channel) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Channel_providerQuotaStatus,
-		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Channel().ProviderQuotaStatus(ctx, obj)
-		},
-		nil,
-		ec.marshalOProviderQuotaStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatus,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_Channel_providerQuotaStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Channel",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_ProviderQuotaStatus_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_ProviderQuotaStatus_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_ProviderQuotaStatus_updatedAt(ctx, field)
-			case "channelID":
-				return ec.fieldContext_ProviderQuotaStatus_channelID(ctx, field)
-			case "scopeKey":
-				return ec.fieldContext_ProviderQuotaStatus_scopeKey(ctx, field)
-			case "credentialID":
-				return ec.fieldContext_ProviderQuotaStatus_credentialID(ctx, field)
-			case "credentialFingerprint":
-				return ec.fieldContext_ProviderQuotaStatus_credentialFingerprint(ctx, field)
-			case "secretFingerprint":
-				return ec.fieldContext_ProviderQuotaStatus_secretFingerprint(ctx, field)
-			case "resourceScopeKey":
-				return ec.fieldContext_ProviderQuotaStatus_resourceScopeKey(ctx, field)
-			case "quotaScopeID":
-				return ec.fieldContext_ProviderQuotaStatus_quotaScopeID(ctx, field)
-			case "providerType":
-				return ec.fieldContext_ProviderQuotaStatus_providerType(ctx, field)
-			case "status":
-				return ec.fieldContext_ProviderQuotaStatus_status(ctx, field)
-			case "quotaData":
-				return ec.fieldContext_ProviderQuotaStatus_quotaData(ctx, field)
-			case "nextResetAt":
-				return ec.fieldContext_ProviderQuotaStatus_nextResetAt(ctx, field)
-			case "ready":
-				return ec.fieldContext_ProviderQuotaStatus_ready(ctx, field)
-			case "nextCheckAt":
-				return ec.fieldContext_ProviderQuotaStatus_nextCheckAt(ctx, field)
-			case "channel":
-				return ec.fieldContext_ProviderQuotaStatus_channel(ctx, field)
-			case "credential":
-				return ec.fieldContext_ProviderQuotaStatus_credential(ctx, field)
-			case "quotaScope":
-				return ec.fieldContext_ProviderQuotaStatus_quotaScope(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type ProviderQuotaStatus", field.Name)
 		},
 	}
 	return fc, nil
@@ -20778,18 +19516,10 @@ func (ec *executionContext) fieldContext_ChannelCredentialRef_channel(_ context.
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -20831,18 +19561,10 @@ func (ec *executionContext) fieldContext_ChannelCredentialRef_credential(_ conte
 				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
 			case "name":
 				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "keyHint":
-				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
-			case "fingerprint":
-				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
-			case "secretFingerprint":
-				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
 			case "status":
 				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "quotaStatus":
-				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
 			case "lastError":
 				return ec.fieldContext_UpstreamCredential_lastError(ctx, field)
 			case "remark":
@@ -20853,8 +19575,6 @@ func (ec *executionContext) fieldContext_ChannelCredentialRef_credential(_ conte
 				return ec.fieldContext_UpstreamCredential_executions(ctx, field)
 			case "usageLogs":
 				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
 			case "secretSummary":
@@ -21045,177 +19765,6 @@ func (ec *executionContext) fieldContext_ChannelCredentialRefEdge_cursor(_ conte
 	return fc, nil
 }
 
-func (ec *executionContext) _ChannelCredentials_apiKey(ctx context.Context, field graphql.CollectedField, obj *objects.ChannelCredentials) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ChannelCredentials_apiKey,
-		func(ctx context.Context) (any, error) {
-			return obj.APIKey, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_ChannelCredentials_apiKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ChannelCredentials",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ChannelCredentials_apiKeys(ctx context.Context, field graphql.CollectedField, obj *objects.ChannelCredentials) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ChannelCredentials_apiKeys,
-		func(ctx context.Context) (any, error) {
-			return obj.APIKeys, nil
-		},
-		nil,
-		ec.marshalOString2ᚕstringᚄ,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_ChannelCredentials_apiKeys(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ChannelCredentials",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ChannelCredentials_azure(ctx context.Context, field graphql.CollectedField, obj *objects.ChannelCredentials) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ChannelCredentials_azure,
-		func(ctx context.Context) (any, error) {
-			return obj.Azure, nil
-		},
-		nil,
-		ec.marshalOAzureCredential2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐAzureCredential,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_ChannelCredentials_azure(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ChannelCredentials",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "apiVersion":
-				return ec.fieldContext_AzureCredential_apiVersion(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type AzureCredential", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ChannelCredentials_gcp(ctx context.Context, field graphql.CollectedField, obj *objects.ChannelCredentials) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ChannelCredentials_gcp,
-		func(ctx context.Context) (any, error) {
-			return obj.GCP, nil
-		},
-		nil,
-		ec.marshalOGCPCredential2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGCPCredential,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_ChannelCredentials_gcp(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ChannelCredentials",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "region":
-				return ec.fieldContext_GCPCredential_region(ctx, field)
-			case "projectID":
-				return ec.fieldContext_GCPCredential_projectID(ctx, field)
-			case "jsonData":
-				return ec.fieldContext_GCPCredential_jsonData(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type GCPCredential", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ChannelCredentials_oauth(ctx context.Context, field graphql.CollectedField, obj *objects.ChannelCredentials) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ChannelCredentials_oauth,
-		func(ctx context.Context) (any, error) {
-			return obj.OAuth, nil
-		},
-		nil,
-		ec.marshalOOAuthCredentials2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋllmᚋoauthᚐOAuthCredentials,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_ChannelCredentials_oauth(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ChannelCredentials",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "accessToken":
-				return ec.fieldContext_OAuthCredentials_accessToken(ctx, field)
-			case "refreshToken":
-				return ec.fieldContext_OAuthCredentials_refreshToken(ctx, field)
-			case "clientID":
-				return ec.fieldContext_OAuthCredentials_clientID(ctx, field)
-			case "expiresAt":
-				return ec.fieldContext_OAuthCredentials_expiresAt(ctx, field)
-			case "tokenType":
-				return ec.fieldContext_OAuthCredentials_tokenType(ctx, field)
-			case "scopes":
-				return ec.fieldContext_OAuthCredentials_scopes(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type OAuthCredentials", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _ChannelEdge_node(ctx context.Context, field graphql.CollectedField, obj *ent.ChannelEdge) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -21290,18 +19839,10 @@ func (ec *executionContext) fieldContext_ChannelEdge_node(_ context.Context, fie
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -22027,18 +20568,10 @@ func (ec *executionContext) fieldContext_ChannelModelPrice_channel(_ context.Con
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -23907,18 +22440,10 @@ func (ec *executionContext) fieldContext_ChannelProbe_channel(_ context.Context,
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -25565,18 +24090,10 @@ func (ec *executionContext) fieldContext_ClearChannelOverrideTemplatesPayload_ch
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -26455,75 +24972,6 @@ func (ec *executionContext) fieldContext_CredentialQuotaScope_credentials(ctx co
 	return fc, nil
 }
 
-func (ec *executionContext) _CredentialQuotaScope_providerQuotaStatuses(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_CredentialQuotaScope_providerQuotaStatuses,
-		func(ctx context.Context) (any, error) {
-			return obj.ProviderQuotaStatuses(ctx)
-		},
-		nil,
-		ec.marshalOProviderQuotaStatus2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusᚄ,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_CredentialQuotaScope_providerQuotaStatuses(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "CredentialQuotaScope",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_ProviderQuotaStatus_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_ProviderQuotaStatus_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_ProviderQuotaStatus_updatedAt(ctx, field)
-			case "channelID":
-				return ec.fieldContext_ProviderQuotaStatus_channelID(ctx, field)
-			case "scopeKey":
-				return ec.fieldContext_ProviderQuotaStatus_scopeKey(ctx, field)
-			case "credentialID":
-				return ec.fieldContext_ProviderQuotaStatus_credentialID(ctx, field)
-			case "credentialFingerprint":
-				return ec.fieldContext_ProviderQuotaStatus_credentialFingerprint(ctx, field)
-			case "secretFingerprint":
-				return ec.fieldContext_ProviderQuotaStatus_secretFingerprint(ctx, field)
-			case "resourceScopeKey":
-				return ec.fieldContext_ProviderQuotaStatus_resourceScopeKey(ctx, field)
-			case "quotaScopeID":
-				return ec.fieldContext_ProviderQuotaStatus_quotaScopeID(ctx, field)
-			case "providerType":
-				return ec.fieldContext_ProviderQuotaStatus_providerType(ctx, field)
-			case "status":
-				return ec.fieldContext_ProviderQuotaStatus_status(ctx, field)
-			case "quotaData":
-				return ec.fieldContext_ProviderQuotaStatus_quotaData(ctx, field)
-			case "nextResetAt":
-				return ec.fieldContext_ProviderQuotaStatus_nextResetAt(ctx, field)
-			case "ready":
-				return ec.fieldContext_ProviderQuotaStatus_ready(ctx, field)
-			case "nextCheckAt":
-				return ec.fieldContext_ProviderQuotaStatus_nextCheckAt(ctx, field)
-			case "channel":
-				return ec.fieldContext_ProviderQuotaStatus_channel(ctx, field)
-			case "credential":
-				return ec.fieldContext_ProviderQuotaStatus_credential(ctx, field)
-			case "quotaScope":
-				return ec.fieldContext_ProviderQuotaStatus_quotaScope(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type ProviderQuotaStatus", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _CredentialQuotaScope_executions(ctx context.Context, field graphql.CollectedField, obj *ent.CredentialQuotaScope) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -26785,8 +25233,6 @@ func (ec *executionContext) fieldContext_CredentialQuotaScopeEdge_node(_ context
 				return ec.fieldContext_CredentialQuotaScope_remark(ctx, field)
 			case "credentials":
 				return ec.fieldContext_CredentialQuotaScope_credentials(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_CredentialQuotaScope_providerQuotaStatuses(ctx, field)
 			case "executions":
 				return ec.fieldContext_CredentialQuotaScope_executions(ctx, field)
 			case "usageLogs":
@@ -27796,64 +26242,6 @@ func (ec *executionContext) fieldContext_DataStorageSettings_webdav(_ context.Co
 	return fc, nil
 }
 
-func (ec *executionContext) _DeleteDisabledAPIKeysPayload_success(ctx context.Context, field graphql.CollectedField, obj *biz.DeleteDisabledAPIKeysResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_DeleteDisabledAPIKeysPayload_success,
-		func(ctx context.Context) (any, error) {
-			return obj.Success, nil
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_DeleteDisabledAPIKeysPayload_success(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "DeleteDisabledAPIKeysPayload",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _DeleteDisabledAPIKeysPayload_message(ctx context.Context, field graphql.CollectedField, obj *biz.DeleteDisabledAPIKeysResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_DeleteDisabledAPIKeysPayload_message,
-		func(ctx context.Context) (any, error) {
-			return obj.Message, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_DeleteDisabledAPIKeysPayload_message(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "DeleteDisabledAPIKeysPayload",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _DeveloperModelSettings_developer(ctx context.Context, field graphql.CollectedField, obj *biz.DeveloperModelSettings) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -27929,122 +26317,6 @@ func (ec *executionContext) fieldContext_DeveloperModelSettings_associations(_ c
 				return ec.fieldContext_ModelAssociation_channelTagsRegex(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ModelAssociation", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _DisabledAPIKey_key(ctx context.Context, field graphql.CollectedField, obj *objects.DisabledAPIKey) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_DisabledAPIKey_key,
-		func(ctx context.Context) (any, error) {
-			return obj.Key, nil
-		},
-		nil,
-		ec.marshalNString2string,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_DisabledAPIKey_key(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "DisabledAPIKey",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _DisabledAPIKey_disabledAt(ctx context.Context, field graphql.CollectedField, obj *objects.DisabledAPIKey) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_DisabledAPIKey_disabledAt,
-		func(ctx context.Context) (any, error) {
-			return obj.DisabledAt, nil
-		},
-		nil,
-		ec.marshalNTime2timeᚐTime,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_DisabledAPIKey_disabledAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "DisabledAPIKey",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Time does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _DisabledAPIKey_errorCode(ctx context.Context, field graphql.CollectedField, obj *objects.DisabledAPIKey) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_DisabledAPIKey_errorCode,
-		func(ctx context.Context) (any, error) {
-			return obj.ErrorCode, nil
-		},
-		nil,
-		ec.marshalNInt2int,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_DisabledAPIKey_errorCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "DisabledAPIKey",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _DisabledAPIKey_reason(ctx context.Context, field graphql.CollectedField, obj *objects.DisabledAPIKey) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_DisabledAPIKey_reason,
-		func(ctx context.Context) (any, error) {
-			return obj.Reason, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_DisabledAPIKey_reason(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "DisabledAPIKey",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -29406,122 +27678,6 @@ func (ec *executionContext) fieldContext_InitializeSystemPayload_token(_ context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _MigrateLegacyCredentialsPayload_migratedChannels(ctx context.Context, field graphql.CollectedField, obj *biz.MigrateLegacyCredentialsPayload) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_MigrateLegacyCredentialsPayload_migratedChannels,
-		func(ctx context.Context) (any, error) {
-			return obj.MigratedChannels, nil
-		},
-		nil,
-		ec.marshalNInt2int,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_MigrateLegacyCredentialsPayload_migratedChannels(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "MigrateLegacyCredentialsPayload",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _MigrateLegacyCredentialsPayload_createdCredentials(ctx context.Context, field graphql.CollectedField, obj *biz.MigrateLegacyCredentialsPayload) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_MigrateLegacyCredentialsPayload_createdCredentials,
-		func(ctx context.Context) (any, error) {
-			return obj.CreatedCredentials, nil
-		},
-		nil,
-		ec.marshalNInt2int,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_MigrateLegacyCredentialsPayload_createdCredentials(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "MigrateLegacyCredentialsPayload",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _MigrateLegacyCredentialsPayload_createdRefs(ctx context.Context, field graphql.CollectedField, obj *biz.MigrateLegacyCredentialsPayload) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_MigrateLegacyCredentialsPayload_createdRefs,
-		func(ctx context.Context) (any, error) {
-			return obj.CreatedRefs, nil
-		},
-		nil,
-		ec.marshalNInt2int,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_MigrateLegacyCredentialsPayload_createdRefs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "MigrateLegacyCredentialsPayload",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _MigrateLegacyCredentialsPayload_skippedChannels(ctx context.Context, field graphql.CollectedField, obj *biz.MigrateLegacyCredentialsPayload) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_MigrateLegacyCredentialsPayload_skippedChannels,
-		func(ctx context.Context) (any, error) {
-			return obj.SkippedChannels, nil
-		},
-		nil,
-		ec.marshalNInt2int,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_MigrateLegacyCredentialsPayload_skippedChannels(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "MigrateLegacyCredentialsPayload",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -31047,18 +29203,10 @@ func (ec *executionContext) fieldContext_ModelChannelConnection_channel(_ contex
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -32121,18 +30269,10 @@ func (ec *executionContext) fieldContext_Mutation_createChannel(ctx context.Cont
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -32228,18 +30368,10 @@ func (ec *executionContext) fieldContext_Mutation_bulkCreateChannels(ctx context
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -32335,18 +30467,10 @@ func (ec *executionContext) fieldContext_Mutation_updateChannel(ctx context.Cont
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -32442,18 +30566,10 @@ func (ec *executionContext) fieldContext_Mutation_saveChannelEndpoints(ctx conte
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -32549,18 +30665,10 @@ func (ec *executionContext) fieldContext_Mutation_updateChannelStatus(ctx contex
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -32878,59 +30986,6 @@ func (ec *executionContext) fieldContext_Mutation_testChannel(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_testChannelAPIKeys(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Mutation_testChannelAPIKeys,
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().TestChannelAPIKeys(ctx, fc.Args["channelID"].(objects.GUID), fc.Args["modelID"].(*string))
-		},
-		nil,
-		ec.marshalNTestChannelAPIKeysPayload2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐTestChannelAPIKeysPayload,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Mutation_testChannelAPIKeys(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "channelID":
-				return ec.fieldContext_TestChannelAPIKeysPayload_channelID(ctx, field)
-			case "total":
-				return ec.fieldContext_TestChannelAPIKeysPayload_total(ctx, field)
-			case "successCount":
-				return ec.fieldContext_TestChannelAPIKeysPayload_successCount(ctx, field)
-			case "failedCount":
-				return ec.fieldContext_TestChannelAPIKeysPayload_failedCount(ctx, field)
-			case "results":
-				return ec.fieldContext_TestChannelAPIKeysPayload_results(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type TestChannelAPIKeysPayload", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_testChannelAPIKeys_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Mutation_bulkImportChannels(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -33033,217 +31088,6 @@ func (ec *executionContext) fieldContext_Mutation_bulkUpdateChannelOrdering(ctx 
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_disableChannelAPIKey(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Mutation_disableChannelAPIKey,
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().DisableChannelAPIKey(ctx, fc.Args["channelID"].(objects.GUID), fc.Args["key"].(string))
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Mutation_disableChannelAPIKey(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_disableChannelAPIKey_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_enableChannelAPIKey(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Mutation_enableChannelAPIKey,
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().EnableChannelAPIKey(ctx, fc.Args["channelID"].(objects.GUID), fc.Args["key"].(string))
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Mutation_enableChannelAPIKey(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_enableChannelAPIKey_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_enableAllChannelAPIKeys(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Mutation_enableAllChannelAPIKeys,
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().EnableAllChannelAPIKeys(ctx, fc.Args["channelID"].(objects.GUID))
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Mutation_enableAllChannelAPIKeys(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_enableAllChannelAPIKeys_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_enableSelectedChannelAPIKeys(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Mutation_enableSelectedChannelAPIKeys,
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().EnableSelectedChannelAPIKeys(ctx, fc.Args["channelID"].(objects.GUID), fc.Args["keys"].([]string))
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Mutation_enableSelectedChannelAPIKeys(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_enableSelectedChannelAPIKeys_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_deleteDisabledChannelAPIKeys(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Mutation_deleteDisabledChannelAPIKeys,
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().DeleteDisabledChannelAPIKeys(ctx, fc.Args["channelID"].(objects.GUID), fc.Args["keys"].([]string))
-		},
-		nil,
-		ec.marshalNDeleteDisabledAPIKeysPayload2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐDeleteDisabledAPIKeysResult,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Mutation_deleteDisabledChannelAPIKeys(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "success":
-				return ec.fieldContext_DeleteDisabledAPIKeysPayload_success(ctx, field)
-			case "message":
-				return ec.fieldContext_DeleteDisabledAPIKeysPayload_message(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type DeleteDisabledAPIKeysPayload", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_deleteDisabledChannelAPIKeys_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Mutation_createUpstreamCredential(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -33277,18 +31121,10 @@ func (ec *executionContext) fieldContext_Mutation_createUpstreamCredential(ctx c
 				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
 			case "name":
 				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "keyHint":
-				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
-			case "fingerprint":
-				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
-			case "secretFingerprint":
-				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
 			case "status":
 				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "quotaStatus":
-				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
 			case "lastError":
 				return ec.fieldContext_UpstreamCredential_lastError(ctx, field)
 			case "remark":
@@ -33299,8 +31135,6 @@ func (ec *executionContext) fieldContext_Mutation_createUpstreamCredential(ctx c
 				return ec.fieldContext_UpstreamCredential_executions(ctx, field)
 			case "usageLogs":
 				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
 			case "secretSummary":
@@ -33356,18 +31190,10 @@ func (ec *executionContext) fieldContext_Mutation_updateUpstreamCredential(ctx c
 				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
 			case "name":
 				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "keyHint":
-				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
-			case "fingerprint":
-				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
-			case "secretFingerprint":
-				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
 			case "status":
 				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "quotaStatus":
-				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
 			case "lastError":
 				return ec.fieldContext_UpstreamCredential_lastError(ctx, field)
 			case "remark":
@@ -33378,8 +31204,6 @@ func (ec *executionContext) fieldContext_Mutation_updateUpstreamCredential(ctx c
 				return ec.fieldContext_UpstreamCredential_executions(ctx, field)
 			case "usageLogs":
 				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
 			case "secretSummary":
@@ -33463,8 +31287,6 @@ func (ec *executionContext) fieldContext_Mutation_createCredentialQuotaScope(ctx
 				return ec.fieldContext_CredentialQuotaScope_remark(ctx, field)
 			case "credentials":
 				return ec.fieldContext_CredentialQuotaScope_credentials(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_CredentialQuotaScope_providerQuotaStatuses(ctx, field)
 			case "executions":
 				return ec.fieldContext_CredentialQuotaScope_executions(ctx, field)
 			case "usageLogs":
@@ -33548,8 +31370,6 @@ func (ec *executionContext) fieldContext_Mutation_updateCredentialQuotaScope(ctx
 				return ec.fieldContext_CredentialQuotaScope_remark(ctx, field)
 			case "credentials":
 				return ec.fieldContext_CredentialQuotaScope_credentials(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_CredentialQuotaScope_providerQuotaStatuses(ctx, field)
 			case "executions":
 				return ec.fieldContext_CredentialQuotaScope_executions(ctx, field)
 			case "usageLogs":
@@ -33605,18 +31425,10 @@ func (ec *executionContext) fieldContext_Mutation_rotateUpstreamCredentialSecret
 				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
 			case "name":
 				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "keyHint":
-				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
-			case "fingerprint":
-				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
-			case "secretFingerprint":
-				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
 			case "status":
 				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "quotaStatus":
-				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
 			case "lastError":
 				return ec.fieldContext_UpstreamCredential_lastError(ctx, field)
 			case "remark":
@@ -33627,8 +31439,6 @@ func (ec *executionContext) fieldContext_Mutation_rotateUpstreamCredentialSecret
 				return ec.fieldContext_UpstreamCredential_executions(ctx, field)
 			case "usageLogs":
 				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
 			case "secretSummary":
@@ -33684,18 +31494,10 @@ func (ec *executionContext) fieldContext_Mutation_archiveUpstreamCredential(ctx 
 				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
 			case "name":
 				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "keyHint":
-				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
-			case "fingerprint":
-				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
-			case "secretFingerprint":
-				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
 			case "status":
 				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "quotaStatus":
-				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
 			case "lastError":
 				return ec.fieldContext_UpstreamCredential_lastError(ctx, field)
 			case "remark":
@@ -33706,8 +31508,6 @@ func (ec *executionContext) fieldContext_Mutation_archiveUpstreamCredential(ctx 
 				return ec.fieldContext_UpstreamCredential_executions(ctx, field)
 			case "usageLogs":
 				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
 			case "secretSummary":
@@ -33804,18 +31604,10 @@ func (ec *executionContext) fieldContext_Mutation_updateUpstreamCredentialStatus
 				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
 			case "name":
 				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "keyHint":
-				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
-			case "fingerprint":
-				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
-			case "secretFingerprint":
-				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
 			case "status":
 				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "quotaStatus":
-				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
 			case "lastError":
 				return ec.fieldContext_UpstreamCredential_lastError(ctx, field)
 			case "remark":
@@ -33826,8 +31618,6 @@ func (ec *executionContext) fieldContext_Mutation_updateUpstreamCredentialStatus
 				return ec.fieldContext_UpstreamCredential_executions(ctx, field)
 			case "usageLogs":
 				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
 			case "secretSummary":
@@ -34005,45 +31795,6 @@ func (ec *executionContext) fieldContext_Mutation_detachCredentialFromChannel(ct
 	if fc.Args, err = ec.field_Mutation_detachCredentialFromChannel_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_migrateLegacyChannelCredentials(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Mutation_migrateLegacyChannelCredentials,
-		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Mutation().MigrateLegacyChannelCredentials(ctx)
-		},
-		nil,
-		ec.marshalNMigrateLegacyCredentialsPayload2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐMigrateLegacyCredentialsPayload,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Mutation_migrateLegacyChannelCredentials(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "migratedChannels":
-				return ec.fieldContext_MigrateLegacyCredentialsPayload_migratedChannels(ctx, field)
-			case "createdCredentials":
-				return ec.fieldContext_MigrateLegacyCredentialsPayload_createdCredentials(ctx, field)
-			case "createdRefs":
-				return ec.fieldContext_MigrateLegacyCredentialsPayload_createdRefs(ctx, field)
-			case "skippedChannels":
-				return ec.fieldContext_MigrateLegacyCredentialsPayload_skippedChannels(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type MigrateLegacyCredentialsPayload", field.Name)
-		},
 	}
 	return fc, nil
 }
@@ -36461,47 +34212,6 @@ func (ec *executionContext) fieldContext_Mutation_updateStoragePolicy(ctx contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Mutation_updateRetryPolicy(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Mutation_updateRetryPolicy,
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().UpdateRetryPolicy(ctx, fc.Args["input"].(biz.RetryPolicy))
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Mutation_updateRetryPolicy(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_updateRetryPolicy_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Mutation_updateWebhookNotifierConfig(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -36867,76 +34577,6 @@ func (ec *executionContext) fieldContext_Mutation_updateVideoStorageSettings(ctx
 	if fc.Args, err = ec.field_Mutation_updateVideoStorageSettings_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_updateQuotaEnforcementSettings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Mutation_updateQuotaEnforcementSettings,
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().UpdateQuotaEnforcementSettings(ctx, fc.Args["input"].(UpdateQuotaEnforcementSettingsInput))
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Mutation_updateQuotaEnforcementSettings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_updateQuotaEnforcementSettings_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_checkProviderQuotas(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Mutation_checkProviderQuotas,
-		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Mutation().CheckProviderQuotas(ctx)
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Mutation_checkProviderQuotas(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
 	}
 	return fc, nil
 }
@@ -42632,705 +40272,6 @@ func (ec *executionContext) fieldContext_PromptWriteCacheVariant_pricing(_ conte
 	return fc, nil
 }
 
-func (ec *executionContext) _ProviderQuotaStatus_id(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_id,
-		func(ctx context.Context) (any, error) {
-			return ec.resolvers.ProviderQuotaStatus().ID(ctx, obj)
-		},
-		nil,
-		ec.marshalNID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ProviderQuotaStatus_createdAt(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_createdAt,
-		func(ctx context.Context) (any, error) {
-			return obj.CreatedAt, nil
-		},
-		nil,
-		ec.marshalNTime2timeᚐTime,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Time does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ProviderQuotaStatus_updatedAt(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_updatedAt,
-		func(ctx context.Context) (any, error) {
-			return obj.UpdatedAt, nil
-		},
-		nil,
-		ec.marshalNTime2timeᚐTime,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Time does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ProviderQuotaStatus_channelID(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_channelID,
-		func(ctx context.Context) (any, error) {
-			return ec.resolvers.ProviderQuotaStatus().ChannelID(ctx, obj)
-		},
-		nil,
-		ec.marshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_channelID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ProviderQuotaStatus_scopeKey(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_scopeKey,
-		func(ctx context.Context) (any, error) {
-			return obj.ScopeKey, nil
-		},
-		nil,
-		ec.marshalNString2string,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_scopeKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ProviderQuotaStatus_credentialID(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_credentialID,
-		func(ctx context.Context) (any, error) {
-			return ec.resolvers.ProviderQuotaStatus().CredentialID(ctx, obj)
-		},
-		nil,
-		ec.marshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_credentialID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ProviderQuotaStatus_credentialFingerprint(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_credentialFingerprint,
-		func(ctx context.Context) (any, error) {
-			return obj.CredentialFingerprint, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_credentialFingerprint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ProviderQuotaStatus_secretFingerprint(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_secretFingerprint,
-		func(ctx context.Context) (any, error) {
-			return obj.SecretFingerprint, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_secretFingerprint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ProviderQuotaStatus_resourceScopeKey(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_resourceScopeKey,
-		func(ctx context.Context) (any, error) {
-			return obj.ResourceScopeKey, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_resourceScopeKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ProviderQuotaStatus_quotaScopeID(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_quotaScopeID,
-		func(ctx context.Context) (any, error) {
-			return ec.resolvers.ProviderQuotaStatus().QuotaScopeID(ctx, obj)
-		},
-		nil,
-		ec.marshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_quotaScopeID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ProviderQuotaStatus_providerType(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_providerType,
-		func(ctx context.Context) (any, error) {
-			return obj.ProviderType, nil
-		},
-		nil,
-		ec.marshalNProviderQuotaStatusProviderType2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐProviderType,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_providerType(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ProviderQuotaStatusProviderType does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ProviderQuotaStatus_status(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_status,
-		func(ctx context.Context) (any, error) {
-			return obj.Status, nil
-		},
-		nil,
-		ec.marshalNProviderQuotaStatusStatus2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐStatus,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_status(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ProviderQuotaStatusStatus does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ProviderQuotaStatus_quotaData(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_quotaData,
-		func(ctx context.Context) (any, error) {
-			return obj.QuotaData, nil
-		},
-		nil,
-		ec.marshalNMap2map,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_quotaData(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Map does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ProviderQuotaStatus_nextResetAt(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_nextResetAt,
-		func(ctx context.Context) (any, error) {
-			return obj.NextResetAt, nil
-		},
-		nil,
-		ec.marshalOTime2ᚖtimeᚐTime,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_nextResetAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Time does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ProviderQuotaStatus_ready(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_ready,
-		func(ctx context.Context) (any, error) {
-			return obj.Ready, nil
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_ready(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ProviderQuotaStatus_nextCheckAt(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_nextCheckAt,
-		func(ctx context.Context) (any, error) {
-			return obj.NextCheckAt, nil
-		},
-		nil,
-		ec.marshalNTime2timeᚐTime,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_nextCheckAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Time does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ProviderQuotaStatus_channel(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_channel,
-		func(ctx context.Context) (any, error) {
-			return obj.Channel(ctx)
-		},
-		nil,
-		ec.marshalOChannel2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐChannel,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_channel(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Channel_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_Channel_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_Channel_updatedAt(ctx, field)
-			case "type":
-				return ec.fieldContext_Channel_type(ctx, field)
-			case "baseURL":
-				return ec.fieldContext_Channel_baseURL(ctx, field)
-			case "name":
-				return ec.fieldContext_Channel_name(ctx, field)
-			case "status":
-				return ec.fieldContext_Channel_status(ctx, field)
-			case "supportedModels":
-				return ec.fieldContext_Channel_supportedModels(ctx, field)
-			case "manualModels":
-				return ec.fieldContext_Channel_manualModels(ctx, field)
-			case "autoSyncSupportedModels":
-				return ec.fieldContext_Channel_autoSyncSupportedModels(ctx, field)
-			case "autoSyncModelPattern":
-				return ec.fieldContext_Channel_autoSyncModelPattern(ctx, field)
-			case "tags":
-				return ec.fieldContext_Channel_tags(ctx, field)
-			case "defaultTestModel":
-				return ec.fieldContext_Channel_defaultTestModel(ctx, field)
-			case "policies":
-				return ec.fieldContext_Channel_policies(ctx, field)
-			case "settings":
-				return ec.fieldContext_Channel_settings(ctx, field)
-			case "orderingWeight":
-				return ec.fieldContext_Channel_orderingWeight(ctx, field)
-			case "errorMessage":
-				return ec.fieldContext_Channel_errorMessage(ctx, field)
-			case "remark":
-				return ec.fieldContext_Channel_remark(ctx, field)
-			case "endpoints":
-				return ec.fieldContext_Channel_endpoints(ctx, field)
-			case "requests":
-				return ec.fieldContext_Channel_requests(ctx, field)
-			case "executions":
-				return ec.fieldContext_Channel_executions(ctx, field)
-			case "usageLogs":
-				return ec.fieldContext_Channel_usageLogs(ctx, field)
-			case "channelProbes":
-				return ec.fieldContext_Channel_channelProbes(ctx, field)
-			case "channelModelPrices":
-				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
-			case "credentialRefs":
-				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
-			case "defaultEndpoints":
-				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
-			case "allModelEntries":
-				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
-			case "liveLimiterStats":
-				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Channel", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ProviderQuotaStatus_credential(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_credential,
-		func(ctx context.Context) (any, error) {
-			return obj.Credential(ctx)
-		},
-		nil,
-		ec.marshalOUpstreamCredential2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUpstreamCredential,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_credential(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_UpstreamCredential_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_UpstreamCredential_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
-			case "name":
-				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "keyHint":
-				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
-			case "quotaScopeID":
-				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
-			case "fingerprint":
-				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
-			case "secretFingerprint":
-				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
-			case "status":
-				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "quotaStatus":
-				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
-			case "lastError":
-				return ec.fieldContext_UpstreamCredential_lastError(ctx, field)
-			case "remark":
-				return ec.fieldContext_UpstreamCredential_remark(ctx, field)
-			case "channelRefs":
-				return ec.fieldContext_UpstreamCredential_channelRefs(ctx, field)
-			case "executions":
-				return ec.fieldContext_UpstreamCredential_executions(ctx, field)
-			case "usageLogs":
-				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
-			case "quotaScope":
-				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
-			case "secretSummary":
-				return ec.fieldContext_UpstreamCredential_secretSummary(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type UpstreamCredential", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ProviderQuotaStatus_quotaScope(ctx context.Context, field graphql.CollectedField, obj *ent.ProviderQuotaStatus) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_ProviderQuotaStatus_quotaScope,
-		func(ctx context.Context) (any, error) {
-			return obj.QuotaScope(ctx)
-		},
-		nil,
-		ec.marshalOCredentialQuotaScope2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScope,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_ProviderQuotaStatus_quotaScope(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ProviderQuotaStatus",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_CredentialQuotaScope_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_CredentialQuotaScope_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_CredentialQuotaScope_updatedAt(ctx, field)
-			case "name":
-				return ec.fieldContext_CredentialQuotaScope_name(ctx, field)
-			case "status":
-				return ec.fieldContext_CredentialQuotaScope_status(ctx, field)
-			case "unit":
-				return ec.fieldContext_CredentialQuotaScope_unit(ctx, field)
-			case "limitAmount":
-				return ec.fieldContext_CredentialQuotaScope_limitAmount(ctx, field)
-			case "usedAmount":
-				return ec.fieldContext_CredentialQuotaScope_usedAmount(ctx, field)
-			case "warningThresholdPercent":
-				return ec.fieldContext_CredentialQuotaScope_warningThresholdPercent(ctx, field)
-			case "resetPolicy":
-				return ec.fieldContext_CredentialQuotaScope_resetPolicy(ctx, field)
-			case "resetAt":
-				return ec.fieldContext_CredentialQuotaScope_resetAt(ctx, field)
-			case "windowStartedAt":
-				return ec.fieldContext_CredentialQuotaScope_windowStartedAt(ctx, field)
-			case "overLimitAction":
-				return ec.fieldContext_CredentialQuotaScope_overLimitAction(ctx, field)
-			case "pauseUntil":
-				return ec.fieldContext_CredentialQuotaScope_pauseUntil(ctx, field)
-			case "source":
-				return ec.fieldContext_CredentialQuotaScope_source(ctx, field)
-			case "lastError":
-				return ec.fieldContext_CredentialQuotaScope_lastError(ctx, field)
-			case "remark":
-				return ec.fieldContext_CredentialQuotaScope_remark(ctx, field)
-			case "credentials":
-				return ec.fieldContext_CredentialQuotaScope_credentials(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_CredentialQuotaScope_providerQuotaStatuses(ctx, field)
-			case "executions":
-				return ec.fieldContext_CredentialQuotaScope_executions(ctx, field)
-			case "usageLogs":
-				return ec.fieldContext_CredentialQuotaScope_usageLogs(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type CredentialQuotaScope", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _ProxyConfig_type(ctx context.Context, field graphql.CollectedField, obj *httpclient.ProxyConfig) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -44700,18 +41641,10 @@ func (ec *executionContext) fieldContext_Query_allChannelSummarys(ctx context.Co
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -46221,53 +43154,6 @@ func (ec *executionContext) fieldContext_Query_storagePolicy(_ context.Context, 
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_retryPolicy(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Query_retryPolicy,
-		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Query().RetryPolicy(ctx)
-		},
-		nil,
-		ec.marshalNRetryPolicy2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐRetryPolicy,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Query_retryPolicy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "maxChannelRetries":
-				return ec.fieldContext_RetryPolicy_maxChannelRetries(ctx, field)
-			case "maxSingleChannelRetries":
-				return ec.fieldContext_RetryPolicy_maxSingleChannelRetries(ctx, field)
-			case "retryDelayMs":
-				return ec.fieldContext_RetryPolicy_retryDelayMs(ctx, field)
-			case "loadBalancerStrategy":
-				return ec.fieldContext_RetryPolicy_loadBalancerStrategy(ctx, field)
-			case "enabled":
-				return ec.fieldContext_RetryPolicy_enabled(ctx, field)
-			case "autoDisableChannel":
-				return ec.fieldContext_RetryPolicy_autoDisableChannel(ctx, field)
-			case "emptyResponseDetection":
-				return ec.fieldContext_RetryPolicy_emptyResponseDetection(ctx, field)
-			case "upstreamErrorPolicy":
-				return ec.fieldContext_RetryPolicy_upstreamErrorPolicy(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type RetryPolicy", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Query_webhookNotifierConfig(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -46602,41 +43488,6 @@ func (ec *executionContext) fieldContext_Query_videoStorageSettings(_ context.Co
 				return ec.fieldContext_VideoStorageSettings_scanLimit(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type VideoStorageSettings", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_quotaEnforcementSettings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Query_quotaEnforcementSettings,
-		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Query().QuotaEnforcementSettings(ctx)
-		},
-		nil,
-		ec.marshalNQuotaEnforcementSettings2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐQuotaEnforcementSettings,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Query_quotaEnforcementSettings(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "enabled":
-				return ec.fieldContext_QuotaEnforcementSettings_enabled(ctx, field)
-			case "mode":
-				return ec.fieldContext_QuotaEnforcementSettings_mode(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type QuotaEnforcementSettings", field.Name)
 		},
 	}
 	return fc, nil
@@ -47177,64 +44028,6 @@ func (ec *executionContext) fieldContext_Query___schema(_ context.Context, field
 				return ec.fieldContext___Schema_directives(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type __Schema", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _QuotaEnforcementSettings_enabled(ctx context.Context, field graphql.CollectedField, obj *biz.QuotaEnforcementSettings) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_QuotaEnforcementSettings_enabled,
-		func(ctx context.Context) (any, error) {
-			return obj.Enabled, nil
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_QuotaEnforcementSettings_enabled(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "QuotaEnforcementSettings",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _QuotaEnforcementSettings_mode(ctx context.Context, field graphql.CollectedField, obj *biz.QuotaEnforcementSettings) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_QuotaEnforcementSettings_mode,
-		func(ctx context.Context) (any, error) {
-			return obj.Mode, nil
-		},
-		nil,
-		ec.marshalNQuotaEnforcementMode2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐQuotaEnforcementMode,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_QuotaEnforcementSettings_mode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "QuotaEnforcementSettings",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type QuotaEnforcementMode does not have child fields")
 		},
 	}
 	return fc, nil
@@ -48448,18 +45241,10 @@ func (ec *executionContext) fieldContext_Request_channel(_ context.Context, fiel
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -49039,93 +45824,6 @@ func (ec *executionContext) fieldContext_RequestExecution_modelID(_ context.Cont
 	return fc, nil
 }
 
-func (ec *executionContext) _RequestExecution_credentialFingerprint(ctx context.Context, field graphql.CollectedField, obj *ent.RequestExecution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_RequestExecution_credentialFingerprint,
-		func(ctx context.Context) (any, error) {
-			return obj.CredentialFingerprint, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_RequestExecution_credentialFingerprint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "RequestExecution",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _RequestExecution_secretFingerprint(ctx context.Context, field graphql.CollectedField, obj *ent.RequestExecution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_RequestExecution_secretFingerprint,
-		func(ctx context.Context) (any, error) {
-			return obj.SecretFingerprint, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_RequestExecution_secretFingerprint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "RequestExecution",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _RequestExecution_resourceScopeKey(ctx context.Context, field graphql.CollectedField, obj *ent.RequestExecution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_RequestExecution_resourceScopeKey,
-		func(ctx context.Context) (any, error) {
-			return obj.ResourceScopeKey, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_RequestExecution_resourceScopeKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "RequestExecution",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _RequestExecution_quotaScopeID(ctx context.Context, field graphql.CollectedField, obj *ent.RequestExecution) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -49230,64 +45928,6 @@ func (ec *executionContext) _RequestExecution_credentialNameSnapshot(ctx context
 }
 
 func (ec *executionContext) fieldContext_RequestExecution_credentialNameSnapshot(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "RequestExecution",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _RequestExecution_credentialKeyHint(ctx context.Context, field graphql.CollectedField, obj *ent.RequestExecution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_RequestExecution_credentialKeyHint,
-		func(ctx context.Context) (any, error) {
-			return obj.CredentialKeyHint, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_RequestExecution_credentialKeyHint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "RequestExecution",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _RequestExecution_credentialSource(ctx context.Context, field graphql.CollectedField, obj *ent.RequestExecution) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_RequestExecution_credentialSource,
-		func(ctx context.Context) (any, error) {
-			return obj.CredentialSource, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_RequestExecution_credentialSource(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "RequestExecution",
 		Field:      field,
@@ -49850,18 +46490,10 @@ func (ec *executionContext) fieldContext_RequestExecution_channel(_ context.Cont
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -49903,18 +46535,10 @@ func (ec *executionContext) fieldContext_RequestExecution_credential(_ context.C
 				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
 			case "name":
 				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "keyHint":
-				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
-			case "fingerprint":
-				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
-			case "secretFingerprint":
-				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
 			case "status":
 				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "quotaStatus":
-				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
 			case "lastError":
 				return ec.fieldContext_UpstreamCredential_lastError(ctx, field)
 			case "remark":
@@ -49925,8 +46549,6 @@ func (ec *executionContext) fieldContext_RequestExecution_credential(_ context.C
 				return ec.fieldContext_UpstreamCredential_executions(ctx, field)
 			case "usageLogs":
 				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
 			case "secretSummary":
@@ -49998,8 +46620,6 @@ func (ec *executionContext) fieldContext_RequestExecution_quotaScope(_ context.C
 				return ec.fieldContext_CredentialQuotaScope_remark(ctx, field)
 			case "credentials":
 				return ec.fieldContext_CredentialQuotaScope_credentials(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_CredentialQuotaScope_providerQuotaStatuses(ctx, field)
 			case "executions":
 				return ec.fieldContext_CredentialQuotaScope_executions(ctx, field)
 			case "usageLogs":
@@ -50211,12 +46831,6 @@ func (ec *executionContext) fieldContext_RequestExecutionEdge_node(_ context.Con
 				return ec.fieldContext_RequestExecution_externalID(ctx, field)
 			case "modelID":
 				return ec.fieldContext_RequestExecution_modelID(ctx, field)
-			case "credentialFingerprint":
-				return ec.fieldContext_RequestExecution_credentialFingerprint(ctx, field)
-			case "secretFingerprint":
-				return ec.fieldContext_RequestExecution_secretFingerprint(ctx, field)
-			case "resourceScopeKey":
-				return ec.fieldContext_RequestExecution_resourceScopeKey(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_RequestExecution_quotaScopeID(ctx, field)
 			case "quotaScopeNameSnapshot":
@@ -50225,10 +46839,6 @@ func (ec *executionContext) fieldContext_RequestExecutionEdge_node(_ context.Con
 				return ec.fieldContext_RequestExecution_quotaScopeStatusSnapshot(ctx, field)
 			case "credentialNameSnapshot":
 				return ec.fieldContext_RequestExecution_credentialNameSnapshot(ctx, field)
-			case "credentialKeyHint":
-				return ec.fieldContext_RequestExecution_credentialKeyHint(ctx, field)
-			case "credentialSource":
-				return ec.fieldContext_RequestExecution_credentialSource(ctx, field)
 			case "credentialQuotaStatusSnapshot":
 				return ec.fieldContext_RequestExecution_credentialQuotaStatusSnapshot(ctx, field)
 			case "format":
@@ -50818,250 +47428,6 @@ func (ec *executionContext) fieldContext_RestorePayload_message(_ context.Contex
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _RetryPolicy_maxChannelRetries(ctx context.Context, field graphql.CollectedField, obj *biz.RetryPolicy) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_RetryPolicy_maxChannelRetries,
-		func(ctx context.Context) (any, error) {
-			return obj.MaxChannelRetries, nil
-		},
-		nil,
-		ec.marshalNInt2int,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_RetryPolicy_maxChannelRetries(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "RetryPolicy",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _RetryPolicy_maxSingleChannelRetries(ctx context.Context, field graphql.CollectedField, obj *biz.RetryPolicy) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_RetryPolicy_maxSingleChannelRetries,
-		func(ctx context.Context) (any, error) {
-			return obj.MaxSingleChannelRetries, nil
-		},
-		nil,
-		ec.marshalNInt2int,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_RetryPolicy_maxSingleChannelRetries(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "RetryPolicy",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _RetryPolicy_retryDelayMs(ctx context.Context, field graphql.CollectedField, obj *biz.RetryPolicy) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_RetryPolicy_retryDelayMs,
-		func(ctx context.Context) (any, error) {
-			return obj.RetryDelayMs, nil
-		},
-		nil,
-		ec.marshalNInt2int,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_RetryPolicy_retryDelayMs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "RetryPolicy",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _RetryPolicy_loadBalancerStrategy(ctx context.Context, field graphql.CollectedField, obj *biz.RetryPolicy) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_RetryPolicy_loadBalancerStrategy,
-		func(ctx context.Context) (any, error) {
-			return obj.LoadBalancerStrategy, nil
-		},
-		nil,
-		ec.marshalNString2string,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_RetryPolicy_loadBalancerStrategy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "RetryPolicy",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _RetryPolicy_enabled(ctx context.Context, field graphql.CollectedField, obj *biz.RetryPolicy) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_RetryPolicy_enabled,
-		func(ctx context.Context) (any, error) {
-			return obj.Enabled, nil
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_RetryPolicy_enabled(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "RetryPolicy",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _RetryPolicy_autoDisableChannel(ctx context.Context, field graphql.CollectedField, obj *biz.RetryPolicy) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_RetryPolicy_autoDisableChannel,
-		func(ctx context.Context) (any, error) {
-			return obj.AutoDisableChannel, nil
-		},
-		nil,
-		ec.marshalNAutoDisableChannel2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐAutoDisableChannel,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_RetryPolicy_autoDisableChannel(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "RetryPolicy",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "enabled":
-				return ec.fieldContext_AutoDisableChannel_enabled(ctx, field)
-			case "statuses":
-				return ec.fieldContext_AutoDisableChannel_statuses(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type AutoDisableChannel", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _RetryPolicy_emptyResponseDetection(ctx context.Context, field graphql.CollectedField, obj *biz.RetryPolicy) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_RetryPolicy_emptyResponseDetection,
-		func(ctx context.Context) (any, error) {
-			return obj.EmptyResponseDetection, nil
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_RetryPolicy_emptyResponseDetection(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "RetryPolicy",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _RetryPolicy_upstreamErrorPolicy(ctx context.Context, field graphql.CollectedField, obj *biz.RetryPolicy) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_RetryPolicy_upstreamErrorPolicy,
-		func(ctx context.Context) (any, error) {
-			return obj.UpstreamErrorPolicy, nil
-		},
-		nil,
-		ec.marshalNUpstreamErrorPolicy2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐUpstreamErrorPolicy,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_RetryPolicy_upstreamErrorPolicy(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "RetryPolicy",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "mode":
-				return ec.fieldContext_UpstreamErrorPolicy_mode(ctx, field)
-			case "customMessage":
-				return ec.fieldContext_UpstreamErrorPolicy_customMessage(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type UpstreamErrorPolicy", field.Name)
 		},
 	}
 	return fc, nil
@@ -54196,308 +50562,6 @@ func (ec *executionContext) fieldContext_SystemVersion_uptime(_ context.Context,
 	return fc, nil
 }
 
-func (ec *executionContext) _TestAPIKeyResult_keyPrefix(ctx context.Context, field graphql.CollectedField, obj *TestAPIKeyResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_TestAPIKeyResult_keyPrefix,
-		func(ctx context.Context) (any, error) {
-			return obj.KeyPrefix, nil
-		},
-		nil,
-		ec.marshalNString2string,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_TestAPIKeyResult_keyPrefix(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TestAPIKeyResult",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TestAPIKeyResult_success(ctx context.Context, field graphql.CollectedField, obj *TestAPIKeyResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_TestAPIKeyResult_success,
-		func(ctx context.Context) (any, error) {
-			return obj.Success, nil
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_TestAPIKeyResult_success(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TestAPIKeyResult",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TestAPIKeyResult_latency(ctx context.Context, field graphql.CollectedField, obj *TestAPIKeyResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_TestAPIKeyResult_latency,
-		func(ctx context.Context) (any, error) {
-			return obj.Latency, nil
-		},
-		nil,
-		ec.marshalNFloat2float64,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_TestAPIKeyResult_latency(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TestAPIKeyResult",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Float does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TestAPIKeyResult_error(ctx context.Context, field graphql.CollectedField, obj *TestAPIKeyResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_TestAPIKeyResult_error,
-		func(ctx context.Context) (any, error) {
-			return obj.Error, nil
-		},
-		nil,
-		ec.marshalOString2ᚖstring,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_TestAPIKeyResult_error(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TestAPIKeyResult",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TestAPIKeyResult_disabled(ctx context.Context, field graphql.CollectedField, obj *TestAPIKeyResult) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_TestAPIKeyResult_disabled,
-		func(ctx context.Context) (any, error) {
-			return obj.Disabled, nil
-		},
-		nil,
-		ec.marshalNBoolean2bool,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_TestAPIKeyResult_disabled(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TestAPIKeyResult",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TestChannelAPIKeysPayload_channelID(ctx context.Context, field graphql.CollectedField, obj *TestChannelAPIKeysPayload) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_TestChannelAPIKeysPayload_channelID,
-		func(ctx context.Context) (any, error) {
-			return obj.ChannelID, nil
-		},
-		nil,
-		ec.marshalNID2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_TestChannelAPIKeysPayload_channelID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TestChannelAPIKeysPayload",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TestChannelAPIKeysPayload_total(ctx context.Context, field graphql.CollectedField, obj *TestChannelAPIKeysPayload) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_TestChannelAPIKeysPayload_total,
-		func(ctx context.Context) (any, error) {
-			return obj.Total, nil
-		},
-		nil,
-		ec.marshalNInt2int,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_TestChannelAPIKeysPayload_total(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TestChannelAPIKeysPayload",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TestChannelAPIKeysPayload_successCount(ctx context.Context, field graphql.CollectedField, obj *TestChannelAPIKeysPayload) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_TestChannelAPIKeysPayload_successCount,
-		func(ctx context.Context) (any, error) {
-			return obj.SuccessCount, nil
-		},
-		nil,
-		ec.marshalNInt2int,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_TestChannelAPIKeysPayload_successCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TestChannelAPIKeysPayload",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TestChannelAPIKeysPayload_failedCount(ctx context.Context, field graphql.CollectedField, obj *TestChannelAPIKeysPayload) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_TestChannelAPIKeysPayload_failedCount,
-		func(ctx context.Context) (any, error) {
-			return obj.FailedCount, nil
-		},
-		nil,
-		ec.marshalNInt2int,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_TestChannelAPIKeysPayload_failedCount(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TestChannelAPIKeysPayload",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _TestChannelAPIKeysPayload_results(ctx context.Context, field graphql.CollectedField, obj *TestChannelAPIKeysPayload) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_TestChannelAPIKeysPayload_results,
-		func(ctx context.Context) (any, error) {
-			return obj.Results, nil
-		},
-		nil,
-		ec.marshalNTestAPIKeyResult2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐTestAPIKeyResultᚄ,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_TestChannelAPIKeysPayload_results(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "TestChannelAPIKeysPayload",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "keyPrefix":
-				return ec.fieldContext_TestAPIKeyResult_keyPrefix(ctx, field)
-			case "success":
-				return ec.fieldContext_TestAPIKeyResult_success(ctx, field)
-			case "latency":
-				return ec.fieldContext_TestAPIKeyResult_latency(ctx, field)
-			case "error":
-				return ec.fieldContext_TestAPIKeyResult_error(ctx, field)
-			case "disabled":
-				return ec.fieldContext_TestAPIKeyResult_disabled(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type TestAPIKeyResult", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _TestChannelPayload_latency(ctx context.Context, field graphql.CollectedField, obj *TestChannelPayload) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -57249,18 +53313,10 @@ func (ec *executionContext) fieldContext_UnassociatedChannel_channel(_ context.C
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -57415,35 +53471,6 @@ func (ec *executionContext) fieldContext_UpstreamCredential_name(_ context.Conte
 	return fc, nil
 }
 
-func (ec *executionContext) _UpstreamCredential_keyHint(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredential) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_UpstreamCredential_keyHint,
-		func(ctx context.Context) (any, error) {
-			return obj.KeyHint, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_UpstreamCredential_keyHint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UpstreamCredential",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _UpstreamCredential_quotaScopeID(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredential) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -57473,64 +53500,6 @@ func (ec *executionContext) fieldContext_UpstreamCredential_quotaScopeID(_ conte
 	return fc, nil
 }
 
-func (ec *executionContext) _UpstreamCredential_fingerprint(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredential) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_UpstreamCredential_fingerprint,
-		func(ctx context.Context) (any, error) {
-			return obj.Fingerprint, nil
-		},
-		nil,
-		ec.marshalNString2string,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_UpstreamCredential_fingerprint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UpstreamCredential",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _UpstreamCredential_secretFingerprint(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredential) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_UpstreamCredential_secretFingerprint,
-		func(ctx context.Context) (any, error) {
-			return obj.SecretFingerprint, nil
-		},
-		nil,
-		ec.marshalOString2ᚖstring,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_UpstreamCredential_secretFingerprint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UpstreamCredential",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _UpstreamCredential_status(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredential) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -57555,35 +53524,6 @@ func (ec *executionContext) fieldContext_UpstreamCredential_status(_ context.Con
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type UpstreamCredentialStatus does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _UpstreamCredential_quotaStatus(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredential) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_UpstreamCredential_quotaStatus,
-		func(ctx context.Context) (any, error) {
-			return obj.QuotaStatus, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_UpstreamCredential_quotaStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UpstreamCredential",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -57794,75 +53734,6 @@ func (ec *executionContext) fieldContext_UpstreamCredential_usageLogs(ctx contex
 	return fc, nil
 }
 
-func (ec *executionContext) _UpstreamCredential_providerQuotaStatuses(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredential) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_UpstreamCredential_providerQuotaStatuses,
-		func(ctx context.Context) (any, error) {
-			return obj.ProviderQuotaStatuses(ctx)
-		},
-		nil,
-		ec.marshalOProviderQuotaStatus2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusᚄ,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_UpstreamCredential_providerQuotaStatuses(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UpstreamCredential",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_ProviderQuotaStatus_id(ctx, field)
-			case "createdAt":
-				return ec.fieldContext_ProviderQuotaStatus_createdAt(ctx, field)
-			case "updatedAt":
-				return ec.fieldContext_ProviderQuotaStatus_updatedAt(ctx, field)
-			case "channelID":
-				return ec.fieldContext_ProviderQuotaStatus_channelID(ctx, field)
-			case "scopeKey":
-				return ec.fieldContext_ProviderQuotaStatus_scopeKey(ctx, field)
-			case "credentialID":
-				return ec.fieldContext_ProviderQuotaStatus_credentialID(ctx, field)
-			case "credentialFingerprint":
-				return ec.fieldContext_ProviderQuotaStatus_credentialFingerprint(ctx, field)
-			case "secretFingerprint":
-				return ec.fieldContext_ProviderQuotaStatus_secretFingerprint(ctx, field)
-			case "resourceScopeKey":
-				return ec.fieldContext_ProviderQuotaStatus_resourceScopeKey(ctx, field)
-			case "quotaScopeID":
-				return ec.fieldContext_ProviderQuotaStatus_quotaScopeID(ctx, field)
-			case "providerType":
-				return ec.fieldContext_ProviderQuotaStatus_providerType(ctx, field)
-			case "status":
-				return ec.fieldContext_ProviderQuotaStatus_status(ctx, field)
-			case "quotaData":
-				return ec.fieldContext_ProviderQuotaStatus_quotaData(ctx, field)
-			case "nextResetAt":
-				return ec.fieldContext_ProviderQuotaStatus_nextResetAt(ctx, field)
-			case "ready":
-				return ec.fieldContext_ProviderQuotaStatus_ready(ctx, field)
-			case "nextCheckAt":
-				return ec.fieldContext_ProviderQuotaStatus_nextCheckAt(ctx, field)
-			case "channel":
-				return ec.fieldContext_ProviderQuotaStatus_channel(ctx, field)
-			case "credential":
-				return ec.fieldContext_ProviderQuotaStatus_credential(ctx, field)
-			case "quotaScope":
-				return ec.fieldContext_ProviderQuotaStatus_quotaScope(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type ProviderQuotaStatus", field.Name)
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _UpstreamCredential_quotaScope(ctx context.Context, field graphql.CollectedField, obj *ent.UpstreamCredential) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -57923,8 +53794,6 @@ func (ec *executionContext) fieldContext_UpstreamCredential_quotaScope(_ context
 				return ec.fieldContext_CredentialQuotaScope_remark(ctx, field)
 			case "credentials":
 				return ec.fieldContext_CredentialQuotaScope_credentials(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_CredentialQuotaScope_providerQuotaStatuses(ctx, field)
 			case "executions":
 				return ec.fieldContext_CredentialQuotaScope_executions(ctx, field)
 			case "usageLogs":
@@ -58110,18 +53979,10 @@ func (ec *executionContext) fieldContext_UpstreamCredentialEdge_node(_ context.C
 				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
 			case "name":
 				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "keyHint":
-				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
-			case "fingerprint":
-				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
-			case "secretFingerprint":
-				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
 			case "status":
 				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "quotaStatus":
-				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
 			case "lastError":
 				return ec.fieldContext_UpstreamCredential_lastError(ctx, field)
 			case "remark":
@@ -58132,8 +53993,6 @@ func (ec *executionContext) fieldContext_UpstreamCredentialEdge_node(_ context.C
 				return ec.fieldContext_UpstreamCredential_executions(ctx, field)
 			case "usageLogs":
 				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
 			case "secretSummary":
@@ -58609,93 +54468,6 @@ func (ec *executionContext) fieldContext_UsageLog_modelID(_ context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _UsageLog_credentialFingerprint(ctx context.Context, field graphql.CollectedField, obj *ent.UsageLog) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_UsageLog_credentialFingerprint,
-		func(ctx context.Context) (any, error) {
-			return obj.CredentialFingerprint, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_UsageLog_credentialFingerprint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UsageLog",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _UsageLog_secretFingerprint(ctx context.Context, field graphql.CollectedField, obj *ent.UsageLog) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_UsageLog_secretFingerprint,
-		func(ctx context.Context) (any, error) {
-			return obj.SecretFingerprint, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_UsageLog_secretFingerprint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UsageLog",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _UsageLog_resourceScopeKey(ctx context.Context, field graphql.CollectedField, obj *ent.UsageLog) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_UsageLog_resourceScopeKey,
-		func(ctx context.Context) (any, error) {
-			return obj.ResourceScopeKey, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_UsageLog_resourceScopeKey(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UsageLog",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _UsageLog_quotaScopeID(ctx context.Context, field graphql.CollectedField, obj *ent.UsageLog) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -58800,64 +54572,6 @@ func (ec *executionContext) _UsageLog_credentialNameSnapshot(ctx context.Context
 }
 
 func (ec *executionContext) fieldContext_UsageLog_credentialNameSnapshot(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UsageLog",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _UsageLog_credentialKeyHint(ctx context.Context, field graphql.CollectedField, obj *ent.UsageLog) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_UsageLog_credentialKeyHint,
-		func(ctx context.Context) (any, error) {
-			return obj.CredentialKeyHint, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_UsageLog_credentialKeyHint(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "UsageLog",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _UsageLog_credentialSource(ctx context.Context, field graphql.CollectedField, obj *ent.UsageLog) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_UsageLog_credentialSource,
-		func(ctx context.Context) (any, error) {
-			return obj.CredentialSource, nil
-		},
-		nil,
-		ec.marshalOString2string,
-		true,
-		false,
-	)
-}
-
-func (ec *executionContext) fieldContext_UsageLog_credentialSource(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "UsageLog",
 		Field:      field,
@@ -59640,18 +55354,10 @@ func (ec *executionContext) fieldContext_UsageLog_channel(_ context.Context, fie
 				return ec.fieldContext_Channel_channelModelPrices(ctx, field)
 			case "credentialRefs":
 				return ec.fieldContext_Channel_credentialRefs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_Channel_providerQuotaStatuses(ctx, field)
 			case "defaultEndpoints":
 				return ec.fieldContext_Channel_defaultEndpoints(ctx, field)
 			case "allModelEntries":
 				return ec.fieldContext_Channel_allModelEntries(ctx, field)
-			case "credentials":
-				return ec.fieldContext_Channel_credentials(ctx, field)
-			case "disabledAPIKeys":
-				return ec.fieldContext_Channel_disabledAPIKeys(ctx, field)
-			case "providerQuotaStatus":
-				return ec.fieldContext_Channel_providerQuotaStatus(ctx, field)
 			case "liveLimiterStats":
 				return ec.fieldContext_Channel_liveLimiterStats(ctx, field)
 			}
@@ -59693,18 +55399,10 @@ func (ec *executionContext) fieldContext_UsageLog_credential(_ context.Context, 
 				return ec.fieldContext_UpstreamCredential_updatedAt(ctx, field)
 			case "name":
 				return ec.fieldContext_UpstreamCredential_name(ctx, field)
-			case "keyHint":
-				return ec.fieldContext_UpstreamCredential_keyHint(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UpstreamCredential_quotaScopeID(ctx, field)
-			case "fingerprint":
-				return ec.fieldContext_UpstreamCredential_fingerprint(ctx, field)
-			case "secretFingerprint":
-				return ec.fieldContext_UpstreamCredential_secretFingerprint(ctx, field)
 			case "status":
 				return ec.fieldContext_UpstreamCredential_status(ctx, field)
-			case "quotaStatus":
-				return ec.fieldContext_UpstreamCredential_quotaStatus(ctx, field)
 			case "lastError":
 				return ec.fieldContext_UpstreamCredential_lastError(ctx, field)
 			case "remark":
@@ -59715,8 +55413,6 @@ func (ec *executionContext) fieldContext_UsageLog_credential(_ context.Context, 
 				return ec.fieldContext_UpstreamCredential_executions(ctx, field)
 			case "usageLogs":
 				return ec.fieldContext_UpstreamCredential_usageLogs(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_UpstreamCredential_providerQuotaStatuses(ctx, field)
 			case "quotaScope":
 				return ec.fieldContext_UpstreamCredential_quotaScope(ctx, field)
 			case "secretSummary":
@@ -59788,8 +55484,6 @@ func (ec *executionContext) fieldContext_UsageLog_quotaScope(_ context.Context, 
 				return ec.fieldContext_CredentialQuotaScope_remark(ctx, field)
 			case "credentials":
 				return ec.fieldContext_CredentialQuotaScope_credentials(ctx, field)
-			case "providerQuotaStatuses":
-				return ec.fieldContext_CredentialQuotaScope_providerQuotaStatuses(ctx, field)
 			case "executions":
 				return ec.fieldContext_CredentialQuotaScope_executions(ctx, field)
 			case "usageLogs":
@@ -59946,12 +55640,6 @@ func (ec *executionContext) fieldContext_UsageLogEdge_node(_ context.Context, fi
 				return ec.fieldContext_UsageLog_credentialID(ctx, field)
 			case "modelID":
 				return ec.fieldContext_UsageLog_modelID(ctx, field)
-			case "credentialFingerprint":
-				return ec.fieldContext_UsageLog_credentialFingerprint(ctx, field)
-			case "secretFingerprint":
-				return ec.fieldContext_UsageLog_secretFingerprint(ctx, field)
-			case "resourceScopeKey":
-				return ec.fieldContext_UsageLog_resourceScopeKey(ctx, field)
 			case "quotaScopeID":
 				return ec.fieldContext_UsageLog_quotaScopeID(ctx, field)
 			case "quotaScopeNameSnapshot":
@@ -59960,10 +55648,6 @@ func (ec *executionContext) fieldContext_UsageLogEdge_node(_ context.Context, fi
 				return ec.fieldContext_UsageLog_quotaScopeStatusSnapshot(ctx, field)
 			case "credentialNameSnapshot":
 				return ec.fieldContext_UsageLog_credentialNameSnapshot(ctx, field)
-			case "credentialKeyHint":
-				return ec.fieldContext_UsageLog_credentialKeyHint(ctx, field)
-			case "credentialSource":
-				return ec.fieldContext_UsageLog_credentialSource(ctx, field)
 			case "credentialQuotaStatusSnapshot":
 				return ec.fieldContext_UsageLog_credentialQuotaStatusSnapshot(ctx, field)
 			case "promptTokens":
@@ -64423,7 +60107,7 @@ func (ec *executionContext) unmarshalInputAPIKeyProfileInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "modelMappings", "channelIDs", "channelTags", "channelTagsMatchMode", "modelIDs", "quota", "loadBalanceStrategy"}
+	fieldsInOrder := [...]string{"name", "modelMappings", "channelIDs", "channelTags", "channelTagsMatchMode", "modelIDs", "quota"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -64479,13 +60163,6 @@ func (ec *executionContext) unmarshalInputAPIKeyProfileInput(ctx context.Context
 				return it, err
 			}
 			it.Quota = data
-		case "loadBalanceStrategy":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("loadBalanceStrategy"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.LoadBalanceStrategy = data
 		}
 	}
 
@@ -66742,61 +62419,6 @@ func (ec *executionContext) unmarshalInputChannelCredentialRefWhereInput(ctx con
 				return it, err
 			}
 			it.HasCredentialWith = data
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputChannelCredentialsInput(ctx context.Context, obj any) (objects.ChannelCredentials, error) {
-	var it objects.ChannelCredentials
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"apiKey", "apiKeys", "azure", "gcp", "oauth"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "apiKey":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("apiKey"))
-			data, err := ec.unmarshalOString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.APIKey = data
-		case "apiKeys":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("apiKeys"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.APIKeys = data
-		case "azure":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("azure"))
-			data, err := ec.unmarshalOAzureCredentialInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐAzureCredential(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Azure = data
-		case "gcp":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gcp"))
-			data, err := ec.unmarshalOGCPCredentialInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGCPCredential(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.GCP = data
-		case "oauth":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("oauth"))
-			data, err := ec.unmarshalOOAuthCredentialsInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋllmᚋoauthᚐOAuthCredentials(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.OAuth = data
 		}
 	}
 
@@ -69658,7 +65280,7 @@ func (ec *executionContext) unmarshalInputChannelWhereInput(ctx context.Context,
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "type", "typeNEQ", "typeIn", "typeNotIn", "baseURL", "baseURLNEQ", "baseURLIn", "baseURLNotIn", "baseURLGT", "baseURLGTE", "baseURLLT", "baseURLLTE", "baseURLContains", "baseURLHasPrefix", "baseURLHasSuffix", "baseURLIsNil", "baseURLNotNil", "baseURLEqualFold", "baseURLContainsFold", "name", "nameNEQ", "nameIn", "nameNotIn", "nameGT", "nameGTE", "nameLT", "nameLTE", "nameContains", "nameHasPrefix", "nameHasSuffix", "nameEqualFold", "nameContainsFold", "status", "statusNEQ", "statusIn", "statusNotIn", "autoSyncSupportedModels", "autoSyncSupportedModelsNEQ", "autoSyncModelPattern", "autoSyncModelPatternNEQ", "autoSyncModelPatternIn", "autoSyncModelPatternNotIn", "autoSyncModelPatternGT", "autoSyncModelPatternGTE", "autoSyncModelPatternLT", "autoSyncModelPatternLTE", "autoSyncModelPatternContains", "autoSyncModelPatternHasPrefix", "autoSyncModelPatternHasSuffix", "autoSyncModelPatternIsNil", "autoSyncModelPatternNotNil", "autoSyncModelPatternEqualFold", "autoSyncModelPatternContainsFold", "defaultTestModel", "defaultTestModelNEQ", "defaultTestModelIn", "defaultTestModelNotIn", "defaultTestModelGT", "defaultTestModelGTE", "defaultTestModelLT", "defaultTestModelLTE", "defaultTestModelContains", "defaultTestModelHasPrefix", "defaultTestModelHasSuffix", "defaultTestModelEqualFold", "defaultTestModelContainsFold", "orderingWeight", "orderingWeightNEQ", "orderingWeightIn", "orderingWeightNotIn", "orderingWeightGT", "orderingWeightGTE", "orderingWeightLT", "orderingWeightLTE", "errorMessage", "errorMessageNEQ", "errorMessageIn", "errorMessageNotIn", "errorMessageGT", "errorMessageGTE", "errorMessageLT", "errorMessageLTE", "errorMessageContains", "errorMessageHasPrefix", "errorMessageHasSuffix", "errorMessageIsNil", "errorMessageNotNil", "errorMessageEqualFold", "errorMessageContainsFold", "remark", "remarkNEQ", "remarkIn", "remarkNotIn", "remarkGT", "remarkGTE", "remarkLT", "remarkLTE", "remarkContains", "remarkHasPrefix", "remarkHasSuffix", "remarkIsNil", "remarkNotNil", "remarkEqualFold", "remarkContainsFold", "hasRequests", "hasRequestsWith", "hasExecutions", "hasExecutionsWith", "hasUsageLogs", "hasUsageLogsWith", "hasChannelProbes", "hasChannelProbesWith", "hasChannelModelPrices", "hasChannelModelPricesWith", "hasCredentialRefs", "hasCredentialRefsWith", "hasProviderQuotaStatuses", "hasProviderQuotaStatusesWith"}
+	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "type", "typeNEQ", "typeIn", "typeNotIn", "baseURL", "baseURLNEQ", "baseURLIn", "baseURLNotIn", "baseURLGT", "baseURLGTE", "baseURLLT", "baseURLLTE", "baseURLContains", "baseURLHasPrefix", "baseURLHasSuffix", "baseURLIsNil", "baseURLNotNil", "baseURLEqualFold", "baseURLContainsFold", "name", "nameNEQ", "nameIn", "nameNotIn", "nameGT", "nameGTE", "nameLT", "nameLTE", "nameContains", "nameHasPrefix", "nameHasSuffix", "nameEqualFold", "nameContainsFold", "status", "statusNEQ", "statusIn", "statusNotIn", "autoSyncSupportedModels", "autoSyncSupportedModelsNEQ", "autoSyncModelPattern", "autoSyncModelPatternNEQ", "autoSyncModelPatternIn", "autoSyncModelPatternNotIn", "autoSyncModelPatternGT", "autoSyncModelPatternGTE", "autoSyncModelPatternLT", "autoSyncModelPatternLTE", "autoSyncModelPatternContains", "autoSyncModelPatternHasPrefix", "autoSyncModelPatternHasSuffix", "autoSyncModelPatternIsNil", "autoSyncModelPatternNotNil", "autoSyncModelPatternEqualFold", "autoSyncModelPatternContainsFold", "defaultTestModel", "defaultTestModelNEQ", "defaultTestModelIn", "defaultTestModelNotIn", "defaultTestModelGT", "defaultTestModelGTE", "defaultTestModelLT", "defaultTestModelLTE", "defaultTestModelContains", "defaultTestModelHasPrefix", "defaultTestModelHasSuffix", "defaultTestModelEqualFold", "defaultTestModelContainsFold", "orderingWeight", "orderingWeightNEQ", "orderingWeightIn", "orderingWeightNotIn", "orderingWeightGT", "orderingWeightGTE", "orderingWeightLT", "orderingWeightLTE", "errorMessage", "errorMessageNEQ", "errorMessageIn", "errorMessageNotIn", "errorMessageGT", "errorMessageGTE", "errorMessageLT", "errorMessageLTE", "errorMessageContains", "errorMessageHasPrefix", "errorMessageHasSuffix", "errorMessageIsNil", "errorMessageNotNil", "errorMessageEqualFold", "errorMessageContainsFold", "remark", "remarkNEQ", "remarkIn", "remarkNotIn", "remarkGT", "remarkGTE", "remarkLT", "remarkLTE", "remarkContains", "remarkHasPrefix", "remarkHasSuffix", "remarkIsNil", "remarkNotNil", "remarkEqualFold", "remarkContainsFold", "hasRequests", "hasRequestsWith", "hasExecutions", "hasExecutionsWith", "hasUsageLogs", "hasUsageLogsWith", "hasChannelProbes", "hasChannelProbesWith", "hasChannelModelPrices", "hasChannelModelPricesWith", "hasCredentialRefs", "hasCredentialRefsWith"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -70698,20 +66320,6 @@ func (ec *executionContext) unmarshalInputChannelWhereInput(ctx context.Context,
 				return it, err
 			}
 			it.HasCredentialRefsWith = data
-		case "hasProviderQuotaStatuses":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasProviderQuotaStatuses"))
-			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.HasProviderQuotaStatuses = data
-		case "hasProviderQuotaStatusesWith":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasProviderQuotaStatusesWith"))
-			data, err := ec.unmarshalOProviderQuotaStatusWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusWhereInputᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.HasProviderQuotaStatusesWith = data
 		}
 	}
 
@@ -71073,7 +66681,7 @@ func (ec *executionContext) unmarshalInputCreateChannelInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"type", "baseURL", "name", "credentials", "supportedModels", "manualModels", "autoSyncSupportedModels", "autoSyncModelPattern", "tags", "defaultTestModel", "policies", "settings", "orderingWeight", "remark", "endpoints"}
+	fieldsInOrder := [...]string{"type", "baseURL", "name", "supportedModels", "manualModels", "autoSyncSupportedModels", "autoSyncModelPattern", "tags", "defaultTestModel", "policies", "settings", "orderingWeight", "remark", "endpoints"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -71101,13 +66709,6 @@ func (ec *executionContext) unmarshalInputCreateChannelInput(ctx context.Context
 				return it, err
 			}
 			it.Name = data
-		case "credentials":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentials"))
-			data, err := ec.unmarshalNChannelCredentialsInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐChannelCredentials(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Credentials = data
 		case "supportedModels":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("supportedModels"))
 			data, err := ec.unmarshalNString2ᚕstringᚄ(ctx, v)
@@ -72212,7 +67813,7 @@ func (ec *executionContext) unmarshalInputCreateUsageLogInput(ctx context.Contex
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"apiKeyID", "modelID", "credentialFingerprint", "secretFingerprint", "resourceScopeKey", "quotaScopeNameSnapshot", "quotaScopeStatusSnapshot", "credentialNameSnapshot", "credentialKeyHint", "credentialSource", "credentialQuotaStatusSnapshot", "promptTokens", "completionTokens", "totalTokens", "promptAudioTokens", "promptCachedTokens", "promptWriteCachedTokens", "promptWriteCachedTokens5m", "promptWriteCachedTokens1h", "completionAudioTokens", "completionReasoningTokens", "completionAcceptedPredictionTokens", "completionRejectedPredictionTokens", "source", "format", "totalCost", "costItems", "costPriceReferenceID", "requestID", "projectID", "channelID", "credentialID", "quotaScopeID"}
+	fieldsInOrder := [...]string{"apiKeyID", "modelID", "quotaScopeNameSnapshot", "quotaScopeStatusSnapshot", "credentialNameSnapshot", "credentialQuotaStatusSnapshot", "promptTokens", "completionTokens", "totalTokens", "promptAudioTokens", "promptCachedTokens", "promptWriteCachedTokens", "promptWriteCachedTokens5m", "promptWriteCachedTokens1h", "completionAudioTokens", "completionReasoningTokens", "completionAcceptedPredictionTokens", "completionRejectedPredictionTokens", "source", "format", "totalCost", "costItems", "costPriceReferenceID", "requestID", "projectID", "channelID", "credentialID", "quotaScopeID"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -72233,27 +67834,6 @@ func (ec *executionContext) unmarshalInputCreateUsageLogInput(ctx context.Contex
 				return it, err
 			}
 			it.ModelID = data
-		case "credentialFingerprint":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprint"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprint = data
-		case "secretFingerprint":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprint"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprint = data
-		case "resourceScopeKey":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKey"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKey = data
 		case "quotaScopeNameSnapshot":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeNameSnapshot"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -72275,20 +67855,6 @@ func (ec *executionContext) unmarshalInputCreateUsageLogInput(ctx context.Contex
 				return it, err
 			}
 			it.CredentialNameSnapshot = data
-		case "credentialKeyHint":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHint"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHint = data
-		case "credentialSource":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSource"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSource = data
 		case "credentialQuotaStatusSnapshot":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshot"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -72626,7 +68192,7 @@ func (ec *executionContext) unmarshalInputCredentialQuotaScopeWhereInput(ctx con
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "name", "nameNEQ", "nameIn", "nameNotIn", "nameGT", "nameGTE", "nameLT", "nameLTE", "nameContains", "nameHasPrefix", "nameHasSuffix", "nameIsNil", "nameNotNil", "nameEqualFold", "nameContainsFold", "status", "statusNEQ", "statusIn", "statusNotIn", "unit", "unitNEQ", "unitIn", "unitNotIn", "limitAmount", "limitAmountNEQ", "limitAmountIn", "limitAmountNotIn", "limitAmountGT", "limitAmountGTE", "limitAmountLT", "limitAmountLTE", "limitAmountContains", "limitAmountHasPrefix", "limitAmountHasSuffix", "limitAmountIsNil", "limitAmountNotNil", "limitAmountEqualFold", "limitAmountContainsFold", "usedAmount", "usedAmountNEQ", "usedAmountIn", "usedAmountNotIn", "usedAmountGT", "usedAmountGTE", "usedAmountLT", "usedAmountLTE", "usedAmountContains", "usedAmountHasPrefix", "usedAmountHasSuffix", "usedAmountIsNil", "usedAmountNotNil", "usedAmountEqualFold", "usedAmountContainsFold", "warningThresholdPercent", "warningThresholdPercentNEQ", "warningThresholdPercentIn", "warningThresholdPercentNotIn", "warningThresholdPercentGT", "warningThresholdPercentGTE", "warningThresholdPercentLT", "warningThresholdPercentLTE", "warningThresholdPercentIsNil", "warningThresholdPercentNotNil", "resetPolicy", "resetPolicyNEQ", "resetPolicyIn", "resetPolicyNotIn", "resetAt", "resetAtNEQ", "resetAtIn", "resetAtNotIn", "resetAtGT", "resetAtGTE", "resetAtLT", "resetAtLTE", "resetAtIsNil", "resetAtNotNil", "windowStartedAt", "windowStartedAtNEQ", "windowStartedAtIn", "windowStartedAtNotIn", "windowStartedAtGT", "windowStartedAtGTE", "windowStartedAtLT", "windowStartedAtLTE", "windowStartedAtIsNil", "windowStartedAtNotNil", "overLimitAction", "overLimitActionNEQ", "overLimitActionIn", "overLimitActionNotIn", "pauseUntil", "pauseUntilNEQ", "pauseUntilIn", "pauseUntilNotIn", "pauseUntilGT", "pauseUntilGTE", "pauseUntilLT", "pauseUntilLTE", "pauseUntilIsNil", "pauseUntilNotNil", "source", "sourceNEQ", "sourceIn", "sourceNotIn", "lastError", "lastErrorNEQ", "lastErrorIn", "lastErrorNotIn", "lastErrorGT", "lastErrorGTE", "lastErrorLT", "lastErrorLTE", "lastErrorContains", "lastErrorHasPrefix", "lastErrorHasSuffix", "lastErrorIsNil", "lastErrorNotNil", "lastErrorEqualFold", "lastErrorContainsFold", "remark", "remarkNEQ", "remarkIn", "remarkNotIn", "remarkGT", "remarkGTE", "remarkLT", "remarkLTE", "remarkContains", "remarkHasPrefix", "remarkHasSuffix", "remarkIsNil", "remarkNotNil", "remarkEqualFold", "remarkContainsFold", "hasCredentials", "hasCredentialsWith", "hasProviderQuotaStatuses", "hasProviderQuotaStatusesWith", "hasExecutions", "hasExecutionsWith", "hasUsageLogs", "hasUsageLogsWith"}
+	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "name", "nameNEQ", "nameIn", "nameNotIn", "nameGT", "nameGTE", "nameLT", "nameLTE", "nameContains", "nameHasPrefix", "nameHasSuffix", "nameIsNil", "nameNotNil", "nameEqualFold", "nameContainsFold", "status", "statusNEQ", "statusIn", "statusNotIn", "unit", "unitNEQ", "unitIn", "unitNotIn", "limitAmount", "limitAmountNEQ", "limitAmountIn", "limitAmountNotIn", "limitAmountGT", "limitAmountGTE", "limitAmountLT", "limitAmountLTE", "limitAmountContains", "limitAmountHasPrefix", "limitAmountHasSuffix", "limitAmountIsNil", "limitAmountNotNil", "limitAmountEqualFold", "limitAmountContainsFold", "usedAmount", "usedAmountNEQ", "usedAmountIn", "usedAmountNotIn", "usedAmountGT", "usedAmountGTE", "usedAmountLT", "usedAmountLTE", "usedAmountContains", "usedAmountHasPrefix", "usedAmountHasSuffix", "usedAmountIsNil", "usedAmountNotNil", "usedAmountEqualFold", "usedAmountContainsFold", "warningThresholdPercent", "warningThresholdPercentNEQ", "warningThresholdPercentIn", "warningThresholdPercentNotIn", "warningThresholdPercentGT", "warningThresholdPercentGTE", "warningThresholdPercentLT", "warningThresholdPercentLTE", "warningThresholdPercentIsNil", "warningThresholdPercentNotNil", "resetPolicy", "resetPolicyNEQ", "resetPolicyIn", "resetPolicyNotIn", "resetAt", "resetAtNEQ", "resetAtIn", "resetAtNotIn", "resetAtGT", "resetAtGTE", "resetAtLT", "resetAtLTE", "resetAtIsNil", "resetAtNotNil", "windowStartedAt", "windowStartedAtNEQ", "windowStartedAtIn", "windowStartedAtNotIn", "windowStartedAtGT", "windowStartedAtGTE", "windowStartedAtLT", "windowStartedAtLTE", "windowStartedAtIsNil", "windowStartedAtNotNil", "overLimitAction", "overLimitActionNEQ", "overLimitActionIn", "overLimitActionNotIn", "pauseUntil", "pauseUntilNEQ", "pauseUntilIn", "pauseUntilNotIn", "pauseUntilGT", "pauseUntilGTE", "pauseUntilLT", "pauseUntilLTE", "pauseUntilIsNil", "pauseUntilNotNil", "source", "sourceNEQ", "sourceIn", "sourceNotIn", "lastError", "lastErrorNEQ", "lastErrorIn", "lastErrorNotIn", "lastErrorGT", "lastErrorGTE", "lastErrorLT", "lastErrorLTE", "lastErrorContains", "lastErrorHasPrefix", "lastErrorHasSuffix", "lastErrorIsNil", "lastErrorNotNil", "lastErrorEqualFold", "lastErrorContainsFold", "remark", "remarkNEQ", "remarkIn", "remarkNotIn", "remarkGT", "remarkGTE", "remarkLT", "remarkLTE", "remarkContains", "remarkHasPrefix", "remarkHasSuffix", "remarkIsNil", "remarkNotNil", "remarkEqualFold", "remarkContainsFold", "hasCredentials", "hasCredentialsWith", "hasExecutions", "hasExecutionsWith", "hasUsageLogs", "hasUsageLogsWith"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -73813,20 +69379,6 @@ func (ec *executionContext) unmarshalInputCredentialQuotaScopeWhereInput(ctx con
 				return it, err
 			}
 			it.HasCredentialsWith = data
-		case "hasProviderQuotaStatuses":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasProviderQuotaStatuses"))
-			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.HasProviderQuotaStatuses = data
-		case "hasProviderQuotaStatusesWith":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasProviderQuotaStatusesWith"))
-			data, err := ec.unmarshalOProviderQuotaStatusWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusWhereInputᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.HasProviderQuotaStatusesWith = data
 		case "hasExecutions":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasExecutions"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
@@ -79712,1103 +75264,6 @@ func (ec *executionContext) unmarshalInputPromptWriteCacheVariantInput(ctx conte
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputProviderQuotaStatusOrder(ctx context.Context, obj any) (ent.ProviderQuotaStatusOrder, error) {
-	var it ent.ProviderQuotaStatusOrder
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	if _, present := asMap["direction"]; !present {
-		asMap["direction"] = "ASC"
-	}
-
-	fieldsInOrder := [...]string{"direction", "field"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "direction":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("direction"))
-			data, err := ec.unmarshalNOrderDirection2entgoᚗioᚋcontribᚋentgqlᚐOrderDirection(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Direction = data
-		case "field":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
-			data, err := ec.unmarshalNProviderQuotaStatusOrderField2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusOrderField(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Field = data
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputProviderQuotaStatusWhereInput(ctx context.Context, obj any) (ent.ProviderQuotaStatusWhereInput, error) {
-	var it ent.ProviderQuotaStatusWhereInput
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "channelID", "channelIDNEQ", "channelIDIn", "channelIDNotIn", "channelIDIsNil", "channelIDNotNil", "scopeKey", "scopeKeyNEQ", "scopeKeyIn", "scopeKeyNotIn", "scopeKeyGT", "scopeKeyGTE", "scopeKeyLT", "scopeKeyLTE", "scopeKeyContains", "scopeKeyHasPrefix", "scopeKeyHasSuffix", "scopeKeyEqualFold", "scopeKeyContainsFold", "credentialID", "credentialIDNEQ", "credentialIDIn", "credentialIDNotIn", "credentialIDIsNil", "credentialIDNotNil", "credentialFingerprint", "credentialFingerprintNEQ", "credentialFingerprintIn", "credentialFingerprintNotIn", "credentialFingerprintGT", "credentialFingerprintGTE", "credentialFingerprintLT", "credentialFingerprintLTE", "credentialFingerprintContains", "credentialFingerprintHasPrefix", "credentialFingerprintHasSuffix", "credentialFingerprintIsNil", "credentialFingerprintNotNil", "credentialFingerprintEqualFold", "credentialFingerprintContainsFold", "secretFingerprint", "secretFingerprintNEQ", "secretFingerprintIn", "secretFingerprintNotIn", "secretFingerprintGT", "secretFingerprintGTE", "secretFingerprintLT", "secretFingerprintLTE", "secretFingerprintContains", "secretFingerprintHasPrefix", "secretFingerprintHasSuffix", "secretFingerprintIsNil", "secretFingerprintNotNil", "secretFingerprintEqualFold", "secretFingerprintContainsFold", "resourceScopeKey", "resourceScopeKeyNEQ", "resourceScopeKeyIn", "resourceScopeKeyNotIn", "resourceScopeKeyGT", "resourceScopeKeyGTE", "resourceScopeKeyLT", "resourceScopeKeyLTE", "resourceScopeKeyContains", "resourceScopeKeyHasPrefix", "resourceScopeKeyHasSuffix", "resourceScopeKeyIsNil", "resourceScopeKeyNotNil", "resourceScopeKeyEqualFold", "resourceScopeKeyContainsFold", "quotaScopeID", "quotaScopeIDNEQ", "quotaScopeIDIn", "quotaScopeIDNotIn", "quotaScopeIDIsNil", "quotaScopeIDNotNil", "providerType", "providerTypeNEQ", "providerTypeIn", "providerTypeNotIn", "status", "statusNEQ", "statusIn", "statusNotIn", "nextResetAt", "nextResetAtNEQ", "nextResetAtIn", "nextResetAtNotIn", "nextResetAtGT", "nextResetAtGTE", "nextResetAtLT", "nextResetAtLTE", "nextResetAtIsNil", "nextResetAtNotNil", "ready", "readyNEQ", "nextCheckAt", "nextCheckAtNEQ", "nextCheckAtIn", "nextCheckAtNotIn", "nextCheckAtGT", "nextCheckAtGTE", "nextCheckAtLT", "nextCheckAtLTE", "hasChannel", "hasChannelWith", "hasCredential", "hasCredentialWith", "hasQuotaScope", "hasQuotaScopeWith"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "not":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("not"))
-			data, err := ec.unmarshalOProviderQuotaStatusWhereInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusWhereInput(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Not = data
-		case "and":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("and"))
-			data, err := ec.unmarshalOProviderQuotaStatusWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusWhereInputᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.And = data
-		case "or":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("or"))
-			data, err := ec.unmarshalOProviderQuotaStatusWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusWhereInputᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Or = data
-		case "id":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.ID = converted
-		case "idNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("idNEQ"))
-			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.IDNEQ = converted
-		case "idIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("idIn"))
-			data, err := ec.unmarshalOID2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUIDᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrsToInts(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.IDIn = converted
-		case "idNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("idNotIn"))
-			data, err := ec.unmarshalOID2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUIDᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrsToInts(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.IDNotIn = converted
-		case "idGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("idGT"))
-			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.IDGT = converted
-		case "idGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("idGTE"))
-			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.IDGTE = converted
-		case "idLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("idLT"))
-			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.IDLT = converted
-		case "idLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("idLTE"))
-			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.IDLTE = converted
-		case "createdAt":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAt"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CreatedAt = data
-		case "createdAtNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAtNEQ"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CreatedAtNEQ = data
-		case "createdAtIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAtIn"))
-			data, err := ec.unmarshalOTime2ᚕtimeᚐTimeᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CreatedAtIn = data
-		case "createdAtNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAtNotIn"))
-			data, err := ec.unmarshalOTime2ᚕtimeᚐTimeᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CreatedAtNotIn = data
-		case "createdAtGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAtGT"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CreatedAtGT = data
-		case "createdAtGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAtGTE"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CreatedAtGTE = data
-		case "createdAtLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAtLT"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CreatedAtLT = data
-		case "createdAtLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("createdAtLTE"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CreatedAtLTE = data
-		case "updatedAt":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAt"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.UpdatedAt = data
-		case "updatedAtNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAtNEQ"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.UpdatedAtNEQ = data
-		case "updatedAtIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAtIn"))
-			data, err := ec.unmarshalOTime2ᚕtimeᚐTimeᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.UpdatedAtIn = data
-		case "updatedAtNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAtNotIn"))
-			data, err := ec.unmarshalOTime2ᚕtimeᚐTimeᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.UpdatedAtNotIn = data
-		case "updatedAtGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAtGT"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.UpdatedAtGT = data
-		case "updatedAtGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAtGTE"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.UpdatedAtGTE = data
-		case "updatedAtLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAtLT"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.UpdatedAtLT = data
-		case "updatedAtLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("updatedAtLTE"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.UpdatedAtLTE = data
-		case "channelID":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("channelID"))
-			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.ChannelID = converted
-		case "channelIDNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("channelIDNEQ"))
-			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.ChannelIDNEQ = converted
-		case "channelIDIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("channelIDIn"))
-			data, err := ec.unmarshalOID2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUIDᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrsToInts(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.ChannelIDIn = converted
-		case "channelIDNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("channelIDNotIn"))
-			data, err := ec.unmarshalOID2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUIDᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrsToInts(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.ChannelIDNotIn = converted
-		case "channelIDIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("channelIDIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ChannelIDIsNil = data
-		case "channelIDNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("channelIDNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ChannelIDNotNil = data
-		case "scopeKey":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKey"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ScopeKey = data
-		case "scopeKeyNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ScopeKeyNEQ = data
-		case "scopeKeyIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ScopeKeyIn = data
-		case "scopeKeyNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ScopeKeyNotIn = data
-		case "scopeKeyGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ScopeKeyGT = data
-		case "scopeKeyGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ScopeKeyGTE = data
-		case "scopeKeyLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ScopeKeyLT = data
-		case "scopeKeyLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ScopeKeyLTE = data
-		case "scopeKeyContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ScopeKeyContains = data
-		case "scopeKeyHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ScopeKeyHasPrefix = data
-		case "scopeKeyHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ScopeKeyHasSuffix = data
-		case "scopeKeyEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ScopeKeyEqualFold = data
-		case "scopeKeyContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("scopeKeyContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ScopeKeyContainsFold = data
-		case "credentialID":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialID"))
-			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.CredentialID = converted
-		case "credentialIDNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialIDNEQ"))
-			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.CredentialIDNEQ = converted
-		case "credentialIDIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialIDIn"))
-			data, err := ec.unmarshalOID2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUIDᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrsToInts(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.CredentialIDIn = converted
-		case "credentialIDNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialIDNotIn"))
-			data, err := ec.unmarshalOID2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUIDᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrsToInts(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.CredentialIDNotIn = converted
-		case "credentialIDIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialIDIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialIDIsNil = data
-		case "credentialIDNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialIDNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialIDNotNil = data
-		case "credentialFingerprint":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprint"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprint = data
-		case "credentialFingerprintNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintNEQ = data
-		case "credentialFingerprintIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintIn = data
-		case "credentialFingerprintNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintNotIn = data
-		case "credentialFingerprintGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintGT = data
-		case "credentialFingerprintGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintGTE = data
-		case "credentialFingerprintLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintLT = data
-		case "credentialFingerprintLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintLTE = data
-		case "credentialFingerprintContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintContains = data
-		case "credentialFingerprintHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintHasPrefix = data
-		case "credentialFingerprintHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintHasSuffix = data
-		case "credentialFingerprintIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintIsNil = data
-		case "credentialFingerprintNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintNotNil = data
-		case "credentialFingerprintEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintEqualFold = data
-		case "credentialFingerprintContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintContainsFold = data
-		case "secretFingerprint":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprint"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprint = data
-		case "secretFingerprintNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintNEQ = data
-		case "secretFingerprintIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintIn = data
-		case "secretFingerprintNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintNotIn = data
-		case "secretFingerprintGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintGT = data
-		case "secretFingerprintGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintGTE = data
-		case "secretFingerprintLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintLT = data
-		case "secretFingerprintLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintLTE = data
-		case "secretFingerprintContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintContains = data
-		case "secretFingerprintHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintHasPrefix = data
-		case "secretFingerprintHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintHasSuffix = data
-		case "secretFingerprintIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintIsNil = data
-		case "secretFingerprintNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintNotNil = data
-		case "secretFingerprintEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintEqualFold = data
-		case "secretFingerprintContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintContainsFold = data
-		case "resourceScopeKey":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKey"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKey = data
-		case "resourceScopeKeyNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyNEQ = data
-		case "resourceScopeKeyIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyIn = data
-		case "resourceScopeKeyNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyNotIn = data
-		case "resourceScopeKeyGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyGT = data
-		case "resourceScopeKeyGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyGTE = data
-		case "resourceScopeKeyLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyLT = data
-		case "resourceScopeKeyLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyLTE = data
-		case "resourceScopeKeyContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyContains = data
-		case "resourceScopeKeyHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyHasPrefix = data
-		case "resourceScopeKeyHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyHasSuffix = data
-		case "resourceScopeKeyIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyIsNil = data
-		case "resourceScopeKeyNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyNotNil = data
-		case "resourceScopeKeyEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyEqualFold = data
-		case "resourceScopeKeyContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyContainsFold = data
-		case "quotaScopeID":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeID"))
-			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.QuotaScopeID = converted
-		case "quotaScopeIDNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDNEQ"))
-			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrToIntPtr(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.QuotaScopeIDNEQ = converted
-		case "quotaScopeIDIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDIn"))
-			data, err := ec.unmarshalOID2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUIDᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrsToInts(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.QuotaScopeIDIn = converted
-		case "quotaScopeIDNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDNotIn"))
-			data, err := ec.unmarshalOID2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUIDᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			converted, err := objects.ConvertGUIDPtrsToInts(data)
-			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
-			it.QuotaScopeIDNotIn = converted
-		case "quotaScopeIDIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaScopeIDIsNil = data
-		case "quotaScopeIDNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeIDNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaScopeIDNotNil = data
-		case "providerType":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerType"))
-			data, err := ec.unmarshalOProviderQuotaStatusProviderType2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐProviderType(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ProviderType = data
-		case "providerTypeNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerTypeNEQ"))
-			data, err := ec.unmarshalOProviderQuotaStatusProviderType2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐProviderType(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ProviderTypeNEQ = data
-		case "providerTypeIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerTypeIn"))
-			data, err := ec.unmarshalOProviderQuotaStatusProviderType2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐProviderTypeᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ProviderTypeIn = data
-		case "providerTypeNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("providerTypeNotIn"))
-			data, err := ec.unmarshalOProviderQuotaStatusProviderType2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐProviderTypeᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ProviderTypeNotIn = data
-		case "status":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
-			data, err := ec.unmarshalOProviderQuotaStatusStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐStatus(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Status = data
-		case "statusNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("statusNEQ"))
-			data, err := ec.unmarshalOProviderQuotaStatusStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐStatus(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.StatusNEQ = data
-		case "statusIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("statusIn"))
-			data, err := ec.unmarshalOProviderQuotaStatusStatus2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐStatusᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.StatusIn = data
-		case "statusNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("statusNotIn"))
-			data, err := ec.unmarshalOProviderQuotaStatusStatus2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐStatusᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.StatusNotIn = data
-		case "nextResetAt":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nextResetAt"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.NextResetAt = data
-		case "nextResetAtNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nextResetAtNEQ"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.NextResetAtNEQ = data
-		case "nextResetAtIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nextResetAtIn"))
-			data, err := ec.unmarshalOTime2ᚕtimeᚐTimeᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.NextResetAtIn = data
-		case "nextResetAtNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nextResetAtNotIn"))
-			data, err := ec.unmarshalOTime2ᚕtimeᚐTimeᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.NextResetAtNotIn = data
-		case "nextResetAtGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nextResetAtGT"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.NextResetAtGT = data
-		case "nextResetAtGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nextResetAtGTE"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.NextResetAtGTE = data
-		case "nextResetAtLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nextResetAtLT"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.NextResetAtLT = data
-		case "nextResetAtLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nextResetAtLTE"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.NextResetAtLTE = data
-		case "nextResetAtIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nextResetAtIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.NextResetAtIsNil = data
-		case "nextResetAtNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nextResetAtNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.NextResetAtNotNil = data
-		case "ready":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ready"))
-			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Ready = data
-		case "readyNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("readyNEQ"))
-			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ReadyNEQ = data
-		case "nextCheckAt":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nextCheckAt"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.NextCheckAt = data
-		case "nextCheckAtNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nextCheckAtNEQ"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.NextCheckAtNEQ = data
-		case "nextCheckAtIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nextCheckAtIn"))
-			data, err := ec.unmarshalOTime2ᚕtimeᚐTimeᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.NextCheckAtIn = data
-		case "nextCheckAtNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nextCheckAtNotIn"))
-			data, err := ec.unmarshalOTime2ᚕtimeᚐTimeᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.NextCheckAtNotIn = data
-		case "nextCheckAtGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nextCheckAtGT"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.NextCheckAtGT = data
-		case "nextCheckAtGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nextCheckAtGTE"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.NextCheckAtGTE = data
-		case "nextCheckAtLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nextCheckAtLT"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.NextCheckAtLT = data
-		case "nextCheckAtLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nextCheckAtLTE"))
-			data, err := ec.unmarshalOTime2ᚖtimeᚐTime(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.NextCheckAtLTE = data
-		case "hasChannel":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasChannel"))
-			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.HasChannel = data
-		case "hasChannelWith":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasChannelWith"))
-			data, err := ec.unmarshalOChannelWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐChannelWhereInputᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.HasChannelWith = data
-		case "hasCredential":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasCredential"))
-			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.HasCredential = data
-		case "hasCredentialWith":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasCredentialWith"))
-			data, err := ec.unmarshalOUpstreamCredentialWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUpstreamCredentialWhereInputᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.HasCredentialWith = data
-		case "hasQuotaScope":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasQuotaScope"))
-			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.HasQuotaScope = data
-		case "hasQuotaScopeWith":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasQuotaScopeWith"))
-			data, err := ec.unmarshalOCredentialQuotaScopeWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐCredentialQuotaScopeWhereInputᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.HasQuotaScopeWith = data
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputProxyConfigInput(ctx context.Context, obj any) (httpclient.ProxyConfig, error) {
 	var it httpclient.ProxyConfig
 	asMap := map[string]any{}
@@ -81094,7 +75549,7 @@ func (ec *executionContext) unmarshalInputRequestExecutionWhereInput(ctx context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "projectID", "projectIDNEQ", "projectIDIn", "projectIDNotIn", "projectIDGT", "projectIDGTE", "projectIDLT", "projectIDLTE", "requestID", "requestIDNEQ", "requestIDIn", "requestIDNotIn", "channelID", "channelIDNEQ", "channelIDIn", "channelIDNotIn", "channelIDIsNil", "channelIDNotNil", "credentialID", "credentialIDNEQ", "credentialIDIn", "credentialIDNotIn", "credentialIDIsNil", "credentialIDNotNil", "dataStorageID", "dataStorageIDNEQ", "dataStorageIDIn", "dataStorageIDNotIn", "dataStorageIDIsNil", "dataStorageIDNotNil", "externalID", "externalIDNEQ", "externalIDIn", "externalIDNotIn", "externalIDGT", "externalIDGTE", "externalIDLT", "externalIDLTE", "externalIDContains", "externalIDHasPrefix", "externalIDHasSuffix", "externalIDIsNil", "externalIDNotNil", "externalIDEqualFold", "externalIDContainsFold", "modelID", "modelIDNEQ", "modelIDIn", "modelIDNotIn", "modelIDGT", "modelIDGTE", "modelIDLT", "modelIDLTE", "modelIDContains", "modelIDHasPrefix", "modelIDHasSuffix", "modelIDEqualFold", "modelIDContainsFold", "credentialFingerprint", "credentialFingerprintNEQ", "credentialFingerprintIn", "credentialFingerprintNotIn", "credentialFingerprintGT", "credentialFingerprintGTE", "credentialFingerprintLT", "credentialFingerprintLTE", "credentialFingerprintContains", "credentialFingerprintHasPrefix", "credentialFingerprintHasSuffix", "credentialFingerprintIsNil", "credentialFingerprintNotNil", "credentialFingerprintEqualFold", "credentialFingerprintContainsFold", "secretFingerprint", "secretFingerprintNEQ", "secretFingerprintIn", "secretFingerprintNotIn", "secretFingerprintGT", "secretFingerprintGTE", "secretFingerprintLT", "secretFingerprintLTE", "secretFingerprintContains", "secretFingerprintHasPrefix", "secretFingerprintHasSuffix", "secretFingerprintIsNil", "secretFingerprintNotNil", "secretFingerprintEqualFold", "secretFingerprintContainsFold", "resourceScopeKey", "resourceScopeKeyNEQ", "resourceScopeKeyIn", "resourceScopeKeyNotIn", "resourceScopeKeyGT", "resourceScopeKeyGTE", "resourceScopeKeyLT", "resourceScopeKeyLTE", "resourceScopeKeyContains", "resourceScopeKeyHasPrefix", "resourceScopeKeyHasSuffix", "resourceScopeKeyIsNil", "resourceScopeKeyNotNil", "resourceScopeKeyEqualFold", "resourceScopeKeyContainsFold", "quotaScopeID", "quotaScopeIDNEQ", "quotaScopeIDIn", "quotaScopeIDNotIn", "quotaScopeIDIsNil", "quotaScopeIDNotNil", "quotaScopeNameSnapshot", "quotaScopeNameSnapshotNEQ", "quotaScopeNameSnapshotIn", "quotaScopeNameSnapshotNotIn", "quotaScopeNameSnapshotGT", "quotaScopeNameSnapshotGTE", "quotaScopeNameSnapshotLT", "quotaScopeNameSnapshotLTE", "quotaScopeNameSnapshotContains", "quotaScopeNameSnapshotHasPrefix", "quotaScopeNameSnapshotHasSuffix", "quotaScopeNameSnapshotIsNil", "quotaScopeNameSnapshotNotNil", "quotaScopeNameSnapshotEqualFold", "quotaScopeNameSnapshotContainsFold", "quotaScopeStatusSnapshot", "quotaScopeStatusSnapshotNEQ", "quotaScopeStatusSnapshotIn", "quotaScopeStatusSnapshotNotIn", "quotaScopeStatusSnapshotGT", "quotaScopeStatusSnapshotGTE", "quotaScopeStatusSnapshotLT", "quotaScopeStatusSnapshotLTE", "quotaScopeStatusSnapshotContains", "quotaScopeStatusSnapshotHasPrefix", "quotaScopeStatusSnapshotHasSuffix", "quotaScopeStatusSnapshotIsNil", "quotaScopeStatusSnapshotNotNil", "quotaScopeStatusSnapshotEqualFold", "quotaScopeStatusSnapshotContainsFold", "credentialNameSnapshot", "credentialNameSnapshotNEQ", "credentialNameSnapshotIn", "credentialNameSnapshotNotIn", "credentialNameSnapshotGT", "credentialNameSnapshotGTE", "credentialNameSnapshotLT", "credentialNameSnapshotLTE", "credentialNameSnapshotContains", "credentialNameSnapshotHasPrefix", "credentialNameSnapshotHasSuffix", "credentialNameSnapshotIsNil", "credentialNameSnapshotNotNil", "credentialNameSnapshotEqualFold", "credentialNameSnapshotContainsFold", "credentialKeyHint", "credentialKeyHintNEQ", "credentialKeyHintIn", "credentialKeyHintNotIn", "credentialKeyHintGT", "credentialKeyHintGTE", "credentialKeyHintLT", "credentialKeyHintLTE", "credentialKeyHintContains", "credentialKeyHintHasPrefix", "credentialKeyHintHasSuffix", "credentialKeyHintIsNil", "credentialKeyHintNotNil", "credentialKeyHintEqualFold", "credentialKeyHintContainsFold", "credentialSource", "credentialSourceNEQ", "credentialSourceIn", "credentialSourceNotIn", "credentialSourceGT", "credentialSourceGTE", "credentialSourceLT", "credentialSourceLTE", "credentialSourceContains", "credentialSourceHasPrefix", "credentialSourceHasSuffix", "credentialSourceIsNil", "credentialSourceNotNil", "credentialSourceEqualFold", "credentialSourceContainsFold", "credentialQuotaStatusSnapshot", "credentialQuotaStatusSnapshotNEQ", "credentialQuotaStatusSnapshotIn", "credentialQuotaStatusSnapshotNotIn", "credentialQuotaStatusSnapshotGT", "credentialQuotaStatusSnapshotGTE", "credentialQuotaStatusSnapshotLT", "credentialQuotaStatusSnapshotLTE", "credentialQuotaStatusSnapshotContains", "credentialQuotaStatusSnapshotHasPrefix", "credentialQuotaStatusSnapshotHasSuffix", "credentialQuotaStatusSnapshotIsNil", "credentialQuotaStatusSnapshotNotNil", "credentialQuotaStatusSnapshotEqualFold", "credentialQuotaStatusSnapshotContainsFold", "format", "formatNEQ", "formatIn", "formatNotIn", "formatGT", "formatGTE", "formatLT", "formatLTE", "formatContains", "formatHasPrefix", "formatHasSuffix", "formatEqualFold", "formatContainsFold", "errorMessage", "errorMessageNEQ", "errorMessageIn", "errorMessageNotIn", "errorMessageGT", "errorMessageGTE", "errorMessageLT", "errorMessageLTE", "errorMessageContains", "errorMessageHasPrefix", "errorMessageHasSuffix", "errorMessageIsNil", "errorMessageNotNil", "errorMessageEqualFold", "errorMessageContainsFold", "responseStatusCode", "responseStatusCodeNEQ", "responseStatusCodeIn", "responseStatusCodeNotIn", "responseStatusCodeGT", "responseStatusCodeGTE", "responseStatusCodeLT", "responseStatusCodeLTE", "responseStatusCodeIsNil", "responseStatusCodeNotNil", "status", "statusNEQ", "statusIn", "statusNotIn", "stream", "streamNEQ", "metricsLatencyMs", "metricsLatencyMsNEQ", "metricsLatencyMsIn", "metricsLatencyMsNotIn", "metricsLatencyMsGT", "metricsLatencyMsGTE", "metricsLatencyMsLT", "metricsLatencyMsLTE", "metricsLatencyMsIsNil", "metricsLatencyMsNotNil", "metricsFirstTokenLatencyMs", "metricsFirstTokenLatencyMsNEQ", "metricsFirstTokenLatencyMsIn", "metricsFirstTokenLatencyMsNotIn", "metricsFirstTokenLatencyMsGT", "metricsFirstTokenLatencyMsGTE", "metricsFirstTokenLatencyMsLT", "metricsFirstTokenLatencyMsLTE", "metricsFirstTokenLatencyMsIsNil", "metricsFirstTokenLatencyMsNotNil", "metricsReasoningDurationMs", "metricsReasoningDurationMsNEQ", "metricsReasoningDurationMsIn", "metricsReasoningDurationMsNotIn", "metricsReasoningDurationMsGT", "metricsReasoningDurationMsGTE", "metricsReasoningDurationMsLT", "metricsReasoningDurationMsLTE", "metricsReasoningDurationMsIsNil", "metricsReasoningDurationMsNotNil", "hasRequest", "hasRequestWith", "hasChannel", "hasChannelWith", "hasCredential", "hasCredentialWith", "hasQuotaScope", "hasQuotaScopeWith", "hasDataStorage", "hasDataStorageWith"}
+	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "projectID", "projectIDNEQ", "projectIDIn", "projectIDNotIn", "projectIDGT", "projectIDGTE", "projectIDLT", "projectIDLTE", "requestID", "requestIDNEQ", "requestIDIn", "requestIDNotIn", "channelID", "channelIDNEQ", "channelIDIn", "channelIDNotIn", "channelIDIsNil", "channelIDNotNil", "credentialID", "credentialIDNEQ", "credentialIDIn", "credentialIDNotIn", "credentialIDIsNil", "credentialIDNotNil", "dataStorageID", "dataStorageIDNEQ", "dataStorageIDIn", "dataStorageIDNotIn", "dataStorageIDIsNil", "dataStorageIDNotNil", "externalID", "externalIDNEQ", "externalIDIn", "externalIDNotIn", "externalIDGT", "externalIDGTE", "externalIDLT", "externalIDLTE", "externalIDContains", "externalIDHasPrefix", "externalIDHasSuffix", "externalIDIsNil", "externalIDNotNil", "externalIDEqualFold", "externalIDContainsFold", "modelID", "modelIDNEQ", "modelIDIn", "modelIDNotIn", "modelIDGT", "modelIDGTE", "modelIDLT", "modelIDLTE", "modelIDContains", "modelIDHasPrefix", "modelIDHasSuffix", "modelIDEqualFold", "modelIDContainsFold", "quotaScopeID", "quotaScopeIDNEQ", "quotaScopeIDIn", "quotaScopeIDNotIn", "quotaScopeIDIsNil", "quotaScopeIDNotNil", "quotaScopeNameSnapshot", "quotaScopeNameSnapshotNEQ", "quotaScopeNameSnapshotIn", "quotaScopeNameSnapshotNotIn", "quotaScopeNameSnapshotGT", "quotaScopeNameSnapshotGTE", "quotaScopeNameSnapshotLT", "quotaScopeNameSnapshotLTE", "quotaScopeNameSnapshotContains", "quotaScopeNameSnapshotHasPrefix", "quotaScopeNameSnapshotHasSuffix", "quotaScopeNameSnapshotIsNil", "quotaScopeNameSnapshotNotNil", "quotaScopeNameSnapshotEqualFold", "quotaScopeNameSnapshotContainsFold", "quotaScopeStatusSnapshot", "quotaScopeStatusSnapshotNEQ", "quotaScopeStatusSnapshotIn", "quotaScopeStatusSnapshotNotIn", "quotaScopeStatusSnapshotGT", "quotaScopeStatusSnapshotGTE", "quotaScopeStatusSnapshotLT", "quotaScopeStatusSnapshotLTE", "quotaScopeStatusSnapshotContains", "quotaScopeStatusSnapshotHasPrefix", "quotaScopeStatusSnapshotHasSuffix", "quotaScopeStatusSnapshotIsNil", "quotaScopeStatusSnapshotNotNil", "quotaScopeStatusSnapshotEqualFold", "quotaScopeStatusSnapshotContainsFold", "credentialNameSnapshot", "credentialNameSnapshotNEQ", "credentialNameSnapshotIn", "credentialNameSnapshotNotIn", "credentialNameSnapshotGT", "credentialNameSnapshotGTE", "credentialNameSnapshotLT", "credentialNameSnapshotLTE", "credentialNameSnapshotContains", "credentialNameSnapshotHasPrefix", "credentialNameSnapshotHasSuffix", "credentialNameSnapshotIsNil", "credentialNameSnapshotNotNil", "credentialNameSnapshotEqualFold", "credentialNameSnapshotContainsFold", "credentialQuotaStatusSnapshot", "credentialQuotaStatusSnapshotNEQ", "credentialQuotaStatusSnapshotIn", "credentialQuotaStatusSnapshotNotIn", "credentialQuotaStatusSnapshotGT", "credentialQuotaStatusSnapshotGTE", "credentialQuotaStatusSnapshotLT", "credentialQuotaStatusSnapshotLTE", "credentialQuotaStatusSnapshotContains", "credentialQuotaStatusSnapshotHasPrefix", "credentialQuotaStatusSnapshotHasSuffix", "credentialQuotaStatusSnapshotIsNil", "credentialQuotaStatusSnapshotNotNil", "credentialQuotaStatusSnapshotEqualFold", "credentialQuotaStatusSnapshotContainsFold", "format", "formatNEQ", "formatIn", "formatNotIn", "formatGT", "formatGTE", "formatLT", "formatLTE", "formatContains", "formatHasPrefix", "formatHasSuffix", "formatEqualFold", "formatContainsFold", "errorMessage", "errorMessageNEQ", "errorMessageIn", "errorMessageNotIn", "errorMessageGT", "errorMessageGTE", "errorMessageLT", "errorMessageLTE", "errorMessageContains", "errorMessageHasPrefix", "errorMessageHasSuffix", "errorMessageIsNil", "errorMessageNotNil", "errorMessageEqualFold", "errorMessageContainsFold", "responseStatusCode", "responseStatusCodeNEQ", "responseStatusCodeIn", "responseStatusCodeNotIn", "responseStatusCodeGT", "responseStatusCodeGTE", "responseStatusCodeLT", "responseStatusCodeLTE", "responseStatusCodeIsNil", "responseStatusCodeNotNil", "status", "statusNEQ", "statusIn", "statusNotIn", "stream", "streamNEQ", "metricsLatencyMs", "metricsLatencyMsNEQ", "metricsLatencyMsIn", "metricsLatencyMsNotIn", "metricsLatencyMsGT", "metricsLatencyMsGTE", "metricsLatencyMsLT", "metricsLatencyMsLTE", "metricsLatencyMsIsNil", "metricsLatencyMsNotNil", "metricsFirstTokenLatencyMs", "metricsFirstTokenLatencyMsNEQ", "metricsFirstTokenLatencyMsIn", "metricsFirstTokenLatencyMsNotIn", "metricsFirstTokenLatencyMsGT", "metricsFirstTokenLatencyMsGTE", "metricsFirstTokenLatencyMsLT", "metricsFirstTokenLatencyMsLTE", "metricsFirstTokenLatencyMsIsNil", "metricsFirstTokenLatencyMsNotNil", "metricsReasoningDurationMs", "metricsReasoningDurationMsNEQ", "metricsReasoningDurationMsIn", "metricsReasoningDurationMsNotIn", "metricsReasoningDurationMsGT", "metricsReasoningDurationMsGTE", "metricsReasoningDurationMsLT", "metricsReasoningDurationMsLTE", "metricsReasoningDurationMsIsNil", "metricsReasoningDurationMsNotNil", "hasRequest", "hasRequestWith", "hasChannel", "hasChannelWith", "hasCredential", "hasCredentialWith", "hasQuotaScope", "hasQuotaScopeWith", "hasDataStorage", "hasDataStorageWith"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -81792,321 +76247,6 @@ func (ec *executionContext) unmarshalInputRequestExecutionWhereInput(ctx context
 				return it, err
 			}
 			it.ModelIDContainsFold = data
-		case "credentialFingerprint":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprint"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprint = data
-		case "credentialFingerprintNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintNEQ = data
-		case "credentialFingerprintIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintIn = data
-		case "credentialFingerprintNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintNotIn = data
-		case "credentialFingerprintGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintGT = data
-		case "credentialFingerprintGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintGTE = data
-		case "credentialFingerprintLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintLT = data
-		case "credentialFingerprintLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintLTE = data
-		case "credentialFingerprintContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintContains = data
-		case "credentialFingerprintHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintHasPrefix = data
-		case "credentialFingerprintHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintHasSuffix = data
-		case "credentialFingerprintIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintIsNil = data
-		case "credentialFingerprintNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintNotNil = data
-		case "credentialFingerprintEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintEqualFold = data
-		case "credentialFingerprintContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintContainsFold = data
-		case "secretFingerprint":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprint"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprint = data
-		case "secretFingerprintNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintNEQ = data
-		case "secretFingerprintIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintIn = data
-		case "secretFingerprintNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintNotIn = data
-		case "secretFingerprintGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintGT = data
-		case "secretFingerprintGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintGTE = data
-		case "secretFingerprintLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintLT = data
-		case "secretFingerprintLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintLTE = data
-		case "secretFingerprintContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintContains = data
-		case "secretFingerprintHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintHasPrefix = data
-		case "secretFingerprintHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintHasSuffix = data
-		case "secretFingerprintIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintIsNil = data
-		case "secretFingerprintNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintNotNil = data
-		case "secretFingerprintEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintEqualFold = data
-		case "secretFingerprintContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintContainsFold = data
-		case "resourceScopeKey":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKey"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKey = data
-		case "resourceScopeKeyNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyNEQ = data
-		case "resourceScopeKeyIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyIn = data
-		case "resourceScopeKeyNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyNotIn = data
-		case "resourceScopeKeyGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyGT = data
-		case "resourceScopeKeyGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyGTE = data
-		case "resourceScopeKeyLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyLT = data
-		case "resourceScopeKeyLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyLTE = data
-		case "resourceScopeKeyContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyContains = data
-		case "resourceScopeKeyHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyHasPrefix = data
-		case "resourceScopeKeyHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyHasSuffix = data
-		case "resourceScopeKeyIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyIsNil = data
-		case "resourceScopeKeyNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyNotNil = data
-		case "resourceScopeKeyEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyEqualFold = data
-		case "resourceScopeKeyContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyContainsFold = data
 		case "quotaScopeID":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeID"))
 			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
@@ -82480,216 +76620,6 @@ func (ec *executionContext) unmarshalInputRequestExecutionWhereInput(ctx context
 				return it, err
 			}
 			it.CredentialNameSnapshotContainsFold = data
-		case "credentialKeyHint":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHint"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHint = data
-		case "credentialKeyHintNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintNEQ = data
-		case "credentialKeyHintIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintIn = data
-		case "credentialKeyHintNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintNotIn = data
-		case "credentialKeyHintGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintGT = data
-		case "credentialKeyHintGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintGTE = data
-		case "credentialKeyHintLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintLT = data
-		case "credentialKeyHintLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintLTE = data
-		case "credentialKeyHintContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintContains = data
-		case "credentialKeyHintHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintHasPrefix = data
-		case "credentialKeyHintHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintHasSuffix = data
-		case "credentialKeyHintIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintIsNil = data
-		case "credentialKeyHintNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintNotNil = data
-		case "credentialKeyHintEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintEqualFold = data
-		case "credentialKeyHintContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintContainsFold = data
-		case "credentialSource":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSource"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSource = data
-		case "credentialSourceNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceNEQ = data
-		case "credentialSourceIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceIn = data
-		case "credentialSourceNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceNotIn = data
-		case "credentialSourceGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceGT = data
-		case "credentialSourceGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceGTE = data
-		case "credentialSourceLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceLT = data
-		case "credentialSourceLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceLTE = data
-		case "credentialSourceContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceContains = data
-		case "credentialSourceHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceHasPrefix = data
-		case "credentialSourceHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceHasSuffix = data
-		case "credentialSourceIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceIsNil = data
-		case "credentialSourceNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceNotNil = data
-		case "credentialSourceEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceEqualFold = data
-		case "credentialSourceContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceContainsFold = data
 		case "credentialQuotaStatusSnapshot":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshot"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -87793,7 +81723,7 @@ func (ec *executionContext) unmarshalInputUpdateChannelInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"type", "baseURL", "clearBaseURL", "name", "status", "credentials", "supportedModels", "appendSupportedModels", "manualModels", "appendManualModels", "clearManualModels", "autoSyncSupportedModels", "autoSyncModelPattern", "clearAutoSyncModelPattern", "tags", "appendTags", "clearTags", "defaultTestModel", "policies", "clearPolicies", "settings", "clearSettings", "orderingWeight", "errorMessage", "clearErrorMessage", "remark", "clearRemark", "endpoints", "appendEndpoints", "clearEndpoints"}
+	fieldsInOrder := [...]string{"type", "baseURL", "clearBaseURL", "name", "status", "supportedModels", "appendSupportedModels", "manualModels", "appendManualModels", "clearManualModels", "autoSyncSupportedModels", "autoSyncModelPattern", "clearAutoSyncModelPattern", "tags", "appendTags", "clearTags", "defaultTestModel", "policies", "clearPolicies", "settings", "clearSettings", "orderingWeight", "errorMessage", "clearErrorMessage", "remark", "clearRemark", "endpoints", "appendEndpoints", "clearEndpoints"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -87835,13 +81765,6 @@ func (ec *executionContext) unmarshalInputUpdateChannelInput(ctx context.Context
 				return it, err
 			}
 			it.Status = data
-		case "credentials":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentials"))
-			data, err := ec.unmarshalOChannelCredentialsInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐChannelCredentials(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Credentials = data
 		case "supportedModels":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("supportedModels"))
 			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
@@ -88982,40 +82905,6 @@ func (ec *executionContext) unmarshalInputUpdatePromptProtectionRuleInput(ctx co
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputUpdateQuotaEnforcementSettingsInput(ctx context.Context, obj any) (UpdateQuotaEnforcementSettingsInput, error) {
-	var it UpdateQuotaEnforcementSettingsInput
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"enabled", "mode"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "enabled":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("enabled"))
-			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Enabled = data
-		case "mode":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("mode"))
-			data, err := ec.unmarshalOQuotaEnforcementMode2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐQuotaEnforcementMode(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Mode = data
-		}
-	}
-
-	return it, nil
-}
-
 func (ec *executionContext) unmarshalInputUpdateRequestInput(ctx context.Context, obj any) (ent.UpdateRequestInput, error) {
 	var it ent.UpdateRequestInput
 	asMap := map[string]any{}
@@ -89223,82 +83112,6 @@ func (ec *executionContext) unmarshalInputUpdateRequestInput(ctx context.Context
 				return it, err
 			}
 			it.ClearChannel = data
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputUpdateRetryPolicyInput(ctx context.Context, obj any) (biz.RetryPolicy, error) {
-	var it biz.RetryPolicy
-	asMap := map[string]any{}
-	for k, v := range obj.(map[string]any) {
-		asMap[k] = v
-	}
-
-	fieldsInOrder := [...]string{"maxChannelRetries", "maxSingleChannelRetries", "retryDelayMs", "loadBalancerStrategy", "enabled", "autoDisableChannel", "emptyResponseDetection", "upstreamErrorPolicy"}
-	for _, k := range fieldsInOrder {
-		v, ok := asMap[k]
-		if !ok {
-			continue
-		}
-		switch k {
-		case "maxChannelRetries":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("maxChannelRetries"))
-			data, err := ec.unmarshalOInt2int(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.MaxChannelRetries = data
-		case "maxSingleChannelRetries":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("maxSingleChannelRetries"))
-			data, err := ec.unmarshalOInt2int(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.MaxSingleChannelRetries = data
-		case "retryDelayMs":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("retryDelayMs"))
-			data, err := ec.unmarshalOInt2int(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.RetryDelayMs = data
-		case "loadBalancerStrategy":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("loadBalancerStrategy"))
-			data, err := ec.unmarshalOString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.LoadBalancerStrategy = data
-		case "enabled":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("enabled"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Enabled = data
-		case "autoDisableChannel":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("autoDisableChannel"))
-			data, err := ec.unmarshalOAutoDisableChannelInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐAutoDisableChannel(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.AutoDisableChannel = data
-		case "emptyResponseDetection":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("emptyResponseDetection"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.EmptyResponseDetection = data
-		case "upstreamErrorPolicy":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("upstreamErrorPolicy"))
-			data, err := ec.unmarshalOUpstreamErrorPolicyInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐUpstreamErrorPolicy(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.UpstreamErrorPolicy = data
 		}
 	}
 
@@ -90288,7 +84101,7 @@ func (ec *executionContext) unmarshalInputUpstreamCredentialWhereInput(ctx conte
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "name", "nameNEQ", "nameIn", "nameNotIn", "nameGT", "nameGTE", "nameLT", "nameLTE", "nameContains", "nameHasPrefix", "nameHasSuffix", "nameIsNil", "nameNotNil", "nameEqualFold", "nameContainsFold", "keyHint", "keyHintNEQ", "keyHintIn", "keyHintNotIn", "keyHintGT", "keyHintGTE", "keyHintLT", "keyHintLTE", "keyHintContains", "keyHintHasPrefix", "keyHintHasSuffix", "keyHintIsNil", "keyHintNotNil", "keyHintEqualFold", "keyHintContainsFold", "quotaScopeID", "quotaScopeIDNEQ", "quotaScopeIDIn", "quotaScopeIDNotIn", "quotaScopeIDIsNil", "quotaScopeIDNotNil", "fingerprint", "fingerprintNEQ", "fingerprintIn", "fingerprintNotIn", "fingerprintGT", "fingerprintGTE", "fingerprintLT", "fingerprintLTE", "fingerprintContains", "fingerprintHasPrefix", "fingerprintHasSuffix", "fingerprintEqualFold", "fingerprintContainsFold", "secretFingerprint", "secretFingerprintNEQ", "secretFingerprintIn", "secretFingerprintNotIn", "secretFingerprintGT", "secretFingerprintGTE", "secretFingerprintLT", "secretFingerprintLTE", "secretFingerprintContains", "secretFingerprintHasPrefix", "secretFingerprintHasSuffix", "secretFingerprintIsNil", "secretFingerprintNotNil", "secretFingerprintEqualFold", "secretFingerprintContainsFold", "status", "statusNEQ", "statusIn", "statusNotIn", "quotaStatus", "quotaStatusNEQ", "quotaStatusIn", "quotaStatusNotIn", "quotaStatusGT", "quotaStatusGTE", "quotaStatusLT", "quotaStatusLTE", "quotaStatusContains", "quotaStatusHasPrefix", "quotaStatusHasSuffix", "quotaStatusIsNil", "quotaStatusNotNil", "quotaStatusEqualFold", "quotaStatusContainsFold", "lastError", "lastErrorNEQ", "lastErrorIn", "lastErrorNotIn", "lastErrorGT", "lastErrorGTE", "lastErrorLT", "lastErrorLTE", "lastErrorContains", "lastErrorHasPrefix", "lastErrorHasSuffix", "lastErrorIsNil", "lastErrorNotNil", "lastErrorEqualFold", "lastErrorContainsFold", "remark", "remarkNEQ", "remarkIn", "remarkNotIn", "remarkGT", "remarkGTE", "remarkLT", "remarkLTE", "remarkContains", "remarkHasPrefix", "remarkHasSuffix", "remarkIsNil", "remarkNotNil", "remarkEqualFold", "remarkContainsFold", "hasChannelRefs", "hasChannelRefsWith", "hasExecutions", "hasExecutionsWith", "hasUsageLogs", "hasUsageLogsWith", "hasProviderQuotaStatuses", "hasProviderQuotaStatusesWith", "hasQuotaScope", "hasQuotaScopeWith"}
+	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "name", "nameNEQ", "nameIn", "nameNotIn", "nameGT", "nameGTE", "nameLT", "nameLTE", "nameContains", "nameHasPrefix", "nameHasSuffix", "nameIsNil", "nameNotNil", "nameEqualFold", "nameContainsFold", "quotaScopeID", "quotaScopeIDNEQ", "quotaScopeIDIn", "quotaScopeIDNotIn", "quotaScopeIDIsNil", "quotaScopeIDNotNil", "status", "statusNEQ", "statusIn", "statusNotIn", "lastError", "lastErrorNEQ", "lastErrorIn", "lastErrorNotIn", "lastErrorGT", "lastErrorGTE", "lastErrorLT", "lastErrorLTE", "lastErrorContains", "lastErrorHasPrefix", "lastErrorHasSuffix", "lastErrorIsNil", "lastErrorNotNil", "lastErrorEqualFold", "lastErrorContainsFold", "remark", "remarkNEQ", "remarkIn", "remarkNotIn", "remarkGT", "remarkGTE", "remarkLT", "remarkLTE", "remarkContains", "remarkHasPrefix", "remarkHasSuffix", "remarkIsNil", "remarkNotNil", "remarkEqualFold", "remarkContainsFold", "hasChannelRefs", "hasChannelRefsWith", "hasExecutions", "hasExecutionsWith", "hasUsageLogs", "hasUsageLogsWith", "hasQuotaScope", "hasQuotaScopeWith"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -90621,111 +84434,6 @@ func (ec *executionContext) unmarshalInputUpstreamCredentialWhereInput(ctx conte
 				return it, err
 			}
 			it.NameContainsFold = data
-		case "keyHint":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyHint"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.KeyHint = data
-		case "keyHintNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyHintNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.KeyHintNEQ = data
-		case "keyHintIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyHintIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.KeyHintIn = data
-		case "keyHintNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyHintNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.KeyHintNotIn = data
-		case "keyHintGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyHintGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.KeyHintGT = data
-		case "keyHintGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyHintGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.KeyHintGTE = data
-		case "keyHintLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyHintLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.KeyHintLT = data
-		case "keyHintLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyHintLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.KeyHintLTE = data
-		case "keyHintContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyHintContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.KeyHintContains = data
-		case "keyHintHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyHintHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.KeyHintHasPrefix = data
-		case "keyHintHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyHintHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.KeyHintHasSuffix = data
-		case "keyHintIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyHintIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.KeyHintIsNil = data
-		case "keyHintNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyHintNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.KeyHintNotNil = data
-		case "keyHintEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyHintEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.KeyHintEqualFold = data
-		case "keyHintContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("keyHintContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.KeyHintContainsFold = data
 		case "quotaScopeID":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeID"))
 			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
@@ -90784,202 +84492,6 @@ func (ec *executionContext) unmarshalInputUpstreamCredentialWhereInput(ctx conte
 				return it, err
 			}
 			it.QuotaScopeIDNotNil = data
-		case "fingerprint":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fingerprint"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.Fingerprint = data
-		case "fingerprintNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fingerprintNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.FingerprintNEQ = data
-		case "fingerprintIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fingerprintIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.FingerprintIn = data
-		case "fingerprintNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fingerprintNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.FingerprintNotIn = data
-		case "fingerprintGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fingerprintGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.FingerprintGT = data
-		case "fingerprintGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fingerprintGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.FingerprintGTE = data
-		case "fingerprintLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fingerprintLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.FingerprintLT = data
-		case "fingerprintLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fingerprintLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.FingerprintLTE = data
-		case "fingerprintContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fingerprintContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.FingerprintContains = data
-		case "fingerprintHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fingerprintHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.FingerprintHasPrefix = data
-		case "fingerprintHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fingerprintHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.FingerprintHasSuffix = data
-		case "fingerprintEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fingerprintEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.FingerprintEqualFold = data
-		case "fingerprintContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("fingerprintContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.FingerprintContainsFold = data
-		case "secretFingerprint":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprint"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprint = data
-		case "secretFingerprintNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintNEQ = data
-		case "secretFingerprintIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintIn = data
-		case "secretFingerprintNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintNotIn = data
-		case "secretFingerprintGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintGT = data
-		case "secretFingerprintGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintGTE = data
-		case "secretFingerprintLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintLT = data
-		case "secretFingerprintLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintLTE = data
-		case "secretFingerprintContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintContains = data
-		case "secretFingerprintHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintHasPrefix = data
-		case "secretFingerprintHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintHasSuffix = data
-		case "secretFingerprintIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintIsNil = data
-		case "secretFingerprintNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintNotNil = data
-		case "secretFingerprintEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintEqualFold = data
-		case "secretFingerprintContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintContainsFold = data
 		case "status":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("status"))
 			data, err := ec.unmarshalOUpstreamCredentialStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋupstreamcredentialᚐStatus(ctx, v)
@@ -91008,111 +84520,6 @@ func (ec *executionContext) unmarshalInputUpstreamCredentialWhereInput(ctx conte
 				return it, err
 			}
 			it.StatusNotIn = data
-		case "quotaStatus":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaStatus"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaStatus = data
-		case "quotaStatusNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaStatusNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaStatusNEQ = data
-		case "quotaStatusIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaStatusIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaStatusIn = data
-		case "quotaStatusNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaStatusNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaStatusNotIn = data
-		case "quotaStatusGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaStatusGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaStatusGT = data
-		case "quotaStatusGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaStatusGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaStatusGTE = data
-		case "quotaStatusLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaStatusLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaStatusLT = data
-		case "quotaStatusLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaStatusLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaStatusLTE = data
-		case "quotaStatusContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaStatusContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaStatusContains = data
-		case "quotaStatusHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaStatusHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaStatusHasPrefix = data
-		case "quotaStatusHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaStatusHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaStatusHasSuffix = data
-		case "quotaStatusIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaStatusIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaStatusIsNil = data
-		case "quotaStatusNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaStatusNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaStatusNotNil = data
-		case "quotaStatusEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaStatusEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaStatusEqualFold = data
-		case "quotaStatusContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaStatusContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.QuotaStatusContainsFold = data
 		case "lastError":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lastError"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -91365,20 +84772,6 @@ func (ec *executionContext) unmarshalInputUpstreamCredentialWhereInput(ctx conte
 				return it, err
 			}
 			it.HasUsageLogsWith = data
-		case "hasProviderQuotaStatuses":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasProviderQuotaStatuses"))
-			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.HasProviderQuotaStatuses = data
-		case "hasProviderQuotaStatusesWith":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasProviderQuotaStatusesWith"))
-			data, err := ec.unmarshalOProviderQuotaStatusWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusWhereInputᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.HasProviderQuotaStatusesWith = data
 		case "hasQuotaScope":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("hasQuotaScope"))
 			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
@@ -91478,7 +84871,7 @@ func (ec *executionContext) unmarshalInputUsageLogWhereInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "requestID", "requestIDNEQ", "requestIDIn", "requestIDNotIn", "apiKeyID", "apiKeyIDNEQ", "apiKeyIDIn", "apiKeyIDNotIn", "apiKeyIDGT", "apiKeyIDGTE", "apiKeyIDLT", "apiKeyIDLTE", "apiKeyIDIsNil", "apiKeyIDNotNil", "projectID", "projectIDNEQ", "projectIDIn", "projectIDNotIn", "channelID", "channelIDNEQ", "channelIDIn", "channelIDNotIn", "channelIDIsNil", "channelIDNotNil", "credentialID", "credentialIDNEQ", "credentialIDIn", "credentialIDNotIn", "credentialIDIsNil", "credentialIDNotNil", "modelID", "modelIDNEQ", "modelIDIn", "modelIDNotIn", "modelIDGT", "modelIDGTE", "modelIDLT", "modelIDLTE", "modelIDContains", "modelIDHasPrefix", "modelIDHasSuffix", "modelIDEqualFold", "modelIDContainsFold", "credentialFingerprint", "credentialFingerprintNEQ", "credentialFingerprintIn", "credentialFingerprintNotIn", "credentialFingerprintGT", "credentialFingerprintGTE", "credentialFingerprintLT", "credentialFingerprintLTE", "credentialFingerprintContains", "credentialFingerprintHasPrefix", "credentialFingerprintHasSuffix", "credentialFingerprintIsNil", "credentialFingerprintNotNil", "credentialFingerprintEqualFold", "credentialFingerprintContainsFold", "secretFingerprint", "secretFingerprintNEQ", "secretFingerprintIn", "secretFingerprintNotIn", "secretFingerprintGT", "secretFingerprintGTE", "secretFingerprintLT", "secretFingerprintLTE", "secretFingerprintContains", "secretFingerprintHasPrefix", "secretFingerprintHasSuffix", "secretFingerprintIsNil", "secretFingerprintNotNil", "secretFingerprintEqualFold", "secretFingerprintContainsFold", "resourceScopeKey", "resourceScopeKeyNEQ", "resourceScopeKeyIn", "resourceScopeKeyNotIn", "resourceScopeKeyGT", "resourceScopeKeyGTE", "resourceScopeKeyLT", "resourceScopeKeyLTE", "resourceScopeKeyContains", "resourceScopeKeyHasPrefix", "resourceScopeKeyHasSuffix", "resourceScopeKeyIsNil", "resourceScopeKeyNotNil", "resourceScopeKeyEqualFold", "resourceScopeKeyContainsFold", "quotaScopeID", "quotaScopeIDNEQ", "quotaScopeIDIn", "quotaScopeIDNotIn", "quotaScopeIDIsNil", "quotaScopeIDNotNil", "quotaScopeNameSnapshot", "quotaScopeNameSnapshotNEQ", "quotaScopeNameSnapshotIn", "quotaScopeNameSnapshotNotIn", "quotaScopeNameSnapshotGT", "quotaScopeNameSnapshotGTE", "quotaScopeNameSnapshotLT", "quotaScopeNameSnapshotLTE", "quotaScopeNameSnapshotContains", "quotaScopeNameSnapshotHasPrefix", "quotaScopeNameSnapshotHasSuffix", "quotaScopeNameSnapshotIsNil", "quotaScopeNameSnapshotNotNil", "quotaScopeNameSnapshotEqualFold", "quotaScopeNameSnapshotContainsFold", "quotaScopeStatusSnapshot", "quotaScopeStatusSnapshotNEQ", "quotaScopeStatusSnapshotIn", "quotaScopeStatusSnapshotNotIn", "quotaScopeStatusSnapshotGT", "quotaScopeStatusSnapshotGTE", "quotaScopeStatusSnapshotLT", "quotaScopeStatusSnapshotLTE", "quotaScopeStatusSnapshotContains", "quotaScopeStatusSnapshotHasPrefix", "quotaScopeStatusSnapshotHasSuffix", "quotaScopeStatusSnapshotIsNil", "quotaScopeStatusSnapshotNotNil", "quotaScopeStatusSnapshotEqualFold", "quotaScopeStatusSnapshotContainsFold", "credentialNameSnapshot", "credentialNameSnapshotNEQ", "credentialNameSnapshotIn", "credentialNameSnapshotNotIn", "credentialNameSnapshotGT", "credentialNameSnapshotGTE", "credentialNameSnapshotLT", "credentialNameSnapshotLTE", "credentialNameSnapshotContains", "credentialNameSnapshotHasPrefix", "credentialNameSnapshotHasSuffix", "credentialNameSnapshotIsNil", "credentialNameSnapshotNotNil", "credentialNameSnapshotEqualFold", "credentialNameSnapshotContainsFold", "credentialKeyHint", "credentialKeyHintNEQ", "credentialKeyHintIn", "credentialKeyHintNotIn", "credentialKeyHintGT", "credentialKeyHintGTE", "credentialKeyHintLT", "credentialKeyHintLTE", "credentialKeyHintContains", "credentialKeyHintHasPrefix", "credentialKeyHintHasSuffix", "credentialKeyHintIsNil", "credentialKeyHintNotNil", "credentialKeyHintEqualFold", "credentialKeyHintContainsFold", "credentialSource", "credentialSourceNEQ", "credentialSourceIn", "credentialSourceNotIn", "credentialSourceGT", "credentialSourceGTE", "credentialSourceLT", "credentialSourceLTE", "credentialSourceContains", "credentialSourceHasPrefix", "credentialSourceHasSuffix", "credentialSourceIsNil", "credentialSourceNotNil", "credentialSourceEqualFold", "credentialSourceContainsFold", "credentialQuotaStatusSnapshot", "credentialQuotaStatusSnapshotNEQ", "credentialQuotaStatusSnapshotIn", "credentialQuotaStatusSnapshotNotIn", "credentialQuotaStatusSnapshotGT", "credentialQuotaStatusSnapshotGTE", "credentialQuotaStatusSnapshotLT", "credentialQuotaStatusSnapshotLTE", "credentialQuotaStatusSnapshotContains", "credentialQuotaStatusSnapshotHasPrefix", "credentialQuotaStatusSnapshotHasSuffix", "credentialQuotaStatusSnapshotIsNil", "credentialQuotaStatusSnapshotNotNil", "credentialQuotaStatusSnapshotEqualFold", "credentialQuotaStatusSnapshotContainsFold", "promptTokens", "promptTokensNEQ", "promptTokensIn", "promptTokensNotIn", "promptTokensGT", "promptTokensGTE", "promptTokensLT", "promptTokensLTE", "completionTokens", "completionTokensNEQ", "completionTokensIn", "completionTokensNotIn", "completionTokensGT", "completionTokensGTE", "completionTokensLT", "completionTokensLTE", "totalTokens", "totalTokensNEQ", "totalTokensIn", "totalTokensNotIn", "totalTokensGT", "totalTokensGTE", "totalTokensLT", "totalTokensLTE", "promptAudioTokens", "promptAudioTokensNEQ", "promptAudioTokensIn", "promptAudioTokensNotIn", "promptAudioTokensGT", "promptAudioTokensGTE", "promptAudioTokensLT", "promptAudioTokensLTE", "promptAudioTokensIsNil", "promptAudioTokensNotNil", "promptCachedTokens", "promptCachedTokensNEQ", "promptCachedTokensIn", "promptCachedTokensNotIn", "promptCachedTokensGT", "promptCachedTokensGTE", "promptCachedTokensLT", "promptCachedTokensLTE", "promptCachedTokensIsNil", "promptCachedTokensNotNil", "promptWriteCachedTokens", "promptWriteCachedTokensNEQ", "promptWriteCachedTokensIn", "promptWriteCachedTokensNotIn", "promptWriteCachedTokensGT", "promptWriteCachedTokensGTE", "promptWriteCachedTokensLT", "promptWriteCachedTokensLTE", "promptWriteCachedTokensIsNil", "promptWriteCachedTokensNotNil", "promptWriteCachedTokens5m", "promptWriteCachedTokens5mNEQ", "promptWriteCachedTokens5mIn", "promptWriteCachedTokens5mNotIn", "promptWriteCachedTokens5mGT", "promptWriteCachedTokens5mGTE", "promptWriteCachedTokens5mLT", "promptWriteCachedTokens5mLTE", "promptWriteCachedTokens5mIsNil", "promptWriteCachedTokens5mNotNil", "promptWriteCachedTokens1h", "promptWriteCachedTokens1hNEQ", "promptWriteCachedTokens1hIn", "promptWriteCachedTokens1hNotIn", "promptWriteCachedTokens1hGT", "promptWriteCachedTokens1hGTE", "promptWriteCachedTokens1hLT", "promptWriteCachedTokens1hLTE", "promptWriteCachedTokens1hIsNil", "promptWriteCachedTokens1hNotNil", "completionAudioTokens", "completionAudioTokensNEQ", "completionAudioTokensIn", "completionAudioTokensNotIn", "completionAudioTokensGT", "completionAudioTokensGTE", "completionAudioTokensLT", "completionAudioTokensLTE", "completionAudioTokensIsNil", "completionAudioTokensNotNil", "completionReasoningTokens", "completionReasoningTokensNEQ", "completionReasoningTokensIn", "completionReasoningTokensNotIn", "completionReasoningTokensGT", "completionReasoningTokensGTE", "completionReasoningTokensLT", "completionReasoningTokensLTE", "completionReasoningTokensIsNil", "completionReasoningTokensNotNil", "completionAcceptedPredictionTokens", "completionAcceptedPredictionTokensNEQ", "completionAcceptedPredictionTokensIn", "completionAcceptedPredictionTokensNotIn", "completionAcceptedPredictionTokensGT", "completionAcceptedPredictionTokensGTE", "completionAcceptedPredictionTokensLT", "completionAcceptedPredictionTokensLTE", "completionAcceptedPredictionTokensIsNil", "completionAcceptedPredictionTokensNotNil", "completionRejectedPredictionTokens", "completionRejectedPredictionTokensNEQ", "completionRejectedPredictionTokensIn", "completionRejectedPredictionTokensNotIn", "completionRejectedPredictionTokensGT", "completionRejectedPredictionTokensGTE", "completionRejectedPredictionTokensLT", "completionRejectedPredictionTokensLTE", "completionRejectedPredictionTokensIsNil", "completionRejectedPredictionTokensNotNil", "source", "sourceNEQ", "sourceIn", "sourceNotIn", "format", "formatNEQ", "formatIn", "formatNotIn", "formatGT", "formatGTE", "formatLT", "formatLTE", "formatContains", "formatHasPrefix", "formatHasSuffix", "formatEqualFold", "formatContainsFold", "totalCost", "totalCostNEQ", "totalCostIn", "totalCostNotIn", "totalCostGT", "totalCostGTE", "totalCostLT", "totalCostLTE", "totalCostIsNil", "totalCostNotNil", "costPriceReferenceID", "costPriceReferenceIDNEQ", "costPriceReferenceIDIn", "costPriceReferenceIDNotIn", "costPriceReferenceIDGT", "costPriceReferenceIDGTE", "costPriceReferenceIDLT", "costPriceReferenceIDLTE", "costPriceReferenceIDContains", "costPriceReferenceIDHasPrefix", "costPriceReferenceIDHasSuffix", "costPriceReferenceIDIsNil", "costPriceReferenceIDNotNil", "costPriceReferenceIDEqualFold", "costPriceReferenceIDContainsFold", "hasRequest", "hasRequestWith", "hasProject", "hasProjectWith", "hasChannel", "hasChannelWith", "hasCredential", "hasCredentialWith", "hasQuotaScope", "hasQuotaScopeWith"}
+	fieldsInOrder := [...]string{"not", "and", "or", "id", "idNEQ", "idIn", "idNotIn", "idGT", "idGTE", "idLT", "idLTE", "createdAt", "createdAtNEQ", "createdAtIn", "createdAtNotIn", "createdAtGT", "createdAtGTE", "createdAtLT", "createdAtLTE", "updatedAt", "updatedAtNEQ", "updatedAtIn", "updatedAtNotIn", "updatedAtGT", "updatedAtGTE", "updatedAtLT", "updatedAtLTE", "requestID", "requestIDNEQ", "requestIDIn", "requestIDNotIn", "apiKeyID", "apiKeyIDNEQ", "apiKeyIDIn", "apiKeyIDNotIn", "apiKeyIDGT", "apiKeyIDGTE", "apiKeyIDLT", "apiKeyIDLTE", "apiKeyIDIsNil", "apiKeyIDNotNil", "projectID", "projectIDNEQ", "projectIDIn", "projectIDNotIn", "channelID", "channelIDNEQ", "channelIDIn", "channelIDNotIn", "channelIDIsNil", "channelIDNotNil", "credentialID", "credentialIDNEQ", "credentialIDIn", "credentialIDNotIn", "credentialIDIsNil", "credentialIDNotNil", "modelID", "modelIDNEQ", "modelIDIn", "modelIDNotIn", "modelIDGT", "modelIDGTE", "modelIDLT", "modelIDLTE", "modelIDContains", "modelIDHasPrefix", "modelIDHasSuffix", "modelIDEqualFold", "modelIDContainsFold", "quotaScopeID", "quotaScopeIDNEQ", "quotaScopeIDIn", "quotaScopeIDNotIn", "quotaScopeIDIsNil", "quotaScopeIDNotNil", "quotaScopeNameSnapshot", "quotaScopeNameSnapshotNEQ", "quotaScopeNameSnapshotIn", "quotaScopeNameSnapshotNotIn", "quotaScopeNameSnapshotGT", "quotaScopeNameSnapshotGTE", "quotaScopeNameSnapshotLT", "quotaScopeNameSnapshotLTE", "quotaScopeNameSnapshotContains", "quotaScopeNameSnapshotHasPrefix", "quotaScopeNameSnapshotHasSuffix", "quotaScopeNameSnapshotIsNil", "quotaScopeNameSnapshotNotNil", "quotaScopeNameSnapshotEqualFold", "quotaScopeNameSnapshotContainsFold", "quotaScopeStatusSnapshot", "quotaScopeStatusSnapshotNEQ", "quotaScopeStatusSnapshotIn", "quotaScopeStatusSnapshotNotIn", "quotaScopeStatusSnapshotGT", "quotaScopeStatusSnapshotGTE", "quotaScopeStatusSnapshotLT", "quotaScopeStatusSnapshotLTE", "quotaScopeStatusSnapshotContains", "quotaScopeStatusSnapshotHasPrefix", "quotaScopeStatusSnapshotHasSuffix", "quotaScopeStatusSnapshotIsNil", "quotaScopeStatusSnapshotNotNil", "quotaScopeStatusSnapshotEqualFold", "quotaScopeStatusSnapshotContainsFold", "credentialNameSnapshot", "credentialNameSnapshotNEQ", "credentialNameSnapshotIn", "credentialNameSnapshotNotIn", "credentialNameSnapshotGT", "credentialNameSnapshotGTE", "credentialNameSnapshotLT", "credentialNameSnapshotLTE", "credentialNameSnapshotContains", "credentialNameSnapshotHasPrefix", "credentialNameSnapshotHasSuffix", "credentialNameSnapshotIsNil", "credentialNameSnapshotNotNil", "credentialNameSnapshotEqualFold", "credentialNameSnapshotContainsFold", "credentialQuotaStatusSnapshot", "credentialQuotaStatusSnapshotNEQ", "credentialQuotaStatusSnapshotIn", "credentialQuotaStatusSnapshotNotIn", "credentialQuotaStatusSnapshotGT", "credentialQuotaStatusSnapshotGTE", "credentialQuotaStatusSnapshotLT", "credentialQuotaStatusSnapshotLTE", "credentialQuotaStatusSnapshotContains", "credentialQuotaStatusSnapshotHasPrefix", "credentialQuotaStatusSnapshotHasSuffix", "credentialQuotaStatusSnapshotIsNil", "credentialQuotaStatusSnapshotNotNil", "credentialQuotaStatusSnapshotEqualFold", "credentialQuotaStatusSnapshotContainsFold", "promptTokens", "promptTokensNEQ", "promptTokensIn", "promptTokensNotIn", "promptTokensGT", "promptTokensGTE", "promptTokensLT", "promptTokensLTE", "completionTokens", "completionTokensNEQ", "completionTokensIn", "completionTokensNotIn", "completionTokensGT", "completionTokensGTE", "completionTokensLT", "completionTokensLTE", "totalTokens", "totalTokensNEQ", "totalTokensIn", "totalTokensNotIn", "totalTokensGT", "totalTokensGTE", "totalTokensLT", "totalTokensLTE", "promptAudioTokens", "promptAudioTokensNEQ", "promptAudioTokensIn", "promptAudioTokensNotIn", "promptAudioTokensGT", "promptAudioTokensGTE", "promptAudioTokensLT", "promptAudioTokensLTE", "promptAudioTokensIsNil", "promptAudioTokensNotNil", "promptCachedTokens", "promptCachedTokensNEQ", "promptCachedTokensIn", "promptCachedTokensNotIn", "promptCachedTokensGT", "promptCachedTokensGTE", "promptCachedTokensLT", "promptCachedTokensLTE", "promptCachedTokensIsNil", "promptCachedTokensNotNil", "promptWriteCachedTokens", "promptWriteCachedTokensNEQ", "promptWriteCachedTokensIn", "promptWriteCachedTokensNotIn", "promptWriteCachedTokensGT", "promptWriteCachedTokensGTE", "promptWriteCachedTokensLT", "promptWriteCachedTokensLTE", "promptWriteCachedTokensIsNil", "promptWriteCachedTokensNotNil", "promptWriteCachedTokens5m", "promptWriteCachedTokens5mNEQ", "promptWriteCachedTokens5mIn", "promptWriteCachedTokens5mNotIn", "promptWriteCachedTokens5mGT", "promptWriteCachedTokens5mGTE", "promptWriteCachedTokens5mLT", "promptWriteCachedTokens5mLTE", "promptWriteCachedTokens5mIsNil", "promptWriteCachedTokens5mNotNil", "promptWriteCachedTokens1h", "promptWriteCachedTokens1hNEQ", "promptWriteCachedTokens1hIn", "promptWriteCachedTokens1hNotIn", "promptWriteCachedTokens1hGT", "promptWriteCachedTokens1hGTE", "promptWriteCachedTokens1hLT", "promptWriteCachedTokens1hLTE", "promptWriteCachedTokens1hIsNil", "promptWriteCachedTokens1hNotNil", "completionAudioTokens", "completionAudioTokensNEQ", "completionAudioTokensIn", "completionAudioTokensNotIn", "completionAudioTokensGT", "completionAudioTokensGTE", "completionAudioTokensLT", "completionAudioTokensLTE", "completionAudioTokensIsNil", "completionAudioTokensNotNil", "completionReasoningTokens", "completionReasoningTokensNEQ", "completionReasoningTokensIn", "completionReasoningTokensNotIn", "completionReasoningTokensGT", "completionReasoningTokensGTE", "completionReasoningTokensLT", "completionReasoningTokensLTE", "completionReasoningTokensIsNil", "completionReasoningTokensNotNil", "completionAcceptedPredictionTokens", "completionAcceptedPredictionTokensNEQ", "completionAcceptedPredictionTokensIn", "completionAcceptedPredictionTokensNotIn", "completionAcceptedPredictionTokensGT", "completionAcceptedPredictionTokensGTE", "completionAcceptedPredictionTokensLT", "completionAcceptedPredictionTokensLTE", "completionAcceptedPredictionTokensIsNil", "completionAcceptedPredictionTokensNotNil", "completionRejectedPredictionTokens", "completionRejectedPredictionTokensNEQ", "completionRejectedPredictionTokensIn", "completionRejectedPredictionTokensNotIn", "completionRejectedPredictionTokensGT", "completionRejectedPredictionTokensGTE", "completionRejectedPredictionTokensLT", "completionRejectedPredictionTokensLTE", "completionRejectedPredictionTokensIsNil", "completionRejectedPredictionTokensNotNil", "source", "sourceNEQ", "sourceIn", "sourceNotIn", "format", "formatNEQ", "formatIn", "formatNotIn", "formatGT", "formatGTE", "formatLT", "formatLTE", "formatContains", "formatHasPrefix", "formatHasSuffix", "formatEqualFold", "formatContainsFold", "totalCost", "totalCostNEQ", "totalCostIn", "totalCostNotIn", "totalCostGT", "totalCostGTE", "totalCostLT", "totalCostLTE", "totalCostIsNil", "totalCostNotNil", "costPriceReferenceID", "costPriceReferenceIDNEQ", "costPriceReferenceIDIn", "costPriceReferenceIDNotIn", "costPriceReferenceIDGT", "costPriceReferenceIDGTE", "costPriceReferenceIDLT", "costPriceReferenceIDLTE", "costPriceReferenceIDContains", "costPriceReferenceIDHasPrefix", "costPriceReferenceIDHasSuffix", "costPriceReferenceIDIsNil", "costPriceReferenceIDNotNil", "costPriceReferenceIDEqualFold", "costPriceReferenceIDContainsFold", "hasRequest", "hasRequestWith", "hasProject", "hasProjectWith", "hasChannel", "hasChannelWith", "hasCredential", "hasCredentialWith", "hasQuotaScope", "hasQuotaScopeWith"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -92071,321 +85464,6 @@ func (ec *executionContext) unmarshalInputUsageLogWhereInput(ctx context.Context
 				return it, err
 			}
 			it.ModelIDContainsFold = data
-		case "credentialFingerprint":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprint"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprint = data
-		case "credentialFingerprintNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintNEQ = data
-		case "credentialFingerprintIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintIn = data
-		case "credentialFingerprintNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintNotIn = data
-		case "credentialFingerprintGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintGT = data
-		case "credentialFingerprintGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintGTE = data
-		case "credentialFingerprintLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintLT = data
-		case "credentialFingerprintLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintLTE = data
-		case "credentialFingerprintContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintContains = data
-		case "credentialFingerprintHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintHasPrefix = data
-		case "credentialFingerprintHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintHasSuffix = data
-		case "credentialFingerprintIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintIsNil = data
-		case "credentialFingerprintNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintNotNil = data
-		case "credentialFingerprintEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintEqualFold = data
-		case "credentialFingerprintContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialFingerprintContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialFingerprintContainsFold = data
-		case "secretFingerprint":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprint"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprint = data
-		case "secretFingerprintNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintNEQ = data
-		case "secretFingerprintIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintIn = data
-		case "secretFingerprintNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintNotIn = data
-		case "secretFingerprintGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintGT = data
-		case "secretFingerprintGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintGTE = data
-		case "secretFingerprintLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintLT = data
-		case "secretFingerprintLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintLTE = data
-		case "secretFingerprintContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintContains = data
-		case "secretFingerprintHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintHasPrefix = data
-		case "secretFingerprintHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintHasSuffix = data
-		case "secretFingerprintIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintIsNil = data
-		case "secretFingerprintNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintNotNil = data
-		case "secretFingerprintEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintEqualFold = data
-		case "secretFingerprintContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("secretFingerprintContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.SecretFingerprintContainsFold = data
-		case "resourceScopeKey":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKey"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKey = data
-		case "resourceScopeKeyNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyNEQ = data
-		case "resourceScopeKeyIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyIn = data
-		case "resourceScopeKeyNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyNotIn = data
-		case "resourceScopeKeyGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyGT = data
-		case "resourceScopeKeyGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyGTE = data
-		case "resourceScopeKeyLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyLT = data
-		case "resourceScopeKeyLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyLTE = data
-		case "resourceScopeKeyContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyContains = data
-		case "resourceScopeKeyHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyHasPrefix = data
-		case "resourceScopeKeyHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyHasSuffix = data
-		case "resourceScopeKeyIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyIsNil = data
-		case "resourceScopeKeyNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyNotNil = data
-		case "resourceScopeKeyEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyEqualFold = data
-		case "resourceScopeKeyContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("resourceScopeKeyContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.ResourceScopeKeyContainsFold = data
 		case "quotaScopeID":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quotaScopeID"))
 			data, err := ec.unmarshalOID2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGUID(ctx, v)
@@ -92759,216 +85837,6 @@ func (ec *executionContext) unmarshalInputUsageLogWhereInput(ctx context.Context
 				return it, err
 			}
 			it.CredentialNameSnapshotContainsFold = data
-		case "credentialKeyHint":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHint"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHint = data
-		case "credentialKeyHintNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintNEQ = data
-		case "credentialKeyHintIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintIn = data
-		case "credentialKeyHintNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintNotIn = data
-		case "credentialKeyHintGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintGT = data
-		case "credentialKeyHintGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintGTE = data
-		case "credentialKeyHintLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintLT = data
-		case "credentialKeyHintLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintLTE = data
-		case "credentialKeyHintContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintContains = data
-		case "credentialKeyHintHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintHasPrefix = data
-		case "credentialKeyHintHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintHasSuffix = data
-		case "credentialKeyHintIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintIsNil = data
-		case "credentialKeyHintNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintNotNil = data
-		case "credentialKeyHintEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintEqualFold = data
-		case "credentialKeyHintContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialKeyHintContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialKeyHintContainsFold = data
-		case "credentialSource":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSource"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSource = data
-		case "credentialSourceNEQ":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceNEQ"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceNEQ = data
-		case "credentialSourceIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceIn = data
-		case "credentialSourceNotIn":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceNotIn"))
-			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceNotIn = data
-		case "credentialSourceGT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceGT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceGT = data
-		case "credentialSourceGTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceGTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceGTE = data
-		case "credentialSourceLT":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceLT"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceLT = data
-		case "credentialSourceLTE":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceLTE"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceLTE = data
-		case "credentialSourceContains":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceContains"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceContains = data
-		case "credentialSourceHasPrefix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceHasPrefix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceHasPrefix = data
-		case "credentialSourceHasSuffix":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceHasSuffix"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceHasSuffix = data
-		case "credentialSourceIsNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceIsNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceIsNil = data
-		case "credentialSourceNotNil":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceNotNil"))
-			data, err := ec.unmarshalOBoolean2bool(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceNotNil = data
-		case "credentialSourceEqualFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceEqualFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceEqualFold = data
-		case "credentialSourceContainsFold":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialSourceContainsFold"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-			it.CredentialSourceContainsFold = data
 		case "credentialQuotaStatusSnapshot":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("credentialQuotaStatusSnapshot"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -95985,11 +88853,6 @@ func (ec *executionContext) _Node(ctx context.Context, sel ast.SelectionSet, obj
 			return graphql.Null
 		}
 		return ec._Request(ctx, sel, obj)
-	case *ent.ProviderQuotaStatus:
-		if obj == nil {
-			return graphql.Null
-		}
-		return ec._ProviderQuotaStatus(ctx, sel, obj)
 	case *ent.PromptProtectionRule:
 		if obj == nil {
 			return graphql.Null
@@ -96467,8 +89330,6 @@ func (ec *executionContext) _APIKeyProfile(ctx context.Context, sel ast.Selectio
 			out.Values[i] = ec._APIKeyProfile_modelIDs(ctx, field, obj)
 		case "quota":
 			out.Values[i] = ec._APIKeyProfile_quota(ctx, field, obj)
-		case "loadBalanceStrategy":
-			out.Values[i] = ec._APIKeyProfile_loadBalanceStrategy(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -97292,94 +90153,6 @@ func (ec *executionContext) _AutoBackupSettings(ctx context.Context, sel ast.Sel
 	return out
 }
 
-var autoDisableAPIKeyImplementors = []string{"AutoDisableAPIKey"}
-
-func (ec *executionContext) _AutoDisableAPIKey(ctx context.Context, sel ast.SelectionSet, obj *AutoDisableAPIKey) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, autoDisableAPIKeyImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("AutoDisableAPIKey")
-		case "enabled":
-			out.Values[i] = ec._AutoDisableAPIKey_enabled(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "statuses":
-			out.Values[i] = ec._AutoDisableAPIKey_statuses(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var autoDisableAPIKeyStatusImplementors = []string{"AutoDisableAPIKeyStatus"}
-
-func (ec *executionContext) _AutoDisableAPIKeyStatus(ctx context.Context, sel ast.SelectionSet, obj *AutoDisableAPIKeyStatus) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, autoDisableAPIKeyStatusImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("AutoDisableAPIKeyStatus")
-		case "status":
-			out.Values[i] = ec._AutoDisableAPIKeyStatus_status(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "times":
-			out.Values[i] = ec._AutoDisableAPIKeyStatus_times(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
 var autoDisableChannelImplementors = []string{"AutoDisableChannel"}
 
 func (ec *executionContext) _AutoDisableChannel(ctx context.Context, sel ast.SelectionSet, obj *biz.AutoDisableChannel) graphql.Marshaler {
@@ -98087,39 +90860,6 @@ func (ec *executionContext) _Channel(ctx context.Context, sel ast.SelectionSet, 
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "providerQuotaStatuses":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Channel_providerQuotaStatuses(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "defaultEndpoints":
 			field := field
 
@@ -98169,105 +90909,6 @@ func (ec *executionContext) _Channel(ctx context.Context, sel ast.SelectionSet, 
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "credentials":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Channel_credentials(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "disabledAPIKeys":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Channel_disabledAPIKeys(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "providerQuotaStatus":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Channel_providerQuotaStatus(ctx, field, obj)
 				return res
 			}
 
@@ -98686,50 +91327,6 @@ func (ec *executionContext) _ChannelCredentialRefEdge(ctx context.Context, sel a
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var channelCredentialsImplementors = []string{"ChannelCredentials"}
-
-func (ec *executionContext) _ChannelCredentials(ctx context.Context, sel ast.SelectionSet, obj *objects.ChannelCredentials) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, channelCredentialsImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("ChannelCredentials")
-		case "apiKey":
-			out.Values[i] = ec._ChannelCredentials_apiKey(ctx, field, obj)
-		case "apiKeys":
-			out.Values[i] = ec._ChannelCredentials_apiKeys(ctx, field, obj)
-		case "azure":
-			out.Values[i] = ec._ChannelCredentials_azure(ctx, field, obj)
-		case "gcp":
-			out.Values[i] = ec._ChannelCredentials_gcp(ctx, field, obj)
-		case "oauth":
-			out.Values[i] = ec._ChannelCredentials_oauth(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -101219,39 +93816,6 @@ func (ec *executionContext) _CredentialQuotaScope(ctx context.Context, sel ast.S
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "providerQuotaStatuses":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._CredentialQuotaScope_providerQuotaStatuses(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "executions":
 			field := field
 
@@ -101852,47 +94416,6 @@ func (ec *executionContext) _DataStorageSettings(ctx context.Context, sel ast.Se
 	return out
 }
 
-var deleteDisabledAPIKeysPayloadImplementors = []string{"DeleteDisabledAPIKeysPayload"}
-
-func (ec *executionContext) _DeleteDisabledAPIKeysPayload(ctx context.Context, sel ast.SelectionSet, obj *biz.DeleteDisabledAPIKeysResult) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, deleteDisabledAPIKeysPayloadImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("DeleteDisabledAPIKeysPayload")
-		case "success":
-			out.Values[i] = ec._DeleteDisabledAPIKeysPayload_success(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "message":
-			out.Values[i] = ec._DeleteDisabledAPIKeysPayload_message(ctx, field, obj)
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
 var developerModelSettingsImplementors = []string{"DeveloperModelSettings"}
 
 func (ec *executionContext) _DeveloperModelSettings(ctx context.Context, sel ast.SelectionSet, obj *biz.DeveloperModelSettings) graphql.Marshaler {
@@ -101914,57 +94437,6 @@ func (ec *executionContext) _DeveloperModelSettings(ctx context.Context, sel ast
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var disabledAPIKeyImplementors = []string{"DisabledAPIKey"}
-
-func (ec *executionContext) _DisabledAPIKey(ctx context.Context, sel ast.SelectionSet, obj *objects.DisabledAPIKey) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, disabledAPIKeyImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("DisabledAPIKey")
-		case "key":
-			out.Values[i] = ec._DisabledAPIKey_key(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "disabledAt":
-			out.Values[i] = ec._DisabledAPIKey_disabledAt(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "errorCode":
-			out.Values[i] = ec._DisabledAPIKey_errorCode(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "reason":
-			out.Values[i] = ec._DisabledAPIKey_reason(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -102565,60 +95037,6 @@ func (ec *executionContext) _InitializeSystemPayload(ctx context.Context, sel as
 			out.Values[i] = ec._InitializeSystemPayload_user(ctx, field, obj)
 		case "token":
 			out.Values[i] = ec._InitializeSystemPayload_token(ctx, field, obj)
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var migrateLegacyCredentialsPayloadImplementors = []string{"MigrateLegacyCredentialsPayload"}
-
-func (ec *executionContext) _MigrateLegacyCredentialsPayload(ctx context.Context, sel ast.SelectionSet, obj *biz.MigrateLegacyCredentialsPayload) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, migrateLegacyCredentialsPayloadImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("MigrateLegacyCredentialsPayload")
-		case "migratedChannels":
-			out.Values[i] = ec._MigrateLegacyCredentialsPayload_migratedChannels(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "createdCredentials":
-			out.Values[i] = ec._MigrateLegacyCredentialsPayload_createdCredentials(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "createdRefs":
-			out.Values[i] = ec._MigrateLegacyCredentialsPayload_createdRefs(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "skippedChannels":
-			out.Values[i] = ec._MigrateLegacyCredentialsPayload_skippedChannels(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -103815,13 +96233,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "testChannelAPIKeys":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_testChannelAPIKeys(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "bulkImportChannels":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_bulkImportChannels(ctx, field)
@@ -103832,41 +96243,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "bulkUpdateChannelOrdering":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_bulkUpdateChannelOrdering(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "disableChannelAPIKey":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_disableChannelAPIKey(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "enableChannelAPIKey":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_enableChannelAPIKey(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "enableAllChannelAPIKeys":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_enableAllChannelAPIKeys(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "enableSelectedChannelAPIKeys":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_enableSelectedChannelAPIKeys(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "deleteDisabledChannelAPIKeys":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_deleteDisabledChannelAPIKeys(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -103944,13 +96320,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "detachCredentialFromChannel":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_detachCredentialFromChannel(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "migrateLegacyChannelCredentials":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_migrateLegacyChannelCredentials(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -104242,13 +96611,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "updateRetryPolicy":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_updateRetryPolicy(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "updateWebhookNotifierConfig":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_updateWebhookNotifierConfig(ctx, field)
@@ -104308,20 +96670,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "updateVideoStorageSettings":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_updateVideoStorageSettings(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "updateQuotaEnforcementSettings":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_updateQuotaEnforcementSettings(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "checkProviderQuotas":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_checkProviderQuotas(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -106582,322 +98930,6 @@ func (ec *executionContext) _PromptWriteCacheVariant(ctx context.Context, sel as
 	return out
 }
 
-var providerQuotaStatusImplementors = []string{"ProviderQuotaStatus", "Node"}
-
-func (ec *executionContext) _ProviderQuotaStatus(ctx context.Context, sel ast.SelectionSet, obj *ent.ProviderQuotaStatus) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, providerQuotaStatusImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("ProviderQuotaStatus")
-		case "id":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._ProviderQuotaStatus_id(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "createdAt":
-			out.Values[i] = ec._ProviderQuotaStatus_createdAt(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "updatedAt":
-			out.Values[i] = ec._ProviderQuotaStatus_updatedAt(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "channelID":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._ProviderQuotaStatus_channelID(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "scopeKey":
-			out.Values[i] = ec._ProviderQuotaStatus_scopeKey(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "credentialID":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._ProviderQuotaStatus_credentialID(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "credentialFingerprint":
-			out.Values[i] = ec._ProviderQuotaStatus_credentialFingerprint(ctx, field, obj)
-		case "secretFingerprint":
-			out.Values[i] = ec._ProviderQuotaStatus_secretFingerprint(ctx, field, obj)
-		case "resourceScopeKey":
-			out.Values[i] = ec._ProviderQuotaStatus_resourceScopeKey(ctx, field, obj)
-		case "quotaScopeID":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._ProviderQuotaStatus_quotaScopeID(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "providerType":
-			out.Values[i] = ec._ProviderQuotaStatus_providerType(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "status":
-			out.Values[i] = ec._ProviderQuotaStatus_status(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "quotaData":
-			out.Values[i] = ec._ProviderQuotaStatus_quotaData(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "nextResetAt":
-			out.Values[i] = ec._ProviderQuotaStatus_nextResetAt(ctx, field, obj)
-		case "ready":
-			out.Values[i] = ec._ProviderQuotaStatus_ready(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "nextCheckAt":
-			out.Values[i] = ec._ProviderQuotaStatus_nextCheckAt(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "channel":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._ProviderQuotaStatus_channel(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "credential":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._ProviderQuotaStatus_credential(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "quotaScope":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._ProviderQuotaStatus_quotaScope(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
 var proxyConfigImplementors = []string{"ProxyConfig"}
 
 func (ec *executionContext) _ProxyConfig(ctx context.Context, sel ast.SelectionSet, obj *httpclient.ProxyConfig) graphql.Marshaler {
@@ -108192,28 +100224,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "retryPolicy":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_retryPolicy(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "webhookNotifierConfig":
 			field := field
 
@@ -108394,28 +100404,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_videoStorageSettings(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "quotaEnforcementSettings":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_quotaEnforcementSettings(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -108656,50 +100644,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___schema(ctx, field)
 			})
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var quotaEnforcementSettingsImplementors = []string{"QuotaEnforcementSettings"}
-
-func (ec *executionContext) _QuotaEnforcementSettings(ctx context.Context, sel ast.SelectionSet, obj *biz.QuotaEnforcementSettings) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, quotaEnforcementSettingsImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("QuotaEnforcementSettings")
-		case "enabled":
-			out.Values[i] = ec._QuotaEnforcementSettings_enabled(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "mode":
-			out.Values[i] = ec._QuotaEnforcementSettings_mode(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -109698,12 +101642,6 @@ func (ec *executionContext) _RequestExecution(ctx context.Context, sel ast.Selec
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
-		case "credentialFingerprint":
-			out.Values[i] = ec._RequestExecution_credentialFingerprint(ctx, field, obj)
-		case "secretFingerprint":
-			out.Values[i] = ec._RequestExecution_secretFingerprint(ctx, field, obj)
-		case "resourceScopeKey":
-			out.Values[i] = ec._RequestExecution_resourceScopeKey(ctx, field, obj)
 		case "quotaScopeID":
 			field := field
 
@@ -109743,10 +101681,6 @@ func (ec *executionContext) _RequestExecution(ctx context.Context, sel ast.Selec
 			out.Values[i] = ec._RequestExecution_quotaScopeStatusSnapshot(ctx, field, obj)
 		case "credentialNameSnapshot":
 			out.Values[i] = ec._RequestExecution_credentialNameSnapshot(ctx, field, obj)
-		case "credentialKeyHint":
-			out.Values[i] = ec._RequestExecution_credentialKeyHint(ctx, field, obj)
-		case "credentialSource":
-			out.Values[i] = ec._RequestExecution_credentialSource(ctx, field, obj)
 		case "credentialQuotaStatusSnapshot":
 			out.Values[i] = ec._RequestExecution_credentialQuotaStatusSnapshot(ctx, field, obj)
 		case "format":
@@ -110409,80 +102343,6 @@ func (ec *executionContext) _RestorePayload(ctx context.Context, sel ast.Selecti
 			}
 		case "message":
 			out.Values[i] = ec._RestorePayload_message(ctx, field, obj)
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var retryPolicyImplementors = []string{"RetryPolicy"}
-
-func (ec *executionContext) _RetryPolicy(ctx context.Context, sel ast.SelectionSet, obj *biz.RetryPolicy) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, retryPolicyImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("RetryPolicy")
-		case "maxChannelRetries":
-			out.Values[i] = ec._RetryPolicy_maxChannelRetries(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "maxSingleChannelRetries":
-			out.Values[i] = ec._RetryPolicy_maxSingleChannelRetries(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "retryDelayMs":
-			out.Values[i] = ec._RetryPolicy_retryDelayMs(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "loadBalancerStrategy":
-			out.Values[i] = ec._RetryPolicy_loadBalancerStrategy(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "enabled":
-			out.Values[i] = ec._RetryPolicy_enabled(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "autoDisableChannel":
-			out.Values[i] = ec._RetryPolicy_autoDisableChannel(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "emptyResponseDetection":
-			out.Values[i] = ec._RetryPolicy_emptyResponseDetection(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "upstreamErrorPolicy":
-			out.Values[i] = ec._RetryPolicy_upstreamErrorPolicy(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -112123,121 +103983,6 @@ func (ec *executionContext) _SystemVersion(ctx context.Context, sel ast.Selectio
 	return out
 }
 
-var testAPIKeyResultImplementors = []string{"TestAPIKeyResult"}
-
-func (ec *executionContext) _TestAPIKeyResult(ctx context.Context, sel ast.SelectionSet, obj *TestAPIKeyResult) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, testAPIKeyResultImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("TestAPIKeyResult")
-		case "keyPrefix":
-			out.Values[i] = ec._TestAPIKeyResult_keyPrefix(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "success":
-			out.Values[i] = ec._TestAPIKeyResult_success(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "latency":
-			out.Values[i] = ec._TestAPIKeyResult_latency(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "error":
-			out.Values[i] = ec._TestAPIKeyResult_error(ctx, field, obj)
-		case "disabled":
-			out.Values[i] = ec._TestAPIKeyResult_disabled(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var testChannelAPIKeysPayloadImplementors = []string{"TestChannelAPIKeysPayload"}
-
-func (ec *executionContext) _TestChannelAPIKeysPayload(ctx context.Context, sel ast.SelectionSet, obj *TestChannelAPIKeysPayload) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, testChannelAPIKeysPayloadImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("TestChannelAPIKeysPayload")
-		case "channelID":
-			out.Values[i] = ec._TestChannelAPIKeysPayload_channelID(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "total":
-			out.Values[i] = ec._TestChannelAPIKeysPayload_total(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "successCount":
-			out.Values[i] = ec._TestChannelAPIKeysPayload_successCount(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "failedCount":
-			out.Values[i] = ec._TestChannelAPIKeysPayload_failedCount(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "results":
-			out.Values[i] = ec._TestChannelAPIKeysPayload_results(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
 var testChannelPayloadImplementors = []string{"TestChannelPayload"}
 
 func (ec *executionContext) _TestChannelPayload(ctx context.Context, sel ast.SelectionSet, obj *TestChannelPayload) graphql.Marshaler {
@@ -113773,8 +105518,6 @@ func (ec *executionContext) _UpstreamCredential(ctx context.Context, sel ast.Sel
 			}
 		case "name":
 			out.Values[i] = ec._UpstreamCredential_name(ctx, field, obj)
-		case "keyHint":
-			out.Values[i] = ec._UpstreamCredential_keyHint(ctx, field, obj)
 		case "quotaScopeID":
 			field := field
 
@@ -113808,20 +105551,11 @@ func (ec *executionContext) _UpstreamCredential(ctx context.Context, sel ast.Sel
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "fingerprint":
-			out.Values[i] = ec._UpstreamCredential_fingerprint(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
-		case "secretFingerprint":
-			out.Values[i] = ec._UpstreamCredential_secretFingerprint(ctx, field, obj)
 		case "status":
 			out.Values[i] = ec._UpstreamCredential_status(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
-		case "quotaStatus":
-			out.Values[i] = ec._UpstreamCredential_quotaStatus(ctx, field, obj)
 		case "lastError":
 			out.Values[i] = ec._UpstreamCredential_lastError(ctx, field, obj)
 		case "remark":
@@ -113911,39 +105645,6 @@ func (ec *executionContext) _UpstreamCredential(ctx context.Context, sel ast.Sel
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "providerQuotaStatuses":
-			field := field
-
-			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._UpstreamCredential_providerQuotaStatuses(ctx, field, obj)
 				return res
 			}
 
@@ -114437,12 +106138,6 @@ func (ec *executionContext) _UsageLog(ctx context.Context, sel ast.SelectionSet,
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
-		case "credentialFingerprint":
-			out.Values[i] = ec._UsageLog_credentialFingerprint(ctx, field, obj)
-		case "secretFingerprint":
-			out.Values[i] = ec._UsageLog_secretFingerprint(ctx, field, obj)
-		case "resourceScopeKey":
-			out.Values[i] = ec._UsageLog_resourceScopeKey(ctx, field, obj)
 		case "quotaScopeID":
 			field := field
 
@@ -114482,10 +106177,6 @@ func (ec *executionContext) _UsageLog(ctx context.Context, sel ast.SelectionSet,
 			out.Values[i] = ec._UsageLog_quotaScopeStatusSnapshot(ctx, field, obj)
 		case "credentialNameSnapshot":
 			out.Values[i] = ec._UsageLog_credentialNameSnapshot(ctx, field, obj)
-		case "credentialKeyHint":
-			out.Values[i] = ec._UsageLog_credentialKeyHint(ctx, field, obj)
-		case "credentialSource":
-			out.Values[i] = ec._UsageLog_credentialSource(ctx, field, obj)
 		case "credentialQuotaStatusSnapshot":
 			out.Values[i] = ec._UsageLog_credentialQuotaStatusSnapshot(ctx, field, obj)
 		case "promptTokens":
@@ -117005,64 +108696,6 @@ func (ec *executionContext) marshalNAutoBackupSettings2ᚖgithubᚗcomᚋlooplj�
 	return ec._AutoBackupSettings(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNAutoDisableAPIKeyStatus2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐAutoDisableAPIKeyStatusᚄ(ctx context.Context, sel ast.SelectionSet, v []*AutoDisableAPIKeyStatus) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNAutoDisableAPIKeyStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐAutoDisableAPIKeyStatus(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNAutoDisableAPIKeyStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐAutoDisableAPIKeyStatus(ctx context.Context, sel ast.SelectionSet, v *AutoDisableAPIKeyStatus) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._AutoDisableAPIKeyStatus(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalNAutoDisableChannel2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐAutoDisableChannel(ctx context.Context, sel ast.SelectionSet, v biz.AutoDisableChannel) graphql.Marshaler {
-	return ec._AutoDisableChannel(ctx, sel, &v)
-}
-
 func (ec *executionContext) marshalNAutoDisableChannelStatus2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐAutoDisableChannelStatus(ctx context.Context, sel ast.SelectionSet, v biz.AutoDisableChannelStatus) graphql.Marshaler {
 	return ec._AutoDisableChannelStatus(ctx, sel, &v)
 }
@@ -117391,11 +109024,6 @@ func (ec *executionContext) marshalNChannelCredentialRefOrderField2ᚖgithubᚗc
 func (ec *executionContext) unmarshalNChannelCredentialRefWhereInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐChannelCredentialRefWhereInput(ctx context.Context, v any) (*ent.ChannelCredentialRefWhereInput, error) {
 	res, err := ec.unmarshalInputChannelCredentialRefWhereInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNChannelCredentialsInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐChannelCredentials(ctx context.Context, v any) (objects.ChannelCredentials, error) {
-	res, err := ec.unmarshalInputChannelCredentialsInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNChannelEndpoint2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐChannelEndpoint(ctx context.Context, sel ast.SelectionSet, v objects.ChannelEndpoint) graphql.Marshaler {
@@ -118747,20 +110375,6 @@ func (ec *executionContext) marshalNDecimal2githubᚗcomᚋshopspringᚋdecimal�
 	return res
 }
 
-func (ec *executionContext) marshalNDeleteDisabledAPIKeysPayload2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐDeleteDisabledAPIKeysResult(ctx context.Context, sel ast.SelectionSet, v biz.DeleteDisabledAPIKeysResult) graphql.Marshaler {
-	return ec._DeleteDisabledAPIKeysPayload(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNDeleteDisabledAPIKeysPayload2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐDeleteDisabledAPIKeysResult(ctx context.Context, sel ast.SelectionSet, v *biz.DeleteDisabledAPIKeysResult) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._DeleteDisabledAPIKeysPayload(ctx, sel, v)
-}
-
 func (ec *executionContext) marshalNDeveloperModelSettings2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐDeveloperModelSettingsᚄ(ctx context.Context, sel ast.SelectionSet, v []*biz.DeveloperModelSettings) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -118887,16 +110501,6 @@ func (ec *executionContext) marshalNDiagnosticsTarget2ᚕgithubᚗcomᚋlooplj�
 	}
 
 	return ret
-}
-
-func (ec *executionContext) marshalNDisabledAPIKey2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐDisabledAPIKey(ctx context.Context, sel ast.SelectionSet, v *objects.DisabledAPIKey) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._DisabledAPIKey(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNExcludeAssociation2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐExcludeAssociation(ctx context.Context, sel ast.SelectionSet, v *objects.ExcludeAssociation) graphql.Marshaler {
@@ -119337,42 +110941,6 @@ func (ec *executionContext) marshalNJSONRawMessageInput2githubᚗcomᚋloopljᚋ
 func (ec *executionContext) unmarshalNLoadApiKeyProfileTemplateInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐLoadAPIKeyProfileTemplateInput(ctx context.Context, v any) (LoadAPIKeyProfileTemplateInput, error) {
 	res, err := ec.unmarshalInputLoadApiKeyProfileTemplateInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNMap2map(ctx context.Context, v any) (map[string]any, error) {
-	res, err := graphql.UnmarshalMap(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNMap2map(ctx context.Context, sel ast.SelectionSet, v map[string]any) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	_ = sel
-	res := graphql.MarshalMap(v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
-}
-
-func (ec *executionContext) marshalNMigrateLegacyCredentialsPayload2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐMigrateLegacyCredentialsPayload(ctx context.Context, sel ast.SelectionSet, v biz.MigrateLegacyCredentialsPayload) graphql.Marshaler {
-	return ec._MigrateLegacyCredentialsPayload(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNMigrateLegacyCredentialsPayload2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐMigrateLegacyCredentialsPayload(ctx context.Context, sel ast.SelectionSet, v *biz.MigrateLegacyCredentialsPayload) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._MigrateLegacyCredentialsPayload(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNModel2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐModel(ctx context.Context, sel ast.SelectionSet, v ent.Model) graphql.Marshaler {
@@ -120752,57 +112320,6 @@ func (ec *executionContext) unmarshalNPromptWriteCacheVariantInput2githubᚗcom�
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNProviderQuotaStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatus(ctx context.Context, sel ast.SelectionSet, v *ent.ProviderQuotaStatus) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._ProviderQuotaStatus(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalNProviderQuotaStatusOrderField2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusOrderField(ctx context.Context, v any) (*ent.ProviderQuotaStatusOrderField, error) {
-	var res = new(ent.ProviderQuotaStatusOrderField)
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNProviderQuotaStatusOrderField2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusOrderField(ctx context.Context, sel ast.SelectionSet, v *ent.ProviderQuotaStatusOrderField) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return v
-}
-
-func (ec *executionContext) unmarshalNProviderQuotaStatusProviderType2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐProviderType(ctx context.Context, v any) (providerquotastatus.ProviderType, error) {
-	var res providerquotastatus.ProviderType
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNProviderQuotaStatusProviderType2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐProviderType(ctx context.Context, sel ast.SelectionSet, v providerquotastatus.ProviderType) graphql.Marshaler {
-	return v
-}
-
-func (ec *executionContext) unmarshalNProviderQuotaStatusStatus2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐStatus(ctx context.Context, v any) (providerquotastatus.Status, error) {
-	var res providerquotastatus.Status
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNProviderQuotaStatusStatus2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐStatus(ctx context.Context, sel ast.SelectionSet, v providerquotastatus.Status) graphql.Marshaler {
-	return v
-}
-
-func (ec *executionContext) unmarshalNProviderQuotaStatusWhereInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusWhereInput(ctx context.Context, v any) (*ent.ProviderQuotaStatusWhereInput, error) {
-	res, err := ec.unmarshalInputProviderQuotaStatusWhereInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
 func (ec *executionContext) marshalNProxyPreset2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐProxyPresetᚄ(ctx context.Context, sel ast.SelectionSet, v []*biz.ProxyPreset) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -120882,30 +112399,6 @@ func (ec *executionContext) unmarshalNQueryChannelInput2githubᚗcomᚋloopljᚋ
 func (ec *executionContext) unmarshalNQueryModelsInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐQueryModelsInput(ctx context.Context, v any) (QueryModelsInput, error) {
 	res, err := ec.unmarshalInputQueryModelsInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNQuotaEnforcementMode2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐQuotaEnforcementMode(ctx context.Context, v any) (biz.QuotaEnforcementMode, error) {
-	var res biz.QuotaEnforcementMode
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNQuotaEnforcementMode2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐQuotaEnforcementMode(ctx context.Context, sel ast.SelectionSet, v biz.QuotaEnforcementMode) graphql.Marshaler {
-	return v
-}
-
-func (ec *executionContext) marshalNQuotaEnforcementSettings2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐQuotaEnforcementSettings(ctx context.Context, sel ast.SelectionSet, v biz.QuotaEnforcementSettings) graphql.Marshaler {
-	return ec._QuotaEnforcementSettings(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNQuotaEnforcementSettings2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐQuotaEnforcementSettings(ctx context.Context, sel ast.SelectionSet, v *biz.QuotaEnforcementSettings) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._QuotaEnforcementSettings(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNRemoveUserFromProjectInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐRemoveUserFromProjectInput(ctx context.Context, v any) (RemoveUserFromProjectInput, error) {
@@ -121212,20 +112705,6 @@ func (ec *executionContext) marshalNRestorePayload2ᚖgithubᚗcomᚋloopljᚋax
 		return graphql.Null
 	}
 	return ec._RestorePayload(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalNRetryPolicy2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐRetryPolicy(ctx context.Context, sel ast.SelectionSet, v biz.RetryPolicy) graphql.Marshaler {
-	return ec._RetryPolicy(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNRetryPolicy2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐRetryPolicy(ctx context.Context, sel ast.SelectionSet, v *biz.RetryPolicy) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._RetryPolicy(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNRole2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐRole(ctx context.Context, sel ast.SelectionSet, v ent.Role) graphql.Marshaler {
@@ -121615,74 +113094,6 @@ func (ec *executionContext) marshalNSystemVersion2ᚖgithubᚗcomᚋloopljᚋaxo
 func (ec *executionContext) unmarshalNSystemWhereInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐSystemWhereInput(ctx context.Context, v any) (*ent.SystemWhereInput, error) {
 	res, err := ec.unmarshalInputSystemWhereInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNTestAPIKeyResult2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐTestAPIKeyResultᚄ(ctx context.Context, sel ast.SelectionSet, v []*TestAPIKeyResult) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNTestAPIKeyResult2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐTestAPIKeyResult(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNTestAPIKeyResult2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐTestAPIKeyResult(ctx context.Context, sel ast.SelectionSet, v *TestAPIKeyResult) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._TestAPIKeyResult(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalNTestChannelAPIKeysPayload2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐTestChannelAPIKeysPayload(ctx context.Context, sel ast.SelectionSet, v TestChannelAPIKeysPayload) graphql.Marshaler {
-	return ec._TestChannelAPIKeysPayload(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNTestChannelAPIKeysPayload2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐTestChannelAPIKeysPayload(ctx context.Context, sel ast.SelectionSet, v *TestChannelAPIKeysPayload) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._TestChannelAPIKeysPayload(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNTestChannelInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐTestChannelInput(ctx context.Context, v any) (TestChannelInput, error) {
@@ -122202,16 +113613,6 @@ func (ec *executionContext) unmarshalNUpdatePromptProtectionRuleInput2githubᚗc
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalNUpdateQuotaEnforcementSettingsInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐUpdateQuotaEnforcementSettingsInput(ctx context.Context, v any) (UpdateQuotaEnforcementSettingsInput, error) {
-	res, err := ec.unmarshalInputUpdateQuotaEnforcementSettingsInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNUpdateRetryPolicyInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐRetryPolicy(ctx context.Context, v any) (biz.RetryPolicy, error) {
-	res, err := ec.unmarshalInputUpdateRetryPolicyInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
 func (ec *executionContext) unmarshalNUpdateRoleInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUpdateRoleInput(ctx context.Context, v any) (ent.UpdateRoleInput, error) {
 	res, err := ec.unmarshalInputUpdateRoleInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -122349,10 +113750,6 @@ func (ec *executionContext) marshalNUpstreamCredentialStatus2githubᚗcomᚋloop
 func (ec *executionContext) unmarshalNUpstreamCredentialWhereInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUpstreamCredentialWhereInput(ctx context.Context, v any) (*ent.UpstreamCredentialWhereInput, error) {
 	res, err := ec.unmarshalInputUpstreamCredentialWhereInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNUpstreamErrorPolicy2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐUpstreamErrorPolicy(ctx context.Context, sel ast.SelectionSet, v biz.UpstreamErrorPolicy) graphql.Marshaler {
-	return ec._UpstreamErrorPolicy(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalNUsageLogConnection2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUsageLogConnection(ctx context.Context, sel ast.SelectionSet, v ent.UsageLogConnection) graphql.Marshaler {
@@ -123505,11 +114902,6 @@ func (ec *executionContext) marshalOAny2interface(ctx context.Context, sel ast.S
 	return res
 }
 
-func (ec *executionContext) unmarshalOAutoDisableChannelInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐAutoDisableChannel(ctx context.Context, v any) (biz.AutoDisableChannel, error) {
-	res, err := ec.unmarshalInputAutoDisableChannelInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
 func (ec *executionContext) marshalOAutoDisableChannelOnboarding2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚐAutoDisableChannelOnboarding(ctx context.Context, sel ast.SelectionSet, v *AutoDisableChannelOnboarding) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -123533,13 +114925,6 @@ func (ec *executionContext) unmarshalOAutoDisableChannelStatusInput2ᚕgithubᚗ
 		}
 	}
 	return res, nil
-}
-
-func (ec *executionContext) marshalOAzureCredential2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐAzureCredential(ctx context.Context, sel ast.SelectionSet, v *objects.AzureCredential) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._AzureCredential(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOAzureCredentialInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐAzureCredential(ctx context.Context, v any) (*objects.AzureCredential, error) {
@@ -123705,21 +115090,6 @@ func (ec *executionContext) unmarshalOChannelCredentialRefWhereInput2ᚖgithub�
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputChannelCredentialRefWhereInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOChannelCredentials2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐChannelCredentials(ctx context.Context, sel ast.SelectionSet, v *objects.ChannelCredentials) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._ChannelCredentials(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalOChannelCredentialsInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐChannelCredentials(ctx context.Context, v any) (*objects.ChannelCredentials, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputChannelCredentialsInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
@@ -125637,53 +117007,6 @@ func (ec *executionContext) marshalODiagnosticsTarget2ᚕgithubᚗcomᚋlooplj�
 	return ret
 }
 
-func (ec *executionContext) marshalODisabledAPIKey2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐDisabledAPIKeyᚄ(ctx context.Context, sel ast.SelectionSet, v []*objects.DisabledAPIKey) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNDisabledAPIKey2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐDisabledAPIKey(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
 func (ec *executionContext) marshalOExcludeAssociation2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐExcludeAssociationᚄ(ctx context.Context, sel ast.SelectionSet, v []*objects.ExcludeAssociation) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -125891,13 +117214,6 @@ func (ec *executionContext) marshalOFloat2ᚖfloat64(ctx context.Context, sel as
 	_ = sel
 	res := graphql.MarshalFloatContext(*v)
 	return graphql.WrapContextMarshaler(ctx, res)
-}
-
-func (ec *executionContext) marshalOGCPCredential2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGCPCredential(ctx context.Context, sel ast.SelectionSet, v *objects.GCPCredential) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._GCPCredential(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOGCPCredentialInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐGCPCredential(ctx context.Context, v any) (*objects.GCPCredential, error) {
@@ -126624,13 +117940,6 @@ func (ec *executionContext) marshalONode2githubᚗcomᚋloopljᚋaxonhubᚋinter
 		return graphql.Null
 	}
 	return ec._Node(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalOOAuthCredentials2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋllmᚋoauthᚐOAuthCredentials(ctx context.Context, sel ast.SelectionSet, v *oauth.OAuthCredentials) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._OAuthCredentials(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOOAuthCredentialsInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋllmᚋoauthᚐOAuthCredentials(ctx context.Context, v any) (*oauth.OAuthCredentials, error) {
@@ -127676,248 +118985,6 @@ func (ec *executionContext) unmarshalOPromptWriteCacheVariantInput2ᚕgithubᚗc
 	return res, nil
 }
 
-func (ec *executionContext) marshalOProviderQuotaStatus2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusᚄ(ctx context.Context, sel ast.SelectionSet, v []*ent.ProviderQuotaStatus) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNProviderQuotaStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatus(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalOProviderQuotaStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatus(ctx context.Context, sel ast.SelectionSet, v *ent.ProviderQuotaStatus) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._ProviderQuotaStatus(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalOProviderQuotaStatusProviderType2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐProviderTypeᚄ(ctx context.Context, v any) ([]providerquotastatus.ProviderType, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var vSlice []any
-	vSlice = graphql.CoerceList(v)
-	var err error
-	res := make([]providerquotastatus.ProviderType, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNProviderQuotaStatusProviderType2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐProviderType(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) marshalOProviderQuotaStatusProviderType2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐProviderTypeᚄ(ctx context.Context, sel ast.SelectionSet, v []providerquotastatus.ProviderType) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNProviderQuotaStatusProviderType2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐProviderType(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) unmarshalOProviderQuotaStatusProviderType2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐProviderType(ctx context.Context, v any) (*providerquotastatus.ProviderType, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var res = new(providerquotastatus.ProviderType)
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOProviderQuotaStatusProviderType2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐProviderType(ctx context.Context, sel ast.SelectionSet, v *providerquotastatus.ProviderType) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return v
-}
-
-func (ec *executionContext) unmarshalOProviderQuotaStatusStatus2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐStatusᚄ(ctx context.Context, v any) ([]providerquotastatus.Status, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var vSlice []any
-	vSlice = graphql.CoerceList(v)
-	var err error
-	res := make([]providerquotastatus.Status, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNProviderQuotaStatusStatus2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐStatus(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) marshalOProviderQuotaStatusStatus2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐStatusᚄ(ctx context.Context, sel ast.SelectionSet, v []providerquotastatus.Status) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNProviderQuotaStatusStatus2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐStatus(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) unmarshalOProviderQuotaStatusStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐStatus(ctx context.Context, v any) (*providerquotastatus.Status, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var res = new(providerquotastatus.Status)
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOProviderQuotaStatusStatus2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚋproviderquotastatusᚐStatus(ctx context.Context, sel ast.SelectionSet, v *providerquotastatus.Status) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return v
-}
-
-func (ec *executionContext) unmarshalOProviderQuotaStatusWhereInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusWhereInputᚄ(ctx context.Context, v any) ([]*ent.ProviderQuotaStatusWhereInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var vSlice []any
-	vSlice = graphql.CoerceList(v)
-	var err error
-	res := make([]*ent.ProviderQuotaStatusWhereInput, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNProviderQuotaStatusWhereInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusWhereInput(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) unmarshalOProviderQuotaStatusWhereInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐProviderQuotaStatusWhereInput(ctx context.Context, v any) (*ent.ProviderQuotaStatusWhereInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := ec.unmarshalInputProviderQuotaStatusWhereInput(ctx, v)
-	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
 func (ec *executionContext) marshalOProxyConfig2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋllmᚋhttpclientᚐProxyConfig(ctx context.Context, sel ast.SelectionSet, v *httpclient.ProxyConfig) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -127931,22 +118998,6 @@ func (ec *executionContext) unmarshalOProxyConfigInput2ᚖgithubᚗcomᚋlooplj�
 	}
 	res, err := ec.unmarshalInputProxyConfigInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOQuotaEnforcementMode2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐQuotaEnforcementMode(ctx context.Context, v any) (*biz.QuotaEnforcementMode, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var res = new(biz.QuotaEnforcementMode)
-	err := res.UnmarshalGQL(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOQuotaEnforcementMode2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐQuotaEnforcementMode(ctx context.Context, sel ast.SelectionSet, v *biz.QuotaEnforcementMode) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return v
 }
 
 func (ec *executionContext) marshalORegexAssociation2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐRegexAssociation(ctx context.Context, sel ast.SelectionSet, v *objects.RegexAssociation) graphql.Marshaler {
@@ -129422,11 +120473,6 @@ func (ec *executionContext) unmarshalOUpstreamCredentialWhereInput2ᚖgithubᚗc
 	}
 	res, err := ec.unmarshalInputUpstreamCredentialWhereInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalOUpstreamErrorPolicyInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐUpstreamErrorPolicy(ctx context.Context, v any) (biz.UpstreamErrorPolicy, error) {
-	res, err := ec.unmarshalInputUpstreamErrorPolicyInput(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalOUsageLog2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐUsageLog(ctx context.Context, sel ast.SelectionSet, v *ent.UsageLog) graphql.Marshaler {

@@ -471,30 +471,6 @@ func (f PromptProtectionRuleMutationRuleFunc) EvalMutation(ctx context.Context, 
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.PromptProtectionRuleMutation", m)
 }
 
-// The ProviderQuotaStatusQueryRuleFunc type is an adapter to allow the use of ordinary
-// functions as a query rule.
-type ProviderQuotaStatusQueryRuleFunc func(context.Context, *ent.ProviderQuotaStatusQuery) error
-
-// EvalQuery return f(ctx, q).
-func (f ProviderQuotaStatusQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
-	if q, ok := q.(*ent.ProviderQuotaStatusQuery); ok {
-		return f(ctx, q)
-	}
-	return Denyf("ent/privacy: unexpected query type %T, expect *ent.ProviderQuotaStatusQuery", q)
-}
-
-// The ProviderQuotaStatusMutationRuleFunc type is an adapter to allow the use of ordinary
-// functions as a mutation rule.
-type ProviderQuotaStatusMutationRuleFunc func(context.Context, *ent.ProviderQuotaStatusMutation) error
-
-// EvalMutation calls f(ctx, m).
-func (f ProviderQuotaStatusMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
-	if m, ok := m.(*ent.ProviderQuotaStatusMutation); ok {
-		return f(ctx, m)
-	}
-	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.ProviderQuotaStatusMutation", m)
-}
-
 // The RequestQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type RequestQueryRuleFunc func(context.Context, *ent.RequestQuery) error
@@ -824,8 +800,6 @@ func queryFilter(q ent.Query) (Filter, error) {
 		return q.Filter(), nil
 	case *ent.PromptProtectionRuleQuery:
 		return q.Filter(), nil
-	case *ent.ProviderQuotaStatusQuery:
-		return q.Filter(), nil
 	case *ent.RequestQuery:
 		return q.Filter(), nil
 	case *ent.RequestExecutionQuery:
@@ -884,8 +858,6 @@ func mutationFilter(m ent.Mutation) (Filter, error) {
 	case *ent.PromptMutation:
 		return m.Filter(), nil
 	case *ent.PromptProtectionRuleMutation:
-		return m.Filter(), nil
-	case *ent.ProviderQuotaStatusMutation:
 		return m.Filter(), nil
 	case *ent.RequestMutation:
 		return m.Filter(), nil

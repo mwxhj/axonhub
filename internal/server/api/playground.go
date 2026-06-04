@@ -44,7 +44,6 @@ type PlaygroundHandlersParams struct {
 	HttpClient      *httpclient.HttpClient
 	LiveStreamRegistry *biz.LiveStreamRegistry
 	ChannelLimiterManager       *orchestrator.ChannelLimiterManager
-	ProviderQuotaStatusProvider orchestrator.ProviderQuotaStatusProvider
 }
 
 type PlaygroundHandlers struct {
@@ -68,7 +67,6 @@ func NewPlaygroundHandlers(params PlaygroundHandlersParams) *PlaygroundHandlers 
 			params.PromptProtectionRuleService,
 			params.LiveStreamRegistry,
 			params.ChannelLimiterManager,
-			params.ProviderQuotaStatusProvider,
 		),
 	}
 }

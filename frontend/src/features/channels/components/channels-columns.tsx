@@ -19,7 +19,6 @@ import {
   IconCopy,
   IconCoin,
   IconLoader2,
-  IconKeyOff,
   IconGauge,
   IconHistory,
   IconKey,
@@ -90,9 +89,6 @@ const ActionCell = memo(({ row }: { row: Row<Channel> }) => {
   const testChannel = useTestChannel();
   const isArchived = channel.status === 'archived';
   const hasError = !!channel.errorMessage;
-  const hasDisabledAPIKeys = channelPermissions.canWrite && (channel.disabledAPIKeys?.length ?? 0) > 0;
-  const apiKeysCount = channel.credentials?.apiKeys?.filter((key) => key.trim().length > 0).length ?? 0;
-  const hasMultipleAPIKeys = channelPermissions.canWrite && apiKeysCount > 1;
 
   const handleDefaultTest = async () => {
     try {
@@ -225,29 +221,6 @@ const ActionCell = memo(({ row }: { row: Row<Channel> }) => {
             <IconPlugConnected size={16} className='mr-2' />
             {t('channels.endpoints.title')}
           </DropdownMenuItem>
-          {hasMultipleAPIKeys && (
-            <DropdownMenuItem
-              onClick={() => {
-                setCurrentRow(channel);
-                setOpen('testAPIKeys');
-              }}
-            >
-              <IconPlayerPlay size={16} className='mr-2' />
-              {t('channels.actions.testAPIKeys', { count: apiKeysCount })}
-            </DropdownMenuItem>
-          )}
-          {hasDisabledAPIKeys && (
-            <DropdownMenuItem
-              onClick={() => {
-                setCurrentRow(channel);
-                setOpen('disabledAPIKeys');
-              }}
-              className='text-orange-500!'
-            >
-              <IconKeyOff size={16} className='mr-2' />
-              {t('channels.actions.disabledAPIKeys', { count: channel.disabledAPIKeys?.length ?? 0 })}
-            </DropdownMenuItem>
-          )}
           {hasError && (
             <DropdownMenuItem
               onClick={() => {
@@ -334,8 +307,6 @@ const NameCell = memo(({ row }: { row: Row<Channel> }) => {
   const { t } = useTranslation();
   const channel = row.original;
   const hasError = !!channel.errorMessage;
-  const disabledKeysCount = channel.disabledAPIKeys?.length ?? 0;
-  const hasDisabledKeys = disabledKeysCount > 0;
   const websiteURL = getChannelWebsiteURL(channel.baseURL);
 
   const nameElement = websiteURL ? (
@@ -353,10 +324,9 @@ const NameCell = memo(({ row }: { row: Row<Channel> }) => {
   );
 
   const content = (
-    <div className='flex justify-center'>
-      <div className='flex max-w-56 items-center gap-2'>
-        {hasError && <IconAlertTriangle className='text-destructive h-4 w-4 shrink-0' />}
-        {!hasError && hasDisabledKeys && <IconKeyOff className='h-4 w-4 shrink-0 text-amber-500' />}
+      <div className='flex justify-center'>
+        <div className='flex max-w-56 items-center gap-2'>
+          {hasError && <IconAlertTriangle className='text-destructive h-4 w-4 shrink-0' />}
         {nameElement}
       </div>
     </div>
@@ -374,19 +344,6 @@ const NameCell = memo(({ row }: { row: Row<Channel> }) => {
               })}
             </p>
           </div>
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-
-  if (hasDisabledKeys) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>{content}</TooltipTrigger>
-        <TooltipContent>
-          <p className='text-sm text-amber-500'>
-            {t('channels.actions.disabledAPIKeys', { count: disabledKeysCount })}
-          </p>
         </TooltipContent>
       </Tooltip>
     );

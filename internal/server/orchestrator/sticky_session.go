@@ -14,7 +14,6 @@ import (
 
 	"github.com/looplj/axonhub/internal/log"
 	"github.com/looplj/axonhub/internal/server/biz"
-	"github.com/looplj/axonhub/internal/server/biz/provider_quota"
 	"github.com/looplj/axonhub/llm"
 	"github.com/looplj/axonhub/llm/httpclient"
 	"github.com/looplj/axonhub/llm/pipeline"
@@ -1056,7 +1055,6 @@ func (r *StickySessionRouter) eligibleCandidates(ctx context.Context, req Sticky
 	}
 
 	useStream := req.Request.Stream != nil && *req.Request.Stream
-	ctx = contextWithQuotaLimitType(ctx, string(provider_quota.RequestModality(req.Request.Image != nil)))
 
 	result := make([]*ChannelModelsCandidate, 0, len(req.Candidates))
 	for _, candidate := range req.Candidates {

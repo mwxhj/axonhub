@@ -33,16 +33,10 @@ type Config struct {
 	Metrics          metrics.Config      `conf:"metrics" yaml:"metrics" json:"metrics"`
 	GC               gc.Config           `conf:"gc" yaml:"gc" json:"gc"`
 	Cache            xcache.Config       `conf:"cache" yaml:"cache" json:"cache"`
-	ProviderQuota    providerQuotaConfig `conf:"provider_quota" yaml:"provider_quota" json:"provider_quota"`
 	OIDC             biz.OIDCConfig      `conf:"oidc" yaml:"oidc" json:"oidc"`
 	DisableSSLVerify bool                `name:"disable_ssl_verify" yaml:"-" json:"-"`
 	AllowNoAuth      bool                `name:"allow_no_auth" yaml:"-" json:"-"`
 	APIKeyPrefix     string              `name:"api_key_prefix" yaml:"-" json:"-"`
-}
-
-type providerQuotaConfig struct {
-	CheckInterval             time.Duration `conf:"check_interval" yaml:"check_interval" json:"check_interval"`
-	WarningCheckIntervalRatio int           `conf:"warning_check_interval_ratio" yaml:"warning_check_interval_ratio" json:"warning_check_interval_ratio"`
 }
 
 // Load loads configuration from YAML file and environment variables.
@@ -223,10 +217,6 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("gc.cron", "0 2 * * *") // Daily at 2:00 AM
 	v.SetDefault("gc.vacuum_enabled", true)
 	v.SetDefault("gc.vacuum_full", false)
-
-	// Provider quota defaults
-	v.SetDefault("provider_quota.check_interval", "5m")
-	v.SetDefault("provider_quota.warning_check_interval_ratio", 4) // Warning interval = check_interval * ratio
 
 	// Cache defaults
 	v.SetDefault("cache.mode", "memory")

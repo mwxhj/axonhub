@@ -291,50 +291,6 @@ func (r *promptProtectionRuleResolver) ID(ctx context.Context, obj *ent.PromptPr
 	}, nil
 }
 
-// ID is the resolver for the id field.
-func (r *providerQuotaStatusResolver) ID(ctx context.Context, obj *ent.ProviderQuotaStatus) (*objects.GUID, error) {
-	return &objects.GUID{
-		Type: ent.TypeProviderQuotaStatus,
-		ID:   obj.ID,
-	}, nil
-}
-
-// ChannelID is the resolver for the channelID field.
-func (r *providerQuotaStatusResolver) ChannelID(ctx context.Context, obj *ent.ProviderQuotaStatus) (*objects.GUID, error) {
-	if obj.ChannelID == 0 {
-		return nil, nil
-	}
-
-	return &objects.GUID{
-		Type: ent.TypeChannel,
-		ID:   obj.ChannelID,
-	}, nil
-}
-
-// CredentialID is the resolver for the credentialID field.
-func (r *providerQuotaStatusResolver) CredentialID(ctx context.Context, obj *ent.ProviderQuotaStatus) (*objects.GUID, error) {
-	if obj.CredentialID == 0 {
-		return nil, nil
-	}
-
-	return &objects.GUID{
-		Type: ent.TypeUpstreamCredential,
-		ID:   obj.CredentialID,
-	}, nil
-}
-
-// QuotaScopeID is the resolver for the quotaScopeID field.
-func (r *providerQuotaStatusResolver) QuotaScopeID(ctx context.Context, obj *ent.ProviderQuotaStatus) (*objects.GUID, error) {
-	if obj.QuotaScopeID == 0 {
-		return nil, nil
-	}
-
-	return &objects.GUID{
-		Type: ent.TypeCredentialQuotaScope,
-		ID:   obj.QuotaScopeID,
-	}, nil
-}
-
 // Node is the resolver for the node field.
 func (r *queryResolver) Node(ctx context.Context, id objects.GUID) (ent.Noder, error) {
 	typ, ok := guidTypeToNodeType[id.Type]
@@ -1167,11 +1123,6 @@ func (r *Resolver) PromptProtectionRule() PromptProtectionRuleResolver {
 	return &promptProtectionRuleResolver{r}
 }
 
-// ProviderQuotaStatus returns ProviderQuotaStatusResolver implementation.
-func (r *Resolver) ProviderQuotaStatus() ProviderQuotaStatusResolver {
-	return &providerQuotaStatusResolver{r}
-}
-
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
@@ -1225,7 +1176,6 @@ type oIDCIdentityResolver struct{ *Resolver }
 type projectResolver struct{ *Resolver }
 type promptResolver struct{ *Resolver }
 type promptProtectionRuleResolver struct{ *Resolver }
-type providerQuotaStatusResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type requestResolver struct{ *Resolver }
 type requestExecutionResolver struct{ *Resolver }

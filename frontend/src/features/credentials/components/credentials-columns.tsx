@@ -5,18 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import type { UpstreamCredential } from '../data/credentials';
 import { CredentialsActions } from './credentials-actions';
 
-function providerQuotaLabel(credential: UpstreamCredential, t: TFunction) {
-  const statuses = credential.providerQuotaStatuses ?? [];
-  if (statuses.length === 0) {
-    return t('credentials.providerQuota.empty');
-  }
-
-  const exhausted = statuses.find((status) => !status.ready || status.status === 'exhausted');
-  const status = exhausted ?? statuses.find((item) => item.status === 'warning') ?? statuses[0];
-
-  return `${t(`credentials.providerQuota.status.${status.status}`, { defaultValue: status.status })} · ${status.providerType}`;
-}
-
 function hasQuotaAmount(value: string | null | undefined) {
   return Boolean(value?.trim());
 }
@@ -83,11 +71,6 @@ export const createCredentialColumns = (t: TFunction): ColumnDef<UpstreamCredent
     id: 'localQuota',
     header: t('credentials.columns.localQuota'),
     cell: ({ row }) => <LocalQuotaCell credential={row.original} t={t} />,
-  },
-  {
-    id: 'providerQuota',
-    header: t('credentials.columns.providerQuota'),
-    cell: ({ row }) => <span className='text-muted-foreground line-clamp-2 text-xs'>{providerQuotaLabel(row.original, t)}</span>,
   },
   {
     accessorKey: 'lastError',

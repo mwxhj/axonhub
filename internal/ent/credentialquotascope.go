@@ -61,22 +61,19 @@ type CredentialQuotaScope struct {
 type CredentialQuotaScopeEdges struct {
 	// Credentials holds the value of the credentials edge.
 	Credentials []*UpstreamCredential `json:"credentials,omitempty"`
-	// ProviderQuotaStatuses holds the value of the provider_quota_statuses edge.
-	ProviderQuotaStatuses []*ProviderQuotaStatus `json:"provider_quota_statuses,omitempty"`
 	// Executions holds the value of the executions edge.
 	Executions []*RequestExecution `json:"executions,omitempty"`
 	// UsageLogs holds the value of the usage_logs edge.
 	UsageLogs []*UsageLog `json:"usage_logs,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [4]bool
+	loadedTypes [3]bool
 	// totalCount holds the count of the edges above.
-	totalCount [4]map[string]int
+	totalCount [3]map[string]int
 
-	namedCredentials           map[string][]*UpstreamCredential
-	namedProviderQuotaStatuses map[string][]*ProviderQuotaStatus
-	namedExecutions            map[string][]*RequestExecution
-	namedUsageLogs             map[string][]*UsageLog
+	namedCredentials map[string][]*UpstreamCredential
+	namedExecutions  map[string][]*RequestExecution
+	namedUsageLogs   map[string][]*UsageLog
 }
 
 // CredentialsOrErr returns the Credentials value or an error if the edge
@@ -88,19 +85,10 @@ func (e CredentialQuotaScopeEdges) CredentialsOrErr() ([]*UpstreamCredential, er
 	return nil, &NotLoadedError{edge: "credentials"}
 }
 
-// ProviderQuotaStatusesOrErr returns the ProviderQuotaStatuses value or an error if the edge
-// was not loaded in eager-loading.
-func (e CredentialQuotaScopeEdges) ProviderQuotaStatusesOrErr() ([]*ProviderQuotaStatus, error) {
-	if e.loadedTypes[1] {
-		return e.ProviderQuotaStatuses, nil
-	}
-	return nil, &NotLoadedError{edge: "provider_quota_statuses"}
-}
-
 // ExecutionsOrErr returns the Executions value or an error if the edge
 // was not loaded in eager-loading.
 func (e CredentialQuotaScopeEdges) ExecutionsOrErr() ([]*RequestExecution, error) {
-	if e.loadedTypes[2] {
+	if e.loadedTypes[1] {
 		return e.Executions, nil
 	}
 	return nil, &NotLoadedError{edge: "executions"}
@@ -109,7 +97,7 @@ func (e CredentialQuotaScopeEdges) ExecutionsOrErr() ([]*RequestExecution, error
 // UsageLogsOrErr returns the UsageLogs value or an error if the edge
 // was not loaded in eager-loading.
 func (e CredentialQuotaScopeEdges) UsageLogsOrErr() ([]*UsageLog, error) {
-	if e.loadedTypes[3] {
+	if e.loadedTypes[2] {
 		return e.UsageLogs, nil
 	}
 	return nil, &NotLoadedError{edge: "usage_logs"}
@@ -271,11 +259,6 @@ func (_m *CredentialQuotaScope) QueryCredentials() *UpstreamCredentialQuery {
 	return NewCredentialQuotaScopeClient(_m.config).QueryCredentials(_m)
 }
 
-// QueryProviderQuotaStatuses queries the "provider_quota_statuses" edge of the CredentialQuotaScope entity.
-func (_m *CredentialQuotaScope) QueryProviderQuotaStatuses() *ProviderQuotaStatusQuery {
-	return NewCredentialQuotaScopeClient(_m.config).QueryProviderQuotaStatuses(_m)
-}
-
 // QueryExecutions queries the "executions" edge of the CredentialQuotaScope entity.
 func (_m *CredentialQuotaScope) QueryExecutions() *RequestExecutionQuery {
 	return NewCredentialQuotaScopeClient(_m.config).QueryExecutions(_m)
@@ -392,30 +375,6 @@ func (_m *CredentialQuotaScope) appendNamedCredentials(name string, edges ...*Up
 		_m.Edges.namedCredentials[name] = []*UpstreamCredential{}
 	} else {
 		_m.Edges.namedCredentials[name] = append(_m.Edges.namedCredentials[name], edges...)
-	}
-}
-
-// NamedProviderQuotaStatuses returns the ProviderQuotaStatuses named value or an error if the edge was not
-// loaded in eager-loading with this name.
-func (_m *CredentialQuotaScope) NamedProviderQuotaStatuses(name string) ([]*ProviderQuotaStatus, error) {
-	if _m.Edges.namedProviderQuotaStatuses == nil {
-		return nil, &NotLoadedError{edge: name}
-	}
-	nodes, ok := _m.Edges.namedProviderQuotaStatuses[name]
-	if !ok {
-		return nil, &NotLoadedError{edge: name}
-	}
-	return nodes, nil
-}
-
-func (_m *CredentialQuotaScope) appendNamedProviderQuotaStatuses(name string, edges ...*ProviderQuotaStatus) {
-	if _m.Edges.namedProviderQuotaStatuses == nil {
-		_m.Edges.namedProviderQuotaStatuses = make(map[string][]*ProviderQuotaStatus)
-	}
-	if len(edges) == 0 {
-		_m.Edges.namedProviderQuotaStatuses[name] = []*ProviderQuotaStatus{}
-	} else {
-		_m.Edges.namedProviderQuotaStatuses[name] = append(_m.Edges.namedProviderQuotaStatuses[name], edges...)
 	}
 }
 

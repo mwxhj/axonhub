@@ -39,17 +39,6 @@ export const credentialQuotaScopeSchema = z.object({
 });
 export type CredentialQuotaScope = z.infer<typeof credentialQuotaScopeSchema>;
 
-export const providerQuotaStatusSchema = z.object({
-  id: z.string(),
-  providerType: z.string(),
-  status: z.enum(['available', 'warning', 'exhausted', 'unknown']),
-  nextResetAt: z.string().optional().nullable(),
-  ready: z.boolean(),
-  nextCheckAt: z.string(),
-  updatedAt: z.string(),
-});
-export type ProviderQuotaStatus = z.infer<typeof providerQuotaStatusSchema>;
-
 export const upstreamCredentialSecretSummarySchema = z.object({
   kind: z.enum(['api_key', 'oauth', 'azure', 'gcp', 'other']).or(z.string()),
   providerType: z.string().optional().nullable(),
@@ -101,9 +90,7 @@ export const upstreamCredentialSchema = z.object({
   name: z.string().optional().nullable(),
   quotaScopeID: z.string().optional().nullable(),
   quotaScope: credentialQuotaScopeSchema.optional().nullable(),
-  providerQuotaStatuses: z.array(providerQuotaStatusSchema).optional().nullable(),
   secretSummary: upstreamCredentialSecretSummarySchema.optional().nullable(),
-  quotaStatus: z.string().optional().nullable(),
   lastError: z.string().optional().nullable(),
   status: credentialStatusSchema,
   remark: z.string().optional().nullable(),
@@ -291,14 +278,6 @@ export const updateChannelCredentialRefInputSchema = z.object({
   enabled: z.boolean().optional(),
 });
 export type UpdateChannelCredentialRefInput = z.infer<typeof updateChannelCredentialRefInputSchema>;
-
-export const migrateLegacyCredentialsPayloadSchema = z.object({
-  migratedChannels: z.number().int(),
-  createdCredentials: z.number().int(),
-  createdRefs: z.number().int(),
-  skippedChannels: z.number().int(),
-});
-export type MigrateLegacyCredentialsPayload = z.infer<typeof migrateLegacyCredentialsPayloadSchema>;
 
 export type CredentialFormValues = {
   name: string;

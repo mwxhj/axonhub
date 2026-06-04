@@ -97,6 +97,7 @@ func (UpstreamCredential) Fields() []ent.Field {
 			Comment("Safe display hint for the secret; never contains the full secret").
 			Annotations(
 				entgql.OrderField("KEY_HINT"),
+				entgql.Skip(entgql.SkipType, entgql.SkipWhereInput, entgql.SkipOrderField, entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
 			),
 		field.Int("quota_scope_id").
 			Optional().
@@ -115,6 +116,7 @@ func (UpstreamCredential) Fields() []ent.Field {
 			Comment("Legacy safe upstream credential identity; never contains raw secret material").
 			Annotations(
 				entgql.OrderField("FINGERPRINT"),
+				entgql.Skip(entgql.SkipType, entgql.SkipWhereInput, entgql.SkipOrderField, entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
 			),
 		field.String("secret_fingerprint").
 			Optional().
@@ -123,6 +125,7 @@ func (UpstreamCredential) Fields() []ent.Field {
 			Comment("Safe secret-only identity for deduping the same raw secret across channels/resources").
 			Annotations(
 				entgql.OrderField("SECRET_FINGERPRINT"),
+				entgql.Skip(entgql.SkipType, entgql.SkipWhereInput, entgql.SkipOrderField, entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
 			),
 		field.Enum("status").
 			Values("enabled", "disabled", "archived").
@@ -143,6 +146,7 @@ func (UpstreamCredential) Fields() []ent.Field {
 			Comment("Latest credential-scoped quota or budget status summary").
 			Annotations(
 				entgql.OrderField("QUOTA_STATUS"),
+				entgql.Skip(entgql.SkipType, entgql.SkipWhereInput, entgql.SkipOrderField, entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
 			),
 		field.String("last_error").
 			Optional().
@@ -170,10 +174,6 @@ func (UpstreamCredential) Edges() []ent.Edge {
 			Annotations(
 				entgql.Skip(entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
 				entgql.RelayConnection(),
-			),
-		edge.To("provider_quota_statuses", ProviderQuotaStatus.Type).
-			Annotations(
-				entgql.Skip(entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
 			),
 		edge.From("quota_scope", CredentialQuotaScope.Type).
 			Ref("credentials").

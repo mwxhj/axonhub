@@ -15,7 +15,6 @@ import (
 	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/channelmodelprice"
 	"github.com/looplj/axonhub/internal/ent/channelprobe"
-	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/request"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
@@ -332,21 +331,6 @@ func (_c *ChannelCreate) AddCredentialRefs(v ...*ChannelCredentialRef) *ChannelC
 		ids[i] = v[i].ID
 	}
 	return _c.AddCredentialRefIDs(ids...)
-}
-
-// AddProviderQuotaStatusIDs adds the "provider_quota_statuses" edge to the ProviderQuotaStatus entity by IDs.
-func (_c *ChannelCreate) AddProviderQuotaStatusIDs(ids ...int) *ChannelCreate {
-	_c.mutation.AddProviderQuotaStatusIDs(ids...)
-	return _c
-}
-
-// AddProviderQuotaStatuses adds the "provider_quota_statuses" edges to the ProviderQuotaStatus entity.
-func (_c *ChannelCreate) AddProviderQuotaStatuses(v ...*ProviderQuotaStatus) *ChannelCreate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddProviderQuotaStatusIDs(ids...)
 }
 
 // Mutation returns the ChannelMutation object of the builder.
@@ -686,22 +670,6 @@ func (_c *ChannelCreate) createSpec() (*Channel, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(channelcredentialref.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.ProviderQuotaStatusesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   channel.ProviderQuotaStatusesTable,
-			Columns: []string{channel.ProviderQuotaStatusesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerquotastatus.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

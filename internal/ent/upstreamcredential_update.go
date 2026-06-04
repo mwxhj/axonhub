@@ -14,7 +14,6 @@ import (
 	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/predicate"
-	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
@@ -364,21 +363,6 @@ func (_u *UpstreamCredentialUpdate) AddUsageLogs(v ...*UsageLog) *UpstreamCreden
 	return _u.AddUsageLogIDs(ids...)
 }
 
-// AddProviderQuotaStatusIDs adds the "provider_quota_statuses" edge to the ProviderQuotaStatus entity by IDs.
-func (_u *UpstreamCredentialUpdate) AddProviderQuotaStatusIDs(ids ...int) *UpstreamCredentialUpdate {
-	_u.mutation.AddProviderQuotaStatusIDs(ids...)
-	return _u
-}
-
-// AddProviderQuotaStatuses adds the "provider_quota_statuses" edges to the ProviderQuotaStatus entity.
-func (_u *UpstreamCredentialUpdate) AddProviderQuotaStatuses(v ...*ProviderQuotaStatus) *UpstreamCredentialUpdate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddProviderQuotaStatusIDs(ids...)
-}
-
 // SetQuotaScope sets the "quota_scope" edge to the CredentialQuotaScope entity.
 func (_u *UpstreamCredentialUpdate) SetQuotaScope(v *CredentialQuotaScope) *UpstreamCredentialUpdate {
 	return _u.SetQuotaScopeID(v.ID)
@@ -450,27 +434,6 @@ func (_u *UpstreamCredentialUpdate) RemoveUsageLogs(v ...*UsageLog) *UpstreamCre
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveUsageLogIDs(ids...)
-}
-
-// ClearProviderQuotaStatuses clears all "provider_quota_statuses" edges to the ProviderQuotaStatus entity.
-func (_u *UpstreamCredentialUpdate) ClearProviderQuotaStatuses() *UpstreamCredentialUpdate {
-	_u.mutation.ClearProviderQuotaStatuses()
-	return _u
-}
-
-// RemoveProviderQuotaStatusIDs removes the "provider_quota_statuses" edge to ProviderQuotaStatus entities by IDs.
-func (_u *UpstreamCredentialUpdate) RemoveProviderQuotaStatusIDs(ids ...int) *UpstreamCredentialUpdate {
-	_u.mutation.RemoveProviderQuotaStatusIDs(ids...)
-	return _u
-}
-
-// RemoveProviderQuotaStatuses removes "provider_quota_statuses" edges to ProviderQuotaStatus entities.
-func (_u *UpstreamCredentialUpdate) RemoveProviderQuotaStatuses(v ...*ProviderQuotaStatus) *UpstreamCredentialUpdate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveProviderQuotaStatusIDs(ids...)
 }
 
 // ClearQuotaScope clears the "quota_scope" edge to the CredentialQuotaScope entity.
@@ -767,51 +730,6 @@ func (_u *UpstreamCredentialUpdate) sqlSave(ctx context.Context) (_node int, err
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.ProviderQuotaStatusesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   upstreamcredential.ProviderQuotaStatusesTable,
-			Columns: []string{upstreamcredential.ProviderQuotaStatusesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerquotastatus.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedProviderQuotaStatusesIDs(); len(nodes) > 0 && !_u.mutation.ProviderQuotaStatusesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   upstreamcredential.ProviderQuotaStatusesTable,
-			Columns: []string{upstreamcredential.ProviderQuotaStatusesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerquotastatus.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.ProviderQuotaStatusesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   upstreamcredential.ProviderQuotaStatusesTable,
-			Columns: []string{upstreamcredential.ProviderQuotaStatusesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerquotastatus.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {
@@ -1199,21 +1117,6 @@ func (_u *UpstreamCredentialUpdateOne) AddUsageLogs(v ...*UsageLog) *UpstreamCre
 	return _u.AddUsageLogIDs(ids...)
 }
 
-// AddProviderQuotaStatusIDs adds the "provider_quota_statuses" edge to the ProviderQuotaStatus entity by IDs.
-func (_u *UpstreamCredentialUpdateOne) AddProviderQuotaStatusIDs(ids ...int) *UpstreamCredentialUpdateOne {
-	_u.mutation.AddProviderQuotaStatusIDs(ids...)
-	return _u
-}
-
-// AddProviderQuotaStatuses adds the "provider_quota_statuses" edges to the ProviderQuotaStatus entity.
-func (_u *UpstreamCredentialUpdateOne) AddProviderQuotaStatuses(v ...*ProviderQuotaStatus) *UpstreamCredentialUpdateOne {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddProviderQuotaStatusIDs(ids...)
-}
-
 // SetQuotaScope sets the "quota_scope" edge to the CredentialQuotaScope entity.
 func (_u *UpstreamCredentialUpdateOne) SetQuotaScope(v *CredentialQuotaScope) *UpstreamCredentialUpdateOne {
 	return _u.SetQuotaScopeID(v.ID)
@@ -1285,27 +1188,6 @@ func (_u *UpstreamCredentialUpdateOne) RemoveUsageLogs(v ...*UsageLog) *Upstream
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveUsageLogIDs(ids...)
-}
-
-// ClearProviderQuotaStatuses clears all "provider_quota_statuses" edges to the ProviderQuotaStatus entity.
-func (_u *UpstreamCredentialUpdateOne) ClearProviderQuotaStatuses() *UpstreamCredentialUpdateOne {
-	_u.mutation.ClearProviderQuotaStatuses()
-	return _u
-}
-
-// RemoveProviderQuotaStatusIDs removes the "provider_quota_statuses" edge to ProviderQuotaStatus entities by IDs.
-func (_u *UpstreamCredentialUpdateOne) RemoveProviderQuotaStatusIDs(ids ...int) *UpstreamCredentialUpdateOne {
-	_u.mutation.RemoveProviderQuotaStatusIDs(ids...)
-	return _u
-}
-
-// RemoveProviderQuotaStatuses removes "provider_quota_statuses" edges to ProviderQuotaStatus entities.
-func (_u *UpstreamCredentialUpdateOne) RemoveProviderQuotaStatuses(v ...*ProviderQuotaStatus) *UpstreamCredentialUpdateOne {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveProviderQuotaStatusIDs(ids...)
 }
 
 // ClearQuotaScope clears the "quota_scope" edge to the CredentialQuotaScope entity.
@@ -1632,51 +1514,6 @@ func (_u *UpstreamCredentialUpdateOne) sqlSave(ctx context.Context) (_node *Upst
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
-	}
-	if _u.mutation.ProviderQuotaStatusesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   upstreamcredential.ProviderQuotaStatusesTable,
-			Columns: []string{upstreamcredential.ProviderQuotaStatusesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerquotastatus.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedProviderQuotaStatusesIDs(); len(nodes) > 0 && !_u.mutation.ProviderQuotaStatusesCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   upstreamcredential.ProviderQuotaStatusesTable,
-			Columns: []string{upstreamcredential.ProviderQuotaStatusesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerquotastatus.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.ProviderQuotaStatusesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   upstreamcredential.ProviderQuotaStatusesTable,
-			Columns: []string{upstreamcredential.ProviderQuotaStatusesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerquotastatus.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

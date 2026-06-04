@@ -68,16 +68,6 @@ type AutoDisableChannel {
   statuses: [AutoDisableChannelStatus!]!
 }
 
-type AutoDisableAPIKeyStatus {
-  status: Int!
-  times: Int!
-}
-
-type AutoDisableAPIKey {
-  enabled: Boolean!
-  statuses: [AutoDisableAPIKeyStatus!]!
-}
-
 type WebhookTarget {
   name: String!
   enabled: Boolean!
@@ -118,17 +108,6 @@ input WebhookNotifierConfigInput {
   subscriptions: [WebhookSubscriptionInput!]
 }
 
-type RetryPolicy {
-  maxChannelRetries: Int!
-  maxSingleChannelRetries: Int!
-  retryDelayMs: Int!
-  loadBalancerStrategy: String!
-  enabled: Boolean!
-  autoDisableChannel: AutoDisableChannel!
-  emptyResponseDetection: Boolean!
-  upstreamErrorPolicy: UpstreamErrorPolicy!
-}
-
 type UpstreamErrorPolicy {
   mode: String!
   customMessage: String!
@@ -147,32 +126,6 @@ input AutoDisableChannelStatusInput {
 input AutoDisableChannelInput {
   enabled: Boolean
   statuses: [AutoDisableChannelStatusInput!]
-}
-
-input UpdateRetryPolicyInput {
-  maxChannelRetries: Int
-  maxSingleChannelRetries: Int
-  retryDelayMs: Int
-  loadBalancerStrategy: String
-  enabled: Boolean
-  autoDisableChannel: AutoDisableChannelInput
-  emptyResponseDetection: Boolean
-  upstreamErrorPolicy: UpstreamErrorPolicyInput
-}
-
-enum QuotaEnforcementMode {
-  EXHAUSTED_ONLY
-  DE_PRIORITIZE
-}
-
-type QuotaEnforcementSettings {
-  enabled: Boolean!
-  mode: QuotaEnforcementMode!
-}
-
-input UpdateQuotaEnforcementSettingsInput {
-  enabled: Boolean
-  mode: QuotaEnforcementMode
 }
 
 type SystemModelSettings {
@@ -348,7 +301,6 @@ type GcCleanupPreviewItem {
 extend type Mutation {
   updateBrandSettings(input: UpdateBrandSettingsInput!): Boolean!
   updateStoragePolicy(input: UpdateStoragePolicyInput!): Boolean!
-  updateRetryPolicy(input: UpdateRetryPolicyInput!): Boolean!
   updateWebhookNotifierConfig(input: WebhookNotifierConfigInput!): Boolean!
   updateSystemModelSettings(input: UpdateSystemModelSettingsInput!): Boolean!
   updateDefaultDataStorage(input: UpdateDefaultDataStorageInput!): Boolean!
@@ -358,8 +310,6 @@ extend type Mutation {
   updateSystemChannelSettings(input: UpdateSystemChannelSettingsInput!): Boolean!
   updateSystemGeneralSettings(input: UpdateSystemGeneralSettingsInput!): Boolean!
   updateVideoStorageSettings(input: UpdateVideoStorageSettingsInput!): Boolean!
-  updateQuotaEnforcementSettings(input: UpdateQuotaEnforcementSettingsInput!): Boolean!
-  checkProviderQuotas: Boolean!
   triggerGcCleanup(input: TriggerGcCleanupInput!): Boolean!
   saveProxyPreset(input: SaveProxyPresetInput!): Boolean!
   deleteProxyPreset(url: String!): Boolean!
@@ -415,7 +365,6 @@ extend type Query {
   systemStatus: SystemStatus!
   brandSettings: BrandSettings!
   storagePolicy: StoragePolicy!
-  retryPolicy: RetryPolicy!
   webhookNotifierConfig: WebhookNotifierConfig!
   systemModelSettings: SystemModelSettings!
   defaultDataStorageID: ID
@@ -425,7 +374,6 @@ extend type Query {
   systemChannelSettings: SystemChannelSettings!
   systemGeneralSettings: SystemGeneralSettings!
   videoStorageSettings: VideoStorageSettings!
-  quotaEnforcementSettings: QuotaEnforcementSettings!
   proxyPresets: [ProxyPreset!]!
   userAgentPassThroughSettings: UserAgentPassThroughSettings!
   passThroughSettings: PassThroughSettings!

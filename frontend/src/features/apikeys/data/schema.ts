@@ -50,7 +50,6 @@ export const apiKeySchema = z.object({
             channelTags: z.array(z.string()).optional().nullable(),
             channelTagsMatchMode: channelTagsMatchModeFieldSchema,
             modelIDs: z.array(z.string()).optional().nullable(),
-            loadBalanceStrategy: z.string().optional().nullable(),
             quota: z
               .object({
                 requests: z.number().optional().nullable(),
@@ -144,7 +143,6 @@ export const apiKeyProfileSchema = z.object({
   channelTags: z.array(z.string()).optional().nullable(),
   channelTagsMatchMode: channelTagsMatchModeFieldSchema,
   modelIDs: z.array(z.string()).optional().nullable(),
-  loadBalanceStrategy: z.string().optional().nullable(),
   quota: z
     .object({
       requests: z.number().optional().nullable(),
@@ -227,7 +225,6 @@ export const updateApiKeyProfilesInputSchemaFactory = (t: (key: string) => strin
             channelTags: z.array(z.string()).optional().nullable(),
             channelTagsMatchMode: channelTagsMatchModeFieldSchema,
             modelIDs: z.array(z.string()).optional().nullable(),
-            loadBalanceStrategy: z.string().optional().nullable(),
             quota: z
               .object({
                 requests: z.number().int().positive().optional().nullable(),
@@ -327,7 +324,6 @@ export const updateApiKeyProfilesInputSchema = z.object({
       channelTags: z.array(z.string()).optional().nullable(),
       channelTagsMatchMode: channelTagsMatchModeFieldSchema,
       modelIDs: z.array(z.string()).optional().nullable(),
-      loadBalanceStrategy: z.string().optional().nullable(),
       quota: z
         .object({
           requests: z.number().int().positive().optional().nullable(),

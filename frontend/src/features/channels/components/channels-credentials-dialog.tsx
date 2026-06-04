@@ -1,9 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Link, Unlink } from 'lucide-react';
+import { Link, Unlink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,7 +19,6 @@ import { Switch } from '@/components/ui/switch';
 import {
   useAttachCredentialToChannel,
   useDetachCredentialFromChannel,
-  useMigrateLegacyChannelCredentials,
   useUpdateChannelCredentialRef,
   useUpstreamCredentials,
   type CredentialRef,
@@ -47,9 +45,6 @@ function ChannelCredentialRow({ credential, refItem }: { credential: UpstreamCre
   const { t } = useTranslation();
   const updateRef = useUpdateChannelCredentialRef();
   const detach = useDetachCredentialFromChannel();
-  const providerQuotaStatus =
-    credential.providerQuotaStatuses?.find((status) => !status.ready || status.status === 'exhausted') ??
-    credential.providerQuotaStatuses?.find((status) => status.status === 'warning');
   const credentialLabel = credential.name?.trim() || t('credentials.unnamed');
 
   return (
@@ -58,11 +53,6 @@ function ChannelCredentialRow({ credential, refItem }: { credential: UpstreamCre
         <div className='flex min-w-0 items-center gap-2'>
           <span className='truncate font-medium'>{credentialLabel}</span>
           <Badge variant={credential.status === 'enabled' ? 'default' : 'secondary'}>{t(`credentials.status.${credential.status}`)}</Badge>
-          {providerQuotaStatus && (
-            <Badge variant='outline'>
-              {t(`credentials.providerQuota.status.${providerQuotaStatus.status}`, { defaultValue: providerQuotaStatus.status })}
-            </Badge>
-          )}
         </div>
       </div>
 
@@ -92,7 +82,6 @@ function ChannelCredentialRow({ credential, refItem }: { credential: UpstreamCre
 export function ChannelsCredentialsDialog({ open, onOpenChange, channel }: ChannelsCredentialsDialogProps) {
   const { t } = useTranslation();
   const attach = useAttachCredentialToChannel();
-  const migrateLegacy = useMigrateLegacyChannelCredentials();
   const [credentialID, setCredentialID] = useState('');
   const [enabled, setEnabled] = useState(true);
 
@@ -128,13 +117,6 @@ export function ChannelsCredentialsDialog({ open, onOpenChange, channel }: Chann
     [channel.id, credentials]
   );
 
-  const hasLegacyInlineCredentials = useMemo(() => {
-    const legacyApiKey = channel.credentials?.apiKey?.trim();
-    const legacyAPIKeys = channel.credentials?.apiKeys?.some((key) => key.trim().length > 0);
-
-    return Boolean(legacyApiKey || legacyAPIKeys);
-  }, [channel.credentials?.apiKey, channel.credentials?.apiKeys]);
-
   const handleAttach = async () => {
     if (!credentialID) {
       return;
@@ -157,24 +139,6 @@ export function ChannelsCredentialsDialog({ open, onOpenChange, channel }: Chann
         </DialogHeader>
 
         <div className='grid max-h-[72vh] gap-5 overflow-y-auto py-2 pr-1'>
-          {hasLegacyInlineCredentials && (
-            <Alert className='border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200'>
-              <AlertTriangle className='h-4 w-4' />
-              <AlertDescription className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-                <span>{t('credentials.dialogs.channels.legacyInlineWarning')}</span>
-                <Button
-                  type='button'
-                  variant='outline'
-                  size='sm'
-                  disabled={migrateLegacy.isPending}
-                  onClick={() => migrateLegacy.mutate()}
-                >
-                  {t('credentials.buttons.migrateLegacy')}
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
-
           <div className='grid gap-3 rounded-md border p-3'>
             <div className='grid grid-cols-1 gap-3 md:grid-cols-[1fr_120px_auto] md:items-end'>
               <div className='grid gap-2'>

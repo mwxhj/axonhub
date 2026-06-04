@@ -114,23 +114,11 @@ func (svc *ChannelService) getHttpClient(channelSettings *objects.ChannelSetting
 // buildChannel creates a Channel with precomputed caches (transformer is set separately).
 func buildChannel(c *ent.Channel, httpClient *httpclient.HttpClient) *Channel {
 	credentialViews := credentialViewsFromRefs(c)
-	if len(credentialViews) == 0 {
-		credentialViews = legacyCredentialViews(c)
-	}
 	credentialViews = dedupeCredentialViews(credentialViews)
-
-	// Precompute disabled key set for O(1) lookup
-	disabledKeySet := make(map[string]struct{}, len(c.DisabledAPIKeys))
-	for _, dk := range c.DisabledAPIKeys {
-		if dk.Key != "" {
-			disabledKeySet[dk.Key] = struct{}{}
-		}
-	}
 
 	ch := &Channel{
 		Channel:               c,
 		HTTPClient:            httpClient,
-		cachedDisabledKeySet:  disabledKeySet,
 		cachedCredentialViews: credentialViews,
 	}
 	ch.cachedEnabledAPIKeys = enabledAPIKeysFromCredentialViews(credentialViews)
@@ -436,19 +424,13 @@ func (svc *ChannelService) buildNonDefaultEndpointOutbound(
 //nolint:maintidx // Checked.
 func (svc *ChannelService) buildChannelWithTransformer(c *ent.Channel) (*Channel, error) {
 	credentialViews := credentialViewsFromRefs(c)
-	if len(credentialViews) == 0 {
-		credentialViews = legacyCredentialViews(c)
-	}
 	credentialViews = dedupeCredentialViews(credentialViews)
-	resolvedCredentials := credentialsFromViews(credentialViews, c.Credentials)
+	resolvedCredentials := credentialsFromViews(credentialViews, objects.ChannelCredentials{})
 
 	// Validate credentials early so we can fail fast without constructing HTTP clients/transformers.
 	//
 	// NOTE: "enabled" keys excludes keys that were explicitly disabled for this channel.
 	enabledKeys := authCapableAPIKeysFromCredentialViews(credentialViews)
-	if len(enabledKeys) == 0 {
-		enabledKeys = resolvedCredentials.GetEnabledAPIKeys(c.DisabledAPIKeys)
-	}
 
 	//nolint:exhaustive // Checked.
 	switch c.Type {
@@ -477,11 +459,9 @@ func (svc *ChannelService) buildChannelWithTransformer(c *ent.Channel) (*Channel
 	}
 
 	httpClient := svc.getHttpClient(c.Settings)
-	if len(credentialViews) > 0 {
-		clone := *c
-		clone.Credentials = resolvedCredentials
-		c = &clone
-	}
+	clone := *c
+	clone.Credentials = resolvedCredentials
+	c = &clone
 	ch := buildChannel(c, httpClient)
 
 	switch c.Type {
@@ -1075,13 +1055,7 @@ func (svc *ChannelService) refreshOAuthToken(ctx context.Context, ch *ent.Channe
 		return err
 	}
 
-	updated := ch.Credentials
-	updated.APIKey = updatedSecret.APIKey
-	updated.OAuth = updatedSecret.OAuth
-
-	_, err = svc.entFromContext(ctx).Channel.UpdateOneID(ch.ID).SetCredentials(updated).Save(ctx)
-
-	return err
+	return fmt.Errorf("missing credential id for oauth refresh on channel %d", ch.ID)
 }
 
 func refreshedCredentialSecret(ch *ent.Channel, current objects.UpstreamCredentialSecret, refreshed *oauth.OAuthCredentials) (objects.UpstreamCredentialSecret, error) {
@@ -1093,9 +1067,6 @@ func refreshedCredentialSecret(ch *ent.Channel, current objects.UpstreamCredenti
 
 	if ch != nil && ch.Type == channel.TypeAntigravity {
 		projectID, err := extractProjectIDFromAntigravityCreds(current.APIKey)
-		if err != nil && ch.Credentials.APIKey != current.APIKey {
-			projectID, err = extractProjectIDFromAntigravityCreds(ch.Credentials.APIKey)
-		}
 		if err != nil {
 			return objects.UpstreamCredentialSecret{}, fmt.Errorf("failed to extract project ID from antigravity credentials: %w", err)
 		}

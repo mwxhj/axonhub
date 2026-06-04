@@ -317,7 +317,7 @@ func TestPersistRequestExecutionStoresCredentialPerRetryAttempt(t *testing.T) {
 		resourceScopeKey:      "openai:secret:second",
 		credentialName:        "second credential",
 		credentialKeyHint:     "seco...d-key",
-		credentialSource:      biz.ChannelCredentialSourceLegacy,
+		credentialSource:      biz.ChannelCredentialSourceRef,
 		credentialQuotaStatus: "warning",
 		quotaScopeID:          scope2.ID,
 		quotaScopeName:        scope2.Name,
@@ -395,7 +395,7 @@ func TestPersistRequestExecutionStoresCredentialPerRetryAttempt(t *testing.T) {
 	require.Equal(t, "openai:secret:second", executions[1].ResourceScopeKey)
 	require.Equal(t, "second credential", executions[1].CredentialNameSnapshot)
 	require.Equal(t, "seco...d-key", executions[1].CredentialKeyHint)
-	require.Equal(t, biz.ChannelCredentialSourceLegacy, executions[1].CredentialSource)
+	require.Equal(t, biz.ChannelCredentialSourceRef, executions[1].CredentialSource)
 	require.Equal(t, "warning", executions[1].CredentialQuotaStatusSnapshot)
 	require.Equal(t, scope2.ID, executions[1].QuotaScopeID)
 	require.Equal(t, "scope-two", executions[1].QuotaScopeNameSnapshot)

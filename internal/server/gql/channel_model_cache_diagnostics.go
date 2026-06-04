@@ -71,18 +71,17 @@ type channelModelCacheDiagnosticsChannelDB struct {
 }
 
 type channelModelCacheDiagnosticsChannelCached struct {
-	ID                  int                                  `json:"id"`
-	Name                string                               `json:"name"`
-	Type                string                               `json:"type"`
-	Status              string                               `json:"status"`
-	UpdatedAt           string                               `json:"updatedAt"`
-	Tags                []string                             `json:"tags"`
-	SupportedModels     []string                             `json:"supportedModels"`
-	DefaultTestModel    string                               `json:"defaultTestModel"`
-	EnabledAPIKeyCount  int                                  `json:"enabledApiKeyCount"`
-	DisabledAPIKeyCount int                                  `json:"disabledApiKeyCount"`
-	Settings            channelModelCacheDiagnosticsSettings `json:"settings"`
-	ModelEntries        []channelModelCacheDiagnosticsEntry  `json:"modelEntries"`
+	ID                 int                                  `json:"id"`
+	Name               string                               `json:"name"`
+	Type               string                               `json:"type"`
+	Status             string                               `json:"status"`
+	UpdatedAt          string                               `json:"updatedAt"`
+	Tags               []string                             `json:"tags"`
+	SupportedModels    []string                             `json:"supportedModels"`
+	DefaultTestModel   string                               `json:"defaultTestModel"`
+	EnabledAPIKeyCount int                                  `json:"enabledApiKeyCount"`
+	Settings           channelModelCacheDiagnosticsSettings `json:"settings"`
+	ModelEntries       []channelModelCacheDiagnosticsEntry  `json:"modelEntries"`
 }
 
 type channelModelCacheDiagnosticsSettings struct {
@@ -233,18 +232,17 @@ func buildChannelDBSnapshot(ch *ent.Channel) channelModelCacheDiagnosticsChannel
 
 func buildChannelCachedSnapshot(ch *biz.Channel) channelModelCacheDiagnosticsChannelCached {
 	return channelModelCacheDiagnosticsChannelCached{
-		ID:                  ch.ID,
-		Name:                ch.Name,
-		Type:                ch.Type.String(),
-		Status:              ch.Status.String(),
-		UpdatedAt:           ch.UpdatedAt.UTC().Format(time.RFC3339),
-		Tags:                append([]string(nil), ch.Tags...),
-		SupportedModels:     append([]string(nil), ch.SupportedModels...),
-		DefaultTestModel:    ch.DefaultTestModel,
-		EnabledAPIKeyCount:  len(ch.GetEnabledAPIKeys()),
-		DisabledAPIKeyCount: len(ch.DisabledAPIKeys),
-		Settings:            buildSettingsSnapshot(ch.Settings),
-		ModelEntries:        buildSortedEntries(ch.GetModelEntries()),
+		ID:                 ch.ID,
+		Name:               ch.Name,
+		Type:               ch.Type.String(),
+		Status:             ch.Status.String(),
+		UpdatedAt:          ch.UpdatedAt.UTC().Format(time.RFC3339),
+		Tags:               append([]string(nil), ch.Tags...),
+		SupportedModels:    append([]string(nil), ch.SupportedModels...),
+		DefaultTestModel:   ch.DefaultTestModel,
+		EnabledAPIKeyCount: len(ch.GetEnabledAPIKeys()),
+		Settings:           buildSettingsSnapshot(ch.Settings),
+		ModelEntries:       buildSortedEntries(ch.GetModelEntries()),
 	}
 }
 

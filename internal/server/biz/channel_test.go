@@ -222,7 +222,6 @@ func TestChannelService_CreateChannel_PersistsAutoSyncModelPatternAndManualModel
 		Type:                    channel.TypeOpenai,
 		BaseURL:                 new("https://api.openai.com/v1"),
 		Name:                    "Create Persist Fields",
-		Credentials:             objects.ChannelCredentials{APIKey: "key"},
 		SupportedModels:         []string{"gpt-4"},
 		ManualModels:            []string{"manual-1"},
 		AutoSyncSupportedModels: new(true),
@@ -268,9 +267,6 @@ func TestChannelService_CreateChannel(t *testing.T) {
 				Type:    channel.TypeOpenai,
 				Name:    "Test OpenAI Channel",
 				BaseURL: lo.ToPtr("https://api.openai.com/v1"),
-				Credentials: objects.ChannelCredentials{
-					APIKeys: []string{"test-api-key"},
-				},
 				SupportedModels:  []string{"gpt-4", "gpt-3.5-turbo"},
 				DefaultTestModel: "gpt-3.5-turbo",
 			},
@@ -282,9 +278,6 @@ func TestChannelService_CreateChannel(t *testing.T) {
 				Type:    channel.TypeAnthropic,
 				Name:    "Test Anthropic Channel",
 				BaseURL: lo.ToPtr("https://api.anthropic.com"),
-				Credentials: objects.ChannelCredentials{
-					APIKey: "test-api-key",
-				},
 				SupportedModels:  []string{"claude-3-opus-20240229"},
 				DefaultTestModel: "claude-3-opus-20240229",
 				Settings: &objects.ChannelSettings{
@@ -301,9 +294,6 @@ func TestChannelService_CreateChannel(t *testing.T) {
 				Type:    channel.TypeOpenai,
 				Name:    "Duplicate Channel Name",
 				BaseURL: lo.ToPtr("https://api.openai.com/v1"),
-				Credentials: objects.ChannelCredentials{
-					APIKey: "test-api-key",
-				},
 				SupportedModels:  []string{"gpt-4"},
 				DefaultTestModel: "gpt-4",
 			},
@@ -401,19 +391,6 @@ func TestChannelService_UpdateChannel(t *testing.T) {
 			wantErr: false,
 			verify: func(t *testing.T, result *ent.Channel) {
 				require.ElementsMatch(t, []string{"gpt-4", "gpt-3.5-turbo", "gpt-4-turbo"}, result.SupportedModels)
-			},
-		},
-		{
-			name: "update credentials",
-			id:   ch1.ID,
-			input: &ent.UpdateChannelInput{
-				Credentials: &objects.ChannelCredentials{
-					APIKey: "new-api-key",
-				},
-			},
-			wantErr: false,
-			verify: func(t *testing.T, result *ent.Channel) {
-				require.Equal(t, "new-api-key", result.Credentials.APIKey)
 			},
 		},
 		{

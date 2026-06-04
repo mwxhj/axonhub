@@ -125,51 +125,6 @@ func (svc *ChannelService) checkAndHandleChannelError(ctx context.Context, perf 
 	return false
 }
 
-// checkAndHandleAPIKeyError checks if the API key should be disabled based on the error status code.
-// Returns true if the API key was disabled.
-func (svc *ChannelService) checkAndHandleAPIKeyError(ctx context.Context, perf *PerformanceRecord, policy *RetryPolicy) bool {
-	for _, statusConfig := range policy.AutoDisableChannel.Statuses {
-		if statusConfig.Status != perf.ResponseStatusCode {
-			continue
-		}
-
-		svc.apiKeyErrorCountsLock.Lock()
-
-		if svc.apiKeyErrorCounts[perf.ChannelID] == nil {
-			svc.apiKeyErrorCounts[perf.ChannelID] = make(map[string]map[int]int)
-		}
-
-		if svc.apiKeyErrorCounts[perf.ChannelID][perf.APIKey] == nil {
-			svc.apiKeyErrorCounts[perf.ChannelID][perf.APIKey] = make(map[int]int)
-		}
-
-		svc.apiKeyErrorCounts[perf.ChannelID][perf.APIKey][perf.ResponseStatusCode]++
-		count := svc.apiKeyErrorCounts[perf.ChannelID][perf.APIKey][perf.ResponseStatusCode]
-		svc.apiKeyErrorCountsLock.Unlock()
-
-		if count >= statusConfig.Times {
-			reason := fmt.Sprintf("Auto-disabled after %d consecutive errors with status %d", count, perf.ResponseStatusCode)
-			if err := svc.DisableAPIKey(ctx, perf.ChannelID, perf.APIKey, perf.ResponseStatusCode, reason); err != nil {
-				log.Error(ctx, "Failed to disable API key",
-					log.Int("channel_id", perf.ChannelID),
-					log.Int("error_code", perf.ResponseStatusCode),
-					log.Cause(err),
-				)
-
-				return false
-			}
-
-			svc.apiKeyErrorCountsLock.Lock()
-			delete(svc.apiKeyErrorCounts[perf.ChannelID], perf.APIKey)
-			svc.apiKeyErrorCountsLock.Unlock()
-
-			return true
-		}
-	}
-
-	return false
-}
-
 // checkAndHandleCredentialError checks if the upstream credential should be disabled based on the error status code.
 // Returns true if the credential was disabled across channels that reference it.
 func (svc *ChannelService) checkAndHandleCredentialError(ctx context.Context, perf *PerformanceRecord, policy *RetryPolicy) bool {
@@ -244,7 +199,7 @@ func (svc *ChannelService) disableCredentialFromPerformance(ctx context.Context,
 		return svc.DisableCredentialID(ctx, perf.CredentialID, perf.ResponseStatusCode, reason)
 	}
 
-	return svc.DisableCredentialFingerprint(ctx, perf.CredentialFingerprint, perf.ResponseStatusCode, reason)
+	return 0, fmt.Errorf("missing credential id for auto-disable")
 }
 
 func isCredentialScopedAutoDisableStatus(statusCode int) bool {

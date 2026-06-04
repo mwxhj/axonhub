@@ -933,29 +933,6 @@ func HasCredentialsWith(preds ...predicate.UpstreamCredential) predicate.Credent
 	})
 }
 
-// HasProviderQuotaStatuses applies the HasEdge predicate on the "provider_quota_statuses" edge.
-func HasProviderQuotaStatuses() predicate.CredentialQuotaScope {
-	return predicate.CredentialQuotaScope(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ProviderQuotaStatusesTable, ProviderQuotaStatusesColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasProviderQuotaStatusesWith applies the HasEdge predicate on the "provider_quota_statuses" edge with a given conditions (other predicates).
-func HasProviderQuotaStatusesWith(preds ...predicate.ProviderQuotaStatus) predicate.CredentialQuotaScope {
-	return predicate.CredentialQuotaScope(func(s *sql.Selector) {
-		step := newProviderQuotaStatusesStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
-}
-
 // HasExecutions applies the HasEdge predicate on the "executions" edge.
 func HasExecutions() predicate.CredentialQuotaScope {
 	return predicate.CredentialQuotaScope(func(s *sql.Selector) {

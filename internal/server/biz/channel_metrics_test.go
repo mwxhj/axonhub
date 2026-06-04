@@ -354,7 +354,6 @@ func TestChannelService_RecordPerformance(t *testing.T) {
 		},
 		channelPerfMetrics:    make(map[int]*channelMetrics),
 		channelErrorCounts:    make(map[int]map[int]int),
-		apiKeyErrorCounts:     make(map[int]map[string]map[int]int),
 		credentialErrorCounts: make(map[string]map[int]int),
 		perfWindowSeconds:     600,
 	}

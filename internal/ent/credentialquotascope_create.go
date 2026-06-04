@@ -12,7 +12,6 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
-	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/ent/usagelog"
@@ -277,21 +276,6 @@ func (_c *CredentialQuotaScopeCreate) AddCredentials(v ...*UpstreamCredential) *
 		ids[i] = v[i].ID
 	}
 	return _c.AddCredentialIDs(ids...)
-}
-
-// AddProviderQuotaStatusIDs adds the "provider_quota_statuses" edge to the ProviderQuotaStatus entity by IDs.
-func (_c *CredentialQuotaScopeCreate) AddProviderQuotaStatusIDs(ids ...int) *CredentialQuotaScopeCreate {
-	_c.mutation.AddProviderQuotaStatusIDs(ids...)
-	return _c
-}
-
-// AddProviderQuotaStatuses adds the "provider_quota_statuses" edges to the ProviderQuotaStatus entity.
-func (_c *CredentialQuotaScopeCreate) AddProviderQuotaStatuses(v ...*ProviderQuotaStatus) *CredentialQuotaScopeCreate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddProviderQuotaStatusIDs(ids...)
 }
 
 // AddExecutionIDs adds the "executions" edge to the RequestExecution entity by IDs.
@@ -571,22 +555,6 @@ func (_c *CredentialQuotaScopeCreate) createSpec() (*CredentialQuotaScope, *sqlg
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(upstreamcredential.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
-	}
-	if nodes := _c.mutation.ProviderQuotaStatusesIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   credentialquotascope.ProviderQuotaStatusesTable,
-			Columns: []string{credentialquotascope.ProviderQuotaStatusesColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(providerquotastatus.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

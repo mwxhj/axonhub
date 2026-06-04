@@ -1,7 +1,5 @@
 # schema tells gqlgen where the GraphQL schema is located.
 schema:
-  # axonhub.graphql must be loaded before ent.graphql because it defines DisabledAPIKey
-  # which is referenced by the disabled_api_keys field in Channel schema
   - axonhub.graphql
   - ent.graphql
   - dashboard.graphql
@@ -138,12 +136,6 @@ models:
   ChannelRateLimitInput:
     model:
       - github.com/looplj/axonhub/internal/objects.ChannelRateLimit
-  ChannelCredentials:
-    model:
-      - github.com/looplj/axonhub/internal/objects.ChannelCredentials
-  ChannelCredentialsInput:
-    model:
-      - github.com/looplj/axonhub/internal/objects.ChannelCredentials
   OAuthCredentials:
     model:
       - github.com/looplj/axonhub/internal/objects.OAuthCredentials
@@ -171,12 +163,6 @@ models:
   CleanupOptionInput:
     model:
       - github.com/looplj/axonhub/internal/server/biz.CleanupOption
-  RetryPolicy:
-    model:
-      - github.com/looplj/axonhub/internal/server/biz.RetryPolicy
-  UpdateRetryPolicyInput:
-    model:
-      - github.com/looplj/axonhub/internal/server/biz.RetryPolicy
   WebhookNotifierConfig:
     model:
       - github.com/looplj/axonhub/internal/server/biz.WebhookNotifierConfig
@@ -318,9 +304,6 @@ models:
   UpdateChannelCredentialRefInput:
     model:
       - github.com/looplj/axonhub/internal/server/biz.UpdateChannelCredentialRefInput
-  MigrateLegacyCredentialsPayload:
-    model:
-      - github.com/looplj/axonhub/internal/server/biz.MigrateLegacyCredentialsPayload
   ModelIdentify:
     model:
       - github.com/looplj/axonhub/internal/server/biz.ModelIdentify
@@ -711,9 +694,3 @@ models:
   PromptActivationConditionCompositeInput:
     model:
       - github.com/looplj/axonhub/internal/objects.PromptActivationConditionComposite
-  DisabledAPIKey:
-    model:
-      - github.com/looplj/axonhub/internal/objects.DisabledAPIKey
-  DeleteDisabledAPIKeysPayload:
-    model:
-      - github.com/looplj/axonhub/internal/server/biz.DeleteDisabledAPIKeysResult

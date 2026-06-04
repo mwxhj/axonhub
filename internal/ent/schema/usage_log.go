@@ -65,17 +65,26 @@ func (UsageLog) Fields() []ent.Field {
 			Optional().
 			Immutable().
 			MaxLen(128).
-			Comment("Legacy safe upstream credential identity used for this request; never stores the raw secret"),
+			Comment("Legacy safe upstream credential identity used for this request; never stores the raw secret").
+			Annotations(
+				entgql.Skip(entgql.SkipType, entgql.SkipWhereInput, entgql.SkipOrderField, entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
+			),
 		field.String("secret_fingerprint").
 			Optional().
 			Immutable().
 			MaxLen(128).
-			Comment("Safe secret-only identity used for this request; never stores the raw secret"),
+			Comment("Safe secret-only identity used for this request; never stores the raw secret").
+			Annotations(
+				entgql.Skip(entgql.SkipType, entgql.SkipWhereInput, entgql.SkipOrderField, entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
+			),
 		field.String("resource_scope_key").
 			Optional().
 			Immutable().
 			MaxLen(512).
-			Comment("Safe runtime resource scope for channel resource namespace plus secret fingerprint"),
+			Comment("Safe runtime resource scope for channel resource namespace plus secret fingerprint").
+			Annotations(
+				entgql.Skip(entgql.SkipType, entgql.SkipWhereInput, entgql.SkipOrderField, entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
+			),
 		field.Int("quota_scope_id").
 			Optional().
 			Immutable().
@@ -95,11 +104,17 @@ func (UsageLog) Fields() []ent.Field {
 		field.String("credential_key_hint").
 			Optional().
 			Immutable().
-			Comment("Safe credential key hint captured when usage was logged"),
+			Comment("Safe credential key hint captured when usage was logged").
+			Annotations(
+				entgql.Skip(entgql.SkipType, entgql.SkipWhereInput, entgql.SkipOrderField, entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
+			),
 		field.String("credential_source").
 			Optional().
 			Immutable().
-			Comment("Credential source used for this request: ref, legacy, or unknown"),
+			Comment("Credential source used for this request: ref, legacy, or unknown").
+			Annotations(
+				entgql.Skip(entgql.SkipType, entgql.SkipWhereInput, entgql.SkipOrderField, entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
+			),
 		field.String("credential_quota_status_snapshot").
 			Optional().
 			Immutable().

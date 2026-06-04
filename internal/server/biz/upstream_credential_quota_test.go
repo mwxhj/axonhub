@@ -14,7 +14,6 @@ import (
 	"github.com/looplj/axonhub/internal/ent/channelcredentialref"
 	"github.com/looplj/axonhub/internal/ent/credentialquotascope"
 	"github.com/looplj/axonhub/internal/ent/enttest"
-	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/schema/schematype"
 	"github.com/looplj/axonhub/internal/ent/upstreamcredential"
 	"github.com/looplj/axonhub/internal/objects"
@@ -402,17 +401,6 @@ func TestUpstreamCredentialService_DeleteRemovesRefsAndAllowsSecretRecreate(t *t
 		Save(ctx)
 	require.NoError(t, err)
 
-	_, err = client.ProviderQuotaStatus.Create().
-		SetProviderType(providerquotastatus.ProviderTypeSynthetic).
-		SetScopeKey("credential:test").
-		SetCredentialID(credential.ID).
-		SetStatus(providerquotastatus.StatusAvailable).
-		SetQuotaData(map[string]any{}).
-		SetReady(true).
-		SetNextCheckAt(time.Now()).
-		Save(ctx)
-	require.NoError(t, err)
-
 	ok, err := svc.DeleteUpstreamCredential(ctx, credential.ID)
 	require.NoError(t, err)
 	require.True(t, ok)
@@ -422,12 +410,6 @@ func TestUpstreamCredentialService_DeleteRemovesRefsAndAllowsSecretRecreate(t *t
 		Count(ctx)
 	require.NoError(t, err)
 	require.Equal(t, 0, refCount)
-
-	statusCount, err := client.ProviderQuotaStatus.Query().
-		Where(providerquotastatus.CredentialID(credential.ID)).
-		Count(ctx)
-	require.NoError(t, err)
-	require.Equal(t, 0, statusCount)
 
 	activeCount, err := client.UpstreamCredential.Query().Count(ctx)
 	require.NoError(t, err)
@@ -721,54 +703,6 @@ func TestBuildChannelKeepsQuotaPausedCredentialLoadable(t *testing.T) {
 	require.NotNil(t, built)
 	require.Empty(t, built.cachedEnabledAPIKeys)
 	require.Len(t, authCapableAPIKeyCredentialViews(built.cachedCredentialViews), 1)
-}
-
-func TestUpstreamCredentialService_MigrateLegacyCredentialsIgnoresDisabledAPIKeys(t *testing.T) {
-	client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
-	defer client.Close()
-
-	ctx := context.Background()
-	ctx = ent.NewContext(ctx, client)
-	ctx = authz.WithTestBypass(ctx)
-
-	ch, err := client.Channel.Create().
-		SetName("legacy disabled key").
-		SetType(channel.TypeOpenai).
-		SetBaseURL("https://api.openai.com/v1").
-		SetCredentials(objects.ChannelCredentials{APIKeys: []string{"sk-disabled-legacy"}}).
-		SetDisabledAPIKeys([]objects.DisabledAPIKey{{
-			Key:       "sk-disabled-legacy",
-			ErrorCode: 401,
-			Reason:    "legacy local disable state",
-		}}).
-		SetSupportedModels([]string{"gpt-4"}).
-		SetDefaultTestModel("gpt-4").
-		Save(ctx)
-	require.NoError(t, err)
-
-	svc := NewUpstreamCredentialService(UpstreamCredentialServiceParams{Ent: client})
-	payload, err := svc.MigrateLegacyChannelCredentials(ctx)
-	require.NoError(t, err)
-	require.Equal(t, 1, payload.MigratedChannels)
-	require.Equal(t, 1, payload.CreatedCredentials)
-	require.Equal(t, 1, payload.CreatedRefs)
-
-	credential, err := client.UpstreamCredential.Query().Only(ctx)
-	require.NoError(t, err)
-	require.Equal(t, upstreamcredential.StatusEnabled, credential.Status)
-
-	ref, err := client.ChannelCredentialRef.Query().
-		Where(
-			channelcredentialref.ChannelID(ch.ID),
-			channelcredentialref.CredentialID(credential.ID),
-		).
-		Only(ctx)
-	require.NoError(t, err)
-	require.True(t, ref.Enabled)
-
-	legacy, err := client.Channel.Get(ctx, ch.ID)
-	require.NoError(t, err)
-	require.Len(t, legacy.DisabledAPIKeys, 1)
 }
 
 func TestUpstreamCredentialService_RotateSameSecretKeepsCredentialIdentity(t *testing.T) {

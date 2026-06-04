@@ -149,13 +149,13 @@ func TestBackupService_Restore_RemapChannelIDsInModelSettingsAndAPIKeyProfiles(t
 		Channels: []*BackupChannel{
 			{
 				Channel: ent.Channel{
-					ID:      oldChannelID,
-					Type:    channel.TypeOpenai,
-					Name:    "Channel From Backup",
-					BaseURL: "https://api.example.com",
-					Status:  channel.StatusEnabled,
+					ID:          oldChannelID,
+					Type:        channel.TypeOpenai,
+					Name:        "Channel From Backup",
+					BaseURL:     "https://api.example.com",
+					Status:      channel.StatusEnabled,
+					Credentials: objects.ChannelCredentials{APIKey: "backup-api-key"},
 				},
-				Credentials: objects.ChannelCredentials{APIKey: "backup-api-key"},
 			},
 		},
 		Models: []*BackupModel{
@@ -276,13 +276,13 @@ func TestBackupService_Restore_RemapChannelIDsInProjectProfiles(t *testing.T) {
 		Channels: []*BackupChannel{
 			{
 				Channel: ent.Channel{
-					ID:      oldChannelID,
-					Type:    channel.TypeOpenai,
-					Name:    "Project Channel From Backup",
-					BaseURL: "https://api.example.com",
-					Status:  channel.StatusEnabled,
+					ID:          oldChannelID,
+					Type:        channel.TypeOpenai,
+					Name:        "Project Channel From Backup",
+					BaseURL:     "https://api.example.com",
+					Status:      channel.StatusEnabled,
+					Credentials: objects.ChannelCredentials{APIKey: "backup-api-key"},
 				},
-				Credentials: objects.ChannelCredentials{APIKey: "backup-api-key"},
 			},
 		},
 	}
@@ -325,14 +325,12 @@ func TestBackupService_Restore_NewData(t *testing.T) {
 					Name:                    "New Channel",
 					BaseURL:                 baseURL,
 					Status:                  channel.StatusEnabled,
+					Credentials:             objects.ChannelCredentials{APIKey: "test-api-key"},
 					SupportedModels:         []string{"new-model-1"},
 					AutoSyncSupportedModels: autoSync,
 					Tags:                    []string{"new"},
 					DefaultTestModel:        "new-model-1",
 					OrderingWeight:          10,
-				},
-				Credentials: objects.ChannelCredentials{
-					APIKey: "test-api-key",
 				},
 			},
 		},
@@ -428,14 +426,12 @@ func TestBackupService_Restore_UpdateExisting(t *testing.T) {
 					Name:                    ch1.Name,
 					BaseURL:                 baseURL,
 					Status:                  channel.StatusDisabled,
+					Credentials:             objects.ChannelCredentials{APIKey: "test-api-key"},
 					SupportedModels:         []string{"updated-model"},
 					AutoSyncSupportedModels: autoSync,
 					Tags:                    []string{"updated"},
 					DefaultTestModel:        "updated-model",
 					OrderingWeight:          20,
-				},
-				Credentials: objects.ChannelCredentials{
-					APIKey: "test-api-key",
 				},
 			},
 		},

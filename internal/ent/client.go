@@ -30,7 +30,6 @@ import (
 	"github.com/looplj/axonhub/internal/ent/project"
 	"github.com/looplj/axonhub/internal/ent/prompt"
 	"github.com/looplj/axonhub/internal/ent/promptprotectionrule"
-	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/request"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
 	"github.com/looplj/axonhub/internal/ent/role"
@@ -79,8 +78,6 @@ type Client struct {
 	Prompt *PromptClient
 	// PromptProtectionRule is the client for interacting with the PromptProtectionRule builders.
 	PromptProtectionRule *PromptProtectionRuleClient
-	// ProviderQuotaStatus is the client for interacting with the ProviderQuotaStatus builders.
-	ProviderQuotaStatus *ProviderQuotaStatusClient
 	// Request is the client for interacting with the Request builders.
 	Request *RequestClient
 	// RequestExecution is the client for interacting with the RequestExecution builders.
@@ -131,7 +128,6 @@ func (c *Client) init() {
 	c.Project = NewProjectClient(c.config)
 	c.Prompt = NewPromptClient(c.config)
 	c.PromptProtectionRule = NewPromptProtectionRuleClient(c.config)
-	c.ProviderQuotaStatus = NewProviderQuotaStatusClient(c.config)
 	c.Request = NewRequestClient(c.config)
 	c.RequestExecution = NewRequestExecutionClient(c.config)
 	c.Role = NewRoleClient(c.config)
@@ -250,7 +246,6 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Project:                  NewProjectClient(cfg),
 		Prompt:                   NewPromptClient(cfg),
 		PromptProtectionRule:     NewPromptProtectionRuleClient(cfg),
-		ProviderQuotaStatus:      NewProviderQuotaStatusClient(cfg),
 		Request:                  NewRequestClient(cfg),
 		RequestExecution:         NewRequestExecutionClient(cfg),
 		Role:                     NewRoleClient(cfg),
@@ -296,7 +291,6 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Project:                  NewProjectClient(cfg),
 		Prompt:                   NewPromptClient(cfg),
 		PromptProtectionRule:     NewPromptProtectionRuleClient(cfg),
-		ProviderQuotaStatus:      NewProviderQuotaStatusClient(cfg),
 		Request:                  NewRequestClient(cfg),
 		RequestExecution:         NewRequestExecutionClient(cfg),
 		Role:                     NewRoleClient(cfg),
@@ -340,9 +334,9 @@ func (c *Client) Use(hooks ...Hook) {
 		c.APIKey, c.APIKeyProfileTemplate, c.Channel, c.ChannelCredentialRef,
 		c.ChannelModelPrice, c.ChannelModelPriceVersion, c.ChannelOverrideTemplate,
 		c.ChannelProbe, c.CredentialQuotaScope, c.DataStorage, c.Model, c.OIDCIdentity,
-		c.Project, c.Prompt, c.PromptProtectionRule, c.ProviderQuotaStatus, c.Request,
-		c.RequestExecution, c.Role, c.System, c.Thread, c.Trace, c.UpstreamCredential,
-		c.UsageLog, c.User, c.UserProject, c.UserRole,
+		c.Project, c.Prompt, c.PromptProtectionRule, c.Request, c.RequestExecution,
+		c.Role, c.System, c.Thread, c.Trace, c.UpstreamCredential, c.UsageLog, c.User,
+		c.UserProject, c.UserRole,
 	} {
 		n.Use(hooks...)
 	}
@@ -355,9 +349,9 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.APIKey, c.APIKeyProfileTemplate, c.Channel, c.ChannelCredentialRef,
 		c.ChannelModelPrice, c.ChannelModelPriceVersion, c.ChannelOverrideTemplate,
 		c.ChannelProbe, c.CredentialQuotaScope, c.DataStorage, c.Model, c.OIDCIdentity,
-		c.Project, c.Prompt, c.PromptProtectionRule, c.ProviderQuotaStatus, c.Request,
-		c.RequestExecution, c.Role, c.System, c.Thread, c.Trace, c.UpstreamCredential,
-		c.UsageLog, c.User, c.UserProject, c.UserRole,
+		c.Project, c.Prompt, c.PromptProtectionRule, c.Request, c.RequestExecution,
+		c.Role, c.System, c.Thread, c.Trace, c.UpstreamCredential, c.UsageLog, c.User,
+		c.UserProject, c.UserRole,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -396,8 +390,6 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Prompt.mutate(ctx, m)
 	case *PromptProtectionRuleMutation:
 		return c.PromptProtectionRule.mutate(ctx, m)
-	case *ProviderQuotaStatusMutation:
-		return c.ProviderQuotaStatus.mutate(ctx, m)
 	case *RequestMutation:
 		return c.Request.mutate(ctx, m)
 	case *RequestExecutionMutation:
@@ -956,22 +948,6 @@ func (c *ChannelClient) QueryCredentialRefs(_m *Channel) *ChannelCredentialRefQu
 			sqlgraph.From(channel.Table, channel.FieldID, id),
 			sqlgraph.To(channelcredentialref.Table, channelcredentialref.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, channel.CredentialRefsTable, channel.CredentialRefsColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryProviderQuotaStatuses queries the provider_quota_statuses edge of a Channel.
-func (c *ChannelClient) QueryProviderQuotaStatuses(_m *Channel) *ProviderQuotaStatusQuery {
-	query := (&ProviderQuotaStatusClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(channel.Table, channel.FieldID, id),
-			sqlgraph.To(providerquotastatus.Table, providerquotastatus.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, channel.ProviderQuotaStatusesTable, channel.ProviderQuotaStatusesColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -1906,22 +1882,6 @@ func (c *CredentialQuotaScopeClient) QueryCredentials(_m *CredentialQuotaScope) 
 			sqlgraph.From(credentialquotascope.Table, credentialquotascope.FieldID, id),
 			sqlgraph.To(upstreamcredential.Table, upstreamcredential.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, credentialquotascope.CredentialsTable, credentialquotascope.CredentialsColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryProviderQuotaStatuses queries the provider_quota_statuses edge of a CredentialQuotaScope.
-func (c *CredentialQuotaScopeClient) QueryProviderQuotaStatuses(_m *CredentialQuotaScope) *ProviderQuotaStatusQuery {
-	query := (&ProviderQuotaStatusClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(credentialquotascope.Table, credentialquotascope.FieldID, id),
-			sqlgraph.To(providerquotastatus.Table, providerquotastatus.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, credentialquotascope.ProviderQuotaStatusesTable, credentialquotascope.ProviderQuotaStatusesColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -3019,189 +2979,6 @@ func (c *PromptProtectionRuleClient) mutate(ctx context.Context, m *PromptProtec
 		return (&PromptProtectionRuleDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown PromptProtectionRule mutation op: %q", m.Op())
-	}
-}
-
-// ProviderQuotaStatusClient is a client for the ProviderQuotaStatus schema.
-type ProviderQuotaStatusClient struct {
-	config
-}
-
-// NewProviderQuotaStatusClient returns a client for the ProviderQuotaStatus from the given config.
-func NewProviderQuotaStatusClient(c config) *ProviderQuotaStatusClient {
-	return &ProviderQuotaStatusClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `providerquotastatus.Hooks(f(g(h())))`.
-func (c *ProviderQuotaStatusClient) Use(hooks ...Hook) {
-	c.hooks.ProviderQuotaStatus = append(c.hooks.ProviderQuotaStatus, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `providerquotastatus.Intercept(f(g(h())))`.
-func (c *ProviderQuotaStatusClient) Intercept(interceptors ...Interceptor) {
-	c.inters.ProviderQuotaStatus = append(c.inters.ProviderQuotaStatus, interceptors...)
-}
-
-// Create returns a builder for creating a ProviderQuotaStatus entity.
-func (c *ProviderQuotaStatusClient) Create() *ProviderQuotaStatusCreate {
-	mutation := newProviderQuotaStatusMutation(c.config, OpCreate)
-	return &ProviderQuotaStatusCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of ProviderQuotaStatus entities.
-func (c *ProviderQuotaStatusClient) CreateBulk(builders ...*ProviderQuotaStatusCreate) *ProviderQuotaStatusCreateBulk {
-	return &ProviderQuotaStatusCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *ProviderQuotaStatusClient) MapCreateBulk(slice any, setFunc func(*ProviderQuotaStatusCreate, int)) *ProviderQuotaStatusCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &ProviderQuotaStatusCreateBulk{err: fmt.Errorf("calling to ProviderQuotaStatusClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*ProviderQuotaStatusCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &ProviderQuotaStatusCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for ProviderQuotaStatus.
-func (c *ProviderQuotaStatusClient) Update() *ProviderQuotaStatusUpdate {
-	mutation := newProviderQuotaStatusMutation(c.config, OpUpdate)
-	return &ProviderQuotaStatusUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *ProviderQuotaStatusClient) UpdateOne(_m *ProviderQuotaStatus) *ProviderQuotaStatusUpdateOne {
-	mutation := newProviderQuotaStatusMutation(c.config, OpUpdateOne, withProviderQuotaStatus(_m))
-	return &ProviderQuotaStatusUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *ProviderQuotaStatusClient) UpdateOneID(id int) *ProviderQuotaStatusUpdateOne {
-	mutation := newProviderQuotaStatusMutation(c.config, OpUpdateOne, withProviderQuotaStatusID(id))
-	return &ProviderQuotaStatusUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for ProviderQuotaStatus.
-func (c *ProviderQuotaStatusClient) Delete() *ProviderQuotaStatusDelete {
-	mutation := newProviderQuotaStatusMutation(c.config, OpDelete)
-	return &ProviderQuotaStatusDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *ProviderQuotaStatusClient) DeleteOne(_m *ProviderQuotaStatus) *ProviderQuotaStatusDeleteOne {
-	return c.DeleteOneID(_m.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *ProviderQuotaStatusClient) DeleteOneID(id int) *ProviderQuotaStatusDeleteOne {
-	builder := c.Delete().Where(providerquotastatus.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &ProviderQuotaStatusDeleteOne{builder}
-}
-
-// Query returns a query builder for ProviderQuotaStatus.
-func (c *ProviderQuotaStatusClient) Query() *ProviderQuotaStatusQuery {
-	return &ProviderQuotaStatusQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeProviderQuotaStatus},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a ProviderQuotaStatus entity by its id.
-func (c *ProviderQuotaStatusClient) Get(ctx context.Context, id int) (*ProviderQuotaStatus, error) {
-	return c.Query().Where(providerquotastatus.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *ProviderQuotaStatusClient) GetX(ctx context.Context, id int) *ProviderQuotaStatus {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// QueryChannel queries the channel edge of a ProviderQuotaStatus.
-func (c *ProviderQuotaStatusClient) QueryChannel(_m *ProviderQuotaStatus) *ChannelQuery {
-	query := (&ChannelClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(providerquotastatus.Table, providerquotastatus.FieldID, id),
-			sqlgraph.To(channel.Table, channel.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, providerquotastatus.ChannelTable, providerquotastatus.ChannelColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryCredential queries the credential edge of a ProviderQuotaStatus.
-func (c *ProviderQuotaStatusClient) QueryCredential(_m *ProviderQuotaStatus) *UpstreamCredentialQuery {
-	query := (&UpstreamCredentialClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(providerquotastatus.Table, providerquotastatus.FieldID, id),
-			sqlgraph.To(upstreamcredential.Table, upstreamcredential.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, providerquotastatus.CredentialTable, providerquotastatus.CredentialColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// QueryQuotaScope queries the quota_scope edge of a ProviderQuotaStatus.
-func (c *ProviderQuotaStatusClient) QueryQuotaScope(_m *ProviderQuotaStatus) *CredentialQuotaScopeQuery {
-	query := (&CredentialQuotaScopeClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(providerquotastatus.Table, providerquotastatus.FieldID, id),
-			sqlgraph.To(credentialquotascope.Table, credentialquotascope.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, providerquotastatus.QuotaScopeTable, providerquotastatus.QuotaScopeColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
-// Hooks returns the client hooks.
-func (c *ProviderQuotaStatusClient) Hooks() []Hook {
-	hooks := c.hooks.ProviderQuotaStatus
-	return append(hooks[:len(hooks):len(hooks)], providerquotastatus.Hooks[:]...)
-}
-
-// Interceptors returns the client interceptors.
-func (c *ProviderQuotaStatusClient) Interceptors() []Interceptor {
-	inters := c.inters.ProviderQuotaStatus
-	return append(inters[:len(inters):len(inters)], providerquotastatus.Interceptors[:]...)
-}
-
-func (c *ProviderQuotaStatusClient) mutate(ctx context.Context, m *ProviderQuotaStatusMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&ProviderQuotaStatusCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&ProviderQuotaStatusUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&ProviderQuotaStatusUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&ProviderQuotaStatusDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown ProviderQuotaStatus mutation op: %q", m.Op())
 	}
 }
 
@@ -4486,22 +4263,6 @@ func (c *UpstreamCredentialClient) QueryUsageLogs(_m *UpstreamCredential) *Usage
 	return query
 }
 
-// QueryProviderQuotaStatuses queries the provider_quota_statuses edge of a UpstreamCredential.
-func (c *UpstreamCredentialClient) QueryProviderQuotaStatuses(_m *UpstreamCredential) *ProviderQuotaStatusQuery {
-	query := (&ProviderQuotaStatusClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(upstreamcredential.Table, upstreamcredential.FieldID, id),
-			sqlgraph.To(providerquotastatus.Table, providerquotastatus.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, upstreamcredential.ProviderQuotaStatusesTable, upstreamcredential.ProviderQuotaStatusesColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // QueryQuotaScope queries the quota_scope edge of a UpstreamCredential.
 func (c *UpstreamCredentialClient) QueryQuotaScope(_m *UpstreamCredential) *CredentialQuotaScopeQuery {
 	query := (&CredentialQuotaScopeClient{config: c.config}).Query()
@@ -5343,16 +5104,14 @@ type (
 		APIKey, APIKeyProfileTemplate, Channel, ChannelCredentialRef, ChannelModelPrice,
 		ChannelModelPriceVersion, ChannelOverrideTemplate, ChannelProbe,
 		CredentialQuotaScope, DataStorage, Model, OIDCIdentity, Project, Prompt,
-		PromptProtectionRule, ProviderQuotaStatus, Request, RequestExecution, Role,
-		System, Thread, Trace, UpstreamCredential, UsageLog, User, UserProject,
-		UserRole []ent.Hook
+		PromptProtectionRule, Request, RequestExecution, Role, System, Thread, Trace,
+		UpstreamCredential, UsageLog, User, UserProject, UserRole []ent.Hook
 	}
 	inters struct {
 		APIKey, APIKeyProfileTemplate, Channel, ChannelCredentialRef, ChannelModelPrice,
 		ChannelModelPriceVersion, ChannelOverrideTemplate, ChannelProbe,
 		CredentialQuotaScope, DataStorage, Model, OIDCIdentity, Project, Prompt,
-		PromptProtectionRule, ProviderQuotaStatus, Request, RequestExecution, Role,
-		System, Thread, Trace, UpstreamCredential, UsageLog, User, UserProject,
-		UserRole []ent.Interceptor
+		PromptProtectionRule, Request, RequestExecution, Role, System, Thread, Trace,
+		UpstreamCredential, UsageLog, User, UserProject, UserRole []ent.Interceptor
 	}
 )

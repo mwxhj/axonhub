@@ -24,10 +24,11 @@ func TestGeminiChannel_BuildChannelWithOutbounds(t *testing.T) {
 		SetName("Gemini Multi Endpoint Channel").
 		SetType(channel.TypeGemini).
 		SetBaseURL("https://generativelanguage.googleapis.com").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key"}).
+		SetCredentials(objects.ChannelCredentials{}).
 		SetSupportedModels([]string{"gemini-2.5-pro"}).
 		SetDefaultTestModel("gemini-2.5-pro").
 		SaveX(ctx)
+	entChannel = attachAPIKeyCredentialForTest(t, ctx, client, entChannel, "test-key")
 
 	channelSvc := NewChannelServiceForTest(client)
 

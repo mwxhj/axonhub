@@ -9,7 +9,6 @@ import {
   createUpstreamCredentialInputSchema,
   credentialQuotaScopesConnectionSchema,
   credentialRefSchema,
-  migrateLegacyCredentialsPayloadSchema,
   rotateUpstreamCredentialSecretInputSchema,
   updateChannelCredentialRefInputSchema,
   updateUpstreamCredentialInputSchema,
@@ -22,8 +21,6 @@ import {
   type CredentialQuotaScopesConnection,
   type CredentialRef,
   type CredentialStatus,
-  type MigrateLegacyCredentialsPayload,
-  type ProviderQuotaStatus,
   type RotateUpstreamCredentialSecretInput,
   type UpdateChannelCredentialRefInput,
   type UpdateUpstreamCredentialInput,
@@ -39,8 +36,6 @@ export type {
   CredentialQuotaScopesConnection,
   CredentialRef,
   CredentialStatus,
-  MigrateLegacyCredentialsPayload,
-  ProviderQuotaStatus,
   RotateUpstreamCredentialSecretInput,
   UpdateChannelCredentialRefInput,
   UpdateUpstreamCredentialInput,
@@ -70,22 +65,12 @@ const CREDENTIAL_FIELDS = `
     lastError
     remark
   }
-  providerQuotaStatuses {
-    id
-    providerType
-    status
-    nextResetAt
-    ready
-    nextCheckAt
-    updatedAt
-  }
   secretSummary {
     kind
     providerType
     baseURL
     issuerScope
   }
-  quotaStatus
   lastError
   status
   remark
@@ -368,17 +353,6 @@ const UPDATE_CHANNEL_CREDENTIAL_REF_MUTATION = `
 const DETACH_CREDENTIAL_FROM_CHANNEL_MUTATION = `
   mutation DetachCredentialFromChannel($channelID: ID!, $credentialID: ID!) {
     detachCredentialFromChannel(channelID: $channelID, credentialID: $credentialID)
-  }
-`;
-
-const MIGRATE_LEGACY_CHANNEL_CREDENTIALS_MUTATION = `
-  mutation MigrateLegacyChannelCredentials {
-    migrateLegacyChannelCredentials {
-      migratedChannels
-      createdCredentials
-      createdRefs
-      skippedChannels
-    }
   }
 `;
 
@@ -687,35 +661,6 @@ export function useDetachCredentialFromChannel() {
     onSuccess: () => {
       invalidateCredentialQueries(queryClient);
       toast.success(t('credentials.messages.detachSuccess'));
-    },
-  });
-}
-
-export function useMigrateLegacyChannelCredentials() {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const { handleError } = useErrorHandler();
-
-  return useMutation({
-    mutationFn: async () => {
-      try {
-        const data = await graphqlRequest<{ migrateLegacyChannelCredentials: MigrateLegacyCredentialsPayload }>(
-          MIGRATE_LEGACY_CHANNEL_CREDENTIALS_MUTATION
-        );
-        return migrateLegacyCredentialsPayloadSchema.parse(data.migrateLegacyChannelCredentials);
-      } catch (error) {
-        handleError(error, { context: t('credentials.buttons.migrateLegacy') });
-        throw error;
-      }
-    },
-    onSuccess: (payload) => {
-      invalidateCredentialQueries(queryClient);
-      toast.success(
-        t('credentials.messages.migrateSuccess', {
-          credentials: payload.createdCredentials,
-          refs: payload.createdRefs,
-        })
-      );
     },
   });
 }

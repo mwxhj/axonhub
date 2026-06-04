@@ -25,7 +25,6 @@ mutation UpdateAPIKeyProfiles($id: ID!, $input: UpdateAPIKeyProfilesInput!) {
         channelTags
         channelTagsMatchMode
         modelIDs
-        loadBalanceStrategy
       }
     }
   }
@@ -49,7 +48,6 @@ mutation LoadApiKeyProfileTemplate($input: LoadApiKeyProfileTemplateInput!) {
         channelTags
         channelTagsMatchMode
         modelIDs
-        loadBalanceStrategy
       }
     }
   }

@@ -72,8 +72,3 @@ var defaultVideoStorageSettings = VideoStorageSettings{
 	ScanIntervalMinutes: 1,
 	ScanLimit:           50,
 }
-
-var defaultQuotaEnforcementSettings = QuotaEnforcementSettings{
-	Enabled: false,
-	Mode:    QuotaEnforcementModeExhaustedOnly,
-}

@@ -161,18 +161,6 @@ func (_m *Channel) CredentialRefs(
 	return _m.QueryCredentialRefs().Paginate(ctx, after, first, before, last, opts...)
 }
 
-func (_m *Channel) ProviderQuotaStatuses(ctx context.Context) (result []*ProviderQuotaStatus, err error) {
-	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
-		result, err = _m.NamedProviderQuotaStatuses(graphql.GetFieldContext(ctx).Field.Alias)
-	} else {
-		result, err = _m.Edges.ProviderQuotaStatusesOrErr()
-	}
-	if IsNotLoaded(err) {
-		result, err = _m.QueryProviderQuotaStatuses().All(ctx)
-	}
-	return result, err
-}
-
 func (_m *ChannelCredentialRef) Channel(ctx context.Context) (*Channel, error) {
 	result, err := _m.Edges.ChannelOrErr()
 	if IsNotLoaded(err) {
@@ -254,18 +242,6 @@ func (_m *CredentialQuotaScope) Credentials(
 	return _m.QueryCredentials().Paginate(ctx, after, first, before, last, opts...)
 }
 
-func (_m *CredentialQuotaScope) ProviderQuotaStatuses(ctx context.Context) (result []*ProviderQuotaStatus, err error) {
-	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
-		result, err = _m.NamedProviderQuotaStatuses(graphql.GetFieldContext(ctx).Field.Alias)
-	} else {
-		result, err = _m.Edges.ProviderQuotaStatusesOrErr()
-	}
-	if IsNotLoaded(err) {
-		result, err = _m.QueryProviderQuotaStatuses().All(ctx)
-	}
-	return result, err
-}
-
 func (_m *CredentialQuotaScope) Executions(
 	ctx context.Context, after *Cursor, first *int, before *Cursor, last *int, orderBy *RequestExecutionOrder, where *RequestExecutionWhereInput,
 ) (*RequestExecutionConnection, error) {
@@ -274,7 +250,7 @@ func (_m *CredentialQuotaScope) Executions(
 		WithRequestExecutionFilter(where.Filter),
 	}
 	alias := graphql.GetFieldContext(ctx).Field.Alias
-	totalCount, hasTotalCount := _m.Edges.totalCount[2][alias]
+	totalCount, hasTotalCount := _m.Edges.totalCount[1][alias]
 	if nodes, err := _m.NamedExecutions(alias); err == nil || hasTotalCount {
 		pager, err := newRequestExecutionPager(opts, last != nil)
 		if err != nil {
@@ -295,7 +271,7 @@ func (_m *CredentialQuotaScope) UsageLogs(
 		WithUsageLogFilter(where.Filter),
 	}
 	alias := graphql.GetFieldContext(ctx).Field.Alias
-	totalCount, hasTotalCount := _m.Edges.totalCount[3][alias]
+	totalCount, hasTotalCount := _m.Edges.totalCount[2][alias]
 	if nodes, err := _m.NamedUsageLogs(alias); err == nil || hasTotalCount {
 		pager, err := newUsageLogPager(opts, last != nil)
 		if err != nil {
@@ -587,30 +563,6 @@ func (_m *Prompt) Projects(
 		return conn, nil
 	}
 	return _m.QueryProjects().Paginate(ctx, after, first, before, last, opts...)
-}
-
-func (_m *ProviderQuotaStatus) Channel(ctx context.Context) (*Channel, error) {
-	result, err := _m.Edges.ChannelOrErr()
-	if IsNotLoaded(err) {
-		result, err = _m.QueryChannel().Only(ctx)
-	}
-	return result, MaskNotFound(err)
-}
-
-func (_m *ProviderQuotaStatus) Credential(ctx context.Context) (*UpstreamCredential, error) {
-	result, err := _m.Edges.CredentialOrErr()
-	if IsNotLoaded(err) {
-		result, err = _m.QueryCredential().Only(ctx)
-	}
-	return result, MaskNotFound(err)
-}
-
-func (_m *ProviderQuotaStatus) QuotaScope(ctx context.Context) (*CredentialQuotaScope, error) {
-	result, err := _m.Edges.QuotaScopeOrErr()
-	if IsNotLoaded(err) {
-		result, err = _m.QueryQuotaScope().Only(ctx)
-	}
-	return result, MaskNotFound(err)
 }
 
 func (_m *Request) APIKey(ctx context.Context) (*APIKey, error) {
@@ -912,18 +864,6 @@ func (_m *UpstreamCredential) UsageLogs(
 		return conn, nil
 	}
 	return _m.QueryUsageLogs().Paginate(ctx, after, first, before, last, opts...)
-}
-
-func (_m *UpstreamCredential) ProviderQuotaStatuses(ctx context.Context) (result []*ProviderQuotaStatus, err error) {
-	if fc := graphql.GetFieldContext(ctx); fc != nil && fc.Field.Alias != "" {
-		result, err = _m.NamedProviderQuotaStatuses(graphql.GetFieldContext(ctx).Field.Alias)
-	} else {
-		result, err = _m.Edges.ProviderQuotaStatusesOrErr()
-	}
-	if IsNotLoaded(err) {
-		result, err = _m.QueryProviderQuotaStatuses().All(ctx)
-	}
-	return result, err
 }
 
 func (_m *UpstreamCredential) QuotaScope(ctx context.Context) (*CredentialQuotaScope, error) {

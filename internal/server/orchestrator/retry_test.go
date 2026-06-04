@@ -5,11 +5,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/looplj/axonhub/internal/ent"
-	"github.com/looplj/axonhub/internal/objects"
 	"github.com/looplj/axonhub/internal/server/biz"
 	"github.com/looplj/axonhub/llm"
 	"github.com/looplj/axonhub/llm/httpclient"
@@ -32,92 +30,14 @@ func TestDeriveLoadBalancerStrategy(t *testing.T) {
 			expected: defaultStrategy,
 		},
 		{
-			name: "active profile is nil",
-			apiKey: &ent.APIKey{
-				Profiles: nil,
-			},
+			name:     "api key without profiles uses system strategy",
+			apiKey:   &ent.APIKey{},
 			expected: defaultStrategy,
 		},
 		{
-			name: "active profile name is empty",
-			apiKey: &ent.APIKey{
-				Profiles: &objects.APIKeyProfiles{
-					ActiveProfile: "",
-				},
-			},
+			name:     "api key cannot override system strategy anymore",
+			apiKey:   &ent.APIKey{},
 			expected: defaultStrategy,
-		},
-		{
-			name: "active profile not found in profiles list",
-			apiKey: &ent.APIKey{
-				Profiles: &objects.APIKeyProfiles{
-					ActiveProfile: "non-existent",
-					Profiles: []objects.APIKeyProfile{
-						{Name: "other"},
-					},
-				},
-			},
-			expected: defaultStrategy,
-		},
-		{
-			name: "load balance strategy is nil in active profile",
-			apiKey: &ent.APIKey{
-				Profiles: &objects.APIKeyProfiles{
-					ActiveProfile: "default",
-					Profiles: []objects.APIKeyProfile{
-						{
-							Name:                "default",
-							LoadBalanceStrategy: nil,
-						},
-					},
-				},
-			},
-			expected: defaultStrategy,
-		},
-		{
-			name: "load balance strategy is empty in active profile",
-			apiKey: &ent.APIKey{
-				Profiles: &objects.APIKeyProfiles{
-					ActiveProfile: "default",
-					Profiles: []objects.APIKeyProfile{
-						{
-							Name:                "default",
-							LoadBalanceStrategy: lo.ToPtr(""),
-						},
-					},
-				},
-			},
-			expected: defaultStrategy,
-		},
-		{
-			name: "load balance strategy is system_default in active profile",
-			apiKey: &ent.APIKey{
-				Profiles: &objects.APIKeyProfiles{
-					ActiveProfile: "default",
-					Profiles: []objects.APIKeyProfile{
-						{
-							Name:                "default",
-							LoadBalanceStrategy: lo.ToPtr("system_default"),
-						},
-					},
-				},
-			},
-			expected: defaultStrategy,
-		},
-		{
-			name: "load balance strategy is set to specific value in active profile",
-			apiKey: &ent.APIKey{
-				Profiles: &objects.APIKeyProfiles{
-					ActiveProfile: "default",
-					Profiles: []objects.APIKeyProfile{
-						{
-							Name:                "default",
-							LoadBalanceStrategy: lo.ToPtr("failover"),
-						},
-					},
-				},
-			},
-			expected: "failover",
 		},
 	}
 

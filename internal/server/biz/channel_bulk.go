@@ -110,7 +110,6 @@ func (svc *ChannelService) BulkCreateChannels(ctx context.Context, input BulkCre
 				Type:                    input.Type,
 				BaseURL:                 input.BaseURL,
 				Name:                    channelName,
-				Credentials:             objects.ChannelCredentials{},
 				SupportedModels:         input.SupportedModels,
 				AutoSyncSupportedModels: input.AutoSyncSupportedModels,
 				Tags:                    tagsToUse,

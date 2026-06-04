@@ -79,8 +79,17 @@ func stickyTestCredentialCandidate(id int, priority int, weight int, keys ...str
 	candidate := stickyTestCandidate(id, priority, weight)
 	candidate.Channel.Type = channel.TypeOpenai
 	candidate.Channel.BaseURL = "https://api.openai.com"
-	candidate.Channel.Credentials = objects.ChannelCredentials{APIKeys: keys}
-	candidate.Channel.DisabledAPIKeys = nil
+	if len(keys) == 0 {
+		return candidate
+	}
+
+	views := make([]biz.ChannelCredentialView, 0, len(keys))
+	for i, key := range keys {
+		fingerprint := biz.ChannelCredentialFingerprintForAPIKey(candidate.Channel.Type.String(), candidate.Channel.BaseURL, key)
+		views = append(views, stickyTestCredentialView(i+1, fingerprint, key))
+	}
+
+	candidate.Channel = candidate.Channel.WithCredentialViewsForSelection(views)
 	return candidate
 }
 

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -242,7 +243,7 @@ func (f *ModelFetcher) FetchModels(ctx context.Context, input FetchModelsInput) 
 	}
 
 	if input.ChannelID != nil {
-		ch, err := f.channelService.entFromContext(ctx).Channel.Get(ctx, *input.ChannelID)
+		ch, err := f.channelService.GetChannel(ctx, *input.ChannelID)
 		if err != nil {
 			return &FetchModelsResult{
 				Models: []ModelIdentify{},
@@ -250,21 +251,25 @@ func (f *ModelFetcher) FetchModels(ctx context.Context, input FetchModelsInput) 
 			}, nil
 		}
 
-		if ch.Credentials.IsOAuth() {
-			if models := f.getDefaultModelsByType(ctx, ch.Type); models != nil {
+		views := ch.CredentialViews()
+		hasOAuth := slices.ContainsFunc(views, func(view ChannelCredentialView) bool {
+			return view.Enabled && normalizeCredentialFingerprintPart(view.AuthKind) == channelCredentialAuthKindOAuth
+		})
+		if hasOAuth {
+			if models := f.getDefaultModelsByType(ctx, ch.Channel.Type); models != nil {
 				return &FetchModelsResult{Models: models}, nil
 			}
 		}
 
 		if apiKey == "" {
-			apiKey = ch.Credentials.APIKey
-			if apiKey == "" && len(ch.Credentials.APIKeys) > 0 {
-				apiKey = ch.Credentials.APIKeys[0]
+			enabledKeys := ch.GetEnabledAPIKeys()
+			if len(enabledKeys) > 0 {
+				apiKey = enabledKeys[0]
 			}
 		}
 
-		if ch.Settings != nil {
-			proxyConfig = ch.Settings.Proxy
+		if ch.Channel.Settings != nil {
+			proxyConfig = ch.Channel.Settings.Proxy
 		}
 	}
 

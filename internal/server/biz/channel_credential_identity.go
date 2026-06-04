@@ -28,8 +28,7 @@ const (
 )
 
 const (
-	ChannelCredentialSourceRef    = "ref"
-	ChannelCredentialSourceLegacy = "legacy"
+	ChannelCredentialSourceRef = "ref"
 )
 
 // ChannelCredentialView is the runtime execution identity resolved for a
@@ -293,7 +292,7 @@ func (c *Channel) CredentialViews() []ChannelCredentialView {
 		return runtimeCredentialViews(c.cachedCredentialViews)
 	}
 
-	return runtimeCredentialViews(legacyCredentialViews(c.Channel))
+	return nil
 }
 
 // WithCredentialViewsForSelection returns a shallow channel snapshot whose
@@ -310,11 +309,6 @@ func (c *Channel) WithCredentialViewsForSelection(views []ChannelCredentialView)
 	clone := *c
 	clone.cachedCredentialViews = views
 	clone.cachedEnabledAPIKeys = enabledAPIKeysFromCredentialViews(views)
-	if c.Channel != nil {
-		entClone := *c.Channel
-		entClone.Credentials = credentialsFromViews(views, c.Channel.Credentials)
-		clone.Channel = &entClone
-	}
 
 	return &clone
 }
@@ -325,9 +319,6 @@ func (c *Channel) enabledCredentialViews() []ChannelCredentialView {
 	}
 
 	views := c.cachedCredentialViews
-	if len(views) == 0 {
-		views = legacyCredentialViews(c.Channel)
-	}
 
 	enabled := make([]ChannelCredentialView, 0, len(views))
 	for _, view := range views {
@@ -397,43 +388,6 @@ func authCapableAPIKeysFromCredentialViews(views []ChannelCredentialView) []stri
 	return result
 }
 
-func legacyCredentialViewsForAPIKeys(c *Channel, keys []string) []ChannelCredentialView {
-	if c == nil {
-		return nil
-	}
-
-	views := make([]ChannelCredentialView, 0, len(keys))
-	for _, key := range keys {
-		key = strings.TrimSpace(key)
-		if key == "" {
-			continue
-		}
-
-		fingerprint := c.CredentialFingerprintForAPIKey(key)
-		if fingerprint == "" {
-			continue
-		}
-		secret := objects.UpstreamCredentialSecretFromAPIKey(key)
-		secretFingerprint := CredentialSecretFingerprintForSecret(channelCredentialAuthKindAPIKey, secret)
-
-		views = append(views, ChannelCredentialView{
-			Fingerprint:       fingerprint,
-			SecretFingerprint: secretFingerprint,
-			ResourceScopeKey:  ChannelCredentialResourceScopeKey(c.Channel, secretFingerprint),
-			AuthKind:          channelCredentialAuthKindAPIKey,
-			SecretKind:        channelCredentialAuthKindAPIKey,
-			IssuerScope:       CredentialIssuerScope(c.Type.String(), c.BaseURL),
-			KeyHint:           CredentialKeyHintForSecret(channelCredentialAuthKindAPIKey, secret),
-			Secret:            secret,
-			Enabled:           true,
-			Weight:            1,
-			Source:            ChannelCredentialSourceLegacy,
-		})
-	}
-
-	return views
-}
-
 // EnabledCredentialFingerprints returns the safe identities for this channel's
 // currently enabled API-key credentials.
 func (c *Channel) EnabledCredentialFingerprints() []string {
@@ -472,14 +426,6 @@ func (c *Channel) HasEnabledCredentialFingerprint(fingerprint string) bool {
 	}
 
 	return slices.Contains(c.EnabledCredentialFingerprints(), fingerprint)
-}
-
-func (c *Channel) legacyCredentialViews() []ChannelCredentialView {
-	if c == nil {
-		return nil
-	}
-
-	return legacyCredentialViews(c.Channel)
 }
 
 func credentialViewsFromRefs(c *ent.Channel) []ChannelCredentialView {
@@ -575,111 +521,6 @@ func primaryCredentialViewForAuthKind(ch *Channel, authKind string) ChannelCrede
 	}
 
 	return ChannelCredentialView{}
-}
-
-func legacyCredentialViews(c *ent.Channel) []ChannelCredentialView {
-	if c == nil {
-		return nil
-	}
-
-	views := make([]ChannelCredentialView, 0, len(c.Credentials.GetAllAPIKeys())+3)
-
-	if c.Credentials.IsOAuth() {
-		secret := objects.UpstreamCredentialSecret{
-			APIKey: strings.TrimSpace(c.Credentials.APIKey),
-			OAuth:  c.Credentials.OAuth,
-		}
-		fingerprint := ChannelCredentialFingerprintForSecret(c.Type.String(), c.BaseURL, channelCredentialAuthKindOAuth, secret)
-		if fingerprint != "" {
-			secretFingerprint := CredentialSecretFingerprintForSecret(channelCredentialAuthKindOAuth, secret)
-			views = append(views, ChannelCredentialView{
-				Fingerprint:       fingerprint,
-				SecretFingerprint: secretFingerprint,
-				ResourceScopeKey:  ChannelCredentialResourceScopeKey(c, secretFingerprint),
-				AuthKind:          channelCredentialAuthKindOAuth,
-				SecretKind:        channelCredentialAuthKindOAuth,
-				IssuerScope:       CredentialIssuerScope(c.Type.String(), c.BaseURL),
-				KeyHint:           CredentialKeyHintForSecret(channelCredentialAuthKindOAuth, secret),
-				Secret:            secret,
-				Enabled:           true,
-				Weight:            1,
-				Source:            ChannelCredentialSourceLegacy,
-			})
-		}
-
-		return views
-	}
-
-	for _, key := range c.Credentials.GetAllAPIKeys() {
-		key = strings.TrimSpace(key)
-		if key == "" {
-			continue
-		}
-		fingerprint := ChannelCredentialFingerprintForAPIKey(c.Type.String(), c.BaseURL, key)
-		if fingerprint == "" {
-			continue
-		}
-		secret := objects.UpstreamCredentialSecretFromAPIKey(key)
-		secretFingerprint := CredentialSecretFingerprintForSecret(channelCredentialAuthKindAPIKey, secret)
-
-		views = append(views, ChannelCredentialView{
-			Fingerprint:       fingerprint,
-			SecretFingerprint: secretFingerprint,
-			ResourceScopeKey:  ChannelCredentialResourceScopeKey(c, secretFingerprint),
-			AuthKind:          channelCredentialAuthKindAPIKey,
-			SecretKind:        channelCredentialAuthKindAPIKey,
-			IssuerScope:       CredentialIssuerScope(c.Type.String(), c.BaseURL),
-			KeyHint:           CredentialKeyHintForSecret(channelCredentialAuthKindAPIKey, secret),
-			Secret:            secret,
-			Enabled:           true,
-			Weight:            1,
-			Source:            ChannelCredentialSourceLegacy,
-		})
-	}
-
-	if c.Credentials.GCP != nil {
-		secret := objects.UpstreamCredentialSecret{GCP: c.Credentials.GCP}
-		fingerprint := ChannelCredentialFingerprintForSecret(c.Type.String(), c.BaseURL, channelCredentialAuthKindGCP, secret)
-		if fingerprint != "" {
-			secretFingerprint := CredentialSecretFingerprintForSecret(channelCredentialAuthKindGCP, secret)
-			views = append(views, ChannelCredentialView{
-				Fingerprint:       fingerprint,
-				SecretFingerprint: secretFingerprint,
-				ResourceScopeKey:  ChannelCredentialResourceScopeKey(c, secretFingerprint),
-				AuthKind:          channelCredentialAuthKindGCP,
-				SecretKind:        channelCredentialAuthKindGCP,
-				IssuerScope:       CredentialIssuerScope(c.Type.String(), c.BaseURL),
-				KeyHint:           CredentialKeyHintForSecret(channelCredentialAuthKindGCP, secret),
-				Secret:            secret,
-				Enabled:           true,
-				Weight:            1,
-				Source:            ChannelCredentialSourceLegacy,
-			})
-		}
-	}
-
-	if c.Credentials.Azure != nil {
-		secret := objects.UpstreamCredentialSecret{Azure: c.Credentials.Azure}
-		fingerprint := ChannelCredentialFingerprintForSecret(c.Type.String(), c.BaseURL, channelCredentialAuthKindAzure, secret)
-		if fingerprint != "" {
-			secretFingerprint := CredentialSecretFingerprintForSecret(channelCredentialAuthKindAzure, secret)
-			views = append(views, ChannelCredentialView{
-				Fingerprint:       fingerprint,
-				SecretFingerprint: secretFingerprint,
-				ResourceScopeKey:  ChannelCredentialResourceScopeKey(c, secretFingerprint),
-				AuthKind:          channelCredentialAuthKindAzure,
-				SecretKind:        channelCredentialAuthKindAzure,
-				IssuerScope:       CredentialIssuerScope(c.Type.String(), c.BaseURL),
-				KeyHint:           CredentialKeyHintForSecret(channelCredentialAuthKindAzure, secret),
-				Secret:            secret,
-				Enabled:           true,
-				Weight:            1,
-				Source:            ChannelCredentialSourceLegacy,
-			})
-		}
-	}
-
-	return dedupeCredentialViews(views)
 }
 
 func credentialsFromViews(views []ChannelCredentialView, fallback objects.ChannelCredentials) objects.ChannelCredentials {

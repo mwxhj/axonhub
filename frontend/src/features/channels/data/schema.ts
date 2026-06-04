@@ -228,42 +228,6 @@ export const channelModelEntrySchema = z.object({
 });
 export type ChannelModelEntry = z.infer<typeof channelModelEntrySchema>;
 
-// Channel Credentials
-export const channelCredentialsSchema = z.object({
-  apiKey: z.string().optional().nullable(),
-  apiKeys: z.array(z.string()).optional().nullable(),
-  oauth: z
-    .object({
-      accessToken: z.string().optional().nullable(),
-      refreshToken: z.string().optional().nullable(),
-      clientID: z.string().optional().nullable(),
-      accountID: z.string().optional().nullable(),
-      expiresAt: z.string().optional().nullable(),
-      tokenType: z.string().optional().nullable(),
-      scopes: z.array(z.string()).optional().nullable(),
-    })
-    .optional()
-    .nullable(),
-  gcp: z
-    .object({
-      region: z.string(),
-      projectID: z.string(),
-      jsonData: z.string(),
-    })
-    .optional()
-    .nullable(),
-});
-export type ChannelCredentials = z.infer<typeof channelCredentialsSchema>;
-
-// Disabled API Key
-export const disabledAPIKeySchema = z.object({
-  key: z.string(),
-  disabledAt: z.string(),
-  errorCode: z.number(),
-  reason: z.string().optional().nullable(),
-});
-export type DisabledAPIKey = z.infer<typeof disabledAPIKeySchema>;
-
 // Channel
 export const channelSchema = z.object({
   id: z.string(),
@@ -274,8 +238,6 @@ export const channelSchema = z.object({
   name: z.string(),
   status: channelStatusSchema,
   policies: channelPoliciesSchema.optional().nullable(),
-  credentials: channelCredentialsSchema.optional().nullable(),
-  disabledAPIKeys: z.array(disabledAPIKeySchema).optional().nullable(),
   supportedModels: z.array(z.string()),
   autoSyncSupportedModels: z.boolean().default(false),
   autoSyncModelPattern: z.string().optional().default(''),
@@ -302,24 +264,6 @@ export const channelEndpointsResponseSchema = z.object({
   endpoints: z.array(channelEndpointSchema).optional().default([]).nullable(),
 });
 export type ChannelEndpointsResponse = z.infer<typeof channelEndpointsResponseSchema>;
-
-export const testAPIKeyResultSchema = z.object({
-  keyPrefix: z.string(),
-  success: z.boolean(),
-  latency: z.number(),
-  error: z.string().optional().nullable(),
-  disabled: z.boolean(),
-});
-export type TestAPIKeyResult = z.infer<typeof testAPIKeyResultSchema>;
-
-export const testChannelAPIKeysPayloadSchema = z.object({
-  channelID: z.string(),
-  total: z.number(),
-  successCount: z.number(),
-  failedCount: z.number(),
-  results: z.array(testAPIKeyResultSchema),
-});
-export type TestChannelAPIKeysPayload = z.infer<typeof testChannelAPIKeysPayloadSchema>;
 
 // Pricing Schemas
 export const pricingModeSchema = z.enum(['flat_fee', 'usage_per_unit', 'usage_tiered', 'usage_volume']);
@@ -394,7 +338,6 @@ export const createChannelInputSchema = z.object({
   orderingWeight: z.number().int().optional(),
   settings: channelSettingsSchema.optional(),
   endpoints: z.array(channelEndpointSchema).optional(),
-  credentials: channelCredentialsSchema.optional().nullable(),
 });
 export type CreateChannelInput = z.infer<typeof createChannelInputSchema>;
 
@@ -414,7 +357,6 @@ export const updateChannelInputSchema = z.object({
   errorMessage: z.string().optional().nullable(),
   remark: z.string().optional().nullable(),
   endpoints: z.array(channelEndpointSchema).optional(),
-  credentials: channelCredentialsSchema.optional().nullable(),
   orderingWeight: z.number().optional(),
 });
 

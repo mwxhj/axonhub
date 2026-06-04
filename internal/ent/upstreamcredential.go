@@ -72,20 +72,17 @@ type UpstreamCredentialEdges struct {
 	Executions []*RequestExecution `json:"executions,omitempty"`
 	// UsageLogs holds the value of the usage_logs edge.
 	UsageLogs []*UsageLog `json:"usage_logs,omitempty"`
-	// ProviderQuotaStatuses holds the value of the provider_quota_statuses edge.
-	ProviderQuotaStatuses []*ProviderQuotaStatus `json:"provider_quota_statuses,omitempty"`
 	// QuotaScope holds the value of the quota_scope edge.
 	QuotaScope *CredentialQuotaScope `json:"quota_scope,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [5]bool
+	loadedTypes [4]bool
 	// totalCount holds the count of the edges above.
-	totalCount [5]map[string]int
+	totalCount [4]map[string]int
 
-	namedChannelRefs           map[string][]*ChannelCredentialRef
-	namedExecutions            map[string][]*RequestExecution
-	namedUsageLogs             map[string][]*UsageLog
-	namedProviderQuotaStatuses map[string][]*ProviderQuotaStatus
+	namedChannelRefs map[string][]*ChannelCredentialRef
+	namedExecutions  map[string][]*RequestExecution
+	namedUsageLogs   map[string][]*UsageLog
 }
 
 // ChannelRefsOrErr returns the ChannelRefs value or an error if the edge
@@ -115,21 +112,12 @@ func (e UpstreamCredentialEdges) UsageLogsOrErr() ([]*UsageLog, error) {
 	return nil, &NotLoadedError{edge: "usage_logs"}
 }
 
-// ProviderQuotaStatusesOrErr returns the ProviderQuotaStatuses value or an error if the edge
-// was not loaded in eager-loading.
-func (e UpstreamCredentialEdges) ProviderQuotaStatusesOrErr() ([]*ProviderQuotaStatus, error) {
-	if e.loadedTypes[3] {
-		return e.ProviderQuotaStatuses, nil
-	}
-	return nil, &NotLoadedError{edge: "provider_quota_statuses"}
-}
-
 // QuotaScopeOrErr returns the QuotaScope value or an error if the edge
 // was not loaded in eager-loading, or loaded but was not found.
 func (e UpstreamCredentialEdges) QuotaScopeOrErr() (*CredentialQuotaScope, error) {
 	if e.QuotaScope != nil {
 		return e.QuotaScope, nil
-	} else if e.loadedTypes[4] {
+	} else if e.loadedTypes[3] {
 		return nil, &NotFoundError{label: credentialquotascope.Label}
 	}
 	return nil, &NotLoadedError{edge: "quota_scope"}
@@ -315,11 +303,6 @@ func (_m *UpstreamCredential) QueryUsageLogs() *UsageLogQuery {
 	return NewUpstreamCredentialClient(_m.config).QueryUsageLogs(_m)
 }
 
-// QueryProviderQuotaStatuses queries the "provider_quota_statuses" edge of the UpstreamCredential entity.
-func (_m *UpstreamCredential) QueryProviderQuotaStatuses() *ProviderQuotaStatusQuery {
-	return NewUpstreamCredentialClient(_m.config).QueryProviderQuotaStatuses(_m)
-}
-
 // QueryQuotaScope queries the "quota_scope" edge of the UpstreamCredential entity.
 func (_m *UpstreamCredential) QueryQuotaScope() *CredentialQuotaScopeQuery {
 	return NewUpstreamCredentialClient(_m.config).QueryQuotaScope(_m)
@@ -480,30 +463,6 @@ func (_m *UpstreamCredential) appendNamedUsageLogs(name string, edges ...*UsageL
 		_m.Edges.namedUsageLogs[name] = []*UsageLog{}
 	} else {
 		_m.Edges.namedUsageLogs[name] = append(_m.Edges.namedUsageLogs[name], edges...)
-	}
-}
-
-// NamedProviderQuotaStatuses returns the ProviderQuotaStatuses named value or an error if the edge was not
-// loaded in eager-loading with this name.
-func (_m *UpstreamCredential) NamedProviderQuotaStatuses(name string) ([]*ProviderQuotaStatus, error) {
-	if _m.Edges.namedProviderQuotaStatuses == nil {
-		return nil, &NotLoadedError{edge: name}
-	}
-	nodes, ok := _m.Edges.namedProviderQuotaStatuses[name]
-	if !ok {
-		return nil, &NotLoadedError{edge: name}
-	}
-	return nodes, nil
-}
-
-func (_m *UpstreamCredential) appendNamedProviderQuotaStatuses(name string, edges ...*ProviderQuotaStatus) {
-	if _m.Edges.namedProviderQuotaStatuses == nil {
-		_m.Edges.namedProviderQuotaStatuses = make(map[string][]*ProviderQuotaStatus)
-	}
-	if len(edges) == 0 {
-		_m.Edges.namedProviderQuotaStatuses[name] = []*ProviderQuotaStatus{}
-	} else {
-		_m.Edges.namedProviderQuotaStatuses[name] = append(_m.Edges.namedProviderQuotaStatuses[name], edges...)
 	}
 }
 

@@ -447,22 +447,24 @@ func TestModelService_ListEnabledModels(t *testing.T) {
 	ctx = authz.WithTestBypass(ctx)
 
 	// Create channels with different configurations
-	_, err := client.Channel.Create().
+	openaiChannel, err := client.Channel.Create().
 		SetType(channel.TypeOpenai).
 		SetName("OpenAI Channel").
 		SetBaseURL("https://api.openai.com/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "key1"}).
+		SetCredentials(objects.ChannelCredentials{}).
 		SetSupportedModels([]string{"gpt-4", "gpt-3.5-turbo"}).
 		SetDefaultTestModel("gpt-4").
 		SetStatus(channel.StatusEnabled).
 		Save(ctx)
 	require.NoError(t, err)
+	openaiChannel = attachAPIKeyCredentialForTest(t, ctx, client, openaiChannel, "key1")
+	_ = openaiChannel
 
-	_, err = client.Channel.Create().
+	anthropicChannel, err := client.Channel.Create().
 		SetType(channel.TypeAnthropic).
 		SetName("Anthropic Channel").
 		SetBaseURL("https://api.anthropic.com").
-		SetCredentials(objects.ChannelCredentials{APIKey: "key2"}).
+		SetCredentials(objects.ChannelCredentials{}).
 		SetSupportedModels([]string{"claude-3-opus-20240229"}).
 		SetDefaultTestModel("claude-3-opus-20240229").
 		SetStatus(channel.StatusEnabled).
@@ -474,12 +476,14 @@ func TestModelService_ListEnabledModels(t *testing.T) {
 		}).
 		Save(ctx)
 	require.NoError(t, err)
+	anthropicChannel = attachAPIKeyCredentialForTest(t, ctx, client, anthropicChannel, "key2")
+	_ = anthropicChannel
 
-	_, err = client.Channel.Create().
+	prefixChannel, err := client.Channel.Create().
 		SetType(channel.TypeOpenai).
 		SetName("Prefix Channel").
 		SetBaseURL("https://api.deepseek.com").
-		SetCredentials(objects.ChannelCredentials{APIKey: "key3"}).
+		SetCredentials(objects.ChannelCredentials{}).
 		SetSupportedModels([]string{"deepseek-chat", "deepseek-reasoner"}).
 		SetDefaultTestModel("deepseek-chat").
 		SetStatus(channel.StatusEnabled).
@@ -488,13 +492,15 @@ func TestModelService_ListEnabledModels(t *testing.T) {
 		}).
 		Save(ctx)
 	require.NoError(t, err)
+	prefixChannel = attachAPIKeyCredentialForTest(t, ctx, client, prefixChannel, "key3")
+	_ = prefixChannel
 
 	// Create disabled channel (should not be included)
 	_, err = client.Channel.Create().
 		SetType(channel.TypeOpenai).
 		SetName("Disabled Channel").
 		SetBaseURL("https://api.disabled.com/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "key4"}).
+		SetCredentials(objects.ChannelCredentials{}).
 		SetSupportedModels([]string{"gpt-4-disabled"}).
 		SetDefaultTestModel("gpt-4-disabled").
 		SetStatus(channel.StatusDisabled).
@@ -503,20 +509,27 @@ func TestModelService_ListEnabledModels(t *testing.T) {
 
 	// Create channel service for testing
 	channelSvc := NewChannelServiceForTest(client)
-	enabledEntities, err := client.Channel.Query().
-		Where(channel.StatusEQ(channel.StatusEnabled)).
-		All(ctx)
-	require.NoError(t, err)
+	reloadEnabledChannels := func() {
+		enabledEntities, queryErr := client.Channel.Query().
+			Where(channel.StatusEQ(channel.StatusEnabled)).
+			WithCredentialRefs(func(q *ent.ChannelCredentialRefQuery) {
+				q.WithCredential()
+			}).
+			All(ctx)
+		require.NoError(t, queryErr)
 
-	enabledChannels := make([]*Channel, 0, len(enabledEntities))
-	for _, e := range enabledEntities {
-		built, buildErr := channelSvc.buildChannelWithTransformer(e)
-		require.NoError(t, buildErr)
+		enabledChannels := make([]*Channel, 0, len(enabledEntities))
+		for _, e := range enabledEntities {
+			built, buildErr := channelSvc.buildChannelWithTransformer(e)
+			require.NoError(t, buildErr)
 
-		enabledChannels = append(enabledChannels, built)
+			enabledChannels = append(enabledChannels, built)
+		}
+
+		channelSvc.SetEnabledChannelsForTest(enabledChannels)
 	}
 
-	channelSvc.SetEnabledChannelsForTest(enabledChannels)
+	reloadEnabledChannels()
 
 	// Create model service with channel service dependency
 	// SystemService with default settings (QueryAllChannelModels: true)
@@ -603,11 +616,11 @@ func TestModelService_ListEnabledModels(t *testing.T) {
 
 	t.Run("mapping to unsupported model should be ignored", func(t *testing.T) {
 		// Create channel with invalid mapping
-		_, err := client.Channel.Create().
+		invalidChannel, err := client.Channel.Create().
 			SetType(channel.TypeOpenai).
 			SetName("Invalid Mapping Channel").
 			SetBaseURL("https://api.example.com/v1").
-			SetCredentials(objects.ChannelCredentials{APIKey: "key5"}).
+			SetCredentials(objects.ChannelCredentials{}).
 			SetSupportedModels([]string{"gpt-4"}).
 			SetDefaultTestModel("gpt-4").
 			SetStatus(channel.StatusEnabled).
@@ -619,21 +632,11 @@ func TestModelService_ListEnabledModels(t *testing.T) {
 			}).
 			Save(ctx)
 		require.NoError(t, err)
+		invalidChannel = attachAPIKeyCredentialForTest(t, ctx, client, invalidChannel, "key5")
 
-		enabledEntities, err := client.Channel.Query().
-			Where(channel.StatusEQ(channel.StatusEnabled)).
-			All(ctx)
-		require.NoError(t, err)
+		_ = invalidChannel
 
-		enabledChannels := make([]*Channel, 0, len(enabledEntities))
-		for _, e := range enabledEntities {
-			built, buildErr := channelSvc.buildChannelWithTransformer(e)
-			require.NoError(t, buildErr)
-
-			enabledChannels = append(enabledChannels, built)
-		}
-
-		channelSvc.SetEnabledChannelsForTest(enabledChannels)
+		reloadEnabledChannels()
 
 		result, err := modelSvc.ListEnabledModels(ctx)
 		require.NoError(t, err)
@@ -650,11 +653,11 @@ func TestModelService_ListEnabledModels(t *testing.T) {
 
 	t.Run("auto-trimmed models", func(t *testing.T) {
 		// Create channel with auto-trim prefix
-		_, err := client.Channel.Create().
+		autoTrimChannel, err := client.Channel.Create().
 			SetType(channel.TypeOpenai).
 			SetName("Auto Trim Channel").
 			SetBaseURL("https://api.example.com/v1").
-			SetCredentials(objects.ChannelCredentials{APIKey: "key6"}).
+			SetCredentials(objects.ChannelCredentials{}).
 			SetSupportedModels([]string{"provider/gpt-4", "provider/gpt-3.5-turbo"}).
 			SetDefaultTestModel("provider/gpt-4").
 			SetStatus(channel.StatusEnabled).
@@ -663,21 +666,10 @@ func TestModelService_ListEnabledModels(t *testing.T) {
 			}).
 			Save(ctx)
 		require.NoError(t, err)
+		autoTrimChannel = attachAPIKeyCredentialForTest(t, ctx, client, autoTrimChannel, "key6")
+		_ = autoTrimChannel
 
-		enabledEntities, err := client.Channel.Query().
-			Where(channel.StatusEQ(channel.StatusEnabled)).
-			All(ctx)
-		require.NoError(t, err)
-
-		enabledChannels := make([]*Channel, 0, len(enabledEntities))
-		for _, e := range enabledEntities {
-			built, buildErr := channelSvc.buildChannelWithTransformer(e)
-			require.NoError(t, buildErr)
-
-			enabledChannels = append(enabledChannels, built)
-		}
-
-		channelSvc.SetEnabledChannelsForTest(enabledChannels)
+		reloadEnabledChannels()
 
 		result, err := modelSvc.ListEnabledModels(ctx)
 		require.NoError(t, err)
@@ -1323,32 +1315,21 @@ func TestModelService_ListEnabledModels(t *testing.T) {
 		require.NoError(t, err)
 
 		// Create a channel with tags
-		_, err = client.Channel.Create().
+		taggedChannel, err := client.Channel.Create().
 			SetType(channel.TypeOpenai).
 			SetName("Tagged Channel").
 			SetBaseURL("https://api.tagged.com/v1").
-			SetCredentials(objects.ChannelCredentials{APIKey: "key-tagged"}).
+			SetCredentials(objects.ChannelCredentials{}).
 			SetSupportedModels([]string{"tagged-model-1", "tagged-model-2"}).
 			SetDefaultTestModel("tagged-model-1").
 			SetStatus(channel.StatusEnabled).
 			SetTags([]string{"production", "team-a"}).
 			Save(ctx)
 		require.NoError(t, err)
+		taggedChannel = attachAPIKeyCredentialForTest(t, ctx, client, taggedChannel, "key-tagged")
+		_ = taggedChannel
 
-		enabledEntities, err := client.Channel.Query().
-			Where(channel.StatusEQ(channel.StatusEnabled)).
-			All(ctx)
-		require.NoError(t, err)
-
-		enabledChannels := make([]*Channel, 0, len(enabledEntities))
-		for _, e := range enabledEntities {
-			built, buildErr := channelSvc.buildChannelWithTransformer(e)
-			require.NoError(t, buildErr)
-
-			enabledChannels = append(enabledChannels, built)
-		}
-
-		channelSvc.SetEnabledChannelsForTest(enabledChannels)
+		reloadEnabledChannels()
 
 		// Create API key with profile that filters by channel tags
 		apiKey := &ent.APIKey{
@@ -1387,44 +1368,35 @@ func TestModelService_ListEnabledModels(t *testing.T) {
 		err = systemSvc.SetModelSettings(ctx, modelSettings)
 		require.NoError(t, err)
 
-		_, err = client.Channel.Create().
+		allTagsChannel, err := client.Channel.Create().
 			SetType(channel.TypeOpenai).
 			SetName("All Tags Channel").
 			SetBaseURL("https://api.all-tags.com/v1").
-			SetCredentials(objects.ChannelCredentials{APIKey: "key-all-tags"}).
+			SetCredentials(objects.ChannelCredentials{}).
 			SetSupportedModels([]string{"all-tags-model"}).
 			SetDefaultTestModel("all-tags-model").
 			SetStatus(channel.StatusEnabled).
 			SetTags([]string{"production", "team-a", "official"}).
 			Save(ctx)
 		require.NoError(t, err)
+		allTagsChannel = attachAPIKeyCredentialForTest(t, ctx, client, allTagsChannel, "key-all-tags")
+		_ = allTagsChannel
 
-		_, err = client.Channel.Create().
+		partialTagsChannel, err := client.Channel.Create().
 			SetType(channel.TypeOpenai).
 			SetName("Partial Tags Channel").
 			SetBaseURL("https://api.partial-tags.com/v1").
-			SetCredentials(objects.ChannelCredentials{APIKey: "key-partial-tags"}).
+			SetCredentials(objects.ChannelCredentials{}).
 			SetSupportedModels([]string{"partial-tags-model"}).
 			SetDefaultTestModel("partial-tags-model").
 			SetStatus(channel.StatusEnabled).
 			SetTags([]string{"production", "team-a"}).
 			Save(ctx)
 		require.NoError(t, err)
+		partialTagsChannel = attachAPIKeyCredentialForTest(t, ctx, client, partialTagsChannel, "key-partial-tags")
+		_ = partialTagsChannel
 
-		enabledEntities, err := client.Channel.Query().
-			Where(channel.StatusEQ(channel.StatusEnabled)).
-			All(ctx)
-		require.NoError(t, err)
-
-		enabledChannels := make([]*Channel, 0, len(enabledEntities))
-		for _, e := range enabledEntities {
-			built, buildErr := channelSvc.buildChannelWithTransformer(e)
-			require.NoError(t, buildErr)
-
-			enabledChannels = append(enabledChannels, built)
-		}
-
-		channelSvc.SetEnabledChannelsForTest(enabledChannels)
+		reloadEnabledChannels()
 
 		apiKey := &ent.APIKey{
 			ID:   14,
@@ -1462,44 +1434,35 @@ func TestModelService_ListEnabledModels(t *testing.T) {
 		err = systemSvc.SetModelSettings(ctx, modelSettings)
 		require.NoError(t, err)
 
-		_, err = client.Channel.Create().
+		noneExcludedChannel, err := client.Channel.Create().
 			SetType(channel.TypeOpenai).
 			SetName("None Match Excluded Channel").
 			SetBaseURL("https://api.none-excluded.com/v1").
-			SetCredentials(objects.ChannelCredentials{APIKey: "key-none-excluded"}).
+			SetCredentials(objects.ChannelCredentials{}).
 			SetSupportedModels([]string{"none-excluded-model"}).
 			SetDefaultTestModel("none-excluded-model").
 			SetStatus(channel.StatusEnabled).
 			SetTags([]string{"cc", "internal"}).
 			Save(ctx)
 		require.NoError(t, err)
+		noneExcludedChannel = attachAPIKeyCredentialForTest(t, ctx, client, noneExcludedChannel, "key-none-excluded")
+		_ = noneExcludedChannel
 
-		_, err = client.Channel.Create().
+		noneAllowedChannel, err := client.Channel.Create().
 			SetType(channel.TypeOpenai).
 			SetName("None Match Allowed Channel").
 			SetBaseURL("https://api.none-allowed.com/v1").
-			SetCredentials(objects.ChannelCredentials{APIKey: "key-none-allowed"}).
+			SetCredentials(objects.ChannelCredentials{}).
 			SetSupportedModels([]string{"none-allowed-model"}).
 			SetDefaultTestModel("none-allowed-model").
 			SetStatus(channel.StatusEnabled).
 			SetTags([]string{"general"}).
 			Save(ctx)
 		require.NoError(t, err)
+		noneAllowedChannel = attachAPIKeyCredentialForTest(t, ctx, client, noneAllowedChannel, "key-none-allowed")
+		_ = noneAllowedChannel
 
-		enabledEntities, err := client.Channel.Query().
-			Where(channel.StatusEQ(channel.StatusEnabled)).
-			All(ctx)
-		require.NoError(t, err)
-
-		enabledChannels := make([]*Channel, 0, len(enabledEntities))
-		for _, e := range enabledEntities {
-			built, buildErr := channelSvc.buildChannelWithTransformer(e)
-			require.NoError(t, buildErr)
-
-			enabledChannels = append(enabledChannels, built)
-		}
-
-		channelSvc.SetEnabledChannelsForTest(enabledChannels)
+		reloadEnabledChannels()
 
 		apiKey := &ent.APIKey{
 			ID:   17,
@@ -1579,39 +1542,28 @@ func TestModelService_ListEnabledModels(t *testing.T) {
 			SetType(channel.TypeOpenai).
 			SetName("Project ID Only Channel").
 			SetBaseURL("https://api.project-id-only.com/v1").
-			SetCredentials(objects.ChannelCredentials{APIKey: "key-project-id-only"}).
+			SetCredentials(objects.ChannelCredentials{}).
 			SetSupportedModels([]string{"project-id-only-model"}).
 			SetDefaultTestModel("project-id-only-model").
 			SetStatus(channel.StatusEnabled).
 			Save(ctx)
 		require.NoError(t, err)
+		idOnlyChannel = attachAPIKeyCredentialForTest(t, ctx, client, idOnlyChannel, "key-project-id-only")
 
 		matchingChannel, err := client.Channel.Create().
 			SetType(channel.TypeOpenai).
 			SetName("Project Matching Channel").
 			SetBaseURL("https://api.project-matching.com/v1").
-			SetCredentials(objects.ChannelCredentials{APIKey: "key-project-matching"}).
+			SetCredentials(objects.ChannelCredentials{}).
 			SetSupportedModels([]string{"project-matching-model"}).
 			SetDefaultTestModel("project-matching-model").
 			SetStatus(channel.StatusEnabled).
 			SetTags([]string{"project-allowed"}).
 			Save(ctx)
 		require.NoError(t, err)
+		matchingChannel = attachAPIKeyCredentialForTest(t, ctx, client, matchingChannel, "key-project-matching")
 
-		enabledEntities, err := client.Channel.Query().
-			Where(channel.StatusEQ(channel.StatusEnabled)).
-			All(ctx)
-		require.NoError(t, err)
-
-		enabledChannels := make([]*Channel, 0, len(enabledEntities))
-		for _, e := range enabledEntities {
-			built, buildErr := channelSvc.buildChannelWithTransformer(e)
-			require.NoError(t, buildErr)
-
-			enabledChannels = append(enabledChannels, built)
-		}
-
-		channelSvc.SetEnabledChannelsForTest(enabledChannels)
+		reloadEnabledChannels()
 
 		apiKey := &ent.APIKey{
 			ID:   15,
@@ -1657,40 +1609,29 @@ func TestModelService_ListEnabledModels(t *testing.T) {
 			SetType(channel.TypeOpenai).
 			SetName("Project All Tags Channel").
 			SetBaseURL("https://api.project-all-tags.com/v1").
-			SetCredentials(objects.ChannelCredentials{APIKey: "key-project-all-tags"}).
+			SetCredentials(objects.ChannelCredentials{}).
 			SetSupportedModels([]string{"project-all-tags-model"}).
 			SetDefaultTestModel("project-all-tags-model").
 			SetStatus(channel.StatusEnabled).
 			SetTags([]string{"project-a", "project-b"}).
 			Save(ctx)
 		require.NoError(t, err)
+		allTagsChannel = attachAPIKeyCredentialForTest(t, ctx, client, allTagsChannel, "key-project-all-tags")
 
 		partialTagsChannel, err := client.Channel.Create().
 			SetType(channel.TypeOpenai).
 			SetName("Project Partial Tags Channel").
 			SetBaseURL("https://api.project-partial-tags.com/v1").
-			SetCredentials(objects.ChannelCredentials{APIKey: "key-project-partial-tags"}).
+			SetCredentials(objects.ChannelCredentials{}).
 			SetSupportedModels([]string{"project-partial-tags-model"}).
 			SetDefaultTestModel("project-partial-tags-model").
 			SetStatus(channel.StatusEnabled).
 			SetTags([]string{"project-a"}).
 			Save(ctx)
 		require.NoError(t, err)
+		partialTagsChannel = attachAPIKeyCredentialForTest(t, ctx, client, partialTagsChannel, "key-project-partial-tags")
 
-		enabledEntities, err := client.Channel.Query().
-			Where(channel.StatusEQ(channel.StatusEnabled)).
-			All(ctx)
-		require.NoError(t, err)
-
-		enabledChannels := make([]*Channel, 0, len(enabledEntities))
-		for _, e := range enabledEntities {
-			built, buildErr := channelSvc.buildChannelWithTransformer(e)
-			require.NoError(t, buildErr)
-
-			enabledChannels = append(enabledChannels, built)
-		}
-
-		channelSvc.SetEnabledChannelsForTest(enabledChannels)
+		reloadEnabledChannels()
 
 		apiKey := &ent.APIKey{
 			ID:   16,

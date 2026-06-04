@@ -66,8 +66,7 @@ func (svc *BackupService) doBackup(ctx context.Context, opts BackupOptions) ([]b
 
 		channelDataList = lo.Map(channels, func(ch *ent.Channel, _ int) *BackupChannel {
 			return &BackupChannel{
-				Channel:     *ch,
-				Credentials: ch.Credentials,
+				Channel: *ch,
 			}
 		})
 

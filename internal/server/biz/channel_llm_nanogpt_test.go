@@ -25,10 +25,11 @@ func TestNanogptChannel_TypeNanogpt(t *testing.T) {
 		SetName("NanoGPT Deprecated Channel").
 		SetType(channel.TypeNanogpt).
 		SetBaseURL("https://api.nanogpt.example.com/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key"}).
+		SetCredentials(objects.ChannelCredentials{}).
 		SetSupportedModels([]string{"gpt-4"}).
 		SetDefaultTestModel("gpt-4").
 		SaveX(ctx)
+	entChannel = attachAPIKeyCredentialForTest(t, ctx, client, entChannel, "test-key")
 
 	channelSvc := NewChannelServiceForTest(client)
 
@@ -52,10 +53,11 @@ func TestNanogptChannel_CreateResponsesTransformer(t *testing.T) {
 		SetName("NanoGPT Responses Channel").
 		SetType(channel.TypeNanogptResponses).
 		SetBaseURL("https://api.nanogpt.example.com/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key"}).
+		SetCredentials(objects.ChannelCredentials{}).
 		SetSupportedModels([]string{"gpt-4"}).
 		SetDefaultTestModel("gpt-4").
 		SaveX(ctx)
+	entChannel = attachAPIKeyCredentialForTest(t, ctx, client, entChannel, "test-key")
 
 	channelSvc := NewChannelServiceForTest(client)
 
@@ -81,10 +83,11 @@ func TestNanogptChannel_VerifyAPIFormat(t *testing.T) {
 			SetName("NanoGPT Responses").
 			SetType(channel.TypeNanogptResponses).
 			SetBaseURL("https://api.nanogpt.example.com/v1").
-			SetCredentials(objects.ChannelCredentials{APIKey: "test-key"}).
+			SetCredentials(objects.ChannelCredentials{}).
 			SetSupportedModels([]string{"gpt-4"}).
 			SetDefaultTestModel("gpt-4").
 			SaveX(ctx)
+		entChannel = attachAPIKeyCredentialForTest(t, ctx, client, entChannel, "test-key")
 
 		built, err := channelSvc.buildChannelWithTransformer(entChannel)
 		require.NoError(t, err)
@@ -102,10 +105,11 @@ func TestNanogptChannel_BuildChannelWithOutbounds(t *testing.T) {
 		SetName("NanoGPT Multi Endpoint Channel").
 		SetType(channel.TypeNanogpt).
 		SetBaseURL("https://api.nanogpt.example.com/v1").
-		SetCredentials(objects.ChannelCredentials{APIKey: "test-key"}).
+		SetCredentials(objects.ChannelCredentials{}).
 		SetSupportedModels([]string{"gpt-4"}).
 		SetDefaultTestModel("gpt-4").
 		SaveX(ctx)
+	entChannel = attachAPIKeyCredentialForTest(t, ctx, client, entChannel, "test-key")
 
 	channelSvc := NewChannelServiceForTest(client)
 

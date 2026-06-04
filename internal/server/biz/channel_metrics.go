@@ -311,33 +311,17 @@ func (svc *ChannelService) RecordPerformance(ctx context.Context, perf *Performa
 		delete(svc.channelErrorCounts, perf.ChannelID)
 		svc.channelErrorCountsLock.Unlock()
 
-		// Also clear API key error counts on success
-		if perf.APIKey != "" {
-			svc.apiKeyErrorCountsLock.Lock()
-
-			if svc.apiKeyErrorCounts[perf.ChannelID] != nil {
-				delete(svc.apiKeyErrorCounts[perf.ChannelID], perf.APIKey)
-			}
-
-			svc.apiKeyErrorCountsLock.Unlock()
-		}
-		if perf.CredentialFingerprint != "" {
+		if perf.CredentialID > 0 || perf.CredentialFingerprint != "" {
 			svc.credentialErrorCountsLock.Lock()
-			delete(svc.credentialErrorCounts, perf.CredentialFingerprint)
+			delete(svc.credentialErrorCounts, credentialErrorIdentity(perf))
 			svc.credentialErrorCountsLock.Unlock()
 		}
 	} else if !perf.Canceled {
 		policy := svc.SystemService.RetryPolicyOrDefault(ctx)
 
 		if policy.AutoDisableChannel.Enabled {
-			// Check credential error first if available.
 			if (perf.CredentialID > 0 || perf.CredentialFingerprint != "") && isCredentialScopedAutoDisableStatus(perf.ResponseStatusCode) {
 				if svc.checkAndHandleCredentialError(ctx, perf, policy) {
-					return
-				}
-			}
-			if perf.APIKey != "" {
-				if svc.checkAndHandleAPIKeyError(ctx, perf, policy) {
 					return
 				}
 			} else {

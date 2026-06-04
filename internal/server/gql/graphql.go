@@ -30,7 +30,6 @@ import (
 	"github.com/looplj/axonhub/internal/ent/model"
 	"github.com/looplj/axonhub/internal/ent/project"
 	"github.com/looplj/axonhub/internal/ent/prompt"
-	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/request"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
 	"github.com/looplj/axonhub/internal/ent/role"
@@ -76,7 +75,6 @@ type Dependencies struct {
 	ChannelProbeService            *biz.ChannelProbeService
 	PromptService                  *biz.PromptService
 	PromptProtectionRuleService    *biz.PromptProtectionRuleService
-	ProviderQuotaService           *biz.ProviderQuotaService
 	Scheduler                      *scheduler.Scheduler
 	DefaultSelector                *orchestrator.DefaultSelector
 	CandidateSelectorDiagnostics   *orchestrator.CandidateSelectorDiagnostics
@@ -115,7 +113,6 @@ func NewGraphqlHandlers(deps Dependencies) *GraphqlHandler {
 			deps.ChannelProbeService,
 			deps.PromptService,
 			deps.PromptProtectionRuleService,
-			deps.ProviderQuotaService,
 			deps.Scheduler,
 			deps.DefaultSelector,
 			deps.CandidateSelectorDiagnostics,
@@ -144,7 +141,7 @@ func NewGraphqlHandlers(deps Dependencies) *GraphqlHandler {
 		// when multiple test requests are sent in parallel from the frontend.
 		// TestChannel performs LLM API calls which can be long-running, and the
 		// database operations within don't require transactional consistency.
-		SkipTxFunc: entgql.SkipOperations("TestChannel", "TestChannelAPIKeys"),
+		SkipTxFunc: entgql.SkipOperations("TestChannel"),
 	})
 
 	// Set error presenter to handle CodedError and add extensions.code
@@ -191,7 +188,6 @@ var guidTypeToNodeType = map[string]string{
 	ent.TypeChannelProbe:            channelprobe.Table,
 	ent.TypeChannelOverrideTemplate: channeloverridetemplate.Table,
 	ent.TypeCredentialQuotaScope:    credentialquotascope.Table,
-	ent.TypeProviderQuotaStatus:     providerquotastatus.Table,
 	ent.TypeRequest:                 request.Table,
 	ent.TypeRequestExecution:        requestexecution.Table,
 	ent.TypeRole:                    role.Table,

@@ -73,8 +73,6 @@ const (
 	EdgeChannelModelPrices = "channel_model_prices"
 	// EdgeCredentialRefs holds the string denoting the credential_refs edge name in mutations.
 	EdgeCredentialRefs = "credential_refs"
-	// EdgeProviderQuotaStatuses holds the string denoting the provider_quota_statuses edge name in mutations.
-	EdgeProviderQuotaStatuses = "provider_quota_statuses"
 	// Table holds the table name of the channel in the database.
 	Table = "channels"
 	// RequestsTable is the table that holds the requests relation/edge.
@@ -119,13 +117,6 @@ const (
 	CredentialRefsInverseTable = "channel_credential_refs"
 	// CredentialRefsColumn is the table column denoting the credential_refs relation/edge.
 	CredentialRefsColumn = "channel_id"
-	// ProviderQuotaStatusesTable is the table that holds the provider_quota_statuses relation/edge.
-	ProviderQuotaStatusesTable = "provider_quota_status"
-	// ProviderQuotaStatusesInverseTable is the table name for the ProviderQuotaStatus entity.
-	// It exists in this package in order to avoid circular dependency with the "providerquotastatus" package.
-	ProviderQuotaStatusesInverseTable = "provider_quota_status"
-	// ProviderQuotaStatusesColumn is the table column denoting the provider_quota_statuses relation/edge.
-	ProviderQuotaStatusesColumn = "channel_id"
 )
 
 // Columns holds all SQL columns for channel fields.
@@ -460,20 +451,6 @@ func ByCredentialRefs(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newCredentialRefsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
-
-// ByProviderQuotaStatusesCount orders the results by provider_quota_statuses count.
-func ByProviderQuotaStatusesCount(opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newProviderQuotaStatusesStep(), opts...)
-	}
-}
-
-// ByProviderQuotaStatuses orders the results by provider_quota_statuses terms.
-func ByProviderQuotaStatuses(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newProviderQuotaStatusesStep(), append([]sql.OrderTerm{term}, terms...)...)
-	}
-}
 func newRequestsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
@@ -514,13 +491,6 @@ func newCredentialRefsStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CredentialRefsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, CredentialRefsTable, CredentialRefsColumn),
-	)
-}
-func newProviderQuotaStatusesStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(ProviderQuotaStatusesInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, ProviderQuotaStatusesTable, ProviderQuotaStatusesColumn),
 	)
 }
 

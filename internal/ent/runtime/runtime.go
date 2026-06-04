@@ -20,7 +20,6 @@ import (
 	"github.com/looplj/axonhub/internal/ent/project"
 	"github.com/looplj/axonhub/internal/ent/prompt"
 	"github.com/looplj/axonhub/internal/ent/promptprotectionrule"
-	"github.com/looplj/axonhub/internal/ent/providerquotastatus"
 	"github.com/looplj/axonhub/internal/ent/request"
 	"github.com/looplj/axonhub/internal/ent/requestexecution"
 	"github.com/looplj/axonhub/internal/ent/role"
@@ -635,53 +634,6 @@ func init() {
 	promptprotectionruleDescDescription := promptprotectionruleFields[1].Descriptor()
 	// promptprotectionrule.DefaultDescription holds the default value on creation for the description field.
 	promptprotectionrule.DefaultDescription = promptprotectionruleDescDescription.Default.(string)
-	providerquotastatusMixin := schema.ProviderQuotaStatus{}.Mixin()
-	providerquotastatusMixinHooks1 := providerquotastatusMixin[1].Hooks()
-	providerquotastatus.Hooks[0] = providerquotastatusMixinHooks1[0]
-	providerquotastatusMixinInters1 := providerquotastatusMixin[1].Interceptors()
-	providerquotastatus.Interceptors[0] = providerquotastatusMixinInters1[0]
-	providerquotastatusMixinFields0 := providerquotastatusMixin[0].Fields()
-	_ = providerquotastatusMixinFields0
-	providerquotastatusMixinFields1 := providerquotastatusMixin[1].Fields()
-	_ = providerquotastatusMixinFields1
-	providerquotastatusFields := schema.ProviderQuotaStatus{}.Fields()
-	_ = providerquotastatusFields
-	// providerquotastatusDescCreatedAt is the schema descriptor for created_at field.
-	providerquotastatusDescCreatedAt := providerquotastatusMixinFields0[0].Descriptor()
-	// providerquotastatus.DefaultCreatedAt holds the default value on creation for the created_at field.
-	providerquotastatus.DefaultCreatedAt = providerquotastatusDescCreatedAt.Default.(func() time.Time)
-	// providerquotastatusDescUpdatedAt is the schema descriptor for updated_at field.
-	providerquotastatusDescUpdatedAt := providerquotastatusMixinFields0[1].Descriptor()
-	// providerquotastatus.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	providerquotastatus.DefaultUpdatedAt = providerquotastatusDescUpdatedAt.Default.(func() time.Time)
-	// providerquotastatus.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	providerquotastatus.UpdateDefaultUpdatedAt = providerquotastatusDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// providerquotastatusDescDeletedAt is the schema descriptor for deleted_at field.
-	providerquotastatusDescDeletedAt := providerquotastatusMixinFields1[0].Descriptor()
-	// providerquotastatus.DefaultDeletedAt holds the default value on creation for the deleted_at field.
-	providerquotastatus.DefaultDeletedAt = providerquotastatusDescDeletedAt.Default.(int)
-	// providerquotastatusDescScopeKey is the schema descriptor for scope_key field.
-	providerquotastatusDescScopeKey := providerquotastatusFields[1].Descriptor()
-	// providerquotastatus.DefaultScopeKey holds the default value on creation for the scope_key field.
-	providerquotastatus.DefaultScopeKey = providerquotastatusDescScopeKey.Default.(string)
-	// providerquotastatus.ScopeKeyValidator is a validator for the "scope_key" field. It is called by the builders before save.
-	providerquotastatus.ScopeKeyValidator = providerquotastatusDescScopeKey.Validators[0].(func(string) error)
-	// providerquotastatusDescCredentialFingerprint is the schema descriptor for credential_fingerprint field.
-	providerquotastatusDescCredentialFingerprint := providerquotastatusFields[3].Descriptor()
-	// providerquotastatus.CredentialFingerprintValidator is a validator for the "credential_fingerprint" field. It is called by the builders before save.
-	providerquotastatus.CredentialFingerprintValidator = providerquotastatusDescCredentialFingerprint.Validators[0].(func(string) error)
-	// providerquotastatusDescSecretFingerprint is the schema descriptor for secret_fingerprint field.
-	providerquotastatusDescSecretFingerprint := providerquotastatusFields[4].Descriptor()
-	// providerquotastatus.SecretFingerprintValidator is a validator for the "secret_fingerprint" field. It is called by the builders before save.
-	providerquotastatus.SecretFingerprintValidator = providerquotastatusDescSecretFingerprint.Validators[0].(func(string) error)
-	// providerquotastatusDescResourceScopeKey is the schema descriptor for resource_scope_key field.
-	providerquotastatusDescResourceScopeKey := providerquotastatusFields[5].Descriptor()
-	// providerquotastatus.ResourceScopeKeyValidator is a validator for the "resource_scope_key" field. It is called by the builders before save.
-	providerquotastatus.ResourceScopeKeyValidator = providerquotastatusDescResourceScopeKey.Validators[0].(func(string) error)
-	// providerquotastatusDescReady is the schema descriptor for ready field.
-	providerquotastatusDescReady := providerquotastatusFields[11].Descriptor()
-	// providerquotastatus.DefaultReady holds the default value on creation for the ready field.
-	providerquotastatus.DefaultReady = providerquotastatusDescReady.Default.(bool)
 	requestMixin := schema.Request{}.Mixin()
 	request.Policy = privacy.NewPolicies(schema.Request{})
 	request.Hooks[0] = func(next ent.Mutator) ent.Mutator {

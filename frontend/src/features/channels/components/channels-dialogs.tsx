@@ -11,7 +11,6 @@ import { ChannelsBulkImportDialog } from './channels-bulk-import-dialog';
 import { ChannelsBulkOrderingDialog } from './channels-bulk-ordering-dialog';
 import { ChannelsBulkTestDialog } from './channels-bulk-test-dialog';
 import { ChannelsDeleteDialog } from './channels-delete-dialog';
-import { ChannelsDisabledAPIKeysDialog } from './channels-disabled-api-keys-dialog';
 import { ChannelsErrorResolvedDialog } from './channels-error-resolved-dialog';
 import { ChannelsModelMappingDialog } from './channels-model-mapping-dialog';
 import { ChannelsModelPriceDialog } from './channels-model-price-dialog';
@@ -20,7 +19,6 @@ import { ChannelsProxyDialog } from './channels-proxy-dialog';
 import { ChannelsStatusDialog } from './channels-status-dialog';
 import { ChannelsTestDialog } from './channels-test-dialog';
 import { ChannelsTestHistoryDrawer } from './channels-test-history-drawer';
-import { ChannelsTestAPIKeysDialog } from './channels-test-api-keys-dialog';
 import { ChannelsRateLimitDialog } from './channels-rate-limit-dialog';
 import { ChannelsTransformOptionsDialog } from './channels-transform-options-dialog';
 import { ChannelsEndpointsDialog } from './channels-endpoints-dialog';
@@ -313,31 +311,6 @@ export function ChannelsDialogs() {
             channel={currentRow}
           />
 
-          <ChannelsDisabledAPIKeysDialog
-            key={`channel-disabled-api-keys-${currentRow.id}`}
-            open={open === 'disabledAPIKeys'}
-            onOpenChange={(isOpen) => {
-              if (!isOpen) {
-                setOpen(null);
-                setTimeout(() => {
-                  setCurrentRow(null);
-                }, 500);
-              }
-            }}
-          />
-
-          <ChannelsTestAPIKeysDialog
-            key={`channel-test-api-keys-${currentRow.id}`}
-            open={open === 'testAPIKeys'}
-            onOpenChange={(isOpen) => {
-              if (!isOpen) {
-                setOpen(null);
-                setTimeout(() => {
-                  setCurrentRow(null);
-                }, 500);
-              }
-            }}
-          />
         </>
       )}
     </>

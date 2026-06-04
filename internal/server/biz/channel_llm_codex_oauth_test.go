@@ -44,16 +44,17 @@ func TestCodexRefreshPersistsChannelCredentials(t *testing.T) {
 		SetStatus(channel.StatusEnabled).
 		SetSupportedModels([]string{"gpt-4o-mini"}).
 		SetDefaultTestModel("gpt-4o-mini").
-		SetCredentials(objects.ChannelCredentials{
-			OAuth: &objects.OAuthCredentials{
-				AccessToken:  "old-access",
-				RefreshToken: "old-refresh",
-				ClientID:     codex.ClientID,
-				ExpiresAt:    time.Now().Add(-1 * time.Hour),
-			},
-		}).
+		SetCredentials(objects.ChannelCredentials{}).
 		Save(ctx)
 	require.NoError(t, err)
+	created = attachOAuthCredentialForTest(t, ctx, db, created, objects.UpstreamCredentialSecret{
+		OAuth: &objects.OAuthCredentials{
+			AccessToken:  "old-access",
+			RefreshToken: "old-refresh",
+			ClientID:     codex.ClientID,
+			ExpiresAt:    time.Now().Add(-1 * time.Hour),
+		},
+	})
 
 	svc := NewChannelServiceForTest(db)
 
@@ -70,14 +71,13 @@ func TestCodexRefreshPersistsChannelCredentials(t *testing.T) {
 	_, err = ch.Outbound.TransformRequest(ctx, req)
 	require.NoError(t, err)
 
-	reloaded, err := db.Channel.Get(ctx, created.ID)
+	reloadedCredential, err := db.UpstreamCredential.Query().Only(ctx)
 	require.NoError(t, err)
-	require.NotNil(t, reloaded.Credentials)
-	require.NotNil(t, reloaded.Credentials.OAuth)
-	require.Equal(t, "new-access", reloaded.Credentials.OAuth.AccessToken)
-	require.Equal(t, "new-refresh", reloaded.Credentials.OAuth.RefreshToken)
-	require.False(t, reloaded.Credentials.OAuth.ExpiresAt.IsZero())
-	require.Equal(t, "new-access", extractAccessTokenFromAPIKeyJSON(t, reloaded.Credentials.APIKey))
+	require.NotNil(t, reloadedCredential.SecretPayload.OAuth)
+	require.Equal(t, "new-access", reloadedCredential.SecretPayload.OAuth.AccessToken)
+	require.Equal(t, "new-refresh", reloadedCredential.SecretPayload.OAuth.RefreshToken)
+	require.False(t, reloadedCredential.SecretPayload.OAuth.ExpiresAt.IsZero())
+	require.Equal(t, "new-access", extractAccessTokenFromAPIKeyJSON(t, reloadedCredential.SecretPayload.APIKey))
 }
 
 func TestCodexRefreshPersistsFirstClassCredentialSecret(t *testing.T) {

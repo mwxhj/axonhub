@@ -9,7 +9,7 @@
 Read this spec before changing:
 
 - Data tables, detail pages, tooltips, popovers, drawers, and dialogs.
-- Credential, channel, request, quota, provider quota, routing availability, and system settings UI.
+- Credential, channel, request, quota, routing availability, and system settings UI.
 - GraphQL queries whose only purpose is to feed visible frontend fields.
 
 The durable rule is:
@@ -57,9 +57,6 @@ credential.quota_scope.unit
 credential.quota_scope.reset_policy
 credential.quota_scope.reset_at
 credential.quota_scope.window_started_at
-credential.provider_quota_status.status
-credential.provider_quota_status.ready
-credential.provider_quota_status.next_reset_at
 credential.channel_ref_count
 credential.updated_at
 ```
@@ -74,7 +71,6 @@ request_execution.credential_fingerprint
 request_execution.secret_fingerprint
 request_execution.resource_scope_key
 request_execution.credential_source
-provider_quota_status.resource_scope_key
 channel inline credential compatibility fields
 masked raw API key fragments such as sk-... unless the user is in an explicit secret rotation/copy flow
 ```
@@ -90,8 +86,8 @@ These fields may remain in backend data, logs, database rows, and internal troub
 - Do not use backend IDs as a visible fallback label. If an entity has no user-facing name, show an unnamed label or `-`, not `id`, a fingerprint, or a key hint.
 - Do not add "debug details" sections that simply move forbidden internal fields from a table into a detail view.
 - Request logs should show channel name, credential name, request state, error, token/cost/latency metrics, and timestamps. They should not show key hints, secret fingerprints, resource scope keys, or credential source strings.
-- Credential lists should show credential name, local quota, provider quota summary, status, channel count, and update time. They should not show `secret:v1:*`, key hint, or `available · default scope` implementation wording.
-- Quota UI must separate local quota, provider quota, and routing availability. Do not collapse them into one generic quota badge.
+- Credential lists should show credential name, local quota, status, channel count, and update time. They should not show `secret:v1:*`, key hint, or `available · default scope` implementation wording.
+- Quota UI must separate local quota and routing availability. Do not collapse them into one generic badge.
 - Local quota display must use business language:
 
 ```text
@@ -118,7 +114,6 @@ Resets daily at 00:00 Asia/Shanghai
 | UI code wants to display a fingerprint, secret fingerprint, resource scope key, credential source, or key hint | Reject the display. Use credential name, channel name, request ID, or an unnamed placeholder. |
 | Credential has a quota scope with used and limit amounts | Show `<used> / <limit> <unit> · today's usage` or the localized equivalent. |
 | Credential has no local quota scope | Show `No local quota`; do not show default internal scope wording. |
-| Provider quota has no observation | Show `No provider quota observation`; do not synthesize provider status from local quota. |
 | Request execution has a credential name | Show the credential name. |
 | Request execution lacks a credential name | Show `-` or `Unknown credential`; do not fall back to key hint or fingerprint. |
 | Operator needs to diagnose a failed request | Show request ID, status, error, channel, credential name, timing, usage, and cost. Keep backend identities out of UI. |
@@ -172,8 +167,6 @@ codexforme
 Local quota
 2.89 / 576.94 USD · today's usage
 
-Provider quota
-No provider quota observation
 ```
 
 ### Wrong

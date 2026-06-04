@@ -92,7 +92,6 @@ function buildApiKeyQuery(permissions: { canViewUsers: boolean }) {
             channelTags
             channelTagsMatchMode
             modelIDs
-            loadBalanceStrategy
             quota {
               requests
               totalTokens
@@ -190,7 +189,6 @@ const UPDATE_APIKEY_PROFILES_MUTATION = `
           channelTags
           channelTagsMatchMode
           modelIDs
-          loadBalanceStrategy
           quota {
             requests
             totalTokens
@@ -297,7 +295,6 @@ const APIKEY_PROFILE_TEMPLATES_QUERY = `
             channelTags
             channelTagsMatchMode
             modelIDs
-            loadBalanceStrategy
             quota {
               requests
               totalTokens
@@ -371,7 +368,6 @@ const LOAD_APIKEY_PROFILE_TEMPLATE_MUTATION = `
           channelTags
           channelTagsMatchMode
           modelIDs
-          loadBalanceStrategy
           quota {
             requests
             totalTokens

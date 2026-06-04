@@ -136,7 +136,6 @@ type CreateChannelInput struct {
 	Type                    channel.Type
 	BaseURL                 *string
 	Name                    string
-	Credentials             objects.ChannelCredentials
 	SupportedModels         []string
 	ManualModels            []string
 	AutoSyncSupportedModels *bool
@@ -157,7 +156,6 @@ func (i *CreateChannelInput) Mutate(m *ChannelMutation) {
 		m.SetBaseURL(*v)
 	}
 	m.SetName(i.Name)
-	m.SetCredentials(i.Credentials)
 	if v := i.SupportedModels; v != nil {
 		m.SetSupportedModels(v)
 	}
@@ -204,7 +202,6 @@ type UpdateChannelInput struct {
 	BaseURL                   *string
 	Name                      *string
 	Status                    *channel.Status
-	Credentials               *objects.ChannelCredentials
 	SupportedModels           []string
 	AppendSupportedModels     []string
 	ClearManualModels         bool
@@ -247,9 +244,6 @@ func (i *UpdateChannelInput) Mutate(m *ChannelMutation) {
 	}
 	if v := i.Status; v != nil {
 		m.SetStatus(*v)
-	}
-	if v := i.Credentials; v != nil {
-		m.SetCredentials(*v)
 	}
 	if v := i.SupportedModels; v != nil {
 		m.SetSupportedModels(v)
@@ -1365,14 +1359,9 @@ func (c *TraceUpdateOne) SetInput(i UpdateTraceInput) *TraceUpdateOne {
 type CreateUsageLogInput struct {
 	APIKeyID                           *int
 	ModelID                            string
-	CredentialFingerprint              *string
-	SecretFingerprint                  *string
-	ResourceScopeKey                   *string
 	QuotaScopeNameSnapshot             *string
 	QuotaScopeStatusSnapshot           *string
 	CredentialNameSnapshot             *string
-	CredentialKeyHint                  *string
-	CredentialSource                   *string
 	CredentialQuotaStatusSnapshot      *string
 	PromptTokens                       *int64
 	CompletionTokens                   *int64
@@ -1404,15 +1393,6 @@ func (i *CreateUsageLogInput) Mutate(m *UsageLogMutation) {
 		m.SetAPIKeyID(*v)
 	}
 	m.SetModelID(i.ModelID)
-	if v := i.CredentialFingerprint; v != nil {
-		m.SetCredentialFingerprint(*v)
-	}
-	if v := i.SecretFingerprint; v != nil {
-		m.SetSecretFingerprint(*v)
-	}
-	if v := i.ResourceScopeKey; v != nil {
-		m.SetResourceScopeKey(*v)
-	}
 	if v := i.QuotaScopeNameSnapshot; v != nil {
 		m.SetQuotaScopeNameSnapshot(*v)
 	}
@@ -1421,12 +1401,6 @@ func (i *CreateUsageLogInput) Mutate(m *UsageLogMutation) {
 	}
 	if v := i.CredentialNameSnapshot; v != nil {
 		m.SetCredentialNameSnapshot(*v)
-	}
-	if v := i.CredentialKeyHint; v != nil {
-		m.SetCredentialKeyHint(*v)
-	}
-	if v := i.CredentialSource; v != nil {
-		m.SetCredentialSource(*v)
 	}
 	if v := i.CredentialQuotaStatusSnapshot; v != nil {
 		m.SetCredentialQuotaStatusSnapshot(*v)
