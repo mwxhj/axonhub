@@ -755,7 +755,6 @@ export function ChannelsActionDialog({ currentRow, duplicateFromRow, open, onOpe
         ...valuesForSubmit,
         supportedModels,
         manualModels,
-      }
       };
 
       if (selectedApiFormat === OPENAI_RESPONSES && !baseURLMatchesResponsesTransport(dataWithModels.baseURL, responsesTransport)) {
