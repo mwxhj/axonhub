@@ -239,3 +239,36 @@ Displayed local credential quota amounts in the credentials table and implemente
 ### Next Steps
 
 - None - task complete
+
+
+## Session 8: Credential quota reset time and HCI cleanup
+
+**Date**: 2026-06-04
+**Task**: Credential quota reset time and HCI cleanup
+**Branch**: `unstable`
+
+### Summary
+
+Added configurable credential local quota daily reset time, cleaned credential/request UI to remove internal identifiers, and documented frontend HCI rules.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `24618c2` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
