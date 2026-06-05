@@ -305,3 +305,37 @@ Hard-cut legacy quota and routing surfaces, removed provider quota subsystem, na
 ### Next Steps
 
 - None - task complete
+
+
+## Session 10: Sticky session fallback routing redesign
+
+**Date**: 2026-06-05
+**Task**: Sticky session fallback routing redesign
+**Branch**: `unstable`
+
+### Summary
+
+Defined and implemented the A-G sticky fallback routing lifecycle. Sticky first-bind now uses normal primary selection without quota-ratio balancing, load balancing keeps full candidate sets, same-channel model alternatives are explicit fallback candidates, and orchestrator routing tests were updated for the credential/ref model.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `93df0a1` | (see git log) |
+| `aa358b4` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
