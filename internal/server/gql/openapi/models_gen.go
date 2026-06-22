@@ -14,6 +14,21 @@ type APIKey struct {
 	Profiles *objects.APIKeyProfiles `json:"profiles,omitempty"`
 }
 
+type APIKeyRouteMigration struct {
+	Version string `json:"version"`
+	Source  string `json:"source"`
+}
+
+type APIKeyRouteTier struct {
+	Name       string `json:"name"`
+	ChannelIDs []int  `json:"channelIDs"`
+}
+
+type APIKeyRouteTierInput struct {
+	Name       string `json:"name"`
+	ChannelIDs []int  `json:"channelIDs"`
+}
+
 type LoadAPIKeyProfileTemplateInput struct {
 	TemplateID objects.GUID `json:"templateID"`
 	APIKeyID   objects.GUID `json:"apiKeyID"`

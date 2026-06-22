@@ -6,19 +6,19 @@ import { useQueryModels } from '@/gql/models';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useSelectedProjectId } from '@/stores/projectStore';
-import { extractNumberID } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { TagsAutocompleteInput } from '@/components/ui/tags-autocomplete-input';
 import { Textarea } from '@/components/ui/textarea';
 import { AutoComplete } from '@/components/auto-complete';
-import { useAllChannelSummarys } from '@/features/channels/data/channels';
 import { useUpdateApiKeyProfileTemplate } from '../data/apikeys';
 import { formSchemaFactory, type FormValues } from '../data/template-form-schema';
 import type { ApiKeyProfileTemplate } from '../data/schema';
+import { RouteTiersEditor } from './route-tiers-editor';
 
 interface ApiKeyEditTemplateDialogProps {
   open: boolean;
@@ -31,18 +31,7 @@ export function ApiKeyEditTemplateDialog({ open, onOpenChange, template }: ApiKe
   const selectedProjectId = useSelectedProjectId();
   const updateTemplate = useUpdateApiKeyProfileTemplate();
   const { data: availableModels, mutateAsync: fetchModels } = useQueryModels();
-  const { data: channelsData } = useAllChannelSummarys(selectedProjectId, { enabled: true });
   const [dialogContent, setDialogContent] = useState<HTMLDivElement | null>(null);
-
-  const allTags = useMemo(() => {
-    const tagsSet = new Set<string>();
-    channelsData?.edges?.forEach((edge) => {
-      edge.node.tags?.forEach((tag) => {
-        if (tag) tagsSet.add(tag);
-      });
-    });
-    return Array.from(tagsSet).sort();
-  }, [channelsData]);
 
   const formSchema = useMemo(() => formSchemaFactory(t), [t]);
 
@@ -58,9 +47,11 @@ export function ApiKeyEditTemplateDialog({ open, onOpenChange, template }: ApiKe
             from: m.from,
             to: m.to,
           })) ?? [],
-        channelIDs: profile?.channelIDs ?? null,
-        channelTags: profile?.channelTags ?? null,
-        channelTagsMatchMode: profile?.channelTagsMatchMode ?? 'any',
+        routeTiers:
+          profile?.routeTiers?.length
+            ? profile.routeTiers
+            : [{ name: t('apikeys.profiles.routeTierDefaultName', { number: 1 }), channelIDs: profile?.channelIDs ?? [] }],
+        preferredChannelID: profile?.preferredChannelID ?? null,
         modelIDs: profile?.modelIDs ?? null,
         quota: profile?.quota
           ? {
@@ -85,7 +76,7 @@ export function ApiKeyEditTemplateDialog({ open, onOpenChange, template }: ApiKe
           : null,
       },
     };
-  }, [template]);
+  }, [template, t]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -114,8 +105,6 @@ export function ApiKeyEditTemplateDialog({ open, onOpenChange, template }: ApiKe
     appendMapping({ from: '', to: '' });
   }, [appendMapping]);
 
-  const channelTagsMatchMode = form.watch('profile.channelTagsMatchMode');
-  const isExcludeMode = channelTagsMatchMode === 'none';
   const hasQuota = form.watch('profile.quota') != null;
   const quotaPeriodType = form.watch('profile.quota.period.type');
 
@@ -244,94 +233,13 @@ export function ApiKeyEditTemplateDialog({ open, onOpenChange, template }: ApiKe
                 />
               </div>
 
-              <div className='border-t pt-6'>
-                <h4 className='mb-3 text-sm font-medium'>{t('apikeys.profiles.allowedChannels')}</h4>
-                <p className='text-muted-foreground mb-3 text-xs'>{t('apikeys.profiles.allowedChannelsDescription')}</p>
-                <FormField
-                  control={form.control}
-                  name='profile.channelIDs'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <TagsAutocompleteInput
-                          value={(field.value || []).map((id) => {
-                            const channel = channelsData?.edges?.find((edge) => parseInt(extractNumberID(edge.node.id), 10) === id);
-                            return channel?.node.name || id.toString();
-                          })}
-                          onChange={(tags) => {
-                            const ids = tags
-                              .map((tag) => {
-                                const channel = channelsData?.edges?.find((edge) => edge.node.name === tag);
-                                return channel ? parseInt(extractNumberID(channel.node.id), 10) : parseInt(tag);
-                              })
-                              .filter((id) => !isNaN(id));
-                            field.onChange(ids);
-                          }}
-                          placeholder={t('apikeys.profiles.allowedChannels')}
-                          suggestions={channelsData?.edges?.map((edge) => edge.node.name) || []}
-                          className='h-auto min-h-9 py-1'
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className='border-t pt-6'>
-                <div className='mb-3 flex items-start justify-between gap-3'>
-                  <div>
-                    <h4 className='text-sm font-medium'>
-                      {t(isExcludeMode ? 'apikeys.profiles.excludedChannelTags' : 'apikeys.profiles.allowedChannelTags')}
-                    </h4>
-                    <p className='text-muted-foreground mt-1 text-xs'>
-                      {t(
-                        isExcludeMode ? 'apikeys.profiles.excludedChannelTagsDescription' : 'apikeys.profiles.allowedChannelTagsDescription'
-                      )}
-                    </p>
-                  </div>
-                  <FormField
-                    control={form.control}
-                    name='profile.channelTagsMatchMode'
-                    render={({ field }) => (
-                      <FormItem className='w-[180px]'>
-                        <FormLabel>{t('apikeys.profiles.allowedChannelTagsMatchMode')}</FormLabel>
-                        <FormControl>
-                          <Select value={field.value || 'any'} onValueChange={field.onChange}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value='any'>{t('apikeys.profiles.allowedChannelTagsMatchModeAny')}</SelectItem>
-                              <SelectItem value='all'>{t('apikeys.profiles.allowedChannelTagsMatchModeAll')}</SelectItem>
-                              <SelectItem value='none'>{t('apikeys.profiles.allowedChannelTagsMatchModeNone')}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name='profile.channelTags'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <TagsAutocompleteInput
-                          value={field.value || []}
-                          onChange={field.onChange}
-                          placeholder={t(isExcludeMode ? 'apikeys.profiles.excludedChannelTags' : 'apikeys.profiles.allowedChannelTags')}
-                          suggestions={allTags}
-                          className='h-auto min-h-9 py-1'
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <RouteTiersEditor
+                form={form}
+                routeTiersName='profile.routeTiers'
+                preferredChannelName='profile.preferredChannelID'
+                selectedProjectId={selectedProjectId}
+                t={t}
+              />
 
               <div className='border-t pt-6'>
                 <div className='space-y-4'>

@@ -173,8 +173,7 @@ type ChannelSettings struct {
 	// When set to true/false, it overrides the global setting.
 	PassThroughBody *bool `json:"passThroughBody,omitempty"`
 
-	// RateLimit configures the upstream rate limit for the channel.
-	// When configured, the load balancer will skip channels that have exceeded their rate limits.
+	// RateLimit configures local per-channel admission and usage accounting.
 	RateLimit *ChannelRateLimit `json:"rateLimit,omitempty"`
 }
 
@@ -184,7 +183,7 @@ type ChannelRateLimit struct {
 	MaxConcurrent *int64 `json:"maxConcurrent,omitempty"` // Maximum concurrent requests, nil = unlimited
 
 	// QueueSize controls the limiter mode when MaxConcurrent is set:
-	//   nil / 0 = soft mode (count only, no blocking, no rejection — preserves PR #1322 scoring behaviour)
+	//   nil / 0 = soft mode (count only, no blocking, no rejection)
 	//   > 0     = hard mode (FIFO wait queue with bounded capacity; excess requests rejected)
 	// Has no effect when MaxConcurrent is unset or <= 0.
 	QueueSize *int64 `json:"queueSize,omitempty"`

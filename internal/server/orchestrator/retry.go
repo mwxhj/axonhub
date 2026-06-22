@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/server/biz"
 	"github.com/looplj/axonhub/llm"
 	"github.com/looplj/axonhub/llm/httpclient"
@@ -87,6 +86,6 @@ func ExtractStatusCodeFromError(err error) int {
 	return 0
 }
 
-func deriveLoadBalancerStrategy(retryPolicy *biz.RetryPolicy, apiKey *ent.APIKey) string {
-	return retryPolicy.LoadBalancerStrategy
+func stickySessionEnabled(retryPolicy *biz.RetryPolicy) bool {
+	return retryPolicy != nil && retryPolicy.LoadBalancerStrategy == biz.LoadBalancerStrategyStickySession
 }

@@ -71,6 +71,13 @@ func createTestProject(t *testing.T, ctx context.Context, client *ent.Client) *e
 	return testProject
 }
 
+func testGQLRouteTiers(ids ...int) []objects.APIKeyRouteTier {
+	return []objects.APIKeyRouteTier{{
+		Name:       "Primary",
+		ChannelIDs: ids,
+	}}
+}
+
 func TestApiKeyProfileTemplate_CreateTemplate(t *testing.T) {
 	mutationResolver, _, ctx, client := setupTestAPIKeyProfileTemplateResolvers(t)
 	defer client.Close()
@@ -87,7 +94,8 @@ func TestApiKeyProfileTemplate_CreateTemplate(t *testing.T) {
 	}
 
 	profile := objects.APIKeyProfile{
-		Name: "test-profile",
+		Name:       "test-profile",
+		RouteTiers: testGQLRouteTiers(1),
 		ModelMappings: []objects.ModelMapping{
 			{From: "gpt-4", To: "gpt-4-turbo"},
 		},
@@ -115,7 +123,7 @@ func TestApiKeyProfileTemplate_UpdateTemplate(t *testing.T) {
 		SetName("original-name").
 		SetDescription("original desc").
 		SetProject(testProject).
-		SetProfile(&objects.APIKeyProfile{Name: "original-profile"}).
+		SetProfile(&objects.APIKeyProfile{Name: "original-profile", RouteTiers: testGQLRouteTiers(1)}).
 		Save(ctx)
 	require.NoError(t, err)
 
@@ -125,7 +133,8 @@ func TestApiKeyProfileTemplate_UpdateTemplate(t *testing.T) {
 	}
 
 	updatedProfile := &objects.APIKeyProfile{
-		Name: "updated-profile",
+		Name:       "updated-profile",
+		RouteTiers: testGQLRouteTiers(2),
 		ModelMappings: []objects.ModelMapping{
 			{From: "claude-3", To: "claude-3-opus"},
 		},
@@ -152,7 +161,7 @@ func TestApiKeyProfileTemplate_DeleteTemplate(t *testing.T) {
 		SetName("to-delete").
 		SetDescription("delete me").
 		SetProject(testProject).
-		SetProfile(&objects.APIKeyProfile{Name: "delete-profile"}).
+		SetProfile(&objects.APIKeyProfile{Name: "delete-profile", RouteTiers: testGQLRouteTiers(1)}).
 		Save(ctx)
 	require.NoError(t, err)
 
@@ -177,7 +186,7 @@ func TestApiKeyProfileTemplate_LoadTemplate(t *testing.T) {
 	existingProfiles := &objects.APIKeyProfiles{
 		ActiveProfile: "Default",
 		Profiles: []objects.APIKeyProfile{
-			{Name: "Default"},
+			{Name: "Default", RouteTiers: testGQLRouteTiers(1)},
 		},
 	}
 
@@ -192,6 +201,7 @@ func TestApiKeyProfileTemplate_LoadTemplate(t *testing.T) {
 	require.NoError(t, err)
 
 	templateProfile := &objects.APIKeyProfile{
+		RouteTiers: testGQLRouteTiers(2),
 		ModelMappings: []objects.ModelMapping{
 			{From: "gpt-4", To: "gpt-4-turbo"},
 		},
@@ -233,7 +243,7 @@ func TestApiKeyProfileTemplate_QueryTemplates(t *testing.T) {
 			SetName(fmt.Sprintf("template-%d", i)).
 			SetDescription(fmt.Sprintf("template %d", i)).
 			SetProject(testProject).
-			SetProfile(&objects.APIKeyProfile{Name: fmt.Sprintf("profile-%d", i)}).
+			SetProfile(&objects.APIKeyProfile{Name: fmt.Sprintf("profile-%d", i), RouteTiers: testGQLRouteTiers(i + 1)}).
 			Save(ctx)
 		require.NoError(t, err)
 	}

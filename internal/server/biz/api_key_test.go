@@ -55,6 +55,13 @@ func setupTestAPIKeyService(t *testing.T, cacheConfig xcache.Config) (*APIKeySer
 	return apiKeyService, client
 }
 
+func testAPIKeyRouteTiers(ids ...int) []objects.APIKeyRouteTier {
+	return []objects.APIKeyRouteTier{{
+		Name:       "Primary",
+		ChannelIDs: ids,
+	}}
+}
+
 func TestAPIKeyService_GetAPIKey(t *testing.T) {
 	// Test with memory cache
 	cacheConfig := xcache.Config{Mode: xcache.ModeMemory}
@@ -302,13 +309,15 @@ func TestAPIKeyService_UpdateAPIKeyProfiles(t *testing.T) {
 			ActiveProfile: "production",
 			Profiles: []objects.APIKeyProfile{
 				{
-					Name: "production",
+					Name:       "production",
+					RouteTiers: testAPIKeyRouteTiers(1, 2),
 					ModelMappings: []objects.ModelMapping{
 						{From: "gpt-4", To: "claude-3"},
 					},
 				},
 				{
-					Name: "development",
+					Name:       "development",
+					RouteTiers: testAPIKeyRouteTiers(3),
 					ModelMappings: []objects.ModelMapping{
 						{From: "gpt-3.5", To: "claude-2"},
 					},
@@ -322,6 +331,7 @@ func TestAPIKeyService_UpdateAPIKeyProfiles(t *testing.T) {
 		require.NotNil(t, updatedAPIKey.Profiles)
 		require.Equal(t, "production", updatedAPIKey.Profiles.ActiveProfile)
 		require.Len(t, updatedAPIKey.Profiles.Profiles, 2)
+		require.Equal(t, []int{1, 2}, updatedAPIKey.Profiles.Profiles[0].RouteTiers[0].ChannelIDs)
 	})
 
 	t.Run("Duplicate profile names - exact match", func(t *testing.T) {
@@ -455,12 +465,39 @@ func TestAPIKeyService_UpdateAPIKeyProfiles(t *testing.T) {
 		require.Contains(t, err.Error(), "channelTagsMatchMode is invalid")
 	})
 
-	t.Run("Channel tags match mode none is valid", func(t *testing.T) {
+	t.Run("Explicit route tiers ignore stale legacy tag fields", func(t *testing.T) {
 		profiles := objects.APIKeyProfiles{
 			ActiveProfile: "production",
 			Profiles: []objects.APIKeyProfile{
 				{
 					Name:                 "production",
+					RouteTiers:           testAPIKeyRouteTiers(2, 1),
+					ChannelTags:          []string{"official"},
+					ChannelTagsMatchMode: objects.ChannelTagsMatchMode("invalid"),
+				},
+			},
+		}
+
+		updatedAPIKey, err := apiKeyService.UpdateAPIKeyProfiles(ctx, apiKey.ID, profiles)
+		require.NoError(t, err)
+		require.NotNil(t, updatedAPIKey)
+		require.NotNil(t, updatedAPIKey.Profiles)
+		profile := updatedAPIKey.Profiles.Profiles[0]
+		require.Empty(t, profile.ChannelIDs)
+		require.Empty(t, profile.ChannelTags)
+		require.Empty(t, profile.ChannelTagsMatchMode)
+		require.Equal(t, []int{2, 1}, profile.RouteTiers[0].ChannelIDs)
+		require.NotNil(t, profile.RouteMigration)
+		require.Equal(t, objects.APIKeyRouteMigrationSourceExplicit, profile.RouteMigration.Source)
+	})
+
+	t.Run("Legacy channel ids migrate to route tiers and clear old filters", func(t *testing.T) {
+		profiles := objects.APIKeyProfiles{
+			ActiveProfile: "production",
+			Profiles: []objects.APIKeyProfile{
+				{
+					Name:                 "production",
+					ChannelIDs:           []int{3, 2, 2, 0},
 					ChannelTags:          []string{"official"},
 					ChannelTagsMatchMode: objects.ChannelTagsMatchModeNone,
 				},
@@ -471,7 +508,44 @@ func TestAPIKeyService_UpdateAPIKeyProfiles(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, updatedAPIKey)
 		require.NotNil(t, updatedAPIKey.Profiles)
-		require.Equal(t, objects.ChannelTagsMatchModeNone, updatedAPIKey.Profiles.Profiles[0].ChannelTagsMatchMode)
+		profile := updatedAPIKey.Profiles.Profiles[0]
+		require.Empty(t, profile.ChannelIDs)
+		require.Empty(t, profile.ChannelTags)
+		require.Empty(t, profile.ChannelTagsMatchMode)
+		require.Equal(t, []int{3, 2}, profile.RouteTiers[0].ChannelIDs)
+		require.NotNil(t, profile.RouteMigration)
+		require.Equal(t, objects.APIKeyRouteMigrationSourceChannelIDs, profile.RouteMigration.Source)
+	})
+
+	t.Run("Empty profile route tiers fail clearly", func(t *testing.T) {
+		profiles := objects.APIKeyProfiles{
+			ActiveProfile: "production",
+			Profiles: []objects.APIKeyProfile{
+				{Name: "production"},
+			},
+		}
+
+		_, err := apiKeyService.UpdateAPIKeyProfiles(ctx, apiKey.ID, profiles)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "routeTiers must contain at least one channel")
+	})
+
+	t.Run("Preferred channel must be inside route tiers", func(t *testing.T) {
+		preferredChannelID := 99
+		profiles := objects.APIKeyProfiles{
+			ActiveProfile: "production",
+			Profiles: []objects.APIKeyProfile{
+				{
+					Name:               "production",
+					RouteTiers:         testAPIKeyRouteTiers(1, 2),
+					PreferredChannelID: &preferredChannelID,
+				},
+			},
+		}
+
+		_, err := apiKeyService.UpdateAPIKeyProfiles(ctx, apiKey.ID, profiles)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "preferredChannelID must exist in routeTiers")
 	})
 
 	t.Run("Multiple profiles with unique names", func(t *testing.T) {
@@ -479,19 +553,22 @@ func TestAPIKeyService_UpdateAPIKeyProfiles(t *testing.T) {
 			ActiveProfile: "staging",
 			Profiles: []objects.APIKeyProfile{
 				{
-					Name: "production",
+					Name:       "production",
+					RouteTiers: testAPIKeyRouteTiers(1),
 					ModelMappings: []objects.ModelMapping{
 						{From: "gpt-4", To: "claude-3"},
 					},
 				},
 				{
-					Name: "staging",
+					Name:       "staging",
+					RouteTiers: testAPIKeyRouteTiers(2),
 					ModelMappings: []objects.ModelMapping{
 						{From: "gpt-3.5", To: "claude-2"},
 					},
 				},
 				{
-					Name: "development",
+					Name:       "development",
+					RouteTiers: testAPIKeyRouteTiers(3),
 					ModelMappings: []objects.ModelMapping{
 						{From: "gpt-3.5-turbo", To: "claude-instant"},
 					},

@@ -785,10 +785,9 @@ func stableJSON(value any) json.RawMessage {
 }
 
 type StickySessionOrderRequest struct {
-	Request      *llm.Request
-	State        *PersistenceState
-	Candidates   []*ChannelModelsCandidate
-	LoadBalancer *LoadBalancer
+	Request    *llm.Request
+	State      *PersistenceState
+	Candidates []*ChannelModelsCandidate
 }
 
 type StickySessionRouter struct {
@@ -829,12 +828,12 @@ func (r *StickySessionRouter) Order(ctx context.Context, req StickySessionOrderR
 		req.State.PreferredCredentialFingerprint = ""
 	}
 
-	if len(req.Candidates) == 0 || req.LoadBalancer == nil || req.Request == nil {
+	if len(req.Candidates) == 0 || req.Request == nil {
 		return req.Candidates
 	}
 
 	if r == nil || r.store == nil || r.extractor == nil {
-		return loadBalancedCandidates(ctx, req.Candidates, req.Request, req.LoadBalancer, stickyRetryPolicyProvider(req))
+		return req.Candidates
 	}
 
 	extraction := stickyNormalizeExtraction(r.extractor.Extract(ctx, req.State, req.Request))
@@ -854,28 +853,26 @@ func (r *StickySessionRouter) Order(ctx context.Context, req StickySessionOrderR
 				log.String("reason", extraction.Reason),
 				log.String("model", req.Request.Model))
 		}
-		return loadBalancedCandidates(ctx, req.Candidates, req.Request, req.LoadBalancer, stickyRetryPolicyProvider(req))
+		return req.Candidates
 	}
 
-	eligibleCandidates := r.eligibleCandidates(ctx, req)
-	primary, excludedChannelID, boundLookup, preferredTarget := r.boundCandidateForLookups(ctx, extraction.Lookups, req.Candidates, eligibleCandidates)
+	primary, boundLookup, preferredTarget := r.boundCandidateForLookups(ctx, extraction.Lookups, req.Candidates)
 	source := stickyRoutingSourceBinding
 	degradeReason := stickyRoutingDegradeNone
 	if primary == nil {
-		primary, preferredTarget, source, degradeReason = stickyFirstBindCandidate(ctx, req, eligibleCandidates, extraction.Key)
+		primary, preferredTarget, source, degradeReason = stickyFirstBindCandidate(ctx, req.Candidates, extraction.Key)
 	}
 	if primary == nil {
-		return loadBalancedCandidates(ctx, req.Candidates, req.Request, req.LoadBalancer, stickyRetryPolicyProvider(req))
+		return req.Candidates
 	}
 
-	ordered := stickyOrderedCandidates(ctx, req, primary, excludedChannelID)
+	ordered := stickyOrderedCandidates(req, primary)
 	if req.State != nil {
 		req.State.StickyRoutingSource = source
 		req.State.StickyRoutingDegradeReason = degradeReason
 		req.State.PreferredCredentialID = preferredTarget.CredentialID
 		req.State.PreferredCredentialFingerprint = preferredTarget.CredentialFingerprint
 	}
-	req.LoadBalancer.TrackSelection(ordered)
 
 	if log.DebugEnabled(ctx) && len(ordered) > 0 && ordered[0] != nil && ordered[0].Channel != nil {
 		reason := extraction.Reason
@@ -899,86 +896,71 @@ func (r *StickySessionRouter) boundCandidateForLookups(
 	ctx context.Context,
 	lookups []StickyLookup,
 	candidates []*ChannelModelsCandidate,
-	eligibleCandidates []*ChannelModelsCandidate,
-) (*ChannelModelsCandidate, int, StickyLookup, StickySessionTarget) {
-	excludedChannelID := 0
-	var excludedTarget StickySessionTarget
+) (*ChannelModelsCandidate, StickyLookup, StickySessionTarget) {
+	currentTier, ok := stickyCurrentRouteTier(candidates)
+	if !ok {
+		return nil, StickyLookup{}, StickySessionTarget{}
+	}
 	for _, lookup := range lookups {
 		if lookup.Key == "" {
 			continue
 		}
-		primary, excluded, preferredTarget := r.boundCandidate(ctx, lookup.Key, candidates, eligibleCandidates)
+		primary, preferredTarget := r.boundCandidate(ctx, lookup.Key, candidates, currentTier)
 		if primary != nil {
-			return primary, excludedChannelID, lookup, preferredTarget
-		}
-		if excluded != 0 && excludedChannelID == 0 {
-			excludedChannelID = excluded
-			excludedTarget = preferredTarget
+			return primary, lookup, preferredTarget
 		}
 	}
 
-	return nil, excludedChannelID, StickyLookup{}, excludedTarget
+	return nil, StickyLookup{}, StickySessionTarget{}
+}
+
+func stickyCurrentRouteTier(candidates []*ChannelModelsCandidate) (int, bool) {
+	for _, candidate := range candidates {
+		if candidate != nil {
+			return candidate.Priority, true
+		}
+	}
+
+	return 0, false
 }
 
 func (r *StickySessionRouter) boundCandidate(
 	ctx context.Context,
 	key string,
 	candidates []*ChannelModelsCandidate,
-	eligibleCandidates []*ChannelModelsCandidate,
-) (*ChannelModelsCandidate, int, StickySessionTarget) {
+	currentTier int,
+) (*ChannelModelsCandidate, StickySessionTarget) {
 	target, ok := stickyStoreGetTarget(r.store, key)
 	if !ok {
-		return nil, 0, StickySessionTarget{}
+		return nil, StickySessionTarget{}
 	}
 
-	primaryTier := stickyBestPriorityCandidates(eligibleCandidates)
 	channelID := target.ChannelID
 	boundChannelPresent := false
-	boundChannelInPrimaryTier := false
+	boundChannelInCurrentTier := false
 
 	for _, candidate := range candidates {
 		if candidate == nil || candidate.Channel == nil || candidate.Channel.ID != channelID {
 			continue
 		}
 		boundChannelPresent = true
-
-		for _, eligible := range primaryTier {
-			if eligible != nil && eligible.Channel != nil && eligible.Channel.ID == channelID && stickyCandidateMatchesTarget(eligible, target) {
-				return eligible, 0, target
-			}
-			if eligible != nil && eligible.Channel != nil && eligible.Channel.ID == channelID {
-				boundChannelInPrimaryTier = true
-			}
+		if candidate.Priority != currentTier {
+			continue
 		}
-
-		break
-	}
-
-	if target.CredentialID > 0 || target.CredentialFingerprint != "" {
-		for _, eligible := range primaryTier {
-			if stickyCandidateMatchesTarget(eligible, target) {
-				if log.DebugEnabled(ctx) {
-					log.Debug(ctx, "sticky-session binding kept credential on same priority channel",
-						log.Int("bound_channel_id", channelID),
-						log.Int("selected_channel_id", eligible.Channel.ID),
-						log.String("credential_fingerprint", target.CredentialFingerprint))
-				}
-
-				return eligible, 0, target
-			}
+		boundChannelInCurrentTier = true
+		if stickyCandidateMatchesTarget(candidate, target) {
+			return candidate, target
 		}
 	}
 
 	if boundChannelPresent {
 		if log.DebugEnabled(ctx) {
-			log.Debug(ctx, "sticky-session binding skipped because channel is not currently eligible in the active priority tier",
+			log.Debug(ctx, "sticky-session binding skipped because target is not currently eligible in the active route tier",
 				log.Int("bound_channel_id", channelID),
+				log.Bool("bound_channel_in_current_tier", boundChannelInCurrentTier),
 				log.String("credential_fingerprint", target.CredentialFingerprint))
 		}
-		if boundChannelInPrimaryTier {
-			return nil, channelID, target
-		}
-		return nil, 0, target
+		return nil, target
 	}
 
 	r.store.Delete(key)
@@ -987,7 +969,7 @@ func (r *StickySessionRouter) boundCandidate(
 			log.Int("bound_channel_id", channelID))
 	}
 
-	return nil, 0, StickySessionTarget{}
+	return nil, StickySessionTarget{}
 }
 
 func stickyStoreGetTarget(store StickySessionStore, key string) (StickySessionTarget, bool) {
@@ -1019,75 +1001,17 @@ func stickyCandidateMatchesTarget(candidate *ChannelModelsCandidate, target Stic
 	return candidate.Channel.HasEnabledCredentialFingerprint(target.CredentialFingerprint)
 }
 
-func stickyBestPriorityCandidates(candidates []*ChannelModelsCandidate) []*ChannelModelsCandidate {
-	bestPrioritySet := false
-	bestPriority := 0
-	for _, candidate := range candidates {
-		if candidate == nil || candidate.Channel == nil {
-			continue
-		}
-		if !bestPrioritySet || candidate.Priority < bestPriority {
-			bestPrioritySet = true
-			bestPriority = candidate.Priority
-		}
-	}
-	if !bestPrioritySet {
-		return nil
-	}
-
-	result := make([]*ChannelModelsCandidate, 0, len(candidates))
-	for _, candidate := range candidates {
-		if candidate != nil && candidate.Channel != nil && candidate.Priority == bestPriority {
-			result = append(result, candidate)
-		}
-	}
-
-	return result
-}
-
-func (r *StickySessionRouter) eligibleCandidates(ctx context.Context, req StickySessionOrderRequest) []*ChannelModelsCandidate {
-	if len(req.Candidates) == 0 || req.LoadBalancer == nil || req.Request == nil {
-		return req.Candidates
-	}
-
-	useStream := req.Request.Stream != nil && *req.Request.Stream
-
-	result := make([]*ChannelModelsCandidate, 0, len(req.Candidates))
-	for _, candidate := range req.Candidates {
-		if !req.LoadBalancer.IsStickyPrimaryEligible(ctx, candidate, req.Request.Model, useStream) {
-			continue
-		}
-		result = append(result, candidate)
-	}
-
-	return result
-}
-
 func stickyOrderedCandidates(
-	ctx context.Context,
 	req StickySessionOrderRequest,
 	primary *ChannelModelsCandidate,
-	excludedChannelID int,
 ) []*ChannelModelsCandidate {
-	requiredCount := req.LoadBalancer.RequiredCandidateCount(ctx, req.Candidates)
-	if requiredCount <= 0 {
-		requiredCount = 1
-	}
-
 	result := []*ChannelModelsCandidate{primary}
-	if requiredCount == 1 {
-		return result
-	}
-
 	remaining := make([]*ChannelModelsCandidate, 0, len(req.Candidates)-1)
 	for _, candidate := range req.Candidates {
 		if candidate == nil || candidate.Channel == nil {
 			continue
 		}
 		if primary != nil && primary.Channel != nil && candidate.Channel.ID == primary.Channel.ID {
-			continue
-		}
-		if excludedChannelID != 0 && candidate.Channel.ID == excludedChannelID {
 			continue
 		}
 		remaining = append(remaining, candidate)
@@ -1097,29 +1021,22 @@ func stickyOrderedCandidates(
 		return result
 	}
 
-	orderedRemaining := loadBalancedCandidatesWithoutTracking(ctx, remaining, req.Request, req.LoadBalancer, stickyRetryPolicyProvider(req))
-	for _, candidate := range orderedRemaining {
-		if len(result) >= requiredCount {
-			break
-		}
-		result = append(result, candidate)
-	}
+	result = append(result, remaining...)
 
 	return result
 }
 
 func stickyFirstBindCandidate(
 	ctx context.Context,
-	req StickySessionOrderRequest,
-	eligibleCandidates []*ChannelModelsCandidate,
+	candidates []*ChannelModelsCandidate,
 	stickyKey string,
 ) (*ChannelModelsCandidate, StickySessionTarget, string, string) {
-	ordered := loadBalancedCandidatesWithoutTracking(ctx, eligibleCandidates, req.Request, req.LoadBalancer, stickyRetryPolicyProvider(req))
-	if len(ordered) == 0 || ordered[0] == nil {
+	_ = ctx
+	if len(candidates) == 0 || candidates[0] == nil {
 		return nil, StickySessionTarget{}, stickyRoutingSourceNoCandidates, stickyRoutingDegradeNone
 	}
 
-	primary := ordered[0]
+	primary := candidates[0]
 	return primary, stickyCandidatePreferredTarget(primary, stickyKey), stickyRoutingSourceNormalFirstBind, stickyRoutingDegradeNone
 }
 
@@ -1198,21 +1115,11 @@ func stickyTargetFromCredentialView(candidate *ChannelModelsCandidate, view biz.
 	return target
 }
 
-func stickyRetryPolicyProvider(req StickySessionOrderRequest) RetryPolicyProvider {
-	if req.State != nil && req.State.RetryPolicyProvider != nil {
-		return req.State.RetryPolicyProvider
-	}
-	if req.LoadBalancer != nil {
-		return req.LoadBalancer.systemService
-	}
-	return nil
-}
-
-func withStickySessionBinding(outbound *PersistentOutboundTransformer, store StickySessionStore, strategy string) pipeline.Middleware {
+func withStickySessionBinding(outbound *PersistentOutboundTransformer, store StickySessionStore, enabled bool) pipeline.Middleware {
 	return &stickySessionBindingMiddleware{
 		outbound: outbound,
 		store:    store,
-		strategy: strategy,
+		enabled:  enabled,
 	}
 }
 
@@ -1221,7 +1128,7 @@ type stickySessionBindingMiddleware struct {
 
 	outbound *PersistentOutboundTransformer
 	store    StickySessionStore
-	strategy string
+	enabled  bool
 }
 
 func (m *stickySessionBindingMiddleware) Name() string {
@@ -1229,7 +1136,7 @@ func (m *stickySessionBindingMiddleware) Name() string {
 }
 
 func (m *stickySessionBindingMiddleware) OnOutboundLlmResponse(ctx context.Context, response *llm.Response) (*llm.Response, error) {
-	if m.strategy != biz.LoadBalancerStrategyStickySession {
+	if !m.enabled {
 		return response, nil
 	}
 	m.captureLlmResponse(response)
@@ -1237,7 +1144,7 @@ func (m *stickySessionBindingMiddleware) OnOutboundLlmResponse(ctx context.Conte
 }
 
 func (m *stickySessionBindingMiddleware) OnOutboundLlmStream(ctx context.Context, stream streams.Stream[*llm.Response]) (streams.Stream[*llm.Response], error) {
-	if m.strategy != biz.LoadBalancerStrategyStickySession {
+	if !m.enabled {
 		return stream, nil
 	}
 	if m.outbound == nil || m.outbound.state == nil {
@@ -1257,7 +1164,7 @@ func (m *stickySessionBindingMiddleware) OnInboundRawResponse(ctx context.Contex
 }
 
 func (m *stickySessionBindingMiddleware) OnInboundRawStream(ctx context.Context, stream streams.Stream[*httpclient.StreamEvent]) (streams.Stream[*httpclient.StreamEvent], error) {
-	if m.strategy != biz.LoadBalancerStrategyStickySession {
+	if !m.enabled {
 		return stream, nil
 	}
 	if m.outbound == nil || m.outbound.state == nil {
@@ -1273,7 +1180,7 @@ func (m *stickySessionBindingMiddleware) OnInboundRawStream(ctx context.Context,
 }
 
 func (m *stickySessionBindingMiddleware) bindCurrentChannel(ctx context.Context) {
-	if m == nil || m.strategy != biz.LoadBalancerStrategyStickySession || m.store == nil || m.outbound == nil || m.outbound.state == nil {
+	if m == nil || !m.enabled || m.store == nil || m.outbound == nil || m.outbound.state == nil {
 		return
 	}
 

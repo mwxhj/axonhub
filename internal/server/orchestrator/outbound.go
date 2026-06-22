@@ -831,7 +831,7 @@ func (p *PersistentOutboundTransformer) PrepareForFallback(ctx context.Context, 
 			log.String("channel", candidate.Channel.Name),
 			log.String("model", model),
 			log.Int("index", p.state.CurrentCandidateIndex),
-			log.Int("priority", candidate.Priority),
+			log.Int("route_tier", candidate.Priority),
 			log.String("api_format", candidate.APIFormat),
 		)
 	}

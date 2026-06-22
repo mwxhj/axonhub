@@ -20,7 +20,7 @@ var (
 // ChannelLimiter provides per-channel admission control with two modes:
 //
 //   - Soft mode (queueSize == 0): Acquire only counts in-flight requests; it never
-//     blocks or rejects. The load balancer uses Stats() to down-rank busy channels.
+//     blocks or rejects.
 //   - Hard mode (queueSize > 0): Acquire enforces a strict capacity. Excess requests
 //     wait in a FIFO queue of queueSize entries; further arrivals get
 //     ErrChannelQueueFull. Each waiter additionally honours an optional timeout

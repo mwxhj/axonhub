@@ -32,7 +32,6 @@ type TestChannelOrchestrator struct {
 	httpClient                  *httpclient.HttpClient
 	modelCircuitBreaker         *biz.ModelCircuitBreaker
 	modelMapper                 *ModelMapper
-	loadBalancer                *LoadBalancer
 	channelLimiterManager       *ChannelLimiterManager
 }
 
@@ -54,8 +53,7 @@ func NewTestChannelOrchestrator(
 		httpClient:                  httpClient,
 		modelCircuitBreaker:         biz.NewModelCircuitBreaker(),
 		modelMapper:                 NewModelMapper(),
-		loadBalancer:                NewLoadBalancer(systemService, channelService, NewWeightStrategy()),
-		channelLimiterManager:      NewChannelLimiterManager(),
+		channelLimiterManager:       NewChannelLimiterManager(),
 	}
 }
 
@@ -92,16 +90,13 @@ func (processor *TestChannelOrchestrator) TestChannel(
 		Middlewares: []pipeline.Middleware{
 			stream.EnsureUsage(),
 		},
-		Inbound:                    inbound,
-		SystemService:              processor.systemService,
-		UsageLogService:            processor.usageLogService,
-		proxy:                      proxy,
-		ModelMapper:                processor.modelMapper,
-		adaptiveLoadBalancer:       processor.loadBalancer,
-		failoverLoadBalancer:       processor.loadBalancer,
-		circuitBreakerLoadBalancer: processor.loadBalancer,
-		channelLimiterManager:      processor.channelLimiterManager,
-		modelCircuitBreaker:        processor.modelCircuitBreaker,
+		Inbound:               inbound,
+		SystemService:         processor.systemService,
+		UsageLogService:       processor.usageLogService,
+		proxy:                 proxy,
+		ModelMapper:           processor.modelMapper,
+		channelLimiterManager: processor.channelLimiterManager,
+		modelCircuitBreaker:   processor.modelCircuitBreaker,
 	}
 
 	channel, err := processor.channelService.GetChannel(ctx, channelID.ID)

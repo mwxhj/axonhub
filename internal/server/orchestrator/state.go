@@ -21,7 +21,6 @@ type PersistenceState struct {
 	PromptProtecter     PromptProtecter
 	RetryPolicyProvider RetryPolicyProvider
 	CandidateSelector   CandidateSelector
-	LoadBalancer        *LoadBalancer
 
 	// Request state
 	ModelMapper *ModelMapper

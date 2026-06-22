@@ -859,13 +859,25 @@ func TestChatCompletionOrchestrator_Process_FallbackToExplicitSameChannelModelCa
 	project := createTestProject(t, ctx, client)
 	ch := createTestChannel(t, ctx, client)
 	channelService, requestService, systemService, usageLogService := setupTestServices(t, client)
+	apiKey, err := client.APIKey.Create().
+		SetName("route-key").
+		SetKey("test-route-key").
+		SetProjectID(project.ID).
+		SetProfiles(&objects.APIKeyProfiles{
+			ActiveProfile: "default",
+			Profiles: []objects.APIKeyProfile{{
+				Name:       "default",
+				RouteTiers: []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{ch.ID}}},
+			}},
+		}).
+		Save(ctx)
+	require.NoError(t, err)
 
-	err := systemService.SetRetryPolicy(ctx, &biz.RetryPolicy{
+	err = systemService.SetRetryPolicy(ctx, &biz.RetryPolicy{
 		Enabled:                 true,
 		MaxChannelRetries:       1,
 		MaxSingleChannelRetries: 1,
 		RetryDelayMs:            0,
-		LoadBalancerStrategy:    "adaptive",
 	})
 	require.NoError(t, err)
 
@@ -929,6 +941,7 @@ func TestChatCompletionOrchestrator_Process_FallbackToExplicitSameChannelModelCa
 
 	httpRequest := buildTestRequest("gpt-4", "Hello!", false)
 	ctx = contexts.WithProjectID(ctx, project.ID)
+	ctx = contexts.WithAPIKey(ctx, apiKey)
 
 	result, err := orchestrator.Process(ctx, httpRequest)
 	require.NoError(t, err)

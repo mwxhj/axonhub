@@ -66,7 +66,8 @@ func TestAPIKeyProfileTemplate(t *testing.T) {
 	// Test 1: Create ApiKeyProfileTemplate with name, description, project_id, profile JSON
 	t.Run("Create ApiKeyProfileTemplate", func(t *testing.T) {
 		profile := &objects.APIKeyProfile{
-			Name: "test-profile",
+			Name:       "test-profile",
+			RouteTiers: testAPIKeyRouteTiers(1),
 			ModelMappings: []objects.ModelMapping{
 				{From: "gpt-4", To: "gpt-4-turbo"},
 			},
@@ -106,7 +107,7 @@ func TestAPIKeyProfileTemplate(t *testing.T) {
 			SetName("my-template").
 			SetDescription("Duplicate").
 			SetProject(testProject).
-			SetProfile(&objects.APIKeyProfile{Name: "dup"}).
+			SetProfile(&objects.APIKeyProfile{Name: "dup", RouteTiers: testAPIKeyRouteTiers(1)}).
 			Save(ctx)
 		require.Error(t, err)
 	})
@@ -125,7 +126,7 @@ func TestAPIKeyProfileTemplate(t *testing.T) {
 			SetName("my-template").
 			SetDescription("Different project").
 			SetProject(project2).
-			SetProfile(&objects.APIKeyProfile{Name: "profile2"}).
+			SetProfile(&objects.APIKeyProfile{Name: "profile2", RouteTiers: testAPIKeyRouteTiers(1)}).
 			Save(ctx)
 		require.NoError(t, err)
 		require.NotNil(t, template2)
@@ -177,7 +178,8 @@ func TestLoadTemplate_HappyPath(t *testing.T) {
 		ActiveProfile: "Default",
 		Profiles: []objects.APIKeyProfile{
 			{
-				Name: "Default",
+				Name:       "Default",
+				RouteTiers: testAPIKeyRouteTiers(1),
 				ModelMappings: []objects.ModelMapping{
 					{From: "gpt-4", To: "gpt-4-turbo"},
 				},
@@ -197,7 +199,8 @@ func TestLoadTemplate_HappyPath(t *testing.T) {
 
 	// Create template with a different profile name
 	templateProfile := &objects.APIKeyProfile{
-		Name: "Production",
+		Name:       "Production",
+		RouteTiers: testAPIKeyRouteTiers(2),
 		ModelMappings: []objects.ModelMapping{
 			{From: "claude-3", To: "claude-3-opus"},
 		},
@@ -268,7 +271,8 @@ func TestLoadTemplate_NameConflict(t *testing.T) {
 		ActiveProfile: "Production",
 		Profiles: []objects.APIKeyProfile{
 			{
-				Name: "Production",
+				Name:       "Production",
+				RouteTiers: testAPIKeyRouteTiers(1),
 				ModelMappings: []objects.ModelMapping{
 					{From: "gpt-4", To: "gpt-4-turbo"},
 				},
@@ -288,7 +292,8 @@ func TestLoadTemplate_NameConflict(t *testing.T) {
 
 	// Create template also named "Production"
 	templateProfile := &objects.APIKeyProfile{
-		Name: "Production",
+		Name:       "Production",
+		RouteTiers: testAPIKeyRouteTiers(2),
 		ModelMappings: []objects.ModelMapping{
 			{From: "claude-3", To: "claude-3-opus"},
 		},
@@ -357,13 +362,15 @@ func TestLoadTemplate_MultipleConflicts(t *testing.T) {
 		ActiveProfile: "Production",
 		Profiles: []objects.APIKeyProfile{
 			{
-				Name: "Production",
+				Name:       "Production",
+				RouteTiers: testAPIKeyRouteTiers(1),
 				ModelMappings: []objects.ModelMapping{
 					{From: "gpt-4", To: "gpt-4-turbo"},
 				},
 			},
 			{
-				Name: "Production (1)",
+				Name:       "Production (1)",
+				RouteTiers: testAPIKeyRouteTiers(2),
 				ModelMappings: []objects.ModelMapping{
 					{From: "gpt-3.5", To: "gpt-3.5-turbo"},
 				},
@@ -383,7 +390,8 @@ func TestLoadTemplate_MultipleConflicts(t *testing.T) {
 
 	// Create template named "Production"
 	templateProfile := &objects.APIKeyProfile{
-		Name: "Production",
+		Name:       "Production",
+		RouteTiers: testAPIKeyRouteTiers(3),
 		ModelMappings: []objects.ModelMapping{
 			{From: "claude-3", To: "claude-3-opus"},
 		},
@@ -478,7 +486,8 @@ func TestLoadTemplate_APIKeyNotFound(t *testing.T) {
 
 	// Create template
 	templateProfile := &objects.APIKeyProfile{
-		Name: "Production",
+		Name:       "Production",
+		RouteTiers: testAPIKeyRouteTiers(1),
 	}
 
 	template, err := client.APIKeyProfileTemplate.Create().
@@ -544,7 +553,8 @@ func TestLoadTemplate_DifferentProject(t *testing.T) {
 
 	// Create template in project 2
 	templateProfile := &objects.APIKeyProfile{
-		Name: "Production",
+		Name:       "Production",
+		RouteTiers: testAPIKeyRouteTiers(1),
 	}
 
 	template, err := client.APIKeyProfileTemplate.Create().

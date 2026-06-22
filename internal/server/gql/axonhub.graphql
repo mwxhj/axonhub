@@ -342,7 +342,14 @@ input APIKeyProfileInput {
   channelTags: [String!]
   channelTagsMatchMode: ChannelTagsMatchMode
   modelIDs: [String!]
+  routeTiers: [APIKeyRouteTierInput!]
+  preferredChannelID: Int
   quota: APIKeyQuotaInput
+}
+
+input APIKeyRouteTierInput {
+  name: String!
+  channelIDs: [Int!]!
 }
 
 input UpdateProjectProfilesInput {
@@ -385,7 +392,20 @@ type APIKeyProfile {
   channelTags: [String!]
   channelTagsMatchMode: ChannelTagsMatchMode
   modelIDs: [String!]
+  routeTiers: [APIKeyRouteTier!]
+  preferredChannelID: Int
+  routeMigration: APIKeyRouteMigration
   quota: APIKeyQuota
+}
+
+type APIKeyRouteTier {
+  name: String!
+  channelIDs: [Int!]!
+}
+
+type APIKeyRouteMigration {
+  version: String!
+  source: String!
 }
 
 enum ChannelTagsMatchMode {

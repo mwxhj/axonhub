@@ -13,6 +13,35 @@ import (
 	"github.com/looplj/axonhub/internal/objects"
 )
 
+// RouteTiers is the resolver for the routeTiers field.
+func (r *aPIKeyProfileResolver) RouteTiers(ctx context.Context, obj *objects.APIKeyProfile) ([]*APIKeyRouteTier, error) {
+	if obj == nil || len(obj.RouteTiers) == 0 {
+		return nil, nil
+	}
+
+	result := make([]*APIKeyRouteTier, 0, len(obj.RouteTiers))
+	for _, tier := range obj.RouteTiers {
+		result = append(result, &APIKeyRouteTier{
+			Name:       tier.Name,
+			ChannelIDs: append([]int(nil), tier.ChannelIDs...),
+		})
+	}
+
+	return result, nil
+}
+
+// RouteMigration is the resolver for the routeMigration field.
+func (r *aPIKeyProfileResolver) RouteMigration(ctx context.Context, obj *objects.APIKeyProfile) (*APIKeyRouteMigration, error) {
+	if obj == nil || obj.RouteMigration == nil {
+		return nil, nil
+	}
+
+	return &APIKeyRouteMigration{
+		Version: obj.RouteMigration.Version,
+		Source:  obj.RouteMigration.Source,
+	}, nil
+}
+
 // CreateLLMAPIKey is the resolver for the createLLMAPIKey field.
 func (r *mutationResolver) CreateLLMAPIKey(ctx context.Context, name string) (*APIKey, error) {
 	ownerKey, ok := contexts.GetAPIKey(ctx)
@@ -59,7 +88,42 @@ func (r *mutationResolver) LoadAPIKeyProfileTemplate(ctx context.Context, input 
 	return toOpenAPIAPIKey(apiKey), nil
 }
 
+// RouteTiers is the resolver for the routeTiers field.
+func (r *aPIKeyProfileInputResolver) RouteTiers(ctx context.Context, obj *objects.APIKeyProfile, data []*APIKeyRouteTierInput) error {
+	if obj == nil {
+		return nil
+	}
+
+	if len(data) == 0 {
+		obj.RouteTiers = nil
+		return nil
+	}
+
+	obj.RouteTiers = make([]objects.APIKeyRouteTier, 0, len(data))
+	for _, tier := range data {
+		if tier == nil {
+			continue
+		}
+		obj.RouteTiers = append(obj.RouteTiers, objects.APIKeyRouteTier{
+			Name:       tier.Name,
+			ChannelIDs: append([]int(nil), tier.ChannelIDs...),
+		})
+	}
+
+	return nil
+}
+
+// APIKeyProfile returns APIKeyProfileResolver implementation.
+func (r *Resolver) APIKeyProfile() APIKeyProfileResolver { return &aPIKeyProfileResolver{r} }
+
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
+// APIKeyProfileInput returns APIKeyProfileInputResolver implementation.
+func (r *Resolver) APIKeyProfileInput() APIKeyProfileInputResolver {
+	return &aPIKeyProfileInputResolver{r}
+}
+
+type aPIKeyProfileResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
+type aPIKeyProfileInputResolver struct{ *Resolver }

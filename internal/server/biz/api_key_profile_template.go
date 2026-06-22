@@ -14,11 +14,14 @@ import (
 type APIKeyProfileTemplateServiceParams struct {
 	fx.In
 
-	Ent *ent.Client
+	Ent            *ent.Client
+	ChannelService *ChannelService `optional:"true"`
 }
 
 type APIKeyProfileTemplateService struct {
 	*AbstractService
+
+	ChannelService *ChannelService
 }
 
 func NewAPIKeyProfileTemplateService(params APIKeyProfileTemplateServiceParams) *APIKeyProfileTemplateService {
@@ -26,6 +29,7 @@ func NewAPIKeyProfileTemplateService(params APIKeyProfileTemplateServiceParams) 
 		AbstractService: &AbstractService{
 			db: params.Ent,
 		},
+		ChannelService: params.ChannelService,
 	}
 }
 
@@ -34,6 +38,9 @@ func (s *APIKeyProfileTemplateService) CreateTemplate(ctx context.Context, input
 
 	if profile != nil {
 		profile.Name = input.Name
+		if err := s.normalizeAndValidateTemplateProfile(profile); err != nil {
+			return nil, err
+		}
 	}
 
 	create := client.APIKeyProfileTemplate.Create().
@@ -89,6 +96,9 @@ func (s *APIKeyProfileTemplateService) UpdateTemplate(ctx context.Context, id in
 				profile.Name = *input.Name
 			} else {
 				profile.Name = existing.Name
+			}
+			if err := s.normalizeAndValidateTemplateProfile(profile); err != nil {
+				return fmt.Errorf("invalid template profile: %w", err)
 			}
 			update.SetProfile(profile)
 		}
@@ -156,6 +166,9 @@ func (s *APIKeyProfileTemplateService) LoadTemplate(ctx context.Context, templat
 		if templateProfile == nil {
 			return fmt.Errorf("template has no profile")
 		}
+		if err := s.normalizeAndValidateTemplateProfile(templateProfile); err != nil {
+			return fmt.Errorf("invalid template profile: %w", err)
+		}
 
 		existingProfiles := apiKey.Profiles
 		if existingProfiles == nil {
@@ -185,6 +198,22 @@ func (s *APIKeyProfileTemplateService) LoadTemplate(ctx context.Context, templat
 	}
 
 	return updatedKey, nil
+}
+
+func (s *APIKeyProfileTemplateService) normalizeAndValidateTemplateProfile(profile *objects.APIKeyProfile) error {
+	if profile == nil {
+		return fmt.Errorf("profile is required")
+	}
+
+	var channels []APIKeyProfileRouteChannel
+	if s.ChannelService != nil {
+		channels = enabledRouteChannels(s.ChannelService.GetEnabledChannels())
+	}
+	if err := migrateAPIKeyProfileRoutesForSave(profile, channels); err != nil {
+		return err
+	}
+
+	return validateProfileRoutes([]objects.APIKeyProfile{*profile})
 }
 
 func resolveProfileNameConflict(existingProfiles []objects.APIKeyProfile, newName string) string {

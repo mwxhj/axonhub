@@ -35,6 +35,21 @@ type APIKeyQuotaWindow struct {
 	End   *time.Time `json:"end,omitempty"`
 }
 
+type APIKeyRouteMigration struct {
+	Version string `json:"version"`
+	Source  string `json:"source"`
+}
+
+type APIKeyRouteTier struct {
+	Name       string `json:"name"`
+	ChannelIDs []int  `json:"channelIDs"`
+}
+
+type APIKeyRouteTierInput struct {
+	Name       string `json:"name"`
+	ChannelIDs []int  `json:"channelIDs"`
+}
+
 type APIKeyTokenUsageStats struct {
 	APIKeyID        objects.GUID            `json:"apiKeyId"`
 	InputTokens     int                     `json:"inputTokens"`

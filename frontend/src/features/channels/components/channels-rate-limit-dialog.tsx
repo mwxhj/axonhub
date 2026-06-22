@@ -91,9 +91,8 @@ export function ChannelsRateLimitDialog({ open, onOpenChange, currentRow }: Prop
   }, [open, currentRow, form]);
 
   // Soft-mode advisory: when the user sets MaxConcurrent without a queue, the
-  // limiter only down-ranks the channel in load-balancer scoring — it does not
-  // block excess requests. Surface this so users understand why the cap may
-  // appear to be exceeded under load.
+  // limiter records over-capacity traffic but does not block excess requests.
+  // Surface this so users understand why the cap may appear to be exceeded.
   const watchedMaxConcurrent = form.watch('maxConcurrent');
   const watchedQueueSize = form.watch('queueSize');
   const showSoftModeHint =

@@ -20,7 +20,29 @@ type APIKeyProfile struct {
 	ChannelTags          []string             `json:"channelTags,omitempty"`
 	ChannelTagsMatchMode ChannelTagsMatchMode `json:"channelTagsMatchMode,omitempty"`
 	ModelIDs             []string             `json:"modelIDs,omitempty"`
+
+	RouteTiers         []APIKeyRouteTier     `json:"routeTiers,omitempty"`
+	PreferredChannelID *int                  `json:"preferredChannelID,omitempty"`
+	RouteMigration     *APIKeyRouteMigration `json:"routeMigration,omitempty"`
 }
+
+type APIKeyRouteTier struct {
+	Name       string `json:"name"`
+	ChannelIDs []int  `json:"channelIDs"`
+}
+
+type APIKeyRouteMigration struct {
+	Version string `json:"version"`
+	Source  string `json:"source"`
+}
+
+const (
+	APIKeyRouteMigrationVersion                  = "v1"
+	APIKeyRouteMigrationSourceExplicit           = "explicit"
+	APIKeyRouteMigrationSourceChannelIDs         = "legacy_channel_ids"
+	APIKeyRouteMigrationSourceChannelTags        = "legacy_channel_tags"
+	APIKeyRouteMigrationSourceAllEnabledChannels = "legacy_all_enabled_channels"
+)
 
 // ChannelTagsMatchMode controls how profile channel tags are matched.
 // If this enum is changed, update MatchChannelTags in this file.
@@ -124,7 +146,34 @@ func (p *APIKeyProfile) Clone() *APIKeyProfile {
 		cp.ModelIDs = make([]string, len(p.ModelIDs))
 		copy(cp.ModelIDs, p.ModelIDs)
 	}
+	if len(p.RouteTiers) > 0 {
+		cp.RouteTiers = cloneAPIKeyRouteTiers(p.RouteTiers)
+	}
+	if p.PreferredChannelID != nil {
+		preferred := *p.PreferredChannelID
+		cp.PreferredChannelID = &preferred
+	}
+	if p.RouteMigration != nil {
+		migration := *p.RouteMigration
+		cp.RouteMigration = &migration
+	}
 	return &cp
+}
+
+func cloneAPIKeyRouteTiers(tiers []APIKeyRouteTier) []APIKeyRouteTier {
+	if len(tiers) == 0 {
+		return nil
+	}
+
+	result := make([]APIKeyRouteTier, len(tiers))
+	for i := range tiers {
+		result[i] = tiers[i]
+		if len(tiers[i].ChannelIDs) > 0 {
+			result[i].ChannelIDs = append([]int(nil), tiers[i].ChannelIDs...)
+		}
+	}
+
+	return result
 }
 
 func (p *APIKeyQuotaPeriod) clone() APIKeyQuotaPeriod {

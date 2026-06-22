@@ -20,6 +20,22 @@ const channelTagsMatchModeFieldSchema = z.preprocess((value) => {
 
   return value;
 }, channelTagsMatchModeSchema);
+const optionalChannelTagsMatchModeFieldSchema = channelTagsMatchModeFieldSchema.optional().default('any');
+
+export const apiKeyRouteTierSchema = z.object({
+  name: z.string().optional().default(''),
+  channelIDs: z.array(z.number()).optional().default([]),
+});
+export type ApiKeyRouteTier = z.infer<typeof apiKeyRouteTierSchema>;
+
+export const apiKeyRouteMigrationSchema = z.object({
+  version: z.string(),
+  source: z.string(),
+});
+export type ApiKeyRouteMigration = z.infer<typeof apiKeyRouteMigrationSchema>;
+
+const routeTiersFieldSchema = z.preprocess((value) => value ?? [], z.array(apiKeyRouteTierSchema));
+const preferredChannelIDFieldSchema = z.preprocess((value) => value ?? null, z.number().nullable());
 
 // API Key schema based on GraphQL schema
 export const apiKeySchema = z.object({
@@ -48,7 +64,10 @@ export const apiKeySchema = z.object({
             ),
             channelIDs: z.array(z.number()).optional().nullable(),
             channelTags: z.array(z.string()).optional().nullable(),
-            channelTagsMatchMode: channelTagsMatchModeFieldSchema,
+            channelTagsMatchMode: optionalChannelTagsMatchModeFieldSchema,
+            routeTiers: routeTiersFieldSchema,
+            preferredChannelID: preferredChannelIDFieldSchema,
+            routeMigration: apiKeyRouteMigrationSchema.optional().nullable(),
             modelIDs: z.array(z.string()).optional().nullable(),
             quota: z
               .object({
@@ -141,7 +160,10 @@ export const apiKeyProfileSchema = z.object({
   modelMappings: z.array(modelMappingSchema),
   channelIDs: z.array(z.number()).optional().nullable(),
   channelTags: z.array(z.string()).optional().nullable(),
-  channelTagsMatchMode: channelTagsMatchModeFieldSchema,
+  channelTagsMatchMode: optionalChannelTagsMatchModeFieldSchema,
+  routeTiers: routeTiersFieldSchema,
+  preferredChannelID: preferredChannelIDFieldSchema,
+  routeMigration: apiKeyRouteMigrationSchema.optional().nullable(),
   modelIDs: z.array(z.string()).optional().nullable(),
   quota: z
     .object({
@@ -223,7 +245,14 @@ export const updateApiKeyProfilesInputSchemaFactory = (t: (key: string) => strin
             ),
             channelIDs: z.array(z.number()).optional().nullable(),
             channelTags: z.array(z.string()).optional().nullable(),
-            channelTagsMatchMode: channelTagsMatchModeFieldSchema,
+            channelTagsMatchMode: optionalChannelTagsMatchModeFieldSchema,
+            routeTiers: z.array(
+              z.object({
+                name: z.string().optional().default(''),
+                channelIDs: z.array(z.number()).min(1, t('apikeys.validation.routeTierChannelsRequired')),
+              })
+            ).min(1, t('apikeys.validation.routeTiersRequired')),
+            preferredChannelID: z.number().optional().nullable(),
             modelIDs: z.array(z.string()).optional().nullable(),
             quota: z
               .object({
@@ -270,6 +299,15 @@ export const updateApiKeyProfilesInputSchemaFactory = (t: (key: string) => strin
     .superRefine((data, ctx) => {
       data.profiles.forEach((profile, index) => {
         const quota = profile.quota;
+        const routeChannelIDs = new Set(profile.routeTiers.flatMap((tier) => tier.channelIDs ?? []));
+        if (profile.preferredChannelID != null && !routeChannelIDs.has(profile.preferredChannelID)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: t('apikeys.validation.preferredChannelMustBeInRoute'),
+            path: ['profiles', index, 'preferredChannelID'],
+          });
+        }
+
         if (!quota) {
           return;
         }
@@ -322,7 +360,9 @@ export const updateApiKeyProfilesInputSchema = z.object({
       ),
       channelIDs: z.array(z.number()).optional().nullable(),
       channelTags: z.array(z.string()).optional().nullable(),
-      channelTagsMatchMode: channelTagsMatchModeFieldSchema,
+      channelTagsMatchMode: optionalChannelTagsMatchModeFieldSchema,
+      routeTiers: z.array(apiKeyRouteTierSchema).min(1, 'At least one route tier is required'),
+      preferredChannelID: z.number().optional().nullable(),
       modelIDs: z.array(z.string()).optional().nullable(),
       quota: z
         .object({

@@ -27,27 +27,6 @@ func (e fixedStickyExtractor) Extract(ctx context.Context, state *PersistenceSta
 	return e.result
 }
 
-type stickyEligibilityStrategy struct {
-	exhaustedChannelID int
-}
-
-func (s stickyEligibilityStrategy) Score(ctx context.Context, channel *biz.Channel) float64 {
-	if channel.ID == s.exhaustedChannelID {
-		return rateLimitExhaustedScore
-	}
-
-	return 100
-}
-
-func (s stickyEligibilityStrategy) ScoreWithDebug(ctx context.Context, channel *biz.Channel) (float64, StrategyScore) {
-	score := s.Score(ctx, channel)
-	return score, StrategyScore{StrategyName: s.Name(), Score: score}
-}
-
-func (s stickyEligibilityStrategy) Name() string {
-	return "stickyEligibility"
-}
-
 func stickyTestMessage(role, content string) llm.Message {
 	return llm.Message{
 		Role: role,
@@ -73,6 +52,17 @@ func stickyTestCandidate(id int, priority int, weight int) *ChannelModelsCandida
 			Source:       "test",
 		}},
 	}
+}
+
+func stickyCandidateIDs(candidates []*ChannelModelsCandidate) []int {
+	ids := make([]int, 0, len(candidates))
+	for _, candidate := range candidates {
+		if candidate == nil || candidate.Channel == nil {
+			continue
+		}
+		ids = append(ids, candidate.Channel.ID)
+	}
+	return ids
 }
 
 func stickyTestCredentialCandidate(id int, priority int, weight int, keys ...string) *ChannelModelsCandidate {
@@ -175,15 +165,6 @@ func stickyTestSeedForCredential(t *testing.T, views []biz.ChannelCredentialView
 
 	t.Fatalf("failed to find deterministic seed for credential %q", fingerprint)
 	return ""
-}
-
-func stickyTestLoadBalancer(retryEnabled bool) *LoadBalancer {
-	return NewLoadBalancer(
-		&mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: retryEnabled, MaxChannelRetries: 3}},
-		nil,
-		NewWeightStrategy(),
-		NewRandomStrategy(),
-	)
 }
 
 func TestDefaultStickyKeyExtractor_RejectsOnlyLatestUserMessage(t *testing.T) {
@@ -311,7 +292,7 @@ func TestStickySessionBindingStore_TargetPreservesCredentialFingerprint(t *testi
 	require.Equal(t, 7, channelID)
 }
 
-func TestStickySessionRouter_UnboundPrimaryStaysInsideBestTier(t *testing.T) {
+func TestStickySessionRouter_UnboundPrimaryPreservesRouteTierOrder(t *testing.T) {
 	router := NewStickySessionRouter(
 		NewStickySessionBindingStore(5*time.Minute),
 		fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}},
@@ -323,22 +304,20 @@ func TestStickySessionRouter_UnboundPrimaryStaysInsideBestTier(t *testing.T) {
 		stickyTestCandidate(4, 1, 100),
 	}
 
-	for range 50 {
-		state := &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 3}}}
-		ordered := router.Order(context.Background(), StickySessionOrderRequest{
-			Request:      &llm.Request{Model: "gpt-4"},
-			State:        state,
-			Candidates:   candidates,
-			LoadBalancer: stickyTestLoadBalancer(true),
-		})
+	state := &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 3}}}
+	ordered := router.Order(context.Background(), StickySessionOrderRequest{
+		Request:    &llm.Request{Model: "gpt-4"},
+		State:      state,
+		Candidates: candidates,
+	})
 
-		require.NotEmpty(t, ordered)
-		require.Contains(t, []int{1, 2}, ordered[0].Channel.ID)
-		require.True(t, state.StickyKeyOK)
-	}
+	require.NotEmpty(t, ordered)
+	require.Equal(t, []int{1, 2, 3, 4}, stickyCandidateIDs(ordered))
+	require.Equal(t, stickyRoutingSourceNormalFirstBind, state.StickyRoutingSource)
+	require.True(t, state.StickyKeyOK)
 }
 
-func TestStickySessionRouter_UnboundPrimaryUsesNormalLoadBalancerWhenQuotaRatiosDiffer(t *testing.T) {
+func TestStickySessionRouter_UnboundPrimaryDoesNotUseLoadBalancerWhenQuotaRatiosDiffer(t *testing.T) {
 	resetAt := time.Now().Add(time.Hour)
 	router := NewStickySessionRouter(
 		NewStickySessionBindingStore(5*time.Minute),
@@ -351,18 +330,17 @@ func TestStickySessionRouter_UnboundPrimaryUsesNormalLoadBalancerWhenQuotaRatios
 	}
 
 	ordered := router.Order(context.Background(), StickySessionOrderRequest{
-		Request:      &llm.Request{Model: "gpt-4"},
-		State:        state,
-		Candidates:   candidates,
-		LoadBalancer: NewLoadBalancer(state.RetryPolicyProvider, nil, NewWeightStrategy()),
+		Request:    &llm.Request{Model: "gpt-4"},
+		State:      state,
+		Candidates: candidates,
 	})
 
 	require.NotEmpty(t, ordered)
-	require.Equal(t, 2, ordered[0].Channel.ID)
+	require.Equal(t, 1, ordered[0].Channel.ID)
 	require.Equal(t, stickyRoutingSourceNormalFirstBind, state.StickyRoutingSource)
 	require.Equal(t, stickyRoutingDegradeNone, state.StickyRoutingDegradeReason)
-	require.Equal(t, 20, state.PreferredCredentialID)
-	require.Equal(t, "cred:high", state.PreferredCredentialFingerprint)
+	require.Equal(t, 10, state.PreferredCredentialID)
+	require.Equal(t, "cred:low", state.PreferredCredentialFingerprint)
 }
 
 func TestStickySessionRouter_BoundPrimaryUsesBindingWhenQuotaRatiosDiffer(t *testing.T) {
@@ -377,10 +355,9 @@ func TestStickySessionRouter_BoundPrimaryUsesBindingWhenQuotaRatiosDiffer(t *tes
 	}
 
 	ordered := router.Order(context.Background(), StickySessionOrderRequest{
-		Request:      &llm.Request{Model: "gpt-4"},
-		State:        state,
-		Candidates:   candidates,
-		LoadBalancer: NewLoadBalancer(state.RetryPolicyProvider, nil, NewWeightStrategy()),
+		Request:    &llm.Request{Model: "gpt-4"},
+		State:      state,
+		Candidates: candidates,
 	})
 
 	require.NotEmpty(t, ordered)
@@ -391,7 +368,7 @@ func TestStickySessionRouter_BoundPrimaryUsesBindingWhenQuotaRatiosDiffer(t *tes
 	require.Equal(t, "cred:high", state.PreferredCredentialFingerprint)
 }
 
-func TestStickySessionRouter_ExpiredBindingRebindsByNormalLoadBalancer(t *testing.T) {
+func TestStickySessionRouter_ExpiredBindingPreservesRouteTierOrder(t *testing.T) {
 	now := time.Date(2026, 6, 3, 23, 22, 35, 0, time.UTC)
 	resetAt := time.Now().Add(time.Hour)
 	store := NewStickySessionBindingStore(5 * time.Minute)
@@ -409,10 +386,9 @@ func TestStickySessionRouter_ExpiredBindingRebindsByNormalLoadBalancer(t *testin
 	}
 
 	ordered := router.Order(context.Background(), StickySessionOrderRequest{
-		Request:      &llm.Request{Model: "gpt-4"},
-		State:        state,
-		Candidates:   candidates,
-		LoadBalancer: NewLoadBalancer(state.RetryPolicyProvider, nil, NewWeightStrategy()),
+		Request:    &llm.Request{Model: "gpt-4"},
+		State:      state,
+		Candidates: candidates,
 	})
 
 	require.NotEmpty(t, ordered)
@@ -441,10 +417,9 @@ func TestStickySessionRouter_UnboundPrimaryKeepsSeededCredentialInsideNormalPrim
 	candidates := []*ChannelModelsCandidate{candidate, stickyTestCredentialCandidate(2, 0, 10, "other-key")}
 
 	ordered := router.Order(context.Background(), StickySessionOrderRequest{
-		Request:      &llm.Request{Model: "gpt-4"},
-		State:        state,
-		Candidates:   candidates,
-		LoadBalancer: NewLoadBalancer(state.RetryPolicyProvider, nil, NewWeightStrategy()),
+		Request:    &llm.Request{Model: "gpt-4"},
+		State:      state,
+		Candidates: candidates,
 	})
 
 	require.NotEmpty(t, ordered)
@@ -455,7 +430,7 @@ func TestStickySessionRouter_UnboundPrimaryKeepsSeededCredentialInsideNormalPrim
 	require.Equal(t, "cred:second", state.PreferredCredentialFingerprint)
 }
 
-func TestStickySessionRouter_DoesNotCrossPriorityForBoundFallback(t *testing.T) {
+func TestStickySessionRouter_DoesNotCrossRouteTierForBoundTarget(t *testing.T) {
 	now := time.Date(2026, 5, 30, 12, 0, 0, 0, time.UTC)
 	store := NewStickySessionBindingStore(5 * time.Minute)
 	store.now = func() time.Time { return now }
@@ -469,21 +444,21 @@ func TestStickySessionRouter_DoesNotCrossPriorityForBoundFallback(t *testing.T) 
 	state := &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 2}}}
 
 	ordered := router.Order(context.Background(), StickySessionOrderRequest{
-		Request:      &llm.Request{Model: "gpt-4"},
-		State:        state,
-		Candidates:   candidates,
-		LoadBalancer: stickyTestLoadBalancer(true),
+		Request:    &llm.Request{Model: "gpt-4"},
+		State:      state,
+		Candidates: candidates,
 	})
 	require.Contains(t, []int{1, 2}, ordered[0].Channel.ID)
+	require.Equal(t, stickyRoutingSourceNormalFirstBind, state.StickyRoutingSource)
 
 	now = now.Add(6 * time.Minute)
 	ordered = router.Order(context.Background(), StickySessionOrderRequest{
-		Request:      &llm.Request{Model: "gpt-4"},
-		State:        state,
-		Candidates:   candidates,
-		LoadBalancer: stickyTestLoadBalancer(true),
+		Request:    &llm.Request{Model: "gpt-4"},
+		State:      state,
+		Candidates: candidates,
 	})
 	require.Contains(t, []int{1, 2}, ordered[0].Channel.ID)
+	require.Equal(t, stickyRoutingSourceNormalFirstBind, state.StickyRoutingSource)
 }
 
 func TestStickySessionRouter_KeepsCredentialOnSamePriorityChannel(t *testing.T) {
@@ -500,7 +475,6 @@ func TestStickySessionRouter_KeepsCredentialOnSamePriorityChannel(t *testing.T) 
 			stickyTestCredentialCandidate(2, 0, 100, "shared-key"),
 			stickyTestCredentialCandidate(3, 1, 100, "shared-key"),
 		},
-		LoadBalancer: stickyTestLoadBalancer(true),
 	})
 
 	require.NotEmpty(t, ordered)
@@ -522,7 +496,6 @@ func TestStickySessionRouter_DoesNotUseLowerPriorityCredentialBinding(t *testing
 			stickyTestCredentialCandidate(2, 0, 100, "other-key"),
 			stickyTestCredentialCandidate(3, 1, 100, "shared-key"),
 		},
-		LoadBalancer: stickyTestLoadBalancer(true),
 	})
 
 	require.NotEmpty(t, ordered)
@@ -560,7 +533,6 @@ func TestStickySessionRouter_UsesResponsesPreviousResponseIDBeforePrefix(t *test
 			stickyTestCandidate(1, 0, 100),
 			stickyTestCandidate(2, 0, 100),
 		},
-		LoadBalancer: stickyTestLoadBalancer(true),
 	})
 
 	require.NotEmpty(t, ordered)
@@ -608,7 +580,6 @@ func TestStickySessionRouter_TranscriptPrefixMatchesGrowingChat(t *testing.T) {
 			stickyTestCandidate(1, 0, 100),
 			stickyTestCandidate(2, 0, 100),
 		},
-		LoadBalancer: stickyTestLoadBalancer(true),
 	})
 
 	require.NotEmpty(t, ordered)
@@ -627,7 +598,6 @@ func TestStickySessionRouter_StaleBindingIgnoredAndDeleted(t *testing.T) {
 			stickyTestCandidate(1, 0, 100),
 			stickyTestCandidate(2, 0, 100),
 		},
-		LoadBalancer: stickyTestLoadBalancer(false),
 	})
 
 	require.NotEmpty(t, ordered)
@@ -638,26 +608,22 @@ func TestStickySessionRouter_StaleBindingIgnoredAndDeleted(t *testing.T) {
 
 func TestStickySessionRouter_SkipsBoundPrimaryWhenIneligible(t *testing.T) {
 	store := NewStickySessionBindingStore(5 * time.Minute)
-	store.Bind("key", 1)
+	store.BindTarget("key", StickySessionTarget{ChannelID: 1, CredentialID: 99, CredentialFingerprint: "missing"})
 	router := NewStickySessionRouter(store, fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}})
-	loadBalancer := NewLoadBalancer(
-		&mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 1}},
-		nil,
-		stickyEligibilityStrategy{exhaustedChannelID: 1},
-	)
+	state := &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 1}}}
 
 	ordered := router.Order(context.Background(), StickySessionOrderRequest{
 		Request: &llm.Request{Model: "gpt-4"},
-		State:   &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 1}}},
+		State:   state,
 		Candidates: []*ChannelModelsCandidate{
-			stickyTestCandidate(1, 0, 100),
-			stickyTestCandidate(2, 0, 100),
+			stickyTestCredentialCandidate(1, 0, 100, "other-key"),
+			stickyTestCredentialCandidate(2, 0, 100, "next-key"),
 		},
-		LoadBalancer: loadBalancer,
 	})
 
 	require.NotEmpty(t, ordered)
-	require.Equal(t, 2, ordered[0].Channel.ID)
+	require.Equal(t, 1, ordered[0].Channel.ID)
+	require.Equal(t, stickyRoutingSourceNormalFirstBind, state.StickyRoutingSource)
 	channelID, ok := store.Get("key")
 	require.True(t, ok)
 	require.Equal(t, 1, channelID)
@@ -684,7 +650,6 @@ func TestStickySessionRouter_DoesNotConsultCircuitBreakerForBoundPrimary(t *test
 			stickyTestCandidate(1, 0, 100),
 			stickyTestCandidate(2, 0, 100),
 		},
-		LoadBalancer: stickyTestLoadBalancer(true),
 	})
 
 	require.NotEmpty(t, ordered)
@@ -694,7 +659,7 @@ func TestStickySessionRouter_DoesNotConsultCircuitBreakerForBoundPrimary(t *test
 	require.Equal(t, 1, channelID)
 }
 
-func TestModelCircuitBreakerMiddleware_InactiveForStickySession(t *testing.T) {
+func TestModelCircuitBreakerMiddleware_SkipsOpenRouteTierTarget(t *testing.T) {
 	cb := biz.NewModelCircuitBreaker()
 	for range 5 {
 		cb.RecordError(context.Background(), 1, "gpt-4")
@@ -709,37 +674,28 @@ func TestModelCircuitBreakerMiddleware_InactiveForStickySession(t *testing.T) {
 			},
 		},
 	}
-	middleware := withModelCircuitBreaker(outbound, cb, biz.LoadBalancerStrategyStickySession)
-
-	request := &httpclient.Request{}
-	got, err := middleware.OnOutboundRawRequest(context.Background(), request)
-	require.NoError(t, err)
-	require.Same(t, request, got)
-
-	middleware.OnOutboundRawError(context.Background(), errors.New("upstream failed"))
-	require.Equal(t, 5, cb.GetModelCircuitBreakerStats(context.Background(), 1, "gpt-4").ConsecutiveFailures)
-}
-
-func TestModelCircuitBreakerMiddleware_StillSkipsForCircuitBreaker(t *testing.T) {
-	cb := biz.NewModelCircuitBreaker()
-	for range 5 {
-		cb.RecordError(context.Background(), 1, "gpt-4")
-	}
-	require.Equal(t, biz.StateOpen, cb.GetModelCircuitBreakerStats(context.Background(), 1, "gpt-4").State)
-
-	outbound := &PersistentOutboundTransformer{
-		state: &PersistenceState{
-			OriginalModel: "gpt-4",
-			CurrentCandidate: &ChannelModelsCandidate{
-				Channel: &biz.Channel{Channel: &ent.Channel{ID: 1, Name: "channel"}},
-			},
-		},
-	}
-	middleware := withModelCircuitBreaker(outbound, cb, biz.LoadBalancerStrategyCircuitBreaker)
+	middleware := withModelCircuitBreaker(outbound, cb)
 
 	got, err := middleware.OnOutboundRawRequest(context.Background(), &httpclient.Request{})
 	require.ErrorIs(t, err, errSkipCandidateByCircuitBreaker)
 	require.Nil(t, got)
+}
+
+func TestModelCircuitBreakerMiddleware_RecordsTargetError(t *testing.T) {
+	cb := biz.NewModelCircuitBreaker()
+
+	outbound := &PersistentOutboundTransformer{
+		state: &PersistenceState{
+			OriginalModel: "gpt-4",
+			CurrentCandidate: &ChannelModelsCandidate{
+				Channel: &biz.Channel{Channel: &ent.Channel{ID: 1, Name: "channel"}},
+			},
+		},
+	}
+	middleware := withModelCircuitBreaker(outbound, cb)
+
+	middleware.OnOutboundRawError(context.Background(), errors.New("upstream failed"))
+	require.Equal(t, 1, cb.GetModelCircuitBreakerStats(context.Background(), 1, "gpt-4").ConsecutiveFailures)
 }
 
 func TestStickySessionBindingMiddleware_BindsSuccessfulFallbackChannel(t *testing.T) {
@@ -757,7 +713,7 @@ func TestStickySessionBindingMiddleware_BindsSuccessfulFallbackChannel(t *testin
 	middleware := &stickySessionBindingMiddleware{
 		outbound: &PersistentOutboundTransformer{state: state},
 		store:    store,
-		strategy: biz.LoadBalancerStrategyStickySession,
+		enabled:  true,
 	}
 
 	middleware.bindCurrentChannel(context.Background())
@@ -782,7 +738,7 @@ func TestStickySessionBindingMiddleware_BindsCredentialTarget(t *testing.T) {
 	middleware := &stickySessionBindingMiddleware{
 		outbound: &PersistentOutboundTransformer{state: state},
 		store:    store,
-		strategy: biz.LoadBalancerStrategyStickySession,
+		enabled:  true,
 	}
 
 	middleware.bindCurrentChannel(context.Background())
@@ -819,7 +775,7 @@ func TestStickySessionBindingMiddleware_BindsResponsesIDAndMigratesActiveAliases
 	middleware := &stickySessionBindingMiddleware{
 		outbound: &PersistentOutboundTransformer{state: state},
 		store:    store,
-		strategy: biz.LoadBalancerStrategyStickySession,
+		enabled:  true,
 	}
 
 	middleware.bindCurrentChannel(context.Background())
@@ -858,7 +814,7 @@ func TestStickySessionBindingMiddleware_StreamCloseBindsOnlyForOriginalStreaming
 			middleware := &stickySessionBindingMiddleware{
 				outbound: &PersistentOutboundTransformer{state: state},
 				store:    store,
-				strategy: biz.LoadBalancerStrategyStickySession,
+				enabled:  true,
 			}
 
 			stream, err := middleware.OnInboundRawStream(
@@ -895,7 +851,7 @@ func TestStickySessionBindingMiddleware_StreamCloseDoesNotBindIncompleteStream(t
 	middleware := &stickySessionBindingMiddleware{
 		outbound: &PersistentOutboundTransformer{state: state},
 		store:    store,
-		strategy: biz.LoadBalancerStrategyStickySession,
+		enabled:  true,
 	}
 
 	stream, err := middleware.OnInboundRawStream(

@@ -60,6 +60,146 @@ This keeps selection, execution, and recovery in separate phases.
 
 ---
 
+## API Key Route Template Contract
+
+### 1. Scope / Trigger
+
+Read this section before changing API key profiles, API key profile templates,
+candidate ordering, channel ordering weight, sticky-session first-bind behavior,
+or runtime interpretation of legacy API key profile channel filters.
+
+### 2. Signatures
+
+Durable route fields on `objects.APIKeyProfile`:
+
+```go
+type APIKeyProfile struct {
+    Name               string
+    RouteTiers         []APIKeyRouteTier
+    PreferredChannelID *int
+    RouteMigration     *APIKeyRouteMigration
+
+    // Compatibility-only migration input. Runtime routing must not read these.
+    ChannelIDs           []int
+    ChannelTags          []string
+    ChannelTagsMatchMode ChannelTagsMatchMode
+}
+
+type APIKeyRouteTier struct {
+    Name       string
+    ChannelIDs []int
+}
+```
+
+Runtime route shape:
+
+```text
+local API key -> active API key profile/template
+-> ordered route tiers -> ordered feasible candidates -> concrete target
+```
+
+### 3. Contracts
+
+- API key route profile/template is the only runtime ordering source for local
+  API key routing.
+- `Channel.ordering_weight` is display ordering. It must not decide runtime
+  route priority, tie-breaks, or first bind.
+- New profile writes must provide non-empty `routeTiers`. Empty route tiers are
+  an explicit invalid route profile, not "all channels".
+- Legacy `APIKeyProfile.ChannelIDs`, `ChannelTags`, and
+  `ChannelTagsMatchMode` are migration inputs only. Save/migration paths may
+  convert them into explicit `routeTiers`, then clear the legacy fields.
+  Runtime selection must not read them as fallback routing rules.
+- Existing empty legacy profiles may be migrated once into an explicit
+  "enabled channels" tier. This is persisted data, not a runtime default group.
+- Runtime selection first builds a feasible candidate set from request facts and
+  hard local state, then intersects that set with the active profile's route
+  tiers in order.
+- A route tier channel ID may match more than one feasible candidate, for
+  example same-channel model fallback entries. Treat the feasible candidate set
+  as a multi-value list keyed by channel, not as `map[channelID]candidate`.
+  Route ordering may move a whole channel group, but must preserve the order of
+  candidates inside that channel group.
+- Inside a tier, `preferredChannelID` wins when feasible. Otherwise deterministic
+  API-key affinity may choose one candidate within the tier. Random scoring,
+  adaptive scoring, and load-balancer sorting must not run.
+- Sticky-session may reorder only candidates already produced by the route
+  profile. No binding, weak sticky key, or expired binding returns the existing
+  route-tier order unchanged.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required Behavior |
+|-----------|-------------------|
+| API key missing or unauthenticated route state | Return explicit API-key route profile error. |
+| Active API key profile missing | Return explicit active profile required error. |
+| Active profile has no valid route tiers | Return invalid model/route error. Do not route via legacy fields or all channels. |
+| Route tiers reference channels that are not feasible for the request | Skip those channels and continue to later tiers. |
+| No route tier has feasible candidates | Return invalid model/no feasible route error. |
+| `preferredChannelID` is configured and feasible in a tier | Put that channel first in that tier. |
+| `preferredChannelID` is outside route tiers on write | Reject the profile/template write. |
+| Legacy `ChannelIDs` are submitted on save | Convert once to `routeTiers`, clear legacy fields, and store migration metadata. |
+| Legacy `ChannelTags` are submitted on save with resolvable channels | Resolve once to concrete channel IDs, clear legacy fields, and store migration metadata. |
+
+### 5. Good / Base / Bad Cases
+
+- Good: profile route tier `[2, 1]` with `preferredChannelID=1` produces channel
+  `1` before channel `2`, regardless of channel display order.
+- Good: a tier containing channel `1` keeps both `channel 1 / gpt-4` and
+  `channel 1 / gpt-3.5-turbo` candidates in order so same-channel model
+  fallback still works.
+- Good: a migrated legacy profile shows explicit `routeTiers` in GraphQL and the
+  API key UI, with `routeMigration.source` explaining where it came from.
+- Base: an old template without `routeTiers` is edited by expanding its legacy
+  `channelIDs` into a visible tier before save.
+- Bad: missing `routeTiers` silently falls back to all enabled channels.
+- Bad: building `map[channelID]candidate` and overwriting earlier same-channel
+  model fallback candidates.
+- Bad: sticky first-bind calls load-balanced ordering when no binding exists.
+- Bad: equal route candidates are sorted by `ordering_weight`.
+
+### 6. Tests Required
+
+When changing API key route-template routing, add or update tests for:
+
+- Route profile ordering by tier order and `preferredChannelID`.
+- Missing `routeTiers` returns a clear error and does not consult legacy
+  `ChannelIDs` or `ChannelTags`.
+- Save-time legacy `ChannelIDs` migration clears old fields and persists
+  `routeMigration`.
+- `preferredChannelID` outside route tiers is rejected.
+- Sticky unbound and expired-binding paths preserve route-tier order and do not
+  call load-balanced ordering.
+- Same-channel multi-model candidates remain present and ordered after route
+  tier intersection.
+- Frontend profile/template writes send `routeTiers` and `preferredChannelID`,
+  not legacy channel/tag route fields.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```text
+API key profile missing routeTiers
+-> read legacy channelIDs/channelTags
+-> if still empty, load-balance all channels
+```
+
+This keeps two routing systems alive under one product surface.
+
+#### Correct
+
+```text
+API key active profile
+-> require explicit routeTiers
+-> intersect feasible candidates by tier order
+-> preferredChannelID or deterministic key affinity inside the tier
+```
+
+This makes the route answerable from one data structure.
+
+---
+
 ## Attempt Target Contract
 
 ### 1. Scope / Trigger
@@ -719,46 +859,61 @@ Required runtime meaning:
 
 - `stickyKey -> target`, not `request -> target`.
 - `target` means the successful execution target. When credential identity is known, it includes both channel and upstream credential identity.
-- TTL is 5 minutes. Expiry intentionally lets normal priority, weight, and availability rules regain control.
+- TTL is 5 minutes. Expiry intentionally lets the current API-key route-tier
+  order and hard availability rules regain control.
 - Bindings are soft. They may be ignored when the target is not eligible for the current candidate tier.
 
 ### 3. Contracts
 
-- Candidate channels still come from the existing profile, API key, model, priority, local quota, and health eligibility rules.
-- Sticky-session must not cross priority tiers to preserve stickiness. It can only reorder eligible candidates inside the current retry/fallback tier.
-- First unbound selection starts from the existing load-balancer order for that tier, including priority and weight semantics. Do not add sticky-specific stable channel scoring or rendezvous hashing.
+- Candidate channels still come from the active API key route profile, model,
+  API-format, credential local quota, and hard eligibility rules.
+- Sticky-session must not cross route tiers to preserve stickiness. It can only
+  reorder eligible candidates inside the current route tier.
+- First unbound selection starts from the existing API-key route-tier order for
+  that tier. It must not call load-balanced ordering or add sticky-specific
+  stable channel scoring.
 - First unbound selection must not apply sticky-specific quota-ratio balancing. If local quota balancing is needed later, expose it as a separate explicit routing policy or sub-policy.
 - A binding is created or refreshed only after an upstream request succeeds.
 - A selected target must not be written to the binding store before upstream success.
 - If the bound target fails and fallback succeeds, refresh the binding to the successful fallback target.
 - If all attempts fail, keep the previous binding until TTL expiry and return the real retry/upstream error.
-- Sticky-session may prefer the same credential across eligible same-priority channels, but it must not move to a lower-priority channel only to keep the credential.
-- If retry/fallback has already entered a lower-priority tier and that tier succeeds, binding may refresh to that successful target. The 5-minute TTL is what prevents permanent priority bypass.
+- Sticky-session may keep the same credential only when the bound target remains
+  eligible inside the current route tier. It must not move to a lower route tier
+  only to keep the credential.
+- If retry/fallback has already entered a lower route tier and that tier
+  succeeds, binding may refresh to that successful target. The 5-minute TTL is
+  what prevents permanent route-tier bypass.
 - Sticky-session semantic states must stay explicit: binding hit, binding ignored, and normal first-bind. Do not silently change from sticky behavior to quota balancing or another routing policy under the same strategy name.
 
 ### 4. Validation & Error Matrix
 
 | Condition | Required Behavior |
 |-----------|-------------------|
-| No qualified sticky key can be generated | Use normal load balancing. Do not create a binding. |
+| No qualified sticky key can be generated | Preserve route-tier order. Do not create a binding. |
 | Binding exists and target is eligible in the current tier | Place that target first for the current attempt. |
-| Binding target is disabled, deleted, model-ineligible, quota-ineligible, or outside the current priority tier | Ignore the binding for this attempt. Normal routing continues. |
+| Binding target is disabled, deleted, model-ineligible, quota-ineligible, or outside the current route tier | Ignore the binding for this attempt. Route-tier order continues. |
 | Bound target returns network error, timeout, 5xx, empty response, retryable 429, or queue-full error | Let existing retry/fallback escape. Do not migrate on failed execution alone. |
 | Fallback target succeeds | Refresh binding to the successful target. |
 | All targets fail | Keep old binding until TTL. Return the real upstream/retry result. |
-| Circuit breaker is open | Circuit-breaker strategy may skip candidates. Sticky-session strategy must not expose a raw-request local skip as HTTP 500. |
+| Circuit breaker is open | Circuit breaker may skip the concrete target as a hard local gate. The surfaced error must be explicit and not a raw middleware wrapper. |
 | No executable candidates remain after eligibility filtering | Return an explicit no-candidate/upstream-unavailable error, not a raw middleware wrapping error. |
 
 ### 5. Good / Base / Bad Cases
 
-- Good: no binding exists, normal priority/weight routing selects channel A, upstream succeeds, binding becomes `stickyKey -> A`.
+- Good: no binding exists, route-tier order selects channel A, upstream
+  succeeds, binding becomes `stickyKey -> A`.
 - Good: binding points to A, A fails once, retry/fallback reaches B and B succeeds, binding refreshes to B.
-- Good: binding points to C from a lower-priority fallback, TTL expires after 5 minutes, the next request returns to normal priority/weight selection.
-- Base: no qualified sticky key exists, request behaves exactly like the configured non-sticky load-balancer.
+- Good: binding points to C from a lower-tier fallback, TTL expires after 5
+  minutes, the next request returns to route-tier selection.
+- Base: no qualified sticky key exists, request preserves API-key route-tier
+  order.
 - Bad: binding to A before A succeeds.
-- Bad: using `hash(stickyKey + channelID)` or rendezvous hashing to override the existing priority/weight selection inside sticky-session.
-- Bad: crossing from high-priority A/B to low-priority C only because C has the old binding.
-- Bad: returning `failed to apply raw request middlewares: skip candidate by circuit breaker` as the client-visible 500 for sticky-session routing.
+- Bad: using `hash(stickyKey + channelID)`, rendezvous hashing, load-balancer
+  score, or display order to override API-key route-tier order inside
+  sticky-session.
+- Bad: crossing from tier A/B to lower tier C only because C has the old binding.
+- Bad: returning `failed to apply raw request middlewares: skip candidate by
+  circuit breaker` as the client-visible 500 for sticky-session routing.
 
 ### 6. Tests Required
 
@@ -767,8 +922,8 @@ When changing sticky-session or neighboring routing behavior, add or update test
 - No binding write before upstream success.
 - Successful fallback refreshes binding to the successful target.
 - Failed fallback does not migrate or delete the old binding.
-- Sticky-session does not cross priority tiers before retry/fallback reaches that tier.
-- Sticky-session does not enable model circuit-breaker raw-request skip behavior.
+- Sticky-session does not cross route tiers before retry/fallback reaches that tier.
+- Circuit-breaker hard skips are surfaced explicitly, not as raw middleware wrappers.
 - No executable candidate returns an explicit routing/unavailable error instead of a raw middleware wrapper.
 - Credential-aware sticky routing keeps the same credential only among eligible same-tier candidates.
 - Sticky first-bind does not perform quota-ratio balancing under the `sticky-session` strategy name.
@@ -787,13 +942,14 @@ This binds on selection instead of success and lets sticky-session introduce its
 
 ```text
 candidate list
--> existing priority/weight/load-balancer tier selection
+-> API-key route-tier selection
 -> sticky binding reorders eligible same-tier candidates only
 -> send upstream through existing retry/fallback
 -> on success, bind stickyKey to the successful target for 5 minutes
 ```
 
-This keeps sticky-session focused on cache locality while priority, quota, health, retry, and fallback remain owned by the normal routing pipeline.
+This keeps sticky-session focused on cache locality while route tiers, quota,
+health, retry, and fallback remain owned by the normal routing pipeline.
 
 ---
 
@@ -832,7 +988,8 @@ type StickyKeyResult struct {
 
 Rules:
 
-- `OK=false` means normal load balancing. Do not force stickiness from weak material.
+- `OK=false` leaves the current API key route-tier order unchanged. Do not force
+  stickiness from weak material.
 - Prefer explicit stable session identity from Codex, Claude Code, agent, project, window, or similar internal context when available.
 - For Responses API, prefer response-chain identity over prompt fingerprinting.
 - For chat/completions without a session ID, build a root-session fingerprint from API key/profile scope, model scope, client format, system/developer prompt, tool schema, and early stable user context.
@@ -847,7 +1004,7 @@ Rules:
 
 Read this section before changing:
 
-- Retry classification, same-channel retry, cross-channel fallback, or cross-priority fallback.
+- Retry classification, same-channel retry, cross-channel fallback, or cross-route-tier fallback.
 - Sticky-session escape behavior after a target fails.
 - Credential-aware fallback, excluded-target tracking, or retry attempt budgeting.
 - Any middleware or selector that can hide an upstream failure by silently switching targets.
@@ -858,14 +1015,16 @@ This section defines project-level constraints, not only one implementation. The
 
 - Retry/fallback must not hide real routing or upstream problems behind aggressive silent recovery.
 - Retry/fallback must not decide for the user that a request has taken "too long" before the user cancels it or the configured request timeout expires.
-- The system may bound retry/fallback by structural scope such as target count, credential count, priority drop count, or total attempts. It must not add a separate hidden time-budget cutoff just for fallback behavior.
+- The system may bound retry/fallback by structural scope such as target count,
+  credential count, route-tier drop count, or total attempts. It must not add a
+  separate hidden time-budget cutoff just for fallback behavior.
 - Recovery should depend primarily on fallback, not on repeated same-target retry. Same-target retry should stay rare and narrowly justified.
 - Same-target retry is less valuable once sticky-session and credential-aware fallback exist. In sticky routing, repeatedly hitting the same failed target usually harms escape behavior more than it helps cache locality.
 - Fallback must stay local before it becomes global:
   - same target retry first when the error is plausibly transient,
   - then same-channel credential fallback,
-  - then same-priority target fallback,
-  - then lower-priority fallback only after the current priority tier is exhausted.
+  - then same-route-tier target fallback,
+  - then lower-route-tier fallback only after the current route tier is exhausted.
 - Same-channel credential fallback requires the channel transformer/auth layer to
   select credentials at request time and honor request-scoped credential
   exclusions. API-key providers that read context can do this. OAuth/token
@@ -876,7 +1035,9 @@ This section defines project-level constraints, not only one implementation. The
 - Successful fallback does not erase the original failure. The failed target, failed attempt count, and final successful target must remain observable in logs, request executions, and metrics.
 - Retry/fallback must not silently change user-visible semantics after output has started. Once a response has begun streaming user-visible tokens, silent fallback to a different upstream target is forbidden.
 - Fallback must only occur when switching targets has a plausible chance to succeed. Clearly non-retryable request/model/configuration errors should be surfaced, not spread across more targets.
-- Priority is a service contract. Normal routing stays inside the best eligible priority tier. Lower-priority fallback is a deliberate degradation step, not a normal balancing path.
+- Route tier is a key-owned service contract. Normal routing stays inside the
+  first feasible route tier. Lower-tier fallback is a deliberate degradation
+  step, not a normal balancing path.
 
 ### 3. Validation & Error Matrix
 
@@ -887,8 +1048,8 @@ This section defines project-level constraints, not only one implementation. The
 | Same target fails with plausibly transient error | Same-target retry may occur if the retry policy and error classification both allow it, but keep it minimal. Prefer later fallback over repeated same-target retries. |
 | Current credential fails with credential-scoped error and same channel has another eligible credential | Prefer same-channel credential fallback before switching channels. |
 | Current credential fails but the channel's auth layer cannot honor request-scoped credential exclusions | Do not pretend same-channel credential fallback happened. Use normal cross-channel fallback or surface the failure when no fallback target remains. |
-| Current priority tier still has untried eligible targets | Do not cross to a lower priority tier yet. |
-| Current priority tier is exhausted and lower-priority fallback is allowed | Lower-priority fallback may begin. |
+| Current route tier still has untried eligible targets | Do not cross to a lower route tier yet. |
+| Current route tier is exhausted and lower-tier fallback is allowed | Lower-tier fallback may begin. |
 | Request/model/configuration error is clearly non-retryable | Surface the error. Do not keep hopping targets just to improve apparent success rate. |
 | Sticky target fails and same-target retry is not clearly justified | Escape to fallback rather than repeatedly retrying the sticky target. |
 | Sticky target fails but fallback succeeds elsewhere | Return success, refresh sticky binding to the successful target, and keep the original failure observable. |
@@ -898,12 +1059,14 @@ This section defines project-level constraints, not only one implementation. The
 
 - Good: sticky target fails with a credential-scoped error, another credential on the same channel succeeds, and the request execution history shows both attempts.
 - Good: a sticky target gets at most one transient same-target retry, then quickly escapes to credential-aware fallback when the target still fails.
-- Good: all targets in the current priority tier fail, fallback drops to the next priority tier, and a later success refreshes sticky binding while leaving the earlier failures visible.
+- Good: all targets in the current route tier fail, fallback drops to the next
+  route tier, and a later success refreshes sticky binding while leaving the
+  earlier failures visible.
 - Base: a long-running request continues retry/fallback within normal request lifetime because the user has not canceled it.
 - Bad: fallback stops after an internal 4-second budget even though the user still wants the request to continue.
 - Bad: the router keeps retrying the same sticky target several times even though other eligible credentials or channels are available.
 - Bad: a failing sticky target silently causes many hidden retries and then only the final success is visible to operators.
-- Bad: the router jumps to a lower priority tier before exhausting the current one.
+- Bad: the router jumps to a lower route tier before exhausting the current one.
 - Bad: a stream has already started, fallback switches upstreams, and the user receives mixed output from different targets.
 
 ### 5. Tests Required
@@ -914,7 +1077,7 @@ When changing retry/fallback behavior, add or update tests for:
 - Same-target retry remains minimal and does not dominate recovery when fallback targets are available.
 - Same-channel credential fallback is attempted before cross-channel fallback when classification says the failure is credential-scoped.
 - Credential fallback tests must cover both request-scoped API-key providers and construction-time auth providers, or explicitly document that construction-time auth providers are not covered by same-channel fallback yet.
-- Lower-priority fallback does not begin until the current priority tier is exhausted.
+- Lower-route-tier fallback does not begin until the current route tier is exhausted.
 - Successful fallback preserves observability of the failed attempts instead of only recording the final success.
 - Silent fallback is blocked after user-visible streaming output has started.
 - Non-retryable request/model/configuration errors surface directly without extra target hopping.

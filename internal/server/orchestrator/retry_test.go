@@ -7,43 +7,37 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/server/biz"
 	"github.com/looplj/axonhub/llm"
 	"github.com/looplj/axonhub/llm/httpclient"
 )
 
-func TestDeriveLoadBalancerStrategy(t *testing.T) {
-	defaultStrategy := "adaptive"
-	retryPolicy := &biz.RetryPolicy{
-		LoadBalancerStrategy: defaultStrategy,
-	}
-
+func TestStickySessionEnabled(t *testing.T) {
 	tests := []struct {
-		name     string
-		apiKey   *ent.APIKey
-		expected string
+		name        string
+		retryPolicy *biz.RetryPolicy
+		expected    bool
 	}{
 		{
-			name:     "apiKey is nil",
-			apiKey:   nil,
-			expected: defaultStrategy,
+			name:        "nil policy",
+			retryPolicy: nil,
+			expected:    false,
 		},
 		{
-			name:     "api key without profiles uses system strategy",
-			apiKey:   &ent.APIKey{},
-			expected: defaultStrategy,
+			name:        "adaptive does not enable sticky binding",
+			retryPolicy: &biz.RetryPolicy{LoadBalancerStrategy: biz.LoadBalancerStrategyAdaptive},
+			expected:    false,
 		},
 		{
-			name:     "api key cannot override system strategy anymore",
-			apiKey:   &ent.APIKey{},
-			expected: defaultStrategy,
+			name:        "sticky-session enables sticky binding",
+			retryPolicy: &biz.RetryPolicy{LoadBalancerStrategy: biz.LoadBalancerStrategyStickySession},
+			expected:    true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := deriveLoadBalancerStrategy(retryPolicy, tt.apiKey)
+			result := stickySessionEnabled(tt.retryPolicy)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

@@ -106,7 +106,6 @@ const (
 	//
 	//nolint:gosec // Not a secret.
 	SystemKeyPassThrough = "system_pass_through"
-
 )
 
 // SystemGeneralSettings represents general system configuration settings.
@@ -192,16 +191,20 @@ type CleanupOption struct {
 }
 
 const (
-	// LoadBalancerStrategyAdaptive is a dynamic load balancer strategy that adapts to the current load.
+	// LoadBalancerStrategyAdaptive is a legacy compatibility value. It no longer
+	// controls primary routing; API key route tiers do.
 	LoadBalancerStrategyAdaptive = "adaptive"
 
-	// LoadBalancerStrategyFailover is a deterministic load balancer strategy that fails over to the next available channel based on the weight of the channels.
+	// LoadBalancerStrategyFailover is a legacy compatibility value. It no longer
+	// controls primary routing; fallback follows API key route tiers.
 	LoadBalancerStrategyFailover = "failover"
 
-	// LoadBalancerStrategyCircuitBreaker is a dynamic load balancer strategy that monitors the health of channels and fails over to a backup channel when the primary channel is unhealthy.
+	// LoadBalancerStrategyCircuitBreaker is a legacy compatibility value. Circuit
+	// breaker is now a hard attempt gate, not a primary route chooser.
 	LoadBalancerStrategyCircuitBreaker = "circuit-breaker"
 
-	// LoadBalancerStrategyStickySession routes cache-compatible request contexts back to the channel that last served that context successfully.
+	// LoadBalancerStrategyStickySession enables cache-compatible sticky bindings
+	// inside the active API key route tier. It does not choose first-bind routes.
 	LoadBalancerStrategyStickySession = "sticky-session"
 
 	// UpstreamErrorModePassthrough keeps provider errors unchanged.
@@ -226,8 +229,9 @@ type RetryPolicy struct {
 	MaxSingleChannelRetries int `json:"max_single_channel_retries"`
 	// RetryDelayMs defines the delay between retries in milliseconds
 	RetryDelayMs int `json:"retry_delay_ms"`
-	// LoadBalancerStrategy defines which channel load balancer strategy to use.
-	// Supported values: "adaptive", "failover", "circuit-breaker", "sticky-session".
+	// LoadBalancerStrategy is retained for legacy settings compatibility.
+	// Only "sticky-session" changes runtime behavior by enabling sticky bindings;
+	// all primary routing follows API key route tiers.
 	LoadBalancerStrategy string `json:"load_balancer_strategy"`
 
 	// AutoDisableChannel controls whether to auto-disable a channel or API key when it exceeds the maximum number of retries.
@@ -937,7 +941,8 @@ func normalizeRetryPolicy(policy *RetryPolicy) {
 		policy.LoadBalancerStrategy = defaultRetryPolicy.LoadBalancerStrategy
 	}
 
-	// The weighted load balancer strategy is deprecated. Use the failover strategy instead.
+	// The weighted load balancer strategy is deprecated. Normalize it to a known
+	// legacy value so old stored settings remain readable.
 	if policy.LoadBalancerStrategy == "weighted" {
 		policy.LoadBalancerStrategy = LoadBalancerStrategyFailover
 	}

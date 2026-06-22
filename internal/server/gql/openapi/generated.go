@@ -40,7 +40,9 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	APIKeyProfile() APIKeyProfileResolver
 	Mutation() MutationResolver
+	APIKeyProfileInput() APIKeyProfileInputResolver
 }
 
 type DirectiveRoot struct {
@@ -62,7 +64,10 @@ type ComplexityRoot struct {
 		ModelIDs             func(childComplexity int) int
 		ModelMappings        func(childComplexity int) int
 		Name                 func(childComplexity int) int
+		PreferredChannelID   func(childComplexity int) int
 		Quota                func(childComplexity int) int
+		RouteMigration       func(childComplexity int) int
+		RouteTiers           func(childComplexity int) int
 	}
 
 	APIKeyProfiles struct {
@@ -92,6 +97,16 @@ type ComplexityRoot struct {
 		Type             func(childComplexity int) int
 	}
 
+	APIKeyRouteMigration struct {
+		Source  func(childComplexity int) int
+		Version func(childComplexity int) int
+	}
+
+	APIKeyRouteTier struct {
+		ChannelIDs func(childComplexity int) int
+		Name       func(childComplexity int) int
+	}
+
 	ModelMapping struct {
 		From func(childComplexity int) int
 		To   func(childComplexity int) int
@@ -107,10 +122,19 @@ type ComplexityRoot struct {
 	}
 }
 
+type APIKeyProfileResolver interface {
+	RouteTiers(ctx context.Context, obj *objects.APIKeyProfile) ([]*APIKeyRouteTier, error)
+
+	RouteMigration(ctx context.Context, obj *objects.APIKeyProfile) (*APIKeyRouteMigration, error)
+}
 type MutationResolver interface {
 	CreateLLMAPIKey(ctx context.Context, name string) (*APIKey, error)
 	UpdateAPIKeyProfiles(ctx context.Context, id objects.GUID, input objects.APIKeyProfiles) (*APIKey, error)
 	LoadAPIKeyProfileTemplate(ctx context.Context, input LoadAPIKeyProfileTemplateInput) (*APIKey, error)
+}
+
+type APIKeyProfileInputResolver interface {
+	RouteTiers(ctx context.Context, obj *objects.APIKeyProfile, data []*APIKeyRouteTierInput) error
 }
 
 type executableSchema struct {
@@ -199,12 +223,30 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.APIKeyProfile.Name(childComplexity), true
+	case "APIKeyProfile.preferredChannelID":
+		if e.complexity.APIKeyProfile.PreferredChannelID == nil {
+			break
+		}
+
+		return e.complexity.APIKeyProfile.PreferredChannelID(childComplexity), true
 	case "APIKeyProfile.quota":
 		if e.complexity.APIKeyProfile.Quota == nil {
 			break
 		}
 
 		return e.complexity.APIKeyProfile.Quota(childComplexity), true
+	case "APIKeyProfile.routeMigration":
+		if e.complexity.APIKeyProfile.RouteMigration == nil {
+			break
+		}
+
+		return e.complexity.APIKeyProfile.RouteMigration(childComplexity), true
+	case "APIKeyProfile.routeTiers":
+		if e.complexity.APIKeyProfile.RouteTiers == nil {
+			break
+		}
+
+		return e.complexity.APIKeyProfile.RouteTiers(childComplexity), true
 
 	case "APIKeyProfiles.activeProfile":
 		if e.complexity.APIKeyProfiles.ActiveProfile == nil {
@@ -283,6 +325,32 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.APIKeyQuotaPeriod.Type(childComplexity), true
 
+	case "APIKeyRouteMigration.source":
+		if e.complexity.APIKeyRouteMigration.Source == nil {
+			break
+		}
+
+		return e.complexity.APIKeyRouteMigration.Source(childComplexity), true
+	case "APIKeyRouteMigration.version":
+		if e.complexity.APIKeyRouteMigration.Version == nil {
+			break
+		}
+
+		return e.complexity.APIKeyRouteMigration.Version(childComplexity), true
+
+	case "APIKeyRouteTier.channelIDs":
+		if e.complexity.APIKeyRouteTier.ChannelIDs == nil {
+			break
+		}
+
+		return e.complexity.APIKeyRouteTier.ChannelIDs(childComplexity), true
+	case "APIKeyRouteTier.name":
+		if e.complexity.APIKeyRouteTier.Name == nil {
+			break
+		}
+
+		return e.complexity.APIKeyRouteTier.Name(childComplexity), true
+
 	case "ModelMapping.from":
 		if e.complexity.ModelMapping.From == nil {
 			break
@@ -343,6 +411,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputAPIKeyQuotaInput,
 		ec.unmarshalInputAPIKeyQuotaPastDurationInput,
 		ec.unmarshalInputAPIKeyQuotaPeriodInput,
+		ec.unmarshalInputAPIKeyRouteTierInput,
 		ec.unmarshalInputLoadApiKeyProfileTemplateInput,
 		ec.unmarshalInputModelMappingInput,
 		ec.unmarshalInputUpdateAPIKeyProfilesInput,
@@ -894,6 +963,105 @@ func (ec *executionContext) fieldContext_APIKeyProfile_modelIDs(_ context.Contex
 	return fc, nil
 }
 
+func (ec *executionContext) _APIKeyProfile_routeTiers(ctx context.Context, field graphql.CollectedField, obj *objects.APIKeyProfile) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_APIKeyProfile_routeTiers,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.APIKeyProfile().RouteTiers(ctx, obj)
+		},
+		nil,
+		ec.marshalOAPIKeyRouteTier2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚋopenapiᚐAPIKeyRouteTierᚄ,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_APIKeyProfile_routeTiers(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "APIKeyProfile",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_APIKeyRouteTier_name(ctx, field)
+			case "channelIDs":
+				return ec.fieldContext_APIKeyRouteTier_channelIDs(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type APIKeyRouteTier", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _APIKeyProfile_preferredChannelID(ctx context.Context, field graphql.CollectedField, obj *objects.APIKeyProfile) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_APIKeyProfile_preferredChannelID,
+		func(ctx context.Context) (any, error) {
+			return obj.PreferredChannelID, nil
+		},
+		nil,
+		ec.marshalOInt2ᚖint,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_APIKeyProfile_preferredChannelID(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "APIKeyProfile",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _APIKeyProfile_routeMigration(ctx context.Context, field graphql.CollectedField, obj *objects.APIKeyProfile) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_APIKeyProfile_routeMigration,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.APIKeyProfile().RouteMigration(ctx, obj)
+		},
+		nil,
+		ec.marshalOAPIKeyRouteMigration2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚋopenapiᚐAPIKeyRouteMigration,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_APIKeyProfile_routeMigration(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "APIKeyProfile",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "version":
+				return ec.fieldContext_APIKeyRouteMigration_version(ctx, field)
+			case "source":
+				return ec.fieldContext_APIKeyRouteMigration_source(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type APIKeyRouteMigration", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _APIKeyProfile_quota(ctx context.Context, field graphql.CollectedField, obj *objects.APIKeyProfile) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -998,6 +1166,12 @@ func (ec *executionContext) fieldContext_APIKeyProfiles_profiles(_ context.Conte
 				return ec.fieldContext_APIKeyProfile_channelTagsMatchMode(ctx, field)
 			case "modelIDs":
 				return ec.fieldContext_APIKeyProfile_modelIDs(ctx, field)
+			case "routeTiers":
+				return ec.fieldContext_APIKeyProfile_routeTiers(ctx, field)
+			case "preferredChannelID":
+				return ec.fieldContext_APIKeyProfile_preferredChannelID(ctx, field)
+			case "routeMigration":
+				return ec.fieldContext_APIKeyProfile_routeMigration(ctx, field)
 			case "quota":
 				return ec.fieldContext_APIKeyProfile_quota(ctx, field)
 			}
@@ -1310,6 +1484,122 @@ func (ec *executionContext) fieldContext_APIKeyQuotaPeriod_calendarDuration(_ co
 				return ec.fieldContext_APIKeyQuotaCalendarDuration_unit(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type APIKeyQuotaCalendarDuration", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _APIKeyRouteMigration_version(ctx context.Context, field graphql.CollectedField, obj *APIKeyRouteMigration) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_APIKeyRouteMigration_version,
+		func(ctx context.Context) (any, error) {
+			return obj.Version, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_APIKeyRouteMigration_version(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "APIKeyRouteMigration",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _APIKeyRouteMigration_source(ctx context.Context, field graphql.CollectedField, obj *APIKeyRouteMigration) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_APIKeyRouteMigration_source,
+		func(ctx context.Context) (any, error) {
+			return obj.Source, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_APIKeyRouteMigration_source(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "APIKeyRouteMigration",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _APIKeyRouteTier_name(ctx context.Context, field graphql.CollectedField, obj *APIKeyRouteTier) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_APIKeyRouteTier_name,
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_APIKeyRouteTier_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "APIKeyRouteTier",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _APIKeyRouteTier_channelIDs(ctx context.Context, field graphql.CollectedField, obj *APIKeyRouteTier) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_APIKeyRouteTier_channelIDs,
+		func(ctx context.Context) (any, error) {
+			return obj.ChannelIDs, nil
+		},
+		nil,
+		ec.marshalNInt2ᚕintᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_APIKeyRouteTier_channelIDs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "APIKeyRouteTier",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3093,7 +3383,7 @@ func (ec *executionContext) unmarshalInputAPIKeyProfileInput(ctx context.Context
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "modelMappings", "channelIDs", "channelTags", "channelTagsMatchMode", "modelIDs", "quota"}
+	fieldsInOrder := [...]string{"name", "modelMappings", "channelIDs", "channelTags", "channelTagsMatchMode", "modelIDs", "routeTiers", "preferredChannelID", "quota"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -3142,6 +3432,22 @@ func (ec *executionContext) unmarshalInputAPIKeyProfileInput(ctx context.Context
 				return it, err
 			}
 			it.ModelIDs = data
+		case "routeTiers":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("routeTiers"))
+			data, err := ec.unmarshalOAPIKeyRouteTierInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚋopenapiᚐAPIKeyRouteTierInputᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			if err = ec.resolvers.APIKeyProfileInput().RouteTiers(ctx, &it, data); err != nil {
+				return it, err
+			}
+		case "preferredChannelID":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("preferredChannelID"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PreferredChannelID = data
 		case "quota":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("quota"))
 			data, err := ec.unmarshalOAPIKeyQuotaInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋobjectsᚐAPIKeyQuota(ctx, v)
@@ -3299,6 +3605,40 @@ func (ec *executionContext) unmarshalInputAPIKeyQuotaPeriodInput(ctx context.Con
 				return it, err
 			}
 			it.CalendarDuration = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputAPIKeyRouteTierInput(ctx context.Context, obj any) (APIKeyRouteTierInput, error) {
+	var it APIKeyRouteTierInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "channelIDs"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "channelIDs":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("channelIDs"))
+			data, err := ec.unmarshalNInt2ᚕintᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ChannelIDs = data
 		}
 	}
 
@@ -3482,7 +3822,7 @@ func (ec *executionContext) _APIKeyProfile(ctx context.Context, sel ast.Selectio
 		case "name":
 			out.Values[i] = ec._APIKeyProfile_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "modelMappings":
 			out.Values[i] = ec._APIKeyProfile_modelMappings(ctx, field, obj)
@@ -3494,6 +3834,74 @@ func (ec *executionContext) _APIKeyProfile(ctx context.Context, sel ast.Selectio
 			out.Values[i] = ec._APIKeyProfile_channelTagsMatchMode(ctx, field, obj)
 		case "modelIDs":
 			out.Values[i] = ec._APIKeyProfile_modelIDs(ctx, field, obj)
+		case "routeTiers":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._APIKeyProfile_routeTiers(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "preferredChannelID":
+			out.Values[i] = ec._APIKeyProfile_preferredChannelID(ctx, field, obj)
+		case "routeMigration":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._APIKeyProfile_routeMigration(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "quota":
 			out.Values[i] = ec._APIKeyProfile_quota(ctx, field, obj)
 		default:
@@ -3708,6 +4116,94 @@ func (ec *executionContext) _APIKeyQuotaPeriod(ctx context.Context, sel ast.Sele
 			out.Values[i] = ec._APIKeyQuotaPeriod_pastDuration(ctx, field, obj)
 		case "calendarDuration":
 			out.Values[i] = ec._APIKeyQuotaPeriod_calendarDuration(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var aPIKeyRouteMigrationImplementors = []string{"APIKeyRouteMigration"}
+
+func (ec *executionContext) _APIKeyRouteMigration(ctx context.Context, sel ast.SelectionSet, obj *APIKeyRouteMigration) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, aPIKeyRouteMigrationImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("APIKeyRouteMigration")
+		case "version":
+			out.Values[i] = ec._APIKeyRouteMigration_version(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "source":
+			out.Values[i] = ec._APIKeyRouteMigration_source(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var aPIKeyRouteTierImplementors = []string{"APIKeyRouteTier"}
+
+func (ec *executionContext) _APIKeyRouteTier(ctx context.Context, sel ast.SelectionSet, obj *APIKeyRouteTier) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, aPIKeyRouteTierImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("APIKeyRouteTier")
+		case "name":
+			out.Values[i] = ec._APIKeyRouteTier_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "channelIDs":
+			out.Values[i] = ec._APIKeyRouteTier_channelIDs(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -4321,6 +4817,21 @@ func (ec *executionContext) marshalNAPIKeyQuotaPeriodType2githubᚗcomᚋlooplj�
 	return res
 }
 
+func (ec *executionContext) marshalNAPIKeyRouteTier2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚋopenapiᚐAPIKeyRouteTier(ctx context.Context, sel ast.SelectionSet, v *APIKeyRouteTier) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._APIKeyRouteTier(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNAPIKeyRouteTierInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚋopenapiᚐAPIKeyRouteTierInput(ctx context.Context, v any) (*APIKeyRouteTierInput, error) {
+	res, err := ec.unmarshalInputAPIKeyRouteTierInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v any) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -4377,6 +4888,36 @@ func (ec *executionContext) marshalNInt2int64(ctx context.Context, sel ast.Selec
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNInt2ᚕintᚄ(ctx context.Context, v any) ([]int, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]int, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNInt2int(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNInt2ᚕintᚄ(ctx context.Context, sel ast.SelectionSet, v []int) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNInt2int(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalNLoadApiKeyProfileTemplateInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚋopenapiᚐLoadAPIKeyProfileTemplateInput(ctx context.Context, v any) (LoadAPIKeyProfileTemplateInput, error) {
@@ -4766,6 +5307,78 @@ func (ec *executionContext) unmarshalOAPIKeyQuotaPastDurationInput2ᚖgithubᚗc
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) marshalOAPIKeyRouteMigration2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚋopenapiᚐAPIKeyRouteMigration(ctx context.Context, sel ast.SelectionSet, v *APIKeyRouteMigration) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._APIKeyRouteMigration(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOAPIKeyRouteTier2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚋopenapiᚐAPIKeyRouteTierᚄ(ctx context.Context, sel ast.SelectionSet, v []*APIKeyRouteTier) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNAPIKeyRouteTier2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚋopenapiᚐAPIKeyRouteTier(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalOAPIKeyRouteTierInput2ᚕᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚋopenapiᚐAPIKeyRouteTierInputᚄ(ctx context.Context, v any) ([]*APIKeyRouteTierInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]*APIKeyRouteTierInput, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNAPIKeyRouteTierInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋgqlᚋopenapiᚐAPIKeyRouteTierInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
 func (ec *executionContext) unmarshalOBoolean2bool(ctx context.Context, v any) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -4879,6 +5492,24 @@ func (ec *executionContext) marshalOInt2ᚕintᚄ(ctx context.Context, sel ast.S
 	}
 
 	return ret
+}
+
+func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v any) (*int, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalInt(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.SelectionSet, v *int) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	_ = sel
+	_ = ctx
+	res := graphql.MarshalInt(*v)
+	return res
 }
 
 func (ec *executionContext) unmarshalOInt2ᚖint64(ctx context.Context, v any) (*int64, error) {

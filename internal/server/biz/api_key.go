@@ -41,6 +41,7 @@ type APIKeyServiceParams struct {
 
 	CacheConfig    xcache.Config
 	Ent            *ent.Client
+	ChannelService *ChannelService `optional:"true"`
 	ProjectService *ProjectService
 	KeyPrefix      string `name:"api_key_prefix"`
 }
@@ -48,6 +49,7 @@ type APIKeyServiceParams struct {
 type APIKeyService struct {
 	*AbstractService
 
+	ChannelService *ChannelService
 	ProjectService *ProjectService
 	APIKeyCache    *live.IndexedCache[string, *ent.APIKey]
 	apiKeyNotifier watcher.Notifier[live.CacheEvent[string]]
@@ -59,6 +61,7 @@ func NewAPIKeyService(params APIKeyServiceParams) *APIKeyService {
 		AbstractService: &AbstractService{
 			db: params.Ent,
 		},
+		ChannelService: params.ChannelService,
 		ProjectService: params.ProjectService,
 		keyPrefix:      params.KeyPrefix,
 	}
@@ -391,7 +394,13 @@ func (s *APIKeyService) UpdateAPIKeyProfiles(ctx context.Context, id int, profil
 		return nil, err
 	}
 
-	if err := validateProfileFilters(profiles.Profiles); err != nil {
+	// Validate legacy route fields before normalizing so compatibility inputs can
+	// return the most specific error when they are malformed.
+	if err := validateLegacyAPIKeyProfileRoutes(profiles.Profiles); err != nil {
+		return nil, err
+	}
+
+	if err := s.normalizeAndValidateAPIKeyProfiles(&profiles); err != nil {
 		return nil, err
 	}
 
@@ -411,6 +420,37 @@ func (s *APIKeyService) UpdateAPIKeyProfiles(ctx context.Context, id int, profil
 	s.invalidateAPIKeyCaches(ctx, apiKey.Key)
 
 	return apiKey, nil
+}
+
+func (s *APIKeyService) normalizeAndValidateAPIKeyProfiles(profiles *objects.APIKeyProfiles) error {
+	if profiles == nil {
+		return fmt.Errorf("api key profiles are required")
+	}
+
+	var channels []APIKeyProfileRouteChannel
+	if s.ChannelService != nil {
+		channels = enabledRouteChannels(s.ChannelService.GetEnabledChannels())
+	}
+	for i := range profiles.Profiles {
+		if err := migrateAPIKeyProfileRoutesForSave(&profiles.Profiles[i], channels); err != nil {
+			return err
+		}
+	}
+
+	return validateProfileRoutes(profiles.Profiles)
+}
+
+func validateLegacyAPIKeyProfileRoutes(profiles []objects.APIKeyProfile) error {
+	for _, profile := range profiles {
+		if hasRouteTiers(profile.RouteTiers) || len(profile.ChannelTags) == 0 {
+			continue
+		}
+		if !profile.ChannelTagsMatchMode.IsValid() {
+			return fmt.Errorf("profile '%s' channelTagsMatchMode is invalid", profile.Name)
+		}
+	}
+
+	return nil
 }
 
 // validateProfileNames checks that all profile names are unique (case-insensitive).
@@ -442,16 +482,6 @@ func validateActiveProfile(activeProfile string, profiles []objects.APIKeyProfil
 	}
 
 	return fmt.Errorf("active profile '%s' does not exist in the profiles list", activeProfile)
-}
-
-func validateProfileFilters(profiles []objects.APIKeyProfile) error {
-	for _, profile := range profiles {
-		if !profile.ChannelTagsMatchMode.IsValid() {
-			return fmt.Errorf("profile '%s' channelTagsMatchMode is invalid", profile.Name)
-		}
-	}
-
-	return nil
 }
 
 func validateProfileQuota(profiles []objects.APIKeyProfile) error {

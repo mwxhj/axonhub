@@ -45,22 +45,6 @@ func NewChatCompletionOrchestrator(
 	// Initialize model circuit breaker
 	modelCircuitBreaker := biz.NewModelCircuitBreaker()
 
-	rateLimitStrategy := NewRateLimitAwareStrategy(rateLimitTracker, channelLimiterManager)
-
-	adaptiveLoadBalancer := NewLoadBalancer(systemService, channelService,
-		NewTraceAwareStrategy(requestService),
-		NewErrorAwareStrategy(channelService),
-		NewWeightRoundRobinStrategy(channelService),
-		NewLatencyAwareStrategy(channelService),
-		rateLimitStrategy,
-	)
-
-	failoverLoadBalancer := NewLoadBalancer(systemService, channelService,
-		NewWeightStrategy(), NewRandomStrategy(), rateLimitStrategy)
-
-	circuitBreakerLoadBalancer := NewLoadBalancer(systemService, channelService,
-		NewWeightStrategy(), NewModelAwareCircuitBreakerStrategy(modelCircuitBreaker), rateLimitStrategy)
-
 	stickySessionStore := NewStickySessionBindingStore(stickySessionBindingTTL)
 	stickySessionRouter := NewStickySessionRouter(stickySessionStore, NewDefaultStickyKeyExtractor())
 
@@ -78,19 +62,16 @@ func NewChatCompletionOrchestrator(
 			cc.StripBillingHeaderCCH(),
 			stream.EnsureUsage(),
 		},
-		PipelineFactory:            pipeline.NewFactory(httpClient),
-		ModelMapper:                NewModelMapper(),
-		channelSelector:            defaultSelector,
-		channelLimiterManager:      channelLimiterManager,
-		channelLimiterMetrics:      channelLimiterMetrics,
-		rateLimitTracker:           rateLimitTracker,
-		adaptiveLoadBalancer:       adaptiveLoadBalancer,
-		failoverLoadBalancer:       failoverLoadBalancer,
-		circuitBreakerLoadBalancer: circuitBreakerLoadBalancer,
-		stickySessionStore:         stickySessionStore,
-		stickySessionRouter:        stickySessionRouter,
-		modelCircuitBreaker:        modelCircuitBreaker,
-		proxy:                      nil,
+		PipelineFactory:       pipeline.NewFactory(httpClient),
+		ModelMapper:           NewModelMapper(),
+		channelSelector:       defaultSelector,
+		channelLimiterManager: channelLimiterManager,
+		channelLimiterMetrics: channelLimiterMetrics,
+		rateLimitTracker:      rateLimitTracker,
+		stickySessionStore:    stickySessionStore,
+		stickySessionRouter:   stickySessionRouter,
+		modelCircuitBreaker:   modelCircuitBreaker,
+		proxy:                 nil,
 	}
 }
 
@@ -111,22 +92,19 @@ type ChatCompletionOrchestrator struct {
 	// The runtime fields.
 
 	// The default channel selector.
-	channelSelector CandidateSelector
-	// The load balancer for channel load balancing.
-	adaptiveLoadBalancer       *LoadBalancer
-	failoverLoadBalancer       *LoadBalancer
-	circuitBreakerLoadBalancer *LoadBalancer
-	stickySessionStore         StickySessionStore
-	stickySessionRouter        *StickySessionRouter
+	channelSelector     CandidateSelector
+	stickySessionStore  StickySessionStore
+	stickySessionRouter *StickySessionRouter
 	// channelLimiterManager owns per-channel concurrency admission control and
-	// supplies in-flight / queue stats to the rate-limit-aware load-balancer strategy.
+	// supplies in-flight / queue stats to operators and admission checks.
 	channelLimiterManager *ChannelLimiterManager
 	// channelLimiterMetrics emits OTel metrics for the limiter (gauges + counters
 	// + histogram). May be nil in test setups that skip metric registration.
 	channelLimiterMetrics *ChannelLimiterMetrics
-	// The rate limit tracker for rate limit aware load balancing.
+	// rateLimitTracker records per-channel request/token windows and upstream
+	// Retry-After cooldowns for local admission and diagnostics.
 	rateLimitTracker *ChannelRequestTracker
-	// The model circuit breaker for circuit-breaker load balancing.
+	// The model circuit breaker observes failures; it is not a primary route chooser.
 	modelCircuitBreaker *biz.ModelCircuitBreaker
 
 	// proxy is the proxy configuration for testing
@@ -169,30 +147,15 @@ func (processor *ChatCompletionOrchestrator) Process(ctx context.Context, reques
 	// Get retry policy from system settings
 	retryPolicy := processor.SystemService.RetryPolicyOrDefault(ctx)
 
-	strategy := deriveLoadBalancerStrategy(retryPolicy, apiKey)
+	stickyEnabled := stickySessionEnabled(retryPolicy)
 	if log.DebugEnabled(ctx) {
 		log.Debug(ctx, "chat request received",
 			log.String("request_body", string(sanitizeResponseBody(request.Body, 4096))),
 			log.Any("request_headers", httpclient.MaskSensitiveHeaders(request.Headers)),
 			log.Any("retry_policy", retryPolicy),
-			log.String("system_load_balance_strategy", retryPolicy.LoadBalancerStrategy),
-			log.String("load_balance_strategy", strategy),
+			log.String("route_strategy", "api-key-route-tiers"),
+			log.Bool("sticky_session_enabled", stickyEnabled),
 		)
-	}
-
-	loadBalancer := processor.adaptiveLoadBalancer
-
-	switch strategy {
-	case biz.LoadBalancerStrategyAdaptive:
-		loadBalancer = processor.adaptiveLoadBalancer
-	case biz.LoadBalancerStrategyFailover:
-		loadBalancer = processor.failoverLoadBalancer
-	case biz.LoadBalancerStrategyCircuitBreaker:
-		loadBalancer = processor.circuitBreakerLoadBalancer
-	case biz.LoadBalancerStrategyStickySession:
-		loadBalancer = processor.failoverLoadBalancer
-	default:
-		// Default to adaptive load balancer
 	}
 
 	state := &PersistenceState{
@@ -204,7 +167,6 @@ func (processor *ChatCompletionOrchestrator) Process(ctx context.Context, reques
 		PromptProtecter:       processor.PromptProtecter,
 		RetryPolicyProvider:   processor.SystemService,
 		CandidateSelector:     processor.channelSelector,
-		LoadBalancer:          loadBalancer,
 		ModelMapper:           processor.ModelMapper,
 		Proxy:                 processor.proxy,
 		CurrentCandidateIndex: 0,
@@ -241,7 +203,7 @@ func (processor *ChatCompletionOrchestrator) Process(ctx context.Context, reques
 		selectCandidates(inbound),
 		injectPrompts(inbound),
 		protectPrompts(inbound),
-		orderCandidates(inbound, strategy, processor.stickySessionRouter),
+		orderCandidates(inbound, stickyEnabled, processor.stickySessionRouter),
 		// Response pass-through middlewares run before persistRequest so the raw provider
 		// response is saved when pass-through is enabled.
 		applyPassThroughResponse(outbound, processor.SystemService),
@@ -263,8 +225,8 @@ func (processor *ChatCompletionOrchestrator) Process(ctx context.Context, reques
 		// Unified performance tracking middleware.
 		withPerformanceRecording(outbound),
 
-		withModelCircuitBreaker(outbound, processor.modelCircuitBreaker, strategy),
-		withStickySessionBinding(outbound, processor.stickySessionStore, strategy),
+		withModelCircuitBreaker(outbound, processor.modelCircuitBreaker),
+		withStickySessionBinding(outbound, processor.stickySessionStore, stickyEnabled),
 
 		// The request execution middleware must be the final middleware
 		// to ensure that the request execution is created with the correct request bodys.
@@ -277,7 +239,8 @@ func (processor *ChatCompletionOrchestrator) Process(ctx context.Context, reques
 		// locally rejected (queue full / queue timeout) request does not consume
 		// RPM budget for a request that never reached upstream.
 		withChannelLimiter(outbound, processor.channelLimiterManager, processor.channelLimiterMetrics),
-		// Rate limit tracking middleware for load balancing.
+		// Rate limit tracking middleware for request/token accounting and
+		// upstream Retry-After cooldown observation.
 		withRateLimitTracking(outbound, processor.rateLimitTracker),
 
 		// Response pass-through capture middlewares must be last in the outbound list

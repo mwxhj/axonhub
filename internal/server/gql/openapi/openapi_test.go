@@ -34,6 +34,13 @@ type fixtures struct {
 	otherKey      *ent.APIKey
 }
 
+func testOpenAPIRouteTiers(ids ...int) []objects.APIKeyRouteTier {
+	return []objects.APIKeyRouteTier{{
+		Name:       "Primary",
+		ChannelIDs: ids,
+	}}
+}
+
 // setupOpenAPI wires real biz services around an in-memory ent client and
 // produces a context carrying a service account API key principal — exactly
 // what `WithOpenAPIAuth` would inject in a real request, so the privacy layer
@@ -93,7 +100,10 @@ func setupOpenAPI(t *testing.T, serviceAccountScopes []string) (*mutationResolve
 		SetType(apikey.TypeUser).
 		SetProfiles(&objects.APIKeyProfiles{
 			ActiveProfile: "Default",
-			Profiles:      []objects.APIKeyProfile{{Name: "Default"}},
+			Profiles: []objects.APIKeyProfile{{
+				Name:       "Default",
+				RouteTiers: testOpenAPIRouteTiers(1),
+			}},
 		}).
 		Save(setupCtx)
 	require.NoError(t, err)
@@ -103,7 +113,8 @@ func setupOpenAPI(t *testing.T, serviceAccountScopes []string) (*mutationResolve
 		SetDescription("Production template").
 		SetProject(proj).
 		SetProfile(&objects.APIKeyProfile{
-			Name: "Production",
+			Name:       "Production",
+			RouteTiers: testOpenAPIRouteTiers(2),
 			ModelMappings: []objects.ModelMapping{
 				{From: "claude-3", To: "claude-3-opus"},
 			},
@@ -123,7 +134,7 @@ func setupOpenAPI(t *testing.T, serviceAccountScopes []string) (*mutationResolve
 		SetName("other-template").
 		SetDescription("foreign template").
 		SetProject(otherProj).
-		SetProfile(&objects.APIKeyProfile{Name: "ForeignProfile"}).
+		SetProfile(&objects.APIKeyProfile{Name: "ForeignProfile", RouteTiers: testOpenAPIRouteTiers(3)}).
 		Save(setupCtx)
 	require.NoError(t, err)
 
@@ -214,9 +225,10 @@ func TestOpenAPIResolver_UpdateAPIKeyProfiles_HappyPath(t *testing.T) {
 	input := objects.APIKeyProfiles{
 		ActiveProfile: "Production",
 		Profiles: []objects.APIKeyProfile{
-			{Name: "Default"},
+			{Name: "Default", RouteTiers: testOpenAPIRouteTiers(1)},
 			{
-				Name: "Production",
+				Name:       "Production",
+				RouteTiers: testOpenAPIRouteTiers(2),
 				ModelMappings: []objects.ModelMapping{
 					{From: "gpt-4", To: "gpt-4o"},
 				},
@@ -248,7 +260,7 @@ func TestOpenAPIResolver_UpdateAPIKeyProfiles_NormalizesNilModelMappings(t *test
 	input := objects.APIKeyProfiles{
 		ActiveProfile: "test",
 		Profiles: []objects.APIKeyProfile{
-			{Name: "test"},
+			{Name: "test", RouteTiers: testOpenAPIRouteTiers(1)},
 		},
 	}
 
@@ -271,7 +283,7 @@ func TestOpenAPIResolver_UpdateAPIKeyProfiles_CrossProjectDenied(t *testing.T) {
 	// 用其他项目的 key id：privacy 层的 read filter 应让 Get 找不到。
 	_, err := mr.UpdateAPIKeyProfiles(ctx, objects.GUID{ID: fx.otherKey.ID}, objects.APIKeyProfiles{
 		ActiveProfile: "X",
-		Profiles:      []objects.APIKeyProfile{{Name: "X"}},
+		Profiles:      []objects.APIKeyProfile{{Name: "X", RouteTiers: testOpenAPIRouteTiers(1)}},
 	})
 	require.Error(t, err)
 }
@@ -283,7 +295,7 @@ func TestOpenAPIResolver_UpdateAPIKeyProfiles_MissingWriteScopeDenied(t *testing
 
 	_, err := mr.UpdateAPIKeyProfiles(ctx, objects.GUID{ID: fx.targetKey.ID}, objects.APIKeyProfiles{
 		ActiveProfile: "Default",
-		Profiles:      []objects.APIKeyProfile{{Name: "Default"}},
+		Profiles:      []objects.APIKeyProfile{{Name: "Default", RouteTiers: testOpenAPIRouteTiers(1)}},
 	})
 	require.Error(t, err)
 }

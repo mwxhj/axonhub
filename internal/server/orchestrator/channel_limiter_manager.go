@@ -156,8 +156,7 @@ func (m *ChannelLimiterManager) Forget(channelID int) {
 }
 
 // Stats returns the current load for a channel. ok=false means the channel has
-// no limiter (i.e. no concurrency limit configured), which the load balancer
-// should treat as "unlimited capacity" rather than a hard zero.
+// no limiter (i.e. no concurrency limit configured).
 func (m *ChannelLimiterManager) Stats(channelID int) (inFlight, waiting int, ok bool) {
 	m.mu.RLock()
 	e, found := m.entries[channelID]

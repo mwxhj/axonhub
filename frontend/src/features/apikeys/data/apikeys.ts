@@ -22,6 +22,27 @@ import { apiKeyConnectionSchema, apiKeyProfileQuotaUsageSchema, apiKeyProfileTem
 
 const NOAUTH_API_KEY_TYPE = 'noauth';
 
+function toApiKeyProfileInput(profile: UpdateApiKeyProfilesInput['profiles'][number]) {
+  return {
+    name: profile.name,
+    modelMappings: profile.modelMappings ?? [],
+    routeTiers: (profile.routeTiers ?? []).map((tier) => ({
+      name: tier.name ?? '',
+      channelIDs: tier.channelIDs ?? [],
+    })),
+    preferredChannelID: profile.preferredChannelID ?? null,
+    modelIDs: profile.modelIDs ?? [],
+    quota: profile.quota ?? null,
+  };
+}
+
+function toApiKeyProfilesInput(input: UpdateApiKeyProfilesInput) {
+  return {
+    activeProfile: input.activeProfile,
+    profiles: input.profiles.map(toApiKeyProfileInput),
+  };
+}
+
 // Dynamic GraphQL query builders
 function buildApiKeysQuery(permissions: { canViewUsers: boolean }) {
   const userFields = permissions.canViewUsers
@@ -88,9 +109,9 @@ function buildApiKeyQuery(permissions: { canViewUsers: boolean }) {
           profiles {
             name
             modelMappings { from to }
-            channelIDs
-            channelTags
-            channelTagsMatchMode
+            routeTiers { name channelIDs }
+            preferredChannelID
+            routeMigration { version source }
             modelIDs
             quota {
               requests
@@ -185,9 +206,9 @@ const UPDATE_APIKEY_PROFILES_MUTATION = `
             from
             to
           }
-          channelIDs
-          channelTags
-          channelTagsMatchMode
+          routeTiers { name channelIDs }
+          preferredChannelID
+          routeMigration { version source }
           modelIDs
           quota {
             requests
@@ -291,9 +312,9 @@ const APIKEY_PROFILE_TEMPLATES_QUERY = `
           profile {
             name
             modelMappings { from to }
-            channelIDs
-            channelTags
-            channelTagsMatchMode
+            routeTiers { name channelIDs }
+            preferredChannelID
+            routeMigration { version source }
             modelIDs
             quota {
               requests
@@ -364,9 +385,9 @@ const LOAD_APIKEY_PROFILE_TEMPLATE_MUTATION = `
         profiles {
           name
           modelMappings { from to }
-          channelIDs
-          channelTags
-          channelTagsMatchMode
+          routeTiers { name channelIDs }
+          preferredChannelID
+          routeMigration { version source }
           modelIDs
           quota {
             requests
@@ -609,7 +630,7 @@ export function useUpdateApiKeyProfiles() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string; input: UpdateApiKeyProfilesInput }) => {
       const headers = selectedProjectId ? { 'X-Project-ID': selectedProjectId } : undefined;
-      return graphqlRequest<{ updateAPIKeyProfiles: ApiKey }>(UPDATE_APIKEY_PROFILES_MUTATION, { id, input }, headers);
+      return graphqlRequest<{ updateAPIKeyProfiles: ApiKey }>(UPDATE_APIKEY_PROFILES_MUTATION, { id, input: toApiKeyProfilesInput(input) }, headers);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['apiKeys'] });
@@ -747,7 +768,7 @@ export function useCreateApiKeyProfileTemplate() {
       };
       return graphqlRequest<{ createApiKeyProfileTemplate: ApiKeyProfileTemplate }>(
         CREATE_APIKEY_PROFILE_TEMPLATE_MUTATION,
-        { input: inputFields, profile: { ...profile, name: input.name } },
+        { input: inputFields, profile: toApiKeyProfileInput({ ...profile, name: input.name }) },
         headers
       );
     },
@@ -766,7 +787,7 @@ export function useUpdateApiKeyProfileTemplate() {
       const headers = selectedProjectId ? { 'X-Project-ID': selectedProjectId } : undefined;
       const { profile, ...inputFields } = input;
       const resolvedProfile = profile
-        ? { ...profile, name: input.name ?? profile.name }
+        ? toApiKeyProfileInput({ ...profile, name: input.name ?? profile.name })
         : undefined;
       return graphqlRequest<{ updateApiKeyProfileTemplate: ApiKeyProfileTemplate }>(
         UPDATE_APIKEY_PROFILE_TEMPLATE_MUTATION,

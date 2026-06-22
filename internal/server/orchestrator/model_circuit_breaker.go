@@ -12,11 +12,10 @@ import (
 	"github.com/looplj/axonhub/llm/streams"
 )
 
-func withModelCircuitBreaker(outbound *PersistentOutboundTransformer, modelCircuitBreaker *biz.ModelCircuitBreaker, strategy string) pipeline.Middleware {
+func withModelCircuitBreaker(outbound *PersistentOutboundTransformer, modelCircuitBreaker *biz.ModelCircuitBreaker) pipeline.Middleware {
 	return &modelCircuitBreakerTracker{
 		outbound:            outbound,
 		modelCircuitBreaker: modelCircuitBreaker,
-		strategy:            strategy,
 	}
 }
 
@@ -26,7 +25,6 @@ type modelCircuitBreakerTracker struct {
 	outbound            *PersistentOutboundTransformer
 	modelCircuitBreaker *biz.ModelCircuitBreaker
 
-	strategy       string
 	probeActive    bool
 	probeChannelID int
 	probeModelID   string
@@ -37,9 +35,7 @@ func (m *modelCircuitBreakerTracker) Name() string {
 }
 
 func (m *modelCircuitBreakerTracker) enabled() bool {
-	return m != nil &&
-		m.strategy == biz.LoadBalancerStrategyCircuitBreaker &&
-		m.modelCircuitBreaker != nil
+	return m != nil && m.modelCircuitBreaker != nil
 }
 
 func (m *modelCircuitBreakerTracker) OnOutboundRawRequest(ctx context.Context, request *httpclient.Request) (*httpclient.Request, error) {

@@ -13,9 +13,15 @@ export const formSchemaFactory = (t: (key: string) => string) =>
             to: z.string().min(1, t('apikeys.validation.targetModelRequired')),
           })
         ),
-        channelIDs: z.array(z.number()).optional().nullable(),
-        channelTags: z.array(z.string()).optional().nullable(),
-        channelTagsMatchMode: z.enum(['any', 'all', 'none']),
+        routeTiers: z
+          .array(
+            z.object({
+              name: z.string().optional().default(''),
+              channelIDs: z.array(z.number()).min(1, t('apikeys.validation.routeTierChannelsRequired')),
+            })
+          )
+          .min(1, t('apikeys.validation.routeTiersRequired')),
+        preferredChannelID: z.number().optional().nullable(),
         modelIDs: z.array(z.string()).optional().nullable(),
         quota: z
           .object({
@@ -45,6 +51,15 @@ export const formSchemaFactory = (t: (key: string) => string) =>
     })
     .superRefine((data, ctx) => {
       const quota = data.profile?.quota;
+      const routeChannelIDs = new Set(data.profile.routeTiers.flatMap((tier) => tier.channelIDs ?? []));
+      if (data.profile.preferredChannelID != null && !routeChannelIDs.has(data.profile.preferredChannelID)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: t('apikeys.validation.preferredChannelMustBeInRoute'),
+          path: ['profile', 'preferredChannelID'],
+        });
+      }
+
       if (!quota) return;
 
       const requests = quota.requests ?? undefined;

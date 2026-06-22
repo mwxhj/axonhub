@@ -8,22 +8,22 @@ import { format, type Locale } from 'date-fns';
 import { zhCN, enUS } from 'date-fns/locale';
 import { useQueryModels } from '@/gql/models';
 import { useTranslation } from 'react-i18next';
-import { extractNumberID } from '@/lib/utils';
+import type { TFunction } from 'i18next';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { TagsAutocompleteInput } from '@/components/ui/tags-autocomplete-input';
 import { AutoComplete } from '@/components/auto-complete';
-import { useAllChannelSummarys } from '@/features/channels/data/channels';
 import { useSelectedProjectId } from '@/stores/projectStore';
 import { useApiKeysContext } from '../context/apikeys-context';
 import { useApiKeyQuotaUsages } from '../data/apikeys';
 import { updateApiKeyProfilesInputSchemaFactory, type ApiKeyProfile, type ApiKeyProfileQuotaUsage, type UpdateApiKeyProfilesInput } from '../data/schema';
+import { RouteTiersEditor } from './route-tiers-editor';
 
 type ApiKeyQuotaPeriod = NonNullable<NonNullable<ApiKeyProfile['quota']>['period']>;
 
@@ -62,6 +62,19 @@ function quotaPeriodLabel(period: ApiKeyQuotaPeriod | null | undefined, t: (key:
     default:
       return period.type;
   }
+}
+
+function profileRouteTiersForForm(profile: ApiKeyProfile, index: number, t: TFunction): ApiKeyProfile['routeTiers'] {
+  if (profile.routeTiers?.length) {
+    return profile.routeTiers;
+  }
+
+  return [
+    {
+      name: t('apikeys.profiles.routeTierDefaultName', { number: index + 1 }),
+      channelIDs: profile.channelIDs ?? [],
+    },
+  ];
 }
 
 interface ApiKeyProfilesDialogProps {
@@ -134,12 +147,16 @@ export function ApiKeyProfilesDialog({ open, onOpenChange, onSubmit, loading = f
 
       return {
         activeProfile: fallbackActiveProfile,
-        profiles: initialData.profiles,
+        profiles: initialData.profiles.map((profile, index) => ({
+          ...profile,
+          routeTiers: profileRouteTiersForForm(profile, index, t),
+          preferredChannelID: profile.preferredChannelID ?? null,
+        })),
       };
     }
 
     return defaultValues;
-  }, [initialData, defaultValues]);
+  }, [initialData, defaultValues, t]);
   const normalizedSerialized = useMemo(() => JSON.stringify(normalizedInitialData), [normalizedInitialData]);
 
   const {
@@ -253,12 +270,11 @@ export function ApiKeyProfilesDialog({ open, onOpenChange, onSubmit, loading = f
     appendProfile({
       name: `Profile ${profileFields.length + 1}`,
       modelMappings: [],
-      channelIDs: [],
-      channelTags: [],
-      channelTagsMatchMode: 'any',
+      routeTiers: [{ name: t('apikeys.profiles.routeTierDefaultName', { number: 1 }), channelIDs: [] }],
+      preferredChannelID: null,
       modelIDs: [],
     });
-  }, [appendProfile, profileFields]);
+  }, [appendProfile, profileFields, t]);
 
   const removeProfileHandler = useCallback(
     (index: number) => {
@@ -446,7 +462,7 @@ interface ProfileCardProps {
   onRemove: () => void;
   canRemove: boolean;
   availableModels: string[];
-  t: (key: string) => string;
+  t: TFunction;
   locale: Locale;
   quotaUsageByProfileName: Map<string, ApiKeyProfileQuotaUsage>;
   defaultExpanded?: boolean;
@@ -473,20 +489,8 @@ function ProfileCard({
 }: ProfileCardProps) {
   const [localProfileName, setLocalProfileName] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(!defaultExpanded);
-  const { data: channelsData } = useAllChannelSummarys(selectedProjectId, { enabled: true });
 
   const debouncedProfileName = useDebounce(localProfileName, 500);
-
-  // 从所有渠道中提取唯一标签
-  const allTags = useMemo(() => {
-    const tagsSet = new Set<string>();
-    channelsData?.edges?.forEach((edge) => {
-      edge.node.tags?.forEach((tag) => {
-        if (tag) tagsSet.add(tag);
-      });
-    });
-    return Array.from(tagsSet).sort();
-  }, [channelsData]);
 
   const {
     fields: mappingFields,
@@ -500,8 +504,6 @@ function ProfileCard({
   // Watch all profiles to check for duplicates
   const allProfiles = form.watch('profiles') || [];
   const profileName = form.watch(`profiles.${profileIndex}.name`);
-  const channelTagsMatchMode = form.watch(`profiles.${profileIndex}.channelTagsMatchMode`);
-  const isExcludeMode = channelTagsMatchMode === 'none';
   const quotaUsage = profileName ? quotaUsageByProfileName.get(profileName) : undefined;
   const currentQuota = form.watch(`profiles.${profileIndex}.quota`);
   const quotaUsagePeriod = (currentQuota?.period ?? quotaUsage?.quota?.period) as ApiKeyQuotaPeriod | null | undefined;
@@ -919,94 +921,13 @@ function ProfileCard({
             />
           </div>
 
-          {/* Channel Restrictions Section */}
-          <div className='border-t pt-6'>
-            <h4 className='mb-3 text-sm font-medium'>{t('apikeys.profiles.allowedChannels')}</h4>
-            <p className='text-muted-foreground mb-3 text-xs'>{t('apikeys.profiles.allowedChannelsDescription')}</p>
-            <FormField
-              control={form.control}
-              name={`profiles.${profileIndex}.channelIDs`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <TagsAutocompleteInput
-                      value={(field.value || []).map((id) => {
-                        const channel = channelsData?.edges?.find((edge) => parseInt(extractNumberID(edge.node.id), 10) === id);
-                        return channel?.node.name || id.toString();
-                      })}
-                      onChange={(tags) => {
-                        const ids = tags
-                          .map((tag) => {
-                            const channel = channelsData?.edges?.find((edge) => edge.node.name === tag);
-                            return channel ? parseInt(extractNumberID(channel.node.id), 10) : parseInt(tag);
-                          })
-                          .filter((id) => !isNaN(id));
-                        field.onChange(ids);
-                      }}
-                      placeholder={t('apikeys.profiles.allowedChannels')}
-                      suggestions={channelsData?.edges?.map((edge) => edge.node.name) || []}
-                      className='h-auto min-h-9 py-1'
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          {/* Channel Tags Restrictions Section */}
-          <div className='border-t pt-6'>
-            <div className='mb-3 flex items-start justify-between gap-3'>
-              <div>
-                <h4 className='text-sm font-medium'>
-                  {t(isExcludeMode ? 'apikeys.profiles.excludedChannelTags' : 'apikeys.profiles.allowedChannelTags')}
-                </h4>
-                <p className='text-muted-foreground mt-1 text-xs'>
-                  {t(isExcludeMode ? 'apikeys.profiles.excludedChannelTagsDescription' : 'apikeys.profiles.allowedChannelTagsDescription')}
-                </p>
-              </div>
-              <FormField
-                control={form.control}
-                name={`profiles.${profileIndex}.channelTagsMatchMode`}
-                render={({ field }) => (
-                  <FormItem className='w-[180px]'>
-                    <FormLabel>{t('apikeys.profiles.allowedChannelTagsMatchMode')}</FormLabel>
-                    <FormControl>
-                      <Select value={field.value || 'any'} onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value='any'>{t('apikeys.profiles.allowedChannelTagsMatchModeAny')}</SelectItem>
-                          <SelectItem value='all'>{t('apikeys.profiles.allowedChannelTagsMatchModeAll')}</SelectItem>
-                          <SelectItem value='none'>{t('apikeys.profiles.allowedChannelTagsMatchModeNone')}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <FormField
-              control={form.control}
-              name={`profiles.${profileIndex}.channelTags`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <TagsAutocompleteInput
-                      value={field.value || []}
-                      onChange={field.onChange}
-                      placeholder={t(isExcludeMode ? 'apikeys.profiles.excludedChannelTags' : 'apikeys.profiles.allowedChannelTags')}
-                      suggestions={allTags}
-                      className='h-auto min-h-9 py-1'
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          <RouteTiersEditor
+            form={form}
+            routeTiersName={`profiles.${profileIndex}.routeTiers`}
+            preferredChannelName={`profiles.${profileIndex}.preferredChannelID`}
+            selectedProjectId={selectedProjectId}
+            t={t}
+          />
         </CardContent>
       )}
     </Card>
