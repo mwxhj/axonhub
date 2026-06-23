@@ -339,3 +339,36 @@ Defined and implemented the A-G sticky fallback routing lifecycle. Sticky first-
 ### Next Steps
 
 - None - task complete
+
+
+## Session 11: Upstream beta4 safe patch port wrap-up
+
+**Date**: 2026-06-23
+**Task**: Upstream beta4 safe patch port wrap-up
+**Branch**: `unstable`
+
+### Summary
+
+Completed upstream beta4 safe patch port, added request observability and LLM transformer media helpers, verified with targeted backend/llm tests, archived all active tasks.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0d0131cb` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

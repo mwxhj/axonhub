@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 10
-- **Last Active**: 2026-06-05
+- **Total Sessions**: 11
+- **Last Active**: 2026-06-23
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~341 | Active |
+| `journal-1.md` | ~374 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 11 | 2026-06-23 | Upstream beta4 safe patch port wrap-up | `0d0131cb` | `unstable` |
 | 10 | 2026-06-05 | Sticky session fallback routing redesign | `93df0a1`, `aa358b4` | `unstable` |
 | 9 | 2026-06-04 | Feature pruning hard-cut rollout | `7f6ff5c` | `unstable` |
 | 8 | 2026-06-04 | Credential quota reset time and HCI cleanup | `24618c2` | `unstable` |
