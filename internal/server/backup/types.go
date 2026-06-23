@@ -169,6 +169,8 @@ func (e BackupRequestExecution) MarshalJSON() ([]byte, error) {
 		CredentialSource              string                   `json:"credential_source,omitempty"`
 		CredentialQuotaStatusSnapshot string                   `json:"credential_quota_status_snapshot,omitempty"`
 		Format                        string                   `json:"format,omitempty"`
+		RequestURL                    string                   `json:"request_url,omitempty"`
+		PassThroughApplied            bool                     `json:"pass_through_applied,omitempty"`
 		RequestHeaders                objects.JSONRawMessage   `json:"request_headers,omitempty"`
 		RequestBody                   objects.JSONRawMessage   `json:"request_body,omitempty"`
 		ResponseBody                  objects.JSONRawMessage   `json:"response_body,omitempty"`
@@ -206,6 +208,8 @@ func (e BackupRequestExecution) MarshalJSON() ([]byte, error) {
 		CredentialSource:              e.CredentialSource,
 		CredentialQuotaStatusSnapshot: e.CredentialQuotaStatusSnapshot,
 		Format:                        e.Format,
+		RequestURL:                    e.RequestURL,
+		PassThroughApplied:            e.PassThroughApplied,
 		RequestHeaders:                e.RequestHeaders,
 		RequestBody:                   e.RequestBody,
 		ResponseBody:                  e.ResponseBody,
@@ -328,6 +332,7 @@ type BackupOptions struct {
 	IncludeAPIKeys     bool
 	IncludeModelPrices bool
 	IncludeUsageStats  bool
+	IncludeRequestLogs bool
 }
 
 type ConflictStrategy string
@@ -345,6 +350,7 @@ type RestoreOptions struct {
 	IncludeAPIKeys             bool
 	IncludeModelPrices         bool
 	IncludeUsageStats          bool
+	IncludeRequestLogs         bool
 	ProjectConflictStrategy    ConflictStrategy
 	ChannelConflictStrategy    ConflictStrategy
 	ModelConflictStrategy      ConflictStrategy

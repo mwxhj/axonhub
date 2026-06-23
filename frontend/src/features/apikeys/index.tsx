@@ -19,7 +19,7 @@ type ApiKeyTabKey = ApiKeyType | 'all';
 
 function ApiKeysContent() {
   const { t } = useTranslation();
-  const { apiKeyPermissions } = usePermissions();
+  const { apiKeyPermissions, hasSystemScope } = usePermissions();
   const { pageSize, setCursors, setPageSize, resetCursor, paginationArgs } = usePaginationSearch({
     defaultPageSize: 20,
     pageSizeStorageKey: 'apikeys-table-page-size',
@@ -34,6 +34,7 @@ function ApiKeysContent() {
   const [dateRange, setDateRange] = useState<DateTimeRangeValue | undefined>();
 
   const debouncedSearchFilter = useDebounce(searchFilter, 300);
+  const canViewCreators = hasSystemScope('read_users');
 
   // Build where clause for API filtering
   const whereClause = (() => {
@@ -56,7 +57,7 @@ function ApiKeysContent() {
       // By default, exclude archived API keys when no status filter is applied
       where.statusIn = ['enabled', 'disabled'];
     }
-    if (userFilter.length > 0 && userFilter[0]) {
+    if (canViewCreators && userFilter.length > 0 && userFilter[0]) {
       where.userID = userFilter[0]; // API expects single userID
     }
     
@@ -116,7 +117,10 @@ function ApiKeysContent() {
     resetCursor();
   };
 
-  const columns = React.useMemo(() => createColumns(t, apiKeyPermissions.canWrite), [t, apiKeyPermissions.canWrite]);
+  const columns = React.useMemo(
+    () => createColumns(t, apiKeyPermissions.canWrite, canViewCreators),
+    [t, apiKeyPermissions.canWrite, canViewCreators]
+  );
 
   return (
     <div className='flex flex-1 flex-col'>
@@ -154,6 +158,7 @@ function ApiKeysContent() {
           onDateRangeChange={setDateRange}
           onResetFilters={handleResetFilters}
           canWrite={apiKeyPermissions.canWrite}
+          canViewCreators={canViewCreators}
         />
       </div>
     </div>

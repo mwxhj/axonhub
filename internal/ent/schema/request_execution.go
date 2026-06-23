@@ -122,6 +122,15 @@ func (RequestExecution) Fields() []ent.Field {
 			Comment("Credential quota/budget status captured at execution time when known"),
 		//  The format of the request, e.g: openai/chat_completions, claude/messages, openai/response.
 		field.String("format").Immutable().Default("openai/chat_completions"),
+		field.String("request_url").
+			Optional().
+			Immutable().
+			MaxLen(2048).
+			Comment("Final upstream request URL used for this execution"),
+		field.Bool("pass_through_applied").
+			Default(false).
+			Immutable().
+			Comment("Whether body/response pass-through was applied for this execution"),
 		// The original request to the provider.
 		// e.g: the user request via OpenAI request format, but the actual request to the provider with Claude format, the request_body is the Claude request format.
 		field.JSON("request_body", objects.JSONRawMessage{}).Immutable().Annotations(

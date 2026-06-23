@@ -48,6 +48,20 @@ func TestChatCompletionOrchestrator_Process_NonStreaming_PreservesGeminiGroundin
 		Save(ctx)
 	require.NoError(t, err)
 
+	apiKey, err := client.APIKey.Create().
+		SetName("gemini-route-key").
+		SetKey("gemini-route-key").
+		SetProjectID(project.ID).
+		SetProfiles(&objects.APIKeyProfiles{
+			ActiveProfile: "default",
+			Profiles: []objects.APIKeyProfile{{
+				Name:       "default",
+				RouteTiers: []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{channelRow.ID}}},
+			}},
+		}).
+		Save(ctx)
+	require.NoError(t, err)
+
 	channelService, requestService, systemService, usageLogService := setupTestServices(t, client)
 
 	geminiResp := geminitransformer.GenerateContentResponse{
@@ -119,6 +133,7 @@ func TestChatCompletionOrchestrator_Process_NonStreaming_PreservesGeminiGroundin
 
 	httpRequest := buildTestRequest("gpt-4", "Summarize with citations", false)
 	ctx = contexts.WithProjectID(ctx, project.ID)
+	ctx = contexts.WithAPIKey(ctx, apiKey)
 
 	result, err := orchestrator.Process(ctx, httpRequest)
 	require.NoError(t, err)
@@ -177,6 +192,20 @@ func TestChatCompletionOrchestrator_Process_NonStreaming_PreservesAnthropicCitat
 		SetCredentials(objects.ChannelCredentials{APIKey: "test-api-key"}).
 		SetSupportedModels([]string{"gpt-4"}).
 		SetDefaultTestModel("gpt-4").
+		Save(ctx)
+	require.NoError(t, err)
+
+	apiKey, err := client.APIKey.Create().
+		SetName("anthropic-route-key").
+		SetKey("anthropic-route-key").
+		SetProjectID(project.ID).
+		SetProfiles(&objects.APIKeyProfiles{
+			ActiveProfile: "default",
+			Profiles: []objects.APIKeyProfile{{
+				Name:       "default",
+				RouteTiers: []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{channelRow.ID}}},
+			}},
+		}).
 		Save(ctx)
 	require.NoError(t, err)
 
@@ -239,6 +268,7 @@ func TestChatCompletionOrchestrator_Process_NonStreaming_PreservesAnthropicCitat
 
 	httpRequest := buildTestRequest("gpt-4", "Summarize with citations", false)
 	ctx = contexts.WithProjectID(ctx, project.ID)
+	ctx = contexts.WithAPIKey(ctx, apiKey)
 
 	result, err := orchestrator.Process(ctx, httpRequest)
 	require.NoError(t, err)
@@ -287,6 +317,20 @@ func TestChatCompletionOrchestrator_Process_NonStreaming(t *testing.T) {
 	ch := createTestChannel(t, ctx, client)
 	channelService, requestService, systemService, usageLogService := setupTestServices(t, client)
 
+	apiKey, err := client.APIKey.Create().
+		SetName("basic-route-key").
+		SetKey("basic-route-key").
+		SetProjectID(project.ID).
+		SetProfiles(&objects.APIKeyProfiles{
+			ActiveProfile: "default",
+			Profiles: []objects.APIKeyProfile{{
+				Name:       "default",
+				RouteTiers: []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{ch.ID}}},
+			}},
+		}).
+		Save(ctx)
+	require.NoError(t, err)
+
 	// Create mock executor with response
 	mockResp := buildMockOpenAIResponse("chatcmpl-123", "gpt-4", "Hello! How can I help you?", 10, 20)
 	executor := &mockExecutor{
@@ -330,6 +374,7 @@ func TestChatCompletionOrchestrator_Process_NonStreaming(t *testing.T) {
 
 	// Set project ID in context
 	ctx = contexts.WithProjectID(ctx, project.ID)
+	ctx = contexts.WithAPIKey(ctx, apiKey)
 
 	// Execute
 	result, err := orchestrator.Process(ctx, httpRequest)
@@ -397,6 +442,20 @@ func TestChatCompletionOrchestrator_Process_NonStreamingRequireStreamCandidate(t
 		Save(ctx)
 	require.NoError(t, err)
 
+	apiKey, err := client.APIKey.Create().
+		SetName("require-stream-route-key").
+		SetKey("require-stream-route-key").
+		SetProjectID(project.ID).
+		SetProfiles(&objects.APIKeyProfiles{
+			ActiveProfile: "default",
+			Profiles: []objects.APIKeyProfile{{
+				Name:       "default",
+				RouteTiers: []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{ch.ID}}},
+			}},
+		}).
+		Save(ctx)
+	require.NoError(t, err)
+
 	channelService, requestService, systemService, usageLogService := setupTestServices(t, client)
 
 	streamEvents := []*httpclient.StreamEvent{
@@ -440,6 +499,7 @@ func TestChatCompletionOrchestrator_Process_NonStreamingRequireStreamCandidate(t
 
 	httpRequest := buildTestRequest("gpt-4", "Hello!", false)
 	ctx = contexts.WithProjectID(ctx, project.ID)
+	ctx = contexts.WithAPIKey(ctx, apiKey)
 
 	result, err := orchestrator.Process(ctx, httpRequest)
 	require.NoError(t, err)
@@ -481,6 +541,20 @@ func TestChatCompletionOrchestrator_Process_NonStreamingRequireStreamCandidate_D
 
 	channelService, requestService, systemService, usageLogService := setupTestServices(t, client)
 
+	apiKey, err := client.APIKey.Create().
+		SetName("pass-through-route-key").
+		SetKey("pass-through-route-key").
+		SetProjectID(project.ID).
+		SetProfiles(&objects.APIKeyProfiles{
+			ActiveProfile: "default",
+			Profiles: []objects.APIKeyProfile{{
+				Name:       "default",
+				RouteTiers: []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{ch.ID}}},
+			}},
+		}).
+		Save(ctx)
+	require.NoError(t, err)
+
 	streamEvents := []*httpclient.StreamEvent{
 		{
 			Data: []byte(`{"id":"chatcmpl-pass-through-upgrade","object":"chat.completion.chunk","created":1677652288,"model":"gpt-4","choices":[{"index":0,"delta":{"role":"assistant","content":"Upgraded"}}]}`),
@@ -516,6 +590,7 @@ func TestChatCompletionOrchestrator_Process_NonStreamingRequireStreamCandidate_D
 
 	httpRequest := buildTestRequest("gpt-4", "Hello!", false)
 	ctx = contexts.WithProjectID(ctx, project.ID)
+	ctx = contexts.WithAPIKey(ctx, apiKey)
 
 	result, err := orchestrator.Process(ctx, httpRequest)
 	require.NoError(t, err)
@@ -563,6 +638,7 @@ func TestChatCompletionOrchestrator_Process_WithModelMapping(t *testing.T) {
 			Profiles: []objects.APIKeyProfile{
 				{
 					Name: "default",
+					RouteTiers: []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{ch.ID}}},
 					ModelMappings: []objects.ModelMapping{
 						{From: "my-custom-model", To: "gpt-4"},
 					},
@@ -664,6 +740,20 @@ func TestChatCompletionOrchestrator_Process_WithOverrideParameters(t *testing.T)
 
 	channelService, requestService, systemService, usageLogService := setupTestServices(t, client)
 
+	apiKey, err := client.APIKey.Create().
+		SetName("override-route-key").
+		SetKey("override-route-key").
+		SetProjectID(project.ID).
+		SetProfiles(&objects.APIKeyProfiles{
+			ActiveProfile: "default",
+			Profiles: []objects.APIKeyProfile{{
+				Name:       "default",
+				RouteTiers: []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{ch.ID}}},
+			}},
+		}).
+		Save(ctx)
+	require.NoError(t, err)
+
 	// Create mock executor that captures the request
 	mockResp := buildMockOpenAIResponse("chatcmpl-789", "gpt-4", "Override test", 10, 15)
 	executor := &mockExecutor{
@@ -706,6 +796,7 @@ func TestChatCompletionOrchestrator_Process_WithOverrideParameters(t *testing.T)
 
 	// Set project ID in context
 	ctx = contexts.WithProjectID(ctx, project.ID)
+	ctx = contexts.WithAPIKey(ctx, apiKey)
 
 	// Execute
 	result, err := orchestrator.Process(ctx, httpRequest)
@@ -744,6 +835,20 @@ func TestChatCompletionOrchestrator_Process_MultipleRequests(t *testing.T) {
 	ch := createTestChannel(t, ctx, client)
 	channelService, requestService, systemService, usageLogService := setupTestServices(t, client)
 
+	apiKey, err := client.APIKey.Create().
+		SetName("multi-route-key").
+		SetKey("multi-route-key").
+		SetProjectID(project.ID).
+		SetProfiles(&objects.APIKeyProfiles{
+			ActiveProfile: "default",
+			Profiles: []objects.APIKeyProfile{{
+				Name:       "default",
+				RouteTiers: []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{ch.ID}}},
+			}},
+		}).
+		Save(ctx)
+	require.NoError(t, err)
+
 	requestCount := 0
 	executor := &mockExecutor{}
 
@@ -774,6 +879,7 @@ func TestChatCompletionOrchestrator_Process_MultipleRequests(t *testing.T) {
 	}
 
 	ctx = contexts.WithProjectID(ctx, project.ID)
+	ctx = contexts.WithAPIKey(ctx, apiKey)
 
 	// Execute multiple requests
 	for i := range 3 {

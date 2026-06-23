@@ -59,6 +59,11 @@ func TestBuildDataURL(t *testing.T) {
 	}
 }
 
+func TestBuildDataURLFromBytes(t *testing.T) {
+	result := BuildDataURLFromBytes("image/png", []byte{0x01, 0x02, 0x03})
+	assert.Equal(t, "data:image/png;base64,AQID", result)
+}
+
 func TestParseDataURL(t *testing.T) {
 	tests := []struct {
 		name     string

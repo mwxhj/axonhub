@@ -111,8 +111,8 @@ type channelProbeStats struct {
 }
 
 // computeAllChannelProbeStats computes probe stats for all channels in a single batch query.
-// Uses CTE with ROW_NUMBER to get only successful execution per request, includes all token types,
-// and applies different TPS formulas for streaming vs non-streaming.
+// Counts each completed/failed execution attempt against its own channel. Successful
+// attempts contribute throughput and TTFT metrics; failed attempts affect health totals only.
 func (svc *ChannelProbeService) computeAllChannelProbeStats(
 	ctx context.Context,
 	channelIDs []int,
@@ -146,14 +146,21 @@ func (svc *ChannelProbeService) computeAllChannelProbeStats(
 	dialectName := sqlDB.Dialect()
 	useDollarPlaceholders := dialectName == dialect.Postgres
 
-	// Build args slice for parameterized query
-	args := make([]interface{}, 0, len(channelIDs)+2)
-	args = append(args, startTime.UTC(), endTime.UTC())
+	// Build args slice for parameterized query.
+	startUTC := startTime.UTC()
+	endUTC := endTime.UTC()
+	args := make([]any, 0, len(channelIDs)+3)
+	if useDollarPlaceholders {
+		args = append(args, startUTC, endUTC)
+	} else {
+		// For ? placeholders, the usage_logs start bound appears before the
+		// outer request_executions time window in the SQL text.
+		args = append(args, startUTC, startUTC, endUTC)
+	}
 
 	// Build channel ID filter with dialect-aware parameterized placeholders
-	// Note: Placeholders start at $3 because $1 and $2 are reserved for startTime and endTime timestamps.
-	// The args slice is constructed with timestamps first (lines 155-156), then channel IDs appended,
-	// so placeholder numbering must match this ordering to bind values correctly.
+	// Note: PostgreSQL placeholders start at $3 because $1 and $2 are reserved
+	// for startTime and endTime timestamps.
 	channelIDFilter := ""
 	if len(channelIDs) > 0 {
 		placeholders := make([]string, len(channelIDs))

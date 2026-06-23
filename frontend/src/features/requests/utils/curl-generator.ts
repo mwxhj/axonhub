@@ -7,6 +7,7 @@ export interface CurlGeneratorOptions {
   headers?: Record<string, any>;
   body?: any;
   baseUrl?: string;
+  requestURL?: string;
   apiFormat?: ApiFormat;
   channelType?: ChannelType;
 }
@@ -93,15 +94,34 @@ function getApiFormatFromChannelType(channelType?: ChannelType): ApiFormat | und
   return CHANNEL_CONFIGS[channelType]?.apiFormat;
 }
 
-export function generateCurlCommand(options: CurlGeneratorOptions): string {
-  const { headers, body, baseUrl, apiFormat, channelType } = options;
+function maskSensitiveURL(rawURL: string): string {
+  try {
+    const url = new URL(rawURL, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+    url.searchParams.forEach((_value, key) => {
+      if (isSensitiveHeader(key) || SENSITIVE_BODY_KEY_RE.test(key)) {
+        url.searchParams.set(key, '******');
+      }
+    });
 
-  const resolvedApiFormat = apiFormat || getApiFormatFromChannelType(channelType);
-  const apiPath = getApiPath(resolvedApiFormat, body, channelType);
+    if (/^https?:\/\//i.test(rawURL)) {
+      return url.toString();
+    }
 
-  let url: string;
-  if (baseUrl) {
-    const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return rawURL;
+  }
+}
+
+function resolveExecutionURL(options: CurlGeneratorOptions, apiFormat?: ApiFormat, body?: any, channelType?: ChannelType): string {
+  if (options.requestURL) {
+    return maskSensitiveURL(options.requestURL);
+  }
+
+  const apiPath = getApiPath(apiFormat, body, channelType);
+
+  if (options.baseUrl) {
+    const cleanBaseUrl = options.baseUrl.replace(/\/+$/, '');
     // Avoid path duplication: if baseUrl ends with a prefix of apiPath, strip the overlap.
     // e.g. baseUrl="https://api.openai.com/v1" + apiPath="/v1/chat/completions"
     //   -> "https://api.openai.com/v1/chat/completions" (not .../v1/v1/chat/completions)
@@ -112,10 +132,17 @@ export function generateCurlCommand(options: CurlGeneratorOptions): string {
         combinedPath = apiPath.substring(i);
       }
     }
-    url = `${cleanBaseUrl}${combinedPath}`;
-  } else {
-    url = `${typeof window !== 'undefined' ? window.location.origin : ''}${apiPath}`;
+    return `${cleanBaseUrl}${combinedPath}`;
   }
+
+  return `${typeof window !== 'undefined' ? window.location.origin : ''}${apiPath}`;
+}
+
+export function generateCurlCommand(options: CurlGeneratorOptions): string {
+  const { headers, body, apiFormat, channelType } = options;
+
+  const resolvedApiFormat = apiFormat || getApiFormatFromChannelType(channelType);
+  const url = resolveExecutionURL(options, resolvedApiFormat, body, channelType);
 
   const curlParts = [`curl '${url}'`];
 
@@ -152,7 +179,8 @@ export function generateExecutionCurl(
   headers: any,
   body: any,
   channel?: { baseURL?: string; type?: ChannelType },
-  apiFormat?: ApiFormat
+  apiFormat?: ApiFormat,
+  requestURL?: string
 ): string {
   return generateCurlCommand({
     headers,
@@ -160,5 +188,6 @@ export function generateExecutionCurl(
     baseUrl: channel?.baseURL,
     channelType: channel?.type,
     apiFormat,
+    requestURL,
   });
 }

@@ -175,6 +175,12 @@ When changing API key route-template routing, add or update tests for:
 - Frontend profile/template writes send `routeTiers` and `preferredChannelID`,
   not legacy channel/tag route fields.
 
+When writing `ChatCompletionOrchestrator.Process` integration tests that rely on
+API-key-aware routing or quota behavior, always create an explicit API key
+context with an active profile whose `routeTiers` are non-empty. Test bypass
+context only disables auth/privacy checks; it does not provide a default API
+key or a fallback route profile.
+
 ### 7. Wrong vs Correct
 
 #### Wrong

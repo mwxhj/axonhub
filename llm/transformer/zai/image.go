@@ -2,7 +2,6 @@ package zai
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/looplj/axonhub/llm"
 	"github.com/looplj/axonhub/llm/httpclient"
+	"github.com/looplj/axonhub/llm/internal/pkg/xurl"
 	"github.com/looplj/axonhub/llm/transformer"
 )
 
@@ -218,11 +218,7 @@ func downloadImageToDataURL(ctx context.Context, imageURL string) (string, error
 		contentType = "image/png"
 	}
 
-	// Convert to base64 data URL
-	base64Data := base64.StdEncoding.EncodeToString(imageData)
-	dataURL := fmt.Sprintf("data:%s;base64,%s", contentType, base64Data)
-
-	return dataURL, nil
+	return xurl.BuildDataURLFromBytes(contentType, imageData), nil
 }
 
 // isDataURL checks if the given URL is a data URL.

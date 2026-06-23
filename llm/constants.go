@@ -3,13 +3,16 @@ package llm
 type RequestType string
 
 const (
-	RequestTypeChat       RequestType = "chat"
-	RequestTypeEmbedding  RequestType = "embedding"
-	RequestTypeRerank     RequestType = "rerank"
-	RequestTypeImage      RequestType = "image"
-	RequestTypeVideo      RequestType = "video"
-	RequestTypeCompact    RequestType = "compact"
-	RequestTypeCompletion RequestType = "completion"
+	RequestTypeChat          RequestType = "chat"
+	RequestTypeEmbedding     RequestType = "embedding"
+	RequestTypeRerank        RequestType = "rerank"
+	RequestTypeImage         RequestType = "image"
+	RequestTypeVideo         RequestType = "video"
+	RequestTypeCompact       RequestType = "compact"
+	RequestTypeCompletion    RequestType = "completion"
+	RequestTypeSpeech        RequestType = "speech"
+	RequestTypeTranscription RequestType = "transcription"
+	RequestTypeTranslation   RequestType = "translation"
 )
 
 func (r RequestType) String() string {
@@ -28,6 +31,9 @@ const (
 	APIFormatOpenAIImageVariation  APIFormat = "openai/image_variation"
 	APIFormatOpenAIEmbedding       APIFormat = "openai/embeddings"
 	APIFormatOpenAIVideo           APIFormat = "openai/video"
+	APIFormatOpenAISpeech          APIFormat = "openai/audio_speech"
+	APIFormatOpenAITranscription   APIFormat = "openai/audio_transcriptions"
+	APIFormatOpenAITranslation     APIFormat = "openai/audio_translations"
 	APIFormatGeminiContents        APIFormat = "gemini/contents"
 	APIFormatAnthropicMessage      APIFormat = "anthropic/messages"
 	APIFormatAiSDKText             APIFormat = "aisdk/text"

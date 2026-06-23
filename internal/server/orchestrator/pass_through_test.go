@@ -1184,6 +1184,7 @@ func TestApplyPassThroughBodyPreservesMappedModel(t *testing.T) {
 	require.Equal(t, "gpt-4o", gjson.GetBytes(processed.Body, "model").String())
 	require.Equal(t, 0.4, gjson.GetBytes(processed.Body, "temperature").Float())
 	require.Equal(t, "my-alias", gjson.GetBytes(outbound.state.LlmRequest.RawRequest.Body, "model").String())
+	require.True(t, outbound.state.PassThroughApplied)
 
 	processed.Body[0] = '['
 	require.Equal(t, `{"model":"my-alias","messages":[{"role":"user","content":"hi"}],"temperature":0.4}`, string(outbound.state.LlmRequest.RawRequest.Body))
@@ -1306,6 +1307,7 @@ func TestApplyPassThroughBodySkipsPassThroughWhenSupportedStreamParameterChanges
 	require.Equal(t, "gpt-4o", gjson.GetBytes(processed.Body, "model").String())
 	require.True(t, gjson.GetBytes(processed.Body, "stream").Bool())
 	require.False(t, gjson.GetBytes(processed.Body, "temperature").Exists())
+	require.False(t, outbound.state.PassThroughApplied)
 }
 
 func TestApplyPassThroughBodyPreservesAlignedStreamWithoutPatchingIt(t *testing.T) {

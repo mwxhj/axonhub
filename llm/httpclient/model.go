@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/looplj/axonhub/llm/streams"
 )
@@ -73,6 +74,9 @@ type AuthConfig struct {
 const (
 	AuthTypeBearer = "bearer"
 	AuthTypeAPIKey = "api_key"
+
+	// BinaryStreamDoneEventType marks EOF for non-SSE streaming responses.
+	BinaryStreamDoneEventType = "binary.done"
 )
 
 // Response represents a generic HTTP response.
@@ -103,6 +107,34 @@ type StreamEvent struct {
 	LastEventID string `json:"last_event_id,omitempty"`
 	Type        string `json:"type"`
 	Data        []byte `json:"data"`
+	// Size optionally carries the byte size of a binary chunk whose Data was
+	// elided for persistence.
+	Size int `json:"size,omitempty"`
+}
+
+// IsBinaryAudioChunk reports whether the event carries raw binary audio rather
+// than an SSE payload or a binary.done sentinel.
+func (e *StreamEvent) IsBinaryAudioChunk() bool {
+	if e == nil || e.Type == "" || e.Type == BinaryStreamDoneEventType {
+		return false
+	}
+
+	t := strings.ToLower(strings.TrimSpace(e.Type))
+
+	return strings.HasPrefix(t, "audio/") || t == "application/octet-stream"
+}
+
+// SummarizeBinaryChunk returns a persistence-safe copy of a binary audio event.
+func SummarizeBinaryChunk(event *StreamEvent) *StreamEvent {
+	if event == nil || !event.IsBinaryAudioChunk() {
+		return event
+	}
+
+	return &StreamEvent{
+		LastEventID: event.LastEventID,
+		Type:        event.Type,
+		Size:        len(event.Data),
+	}
 }
 
 // StreamDecoder defines the interface for decoding streaming responses.

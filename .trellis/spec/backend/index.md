@@ -20,6 +20,10 @@ Before changing backend routing, load balancing, retry/fallback, credential hand
 - [ ] Confirm sticky-session writes happen only after upstream success and never from candidate selection alone.
 - [ ] Confirm the change does not reintroduce channel-owned key/OAuth storage or channel-local quota. `CredentialQuotaScope` is allowed only as credential/key-local quota and may filter that credential view, not the whole channel.
 
+Before changing LLM protocol transformers, request media conversion, or OpenAI-compatible media APIs:
+
+- [ ] Read [LLM Transformer Guidelines](./llm-transformer-guidelines.md).
+
 ---
 
 ## Guidelines Index
@@ -30,6 +34,7 @@ Before changing backend routing, load balancing, retry/fallback, credential hand
 | [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations, GraphQL transaction client usage | Active |
 | [Credential Routing Model](./credential-routing-model.md) | Channel routing-only model, credential-owned secrets/OAuth, credential-local quota, legacy migration | Active |
 | [Error Handling](./error-handling.md) | Error types, handling strategies | To fill |
+| [LLM Transformer Guidelines](./llm-transformer-guidelines.md) | Protocol conversion and media payload contracts for `llm/` transformers | Active |
 | [Routing Guidelines](./routing-guidelines.md) | Channel routing, sticky-session, retry/fallback, credential/quota contracts | Active |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
 | [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | To fill |

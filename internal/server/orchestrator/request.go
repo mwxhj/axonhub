@@ -2,6 +2,9 @@ package orchestrator
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/looplj/axonhub/internal/ent/request"
@@ -122,10 +125,82 @@ func (m *persistRequestMiddleware) OnInboundRawResponse(ctx context.Context, htt
 		return httpResp, nil
 	}
 
-	err := state.RequestService.UpdateRequestCompleted(persistCtx, state.Request.ID, llmResp.ID, httpResp.Body, metrics)
+	if llmResp.RequestType == llm.RequestTypeSpeech {
+		contentType := httpResp.Headers.Get("Content-Type")
+		responseBody := audioSafeResponseBody(llm.RequestTypeSpeech, contentType, httpResp.Body)
+
+		err := state.RequestService.UpdateRequestCompletedWithAudio(
+			persistCtx,
+			state.Request.ID,
+			llmResp.ID,
+			responseBody,
+			httpResp.Body,
+			audioFilenameForContentType(contentType),
+			metrics,
+		)
+		if err != nil {
+			log.Warn(persistCtx, "Failed to update speech request status to completed", log.Cause(err))
+		}
+
+		return httpResp, nil
+	}
+
+	responseBody := audioSafeResponseBody(llmResp.RequestType, httpResp.Headers.Get("Content-Type"), httpResp.Body)
+
+	err := state.RequestService.UpdateRequestCompleted(persistCtx, state.Request.ID, llmResp.ID, responseBody, metrics)
 	if err != nil {
 		log.Warn(persistCtx, "Failed to update request status to completed", log.Cause(err))
 	}
 
 	return httpResp, nil
+}
+
+func audioSafeResponseBody(requestType llm.RequestType, contentType string, body []byte) []byte {
+	switch requestType {
+	case llm.RequestTypeSpeech:
+		return fmt.Appendf(nil, `{"object":"audio.speech","content_type":%q,"bytes":%d}`, contentType, len(body))
+	case llm.RequestTypeTranscription, llm.RequestTypeTranslation:
+		isJSON := strings.Contains(strings.ToLower(contentType), "application/json")
+		if !isJSON && contentType == "" {
+			isJSON = json.Valid(body)
+		}
+		if isJSON {
+			return body
+		}
+
+		wrapped, err := json.Marshal(map[string]string{
+			"object":       "audio.transcription",
+			"content_type": contentType,
+			"text":         string(body),
+		})
+		if err != nil {
+			return body
+		}
+
+		return wrapped
+	default:
+		return body
+	}
+}
+
+func audioFilenameForContentType(contentType string) string {
+	normalized := strings.ToLower(contentType)
+	ext := "mp3"
+
+	switch {
+	case strings.Contains(normalized, "wav"):
+		ext = "wav"
+	case strings.Contains(normalized, "opus"):
+		ext = "opus"
+	case strings.Contains(normalized, "aac"):
+		ext = "aac"
+	case strings.Contains(normalized, "flac"):
+		ext = "flac"
+	case strings.Contains(normalized, "pcm"):
+		ext = "pcm"
+	case strings.Contains(normalized, "mpeg"), strings.Contains(normalized, "mp3"):
+		ext = "mp3"
+	}
+
+	return "audio." + ext
 }

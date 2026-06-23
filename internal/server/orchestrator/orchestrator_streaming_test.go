@@ -57,6 +57,20 @@ func TestChatCompletionOrchestrator_Process_Streaming_PreservesGeminiGroundingAn
 		Save(ctx)
 	require.NoError(t, err)
 
+	apiKey, err := client.APIKey.Create().
+		SetName("gemini-stream-route-key").
+		SetKey("gemini-stream-route-key").
+		SetProjectID(project.ID).
+		SetProfiles(&objects.APIKeyProfiles{
+			ActiveProfile: "default",
+			Profiles: []objects.APIKeyProfile{{
+				Name:       "default",
+				RouteTiers: []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{channelRow.ID}}},
+			}},
+		}).
+		Save(ctx)
+	require.NoError(t, err)
+
 	channelService, requestService, systemService, usageLogService := setupTestServices(t, client)
 	require.NoError(t, systemService.SetStoragePolicy(ctx, &biz.StoragePolicy{
 		StoreChunks:       true,
@@ -139,6 +153,7 @@ func TestChatCompletionOrchestrator_Process_Streaming_PreservesGeminiGroundingAn
 
 	httpRequest := buildTestRequest("gpt-4", "Summarize with citations", true)
 	ctx = contexts.WithProjectID(ctx, project.ID)
+	ctx = contexts.WithAPIKey(ctx, apiKey)
 
 	result, err := orchestrator.Process(ctx, httpRequest)
 	require.NoError(t, err)
@@ -260,6 +275,20 @@ func TestChatCompletionOrchestrator_Process_Streaming_PreservesAnthropicCitation
 		Save(ctx)
 	require.NoError(t, err)
 
+	apiKey, err := client.APIKey.Create().
+		SetName("anthropic-stream-route-key").
+		SetKey("anthropic-stream-route-key").
+		SetProjectID(project.ID).
+		SetProfiles(&objects.APIKeyProfiles{
+			ActiveProfile: "default",
+			Profiles: []objects.APIKeyProfile{{
+				Name:       "default",
+				RouteTiers: []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{channelRow.ID}}},
+			}},
+		}).
+		Save(ctx)
+	require.NoError(t, err)
+
 	channelService, requestService, systemService, usageLogService := setupTestServices(t, client)
 	require.NoError(t, systemService.SetStoragePolicy(ctx, &biz.StoragePolicy{
 		StoreChunks:       true,
@@ -304,6 +333,7 @@ func TestChatCompletionOrchestrator_Process_Streaming_PreservesAnthropicCitation
 
 	httpRequest := buildTestRequest("gpt-4", "Summarize with citations", true)
 	ctx = contexts.WithProjectID(ctx, project.ID)
+	ctx = contexts.WithAPIKey(ctx, apiKey)
 
 	result, err := orchestrator.Process(ctx, httpRequest)
 	require.NoError(t, err)
@@ -408,6 +438,20 @@ func TestChatCompletionOrchestrator_Process_Streaming(t *testing.T) {
 	ch := createTestChannel(t, ctx, client)
 	channelService, requestService, systemService, usageLogService := setupTestServices(t, client)
 
+	apiKey, err := client.APIKey.Create().
+		SetName("stream-route-key").
+		SetKey("stream-route-key").
+		SetProjectID(project.ID).
+		SetProfiles(&objects.APIKeyProfiles{
+			ActiveProfile: "default",
+			Profiles: []objects.APIKeyProfile{{
+				Name:       "default",
+				RouteTiers: []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{ch.ID}}},
+			}},
+		}).
+		Save(ctx)
+	require.NoError(t, err)
+
 	// Create mock stream events
 	streamEvents := []*httpclient.StreamEvent{
 		{
@@ -461,6 +505,7 @@ func TestChatCompletionOrchestrator_Process_Streaming(t *testing.T) {
 
 	// Set project ID in context
 	ctx = contexts.WithProjectID(ctx, project.ID)
+	ctx = contexts.WithAPIKey(ctx, apiKey)
 
 	// Execute
 	result, err := orchestrator.Process(ctx, httpRequest)
@@ -517,6 +562,20 @@ func TestChatCompletionOrchestrator_Process_StreamingError(t *testing.T) {
 	ch := createTestChannel(t, ctx, client)
 	channelService, requestService, systemService, usageLogService := setupTestServices(t, client)
 
+	apiKey, err := client.APIKey.Create().
+		SetName("stream-error-route-key").
+		SetKey("stream-error-route-key").
+		SetProjectID(project.ID).
+		SetProfiles(&objects.APIKeyProfiles{
+			ActiveProfile: "default",
+			Profiles: []objects.APIKeyProfile{{
+				Name:       "default",
+				RouteTiers: []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{ch.ID}}},
+			}},
+		}).
+		Save(ctx)
+	require.NoError(t, err)
+
 	// Create a stream that emits some events then errors
 	midStreamErr := errors.New("upstream connection reset")
 	executor := &mockExecutorWithErrorStream{
@@ -561,6 +620,7 @@ func TestChatCompletionOrchestrator_Process_StreamingError(t *testing.T) {
 	// Build streaming request
 	httpRequest := buildTestRequest("gpt-4", "Hi!", true)
 	ctx = contexts.WithProjectID(ctx, project.ID)
+	ctx = contexts.WithAPIKey(ctx, apiKey)
 
 	// Execute - the stream should be established successfully
 	result, err := orchestrator.Process(ctx, httpRequest)
@@ -614,6 +674,20 @@ func TestChatCompletionOrchestrator_Process_StreamingSuccess_NotMarkedAsError(t 
 	ch := createTestChannel(t, ctx, client)
 	channelService, requestService, systemService, usageLogService := setupTestServices(t, client)
 
+	apiKey, err := client.APIKey.Create().
+		SetName("stream-success-route-key").
+		SetKey("stream-success-route-key").
+		SetProjectID(project.ID).
+		SetProfiles(&objects.APIKeyProfiles{
+			ActiveProfile: "default",
+			Profiles: []objects.APIKeyProfile{{
+				Name:       "default",
+				RouteTiers: []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{ch.ID}}},
+			}},
+		}).
+		Save(ctx)
+	require.NoError(t, err)
+
 	streamEvents := []*httpclient.StreamEvent{
 		{
 			Data: []byte(
@@ -658,6 +732,7 @@ func TestChatCompletionOrchestrator_Process_StreamingSuccess_NotMarkedAsError(t 
 
 	httpRequest := buildTestRequest("gpt-4", "Hi!", true)
 	ctx = contexts.WithProjectID(ctx, project.ID)
+	ctx = contexts.WithAPIKey(ctx, apiKey)
 
 	result, err := orchestrator.Process(ctx, httpRequest)
 	require.NoError(t, err)
@@ -754,6 +829,20 @@ func TestChatCompletionOrchestrator_Process_QueueRejectionDoesNotConsumeRPM(t *t
 	ch := createTestChannel(t, ctx, client)
 	channelService, requestService, systemService, usageLogService := setupTestServices(t, client)
 
+	apiKey, err := client.APIKey.Create().
+		SetName("queue-route-key").
+		SetKey("queue-route-key").
+		SetProjectID(project.ID).
+		SetProfiles(&objects.APIKeyProfiles{
+			ActiveProfile: "default",
+			Profiles: []objects.APIKeyProfile{{
+				Name:       "default",
+				RouteTiers: []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{ch.ID}}},
+			}},
+		}).
+		Save(ctx)
+	require.NoError(t, err)
+
 	mockResp := buildMockOpenAIResponse("chatcmpl-rpm", "gpt-4", "rpm test", 5, 10)
 	executor := &mockExecutor{
 		response: &httpclient.Response{
@@ -820,6 +909,7 @@ func TestChatCompletionOrchestrator_Process_QueueRejectionDoesNotConsumeRPM(t *t
 
 	httpRequest := buildTestRequest("gpt-4", "rpm test", false)
 	ctx = contexts.WithProjectID(ctx, project.ID)
+	ctx = contexts.WithAPIKey(ctx, apiKey)
 
 	_, err = orchestrator.Process(ctx, httpRequest)
 	require.Error(t, err)
@@ -848,6 +938,20 @@ func TestChatCompletionOrchestrator_Process_ChannelLimiter(t *testing.T) {
 	project := createTestProject(t, ctx, client)
 	ch := createTestChannel(t, ctx, client)
 	channelService, requestService, systemService, usageLogService := setupTestServices(t, client)
+
+	apiKey, err := client.APIKey.Create().
+		SetName("limiter-route-key").
+		SetKey("limiter-route-key").
+		SetProjectID(project.ID).
+		SetProfiles(&objects.APIKeyProfiles{
+			ActiveProfile: "default",
+			Profiles: []objects.APIKeyProfile{{
+				Name:       "default",
+				RouteTiers: []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{ch.ID}}},
+			}},
+		}).
+		Save(ctx)
+	require.NoError(t, err)
 
 	mockResp := buildMockOpenAIResponse("chatcmpl-conn", "gpt-4", "Connection test", 5, 10)
 	executor := &mockExecutor{
@@ -904,6 +1008,7 @@ func TestChatCompletionOrchestrator_Process_ChannelLimiter(t *testing.T) {
 
 	httpRequest := buildTestRequest("gpt-4", "Connection test", false)
 	ctx = contexts.WithProjectID(ctx, project.ID)
+	ctx = contexts.WithAPIKey(ctx, apiKey)
 
 	result, err := orchestrator.Process(ctx, httpRequest)
 	require.NoError(t, err)

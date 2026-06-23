@@ -725,8 +725,16 @@ func init() {
 	requestexecutionDescFormat := requestexecutionFields[17].Descriptor()
 	// requestexecution.DefaultFormat holds the default value on creation for the format field.
 	requestexecution.DefaultFormat = requestexecutionDescFormat.Default.(string)
+	// requestexecutionDescRequestURL is the schema descriptor for request_url field.
+	requestexecutionDescRequestURL := requestexecutionFields[18].Descriptor()
+	// requestexecution.RequestURLValidator is a validator for the "request_url" field. It is called by the builders before save.
+	requestexecution.RequestURLValidator = requestexecutionDescRequestURL.Validators[0].(func(string) error)
+	// requestexecutionDescPassThroughApplied is the schema descriptor for pass_through_applied field.
+	requestexecutionDescPassThroughApplied := requestexecutionFields[19].Descriptor()
+	// requestexecution.DefaultPassThroughApplied holds the default value on creation for the pass_through_applied field.
+	requestexecution.DefaultPassThroughApplied = requestexecutionDescPassThroughApplied.Default.(bool)
 	// requestexecutionDescStream is the schema descriptor for stream field.
-	requestexecutionDescStream := requestexecutionFields[24].Descriptor()
+	requestexecutionDescStream := requestexecutionFields[26].Descriptor()
 	// requestexecution.DefaultStream holds the default value on creation for the stream field.
 	requestexecution.DefaultStream = requestexecutionDescStream.Default.(bool)
 	roleMixin := schema.Role{}.Mixin()

@@ -60,7 +60,6 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/vektah/gqlparser/v2 v2.5.31
-	github.com/viterin/partial v1.1.0
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	github.com/zhenzou/executors v0.2.0
 	go.opentelemetry.io/otel v1.43.0

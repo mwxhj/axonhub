@@ -410,10 +410,10 @@ func (s *DataStorageService) createS3Fs(ctx context.Context, s3Config *objects.S
 		o.UsePathStyle = s3Config.PathStyle
 	})
 
-	baseFs := s3fs.NewFsFromClient(s3Config.BucketName, client)
-	cachedFs := afero.NewCacheOnReadFs(baseFs, afero.NewMemMapFs(), 5*time.Minute)
-
-	return cachedFs, nil
+	// Do not wrap remote object stores in afero.NewCacheOnReadFs with
+	// NewMemMapFs. That cache retains request/response bodies in process
+	// memory and grows without a bounded eviction policy.
+	return s3fs.NewFsFromClient(s3Config.BucketName, client), nil
 }
 
 // createGcsFs creates a GCS filesystem using the afero gcsfs adapter.
@@ -436,11 +436,9 @@ func (s *DataStorageService) createGcsFs(ctx context.Context, gcsConfig *objects
 		return nil, fmt.Errorf("failed to create GCS filesystem: %w", err)
 	}
 
-	basePathFs := afero.NewBasePathFs(fs, gcsConfig.BucketName)
-
-	cachedFs := afero.NewCacheOnReadFs(basePathFs, afero.NewMemMapFs(), 5*time.Minute)
-
-	return cachedFs, nil
+	// Keep GCS as the authoritative backing store. A process-local memory
+	// cache keeps every request/response body alive and can OOM the service.
+	return afero.NewBasePathFs(fs, gcsConfig.BucketName), nil
 }
 
 // createWebDAVFs creates a WebDAV filesystem using the afero-webdav adapter.

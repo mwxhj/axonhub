@@ -2,7 +2,6 @@ package anthropic
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/samber/lo"
 
@@ -31,9 +30,7 @@ func convertImageSourceToLLMImageURLPart(source *ImageSource, cacheControl *Cach
 			mediaType = "application/octet-stream"
 		}
 
-		// Convert Anthropic image format to OpenAI format
-		imageURL := fmt.Sprintf("data:%s;base64,%s", mediaType, source.Data)
-		part.ImageURL = &llm.ImageURL{URL: imageURL}
+		part.ImageURL = &llm.ImageURL{URL: xurl.BuildDataURL(mediaType, source.Data, true)}
 
 		return part, true
 	}

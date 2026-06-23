@@ -9,6 +9,7 @@ import (
 
 	"github.com/looplj/axonhub/llm"
 	"github.com/looplj/axonhub/llm/internal/pkg/xmap"
+	"github.com/looplj/axonhub/llm/internal/pkg/xurl"
 	"github.com/looplj/axonhub/llm/transformer/shared"
 )
 
@@ -689,7 +690,7 @@ func convertOutputToMessage(output []Item, transformerMetadata map[string]any) l
 				contentParts = append(contentParts, llm.MessageContentPart{
 					Type: "image_url",
 					ImageURL: &llm.ImageURL{
-						URL: `data:image/` + imageOutputFormat + `;base64,` + *outputItem.Result,
+						URL: xurl.BuildDataURL("image/"+imageOutputFormat, *outputItem.Result, true),
 					},
 					TransformerMetadata: map[string]any{
 						"background":    outputItem.Background,

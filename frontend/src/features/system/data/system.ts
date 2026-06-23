@@ -821,6 +821,21 @@ const UPDATE_VIDEO_STORAGE_SETTINGS_MUTATION = `
   }
 `;
 
+const SECURITY_SETTINGS_QUERY = `
+  query SecuritySettings {
+    securitySettings {
+      blockedIPs
+      showRequestLogIPBanIcon
+    }
+  }
+`;
+
+const UPDATE_SECURITY_SETTINGS_MUTATION = `
+  mutation UpdateSecuritySettings($input: UpdateSecuritySettingsInput!) {
+    updateSecuritySettings(input: $input)
+  }
+`;
+
 export interface ModelSettings {
   fallbackToChannelsOnModelNotFound: boolean;
   queryAllChannelModels: boolean;
@@ -912,6 +927,16 @@ export interface UpdateSystemChannelSettingsInput {
   autoSync?: UpdateChannelModelAutoSyncSettingInput;
 }
 
+export interface SecuritySettings {
+  blockedIPs: string[];
+  showRequestLogIPBanIcon: boolean;
+}
+
+export interface UpdateSecuritySettingsInput {
+  blockedIPs?: string[];
+  showRequestLogIPBanIcon?: boolean;
+}
+
 export function useChannelSetting() {
   const { handleError } = useErrorHandler();
 
@@ -984,6 +1009,46 @@ export function useUpdateGeneralSettings() {
   });
 }
 
+export function useSecuritySettings(options?: { enabled?: boolean }) {
+  const { handleError } = useErrorHandler();
+
+  return useQuery({
+    queryKey: ['securitySettings'],
+    enabled: options?.enabled,
+    queryFn: async () => {
+      try {
+        const data = await graphqlRequest<{ securitySettings: SecuritySettings }>(SECURITY_SETTINGS_QUERY);
+        return data.securitySettings;
+      } catch (error) {
+        handleError(error, i18n.t('common.errors.internalServerError'));
+        throw error;
+      }
+    },
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useUpdateSecuritySettings(options?: { showSuccessToast?: boolean }) {
+  const queryClient = useQueryClient();
+  const showSuccessToast = options?.showSuccessToast ?? true;
+
+  return useMutation({
+    mutationFn: async (input: UpdateSecuritySettingsInput) => {
+      const data = await graphqlRequest<{ updateSecuritySettings: boolean }>(UPDATE_SECURITY_SETTINGS_MUTATION, { input });
+      return data.updateSecuritySettings;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['securitySettings'] });
+      if (showSuccessToast) {
+        toast.success(i18n.t('common.success.systemUpdated'));
+      }
+    },
+    onError: () => {
+      toast.error(i18n.t('common.errors.systemUpdateFailed'));
+    },
+  });
+}
+
 export function useVideoStorageSettings() {
   const { handleError } = useErrorHandler();
 
@@ -1045,6 +1110,7 @@ export interface BackupOptionsInput {
   includeModels: boolean;
   includeAPIKeys: boolean;
   includeUsageStats: boolean;
+  includeRequestLogs: boolean;
 }
 
 export interface BackupPayload {
@@ -1059,6 +1125,7 @@ export interface RestoreOptionsInput {
   includeModels: boolean;
   includeAPIKeys: boolean;
   includeUsageStats: boolean;
+  includeRequestLogs: boolean;
   channelConflictStrategy: 'skip' | 'overwrite' | 'error';
   modelConflictStrategy: 'skip' | 'overwrite' | 'error';
   modelPriceConflictStrategy: 'skip' | 'overwrite' | 'error';
@@ -1156,6 +1223,7 @@ const AUTO_BACKUP_SETTINGS_QUERY = `
       includeAPIKeys
       includeModelPrices
       includeUsageStats
+      includeRequestLogs
       retentionDays
       lastBackupAt
       lastBackupError
@@ -1189,6 +1257,7 @@ export interface AutoBackupSettings {
   includeAPIKeys: boolean;
   includeModelPrices: boolean;
   includeUsageStats: boolean;
+  includeRequestLogs: boolean;
   retentionDays: number;
   lastBackupAt?: string;
   lastBackupError?: string;
@@ -1203,6 +1272,7 @@ export interface UpdateAutoBackupSettingsInput {
   includeAPIKeys?: boolean;
   includeModelPrices?: boolean;
   includeUsageStats?: boolean;
+  includeRequestLogs?: boolean;
   retentionDays?: number;
 }
 

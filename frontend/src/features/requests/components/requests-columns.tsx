@@ -4,16 +4,18 @@ import { format } from 'date-fns';
 import { ColumnDef } from '@tanstack/react-table';
 import { IconRoute, IconArrowsJoin2 } from '@tabler/icons-react';
 import { zhCN, enUS } from 'date-fns/locale';
-import { ArrowLeftRight, FileText, Key } from 'lucide-react';
+import { ArrowLeftRight, Ban, FileText, Key, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { extractNumberID } from '@/lib/utils';
 import { formatDuration } from '@/utils/format-duration';
+import { usePermissions } from '@/hooks/usePermissions';
 import { usePaginationSearch } from '@/hooks/use-pagination-search';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DataTableColumnHeader } from '@/components/data-table-column-header';
-import { useGeneralSettings } from '@/features/system/data/system';
+import { useGeneralSettings, useSecuritySettings, useUpdateSecuritySettings } from '@/features/system/data/system';
 import { useRequestPermissions } from '../../../hooks/useRequestPermissions';
 import { Request } from '../data/schema';
 import { calculateTokensPerSecond, useDisplayMode } from '../utils/tokens-per-second';
@@ -24,13 +26,45 @@ interface UseRequestsColumnsOptions {
   onViewDetail?: (requestId: string) => void;
 }
 
+function normalizeBlockedIPs(values: string[]) {
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  for (const value of values) {
+    const trimmed = value.trim();
+    if (!trimmed || seen.has(trimmed)) {
+      continue;
+    }
+    seen.add(trimmed);
+    normalized.push(trimmed);
+  }
+  return normalized;
+}
+
 export function useRequestsColumns(options?: UseRequestsColumnsOptions): ColumnDef<Request>[] {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'zh' ? zhCN : enUS;
   const permissions = useRequestPermissions();
+  const { hasSystemScope } = usePermissions();
+  const canManageSecuritySettings = hasSystemScope('write_settings');
   const { data: settings } = useGeneralSettings();
+  const { data: securitySettings } = useSecuritySettings({ enabled: canManageSecuritySettings });
+  const updateSecuritySettings = useUpdateSecuritySettings({ showSuccessToast: false });
   const { navigateWithSearch } = usePaginationSearch({ defaultPageSize: 20 });
   const [displayMode, setDisplayMode] = useDisplayMode();
+  const showIPBanIcon = canManageSecuritySettings && securitySettings?.showRequestLogIPBanIcon === true;
+
+  const toggleBlockedIP = async (clientIP: string) => {
+    if (!securitySettings) {
+      return;
+    }
+
+    const blockedIPs = normalizeBlockedIPs(securitySettings.blockedIPs || []);
+    const blocked = blockedIPs.includes(clientIP);
+    const nextBlockedIPs = blocked ? blockedIPs.filter((value) => value !== clientIP) : normalizeBlockedIPs([...blockedIPs, clientIP]);
+
+    await updateSecuritySettings.mutateAsync({ blockedIPs: nextBlockedIPs });
+    toast.success(blocked ? t('requests.actions.ipUnblocked') : t('requests.actions.ipBlocked'));
+  };
 
   // Define all columns
   const columns: ColumnDef<Request>[] = [
@@ -132,6 +166,27 @@ export function useRequestsColumns(options?: UseRequestsColumnsOptions): ColumnD
     },
 
     {
+      id: 'passThrough',
+      header: ({ column }) => <DataTableColumnHeader column={column} title={t('requests.columns.passThrough')} />,
+      enableSorting: false,
+      enableHiding: true,
+      cell: ({ row }) => {
+        const executions = row.original.executions?.edges?.map((edge) => edge.node).filter(Boolean) || [];
+        const appliedExecution = executions.find((execution) => execution?.passThroughApplied);
+
+        if (!appliedExecution) {
+          return <div className='text-muted-foreground text-xs'>-</div>;
+        }
+
+        return (
+          <Badge className='border-amber-200 bg-amber-100 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300'>
+            {t('requests.passThrough.applied')}
+          </Badge>
+        );
+      },
+    },
+
+    {
       id: 'stream',
       accessorKey: 'stream',
       header: ({ column }) => <DataTableColumnHeader column={column} title={t('requests.columns.stream')} />,
@@ -189,7 +244,43 @@ export function useRequestsColumns(options?: UseRequestsColumnsOptions): ColumnD
       enableSorting: false,
       cell: ({ row }) => {
         const clientIP = row.getValue('clientIP') as string;
-        return <div className='font-mono text-xs'>{clientIP || '-'}</div>;
+        if (!clientIP) {
+          return <div className='font-mono text-xs'>-</div>;
+        }
+
+        const blockedIPs = normalizeBlockedIPs(securitySettings?.blockedIPs || []);
+        const blocked = blockedIPs.includes(clientIP);
+
+        return (
+          <div className='flex items-center gap-1.5'>
+            <span className='font-mono text-xs'>{clientIP}</span>
+            {showIPBanIcon && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type='button'
+                    variant='ghost'
+                    size='icon'
+                    className={
+                      blocked
+                        ? 'h-7 w-7 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 dark:hover:bg-emerald-950/50'
+                        : 'text-destructive h-7 w-7 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-950/50'
+                    }
+                    disabled={updateSecuritySettings.isPending}
+                    aria-label={blocked ? t('requests.actions.unblockIP') : t('requests.actions.blockIP')}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleBlockedIP(clientIP);
+                    }}
+                  >
+                    {blocked ? <ShieldCheck className='h-3.5 w-3.5' /> : <Ban className='h-3.5 w-3.5' />}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{blocked ? t('requests.actions.unblockIP') : t('requests.actions.blockIP')}</TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        );
       },
     },
     // Channel column - only show if user has permission to view channels
@@ -431,12 +522,15 @@ export function useRequestsColumns(options?: UseRequestsColumnsOptions): ColumnD
           return <div className='text-muted-foreground text-xs'>-</div>;
         }
 
+        const hitRate = promptTokens > 0 ? (cachedTokens / promptTokens) * 100 : 0;
+        const isLowHitRate = hitRate < 80 && promptTokens >= 40000;
+
         return (
           <div className='text-xs'>
             <div className='text-sm font-medium'>{cachedTokens.toLocaleString()}</div>
-            <div className='text-muted-foreground'>
+            <div className={isLowHitRate ? 'font-medium text-red-600 dark:text-red-400' : 'text-muted-foreground'}>
               {t('requests.columns.cacheHitRate', {
-                rate: promptTokens > 0 ? ((cachedTokens / promptTokens) * 100).toFixed(1) : '0.0',
+                rate: hitRate.toFixed(1),
               })}
             </div>
           </div>

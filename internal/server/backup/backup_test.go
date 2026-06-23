@@ -198,6 +198,8 @@ func createBackupTestUsage(t *testing.T, client *ent.Client, ctx context.Context
 		SetChannelID(ch.ID).
 		SetModelID("gpt-4").
 		SetFormat("openai/chat_completions").
+		SetRequestURL("https://api.example.com/v1/chat/completions?mode=full").
+		SetPassThroughApplied(true).
 		SetRequestBody(objects.JSONRawMessage(`{"model":"gpt-4"}`)).
 		SetResponseBody(objects.JSONRawMessage(`{"id":"resp_backup"}`)).
 		SetStatus(requestexecution.StatusCompleted).
@@ -374,9 +376,33 @@ func TestBackupService_Backup_WithUsageStats(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, BackupVersion, backupData.Version)
+	require.Len(t, backupData.UsageRequests, 0)
+	require.Len(t, backupData.RequestExecutions, 0)
+	require.Len(t, backupData.UsageLogs, 1)
+	require.Equal(t, usage.RequestID, backupData.UsageLogs[0].RequestID)
+	require.Equal(t, int64(150), backupData.UsageLogs[0].TotalTokens)
+	require.Equal(t, "price-ref", backupData.UsageLogs[0].CostPriceReferenceID)
+	require.Empty(t, backupData.UsageLogs[0].APIKeyKey)
+	require.Equal(t, "cred:v1:backup", backupData.UsageLogs[0].CredentialFingerprint)
+	require.Equal(t, "secret:v1:backup", backupData.UsageLogs[0].SecretFingerprint)
+	require.Equal(t, "openai:secret:v1:backup", backupData.UsageLogs[0].ResourceScopeKey)
+	require.Equal(t, "backup credential", backupData.UsageLogs[0].CredentialNameSnapshot)
+	require.Equal(t, "sk-...-backup", backupData.UsageLogs[0].CredentialKeyHint)
+	require.Equal(t, biz.ChannelCredentialSourceRef, backupData.UsageLogs[0].CredentialSource)
+	require.Equal(t, "available", backupData.UsageLogs[0].CredentialQuotaStatusSnapshot)
+
+	data, err = service.Backup(ctx, BackupOptions{
+		IncludeRequestLogs: true,
+	})
+	require.NoError(t, err)
+	require.NotContains(t, string(data), "sk-test-key-1")
+
+	backupData = BackupData{}
+	err = json.Unmarshal(data, &backupData)
+	require.NoError(t, err)
 	require.Len(t, backupData.UsageRequests, 1)
 	require.Len(t, backupData.RequestExecutions, 1)
-	require.Len(t, backupData.UsageLogs, 1)
+	require.Len(t, backupData.UsageLogs, 0)
 	require.Equal(t, req.ID, backupData.UsageRequests[0].ID)
 	require.Equal(t, "Project1", backupData.UsageRequests[0].ProjectName)
 	require.Equal(t, "Channel 1", backupData.UsageRequests[0].ChannelName)
@@ -388,26 +414,21 @@ func TestBackupService_Backup_WithUsageStats(t *testing.T) {
 	require.Equal(t, "backup credential", backupData.RequestExecutions[0].CredentialNameSnapshot)
 	require.Equal(t, "sk-...-backup", backupData.RequestExecutions[0].CredentialKeyHint)
 	require.Equal(t, biz.ChannelCredentialSourceRef, backupData.RequestExecutions[0].CredentialSource)
-	require.Equal(t, usage.RequestID, backupData.UsageLogs[0].RequestID)
-	require.Equal(t, int64(150), backupData.UsageLogs[0].TotalTokens)
-	require.Equal(t, "price-ref", backupData.UsageLogs[0].CostPriceReferenceID)
-	require.Equal(t, "cred:v1:backup", backupData.UsageLogs[0].CredentialFingerprint)
-	require.Equal(t, "secret:v1:backup", backupData.UsageLogs[0].SecretFingerprint)
-	require.Equal(t, "openai:secret:v1:backup", backupData.UsageLogs[0].ResourceScopeKey)
-	require.Equal(t, "backup credential", backupData.UsageLogs[0].CredentialNameSnapshot)
-	require.Equal(t, "sk-...-backup", backupData.UsageLogs[0].CredentialKeyHint)
-	require.Equal(t, biz.ChannelCredentialSourceRef, backupData.UsageLogs[0].CredentialSource)
-	require.Equal(t, "available", backupData.UsageLogs[0].CredentialQuotaStatusSnapshot)
+	require.Equal(t, "https://api.example.com/v1/chat/completions?mode=full", backupData.RequestExecutions[0].RequestURL)
+	require.True(t, backupData.RequestExecutions[0].PassThroughApplied)
 
 	data, err = service.Backup(ctx, BackupOptions{
-		IncludeAPIKeys:    true,
-		IncludeUsageStats: true,
+		IncludeAPIKeys:     true,
+		IncludeUsageStats:  true,
+		IncludeRequestLogs: true,
 	})
 	require.NoError(t, err)
 
+	backupData = BackupData{}
 	err = json.Unmarshal(data, &backupData)
 	require.NoError(t, err)
 	require.Equal(t, "sk-test-key-1", backupData.UsageRequests[0].APIKeyKey)
+	require.Equal(t, "sk-test-key-1", backupData.UsageLogs[0].APIKeyKey)
 }
 
 func TestBackupService_Restore_PreservesRequestExecutionCredentialSnapshots(t *testing.T) {
@@ -421,9 +442,9 @@ func TestBackupService_Restore_PreservesRequestExecutionCredentialSnapshots(t *t
 	_, _, _ = createBackupTestUsage(t, sourceClient, sourceCtx, proj, ch, ak)
 
 	data, err := sourceService.Backup(sourceCtx, BackupOptions{
-		IncludeProjects:   true,
-		IncludeChannels:   true,
-		IncludeUsageStats: true,
+		IncludeProjects:    true,
+		IncludeChannels:    true,
+		IncludeRequestLogs: true,
 	})
 	require.NoError(t, err)
 
@@ -433,7 +454,7 @@ func TestBackupService_Restore_PreservesRequestExecutionCredentialSnapshots(t *t
 	err = targetService.Restore(targetCtx, data, RestoreOptions{
 		IncludeProjects:         true,
 		IncludeChannels:         true,
-		IncludeUsageStats:       true,
+		IncludeRequestLogs:      true,
 		ProjectConflictStrategy: ConflictStrategyOverwrite,
 		ChannelConflictStrategy: ConflictStrategyOverwrite,
 	})
@@ -449,6 +470,8 @@ func TestBackupService_Restore_PreservesRequestExecutionCredentialSnapshots(t *t
 	require.Equal(t, "sk-...-backup", execs[0].CredentialKeyHint)
 	require.Equal(t, biz.ChannelCredentialSourceRef, execs[0].CredentialSource)
 	require.Equal(t, "available", execs[0].CredentialQuotaStatusSnapshot)
+	require.Equal(t, "https://api.example.com/v1/chat/completions?mode=full", execs[0].RequestURL)
+	require.True(t, execs[0].PassThroughApplied)
 }
 
 func TestBackupService_Backup_IncludesUpstreamCredentialsAndRefs(t *testing.T) {

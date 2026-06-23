@@ -67,7 +67,7 @@ func (ts *InboundPersistentStream) Next() bool {
 func (ts *InboundPersistentStream) Current() *httpclient.StreamEvent {
 	event := ts.stream.Current()
 	if event != nil {
-		ts.responseChunks = append(ts.responseChunks, event)
+		ts.responseChunks = append(ts.responseChunks, httpclient.SummarizeBinaryChunk(event))
 		if isTerminalStreamEvent(event) {
 			ts.state.StreamCompleted = true
 		}
@@ -84,7 +84,12 @@ func isTerminalStreamEvent(event *httpclient.StreamEvent) bool {
 		// For Responses API, check for response.completed event
 		event.Type == "response.completed" ||
 		// For Anthropic Messages API, check for message_stop event
-		event.Type == "message_stop"
+		event.Type == "message_stop" ||
+		// For raw binary audio stream, check for the synthetic done event.
+		event.Type == httpclient.BinaryStreamDoneEventType ||
+		// For OpenAI audio SSE streams, check for audio/text terminal events.
+		event.Type == "speech.audio.done" ||
+		event.Type == "transcript.text.done"
 }
 
 func (ts *InboundPersistentStream) Err() error {

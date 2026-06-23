@@ -4669,6 +4669,16 @@ func (_q *RequestExecutionQuery) collectField(ctx context.Context, oneNode bool,
 				selectedFields = append(selectedFields, requestexecution.FieldFormat)
 				fieldSeen[requestexecution.FieldFormat] = struct{}{}
 			}
+		case "requestURL":
+			if _, ok := fieldSeen[requestexecution.FieldRequestURL]; !ok {
+				selectedFields = append(selectedFields, requestexecution.FieldRequestURL)
+				fieldSeen[requestexecution.FieldRequestURL] = struct{}{}
+			}
+		case "passThroughApplied":
+			if _, ok := fieldSeen[requestexecution.FieldPassThroughApplied]; !ok {
+				selectedFields = append(selectedFields, requestexecution.FieldPassThroughApplied)
+				fieldSeen[requestexecution.FieldPassThroughApplied] = struct{}{}
+			}
 		case "requestBody":
 			if _, ok := fieldSeen[requestexecution.FieldRequestBody]; !ok {
 				selectedFields = append(selectedFields, requestexecution.FieldRequestBody)

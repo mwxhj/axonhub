@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/eko/gocache/lib/v4/store"
@@ -75,6 +77,18 @@ func GenerateRequestBodyKey(projectID, requestID int) string {
 // GenerateResponseBodyKey generates the storage key for response body.
 func GenerateResponseBodyKey(projectID, requestID int) string {
 	return fmt.Sprintf("/%d/requests/%d/response_body.json", projectID, requestID)
+}
+
+// GenerateAudioKey generates the storage key for generated audio content.
+func GenerateAudioKey(projectID, requestID int, filename string) string {
+	name := strings.TrimSpace(filename)
+	if name == "" {
+		name = "audio.mp3"
+	}
+
+	name = filepath.Base(name)
+
+	return fmt.Sprintf("/%d/requests/%d/audio/%s", projectID, requestID, name)
 }
 
 // GenerateResponseChunksKey generates the storage key for response chunks.
@@ -247,6 +261,7 @@ func (s *RequestService) CreateRequestExecution(
 	request *ent.Request,
 	channelRequest httpclient.Request,
 	format llm.APIFormat,
+	passThroughApplied bool,
 ) (*ent.RequestExecution, error) {
 	// Decide whether to store the channel request body
 	storeRequestBody := true
@@ -315,7 +330,12 @@ func (s *RequestService) CreateRequestExecution(
 		SetRequestBody(requestBodyForDB).
 		SetStatus(requestexecution.StatusProcessing).
 		SetStream(request.Stream).
-		SetRequestHeaders(requestHeadersBytes)
+		SetRequestHeaders(requestHeadersBytes).
+		SetPassThroughApplied(passThroughApplied)
+
+	if channelRequest.URL != "" {
+		mut = mut.SetRequestURL(channelRequest.URL)
+	}
 
 	if fingerprint, ok := contexts.GetChannelCredentialFingerprint(ctx); ok && fingerprint != "" {
 		mut = mut.SetCredentialFingerprint(fingerprint)
@@ -467,6 +487,97 @@ func (s *RequestService) UpdateRequestCompleted(
 		} else {
 			// Store in database
 			upd = upd.SetResponseBody(responseBodyBytes)
+		}
+	}
+
+	_, err = upd.Save(ctx)
+	if err != nil {
+		log.Error(ctx, "Failed to update request status to completed", log.Cause(err))
+		return err
+	}
+
+	return nil
+}
+
+// UpdateRequestCompletedWithAudio marks a request completed and persists audio content
+// to external storage when configured.
+func (s *RequestService) UpdateRequestCompletedWithAudio(
+	ctx context.Context,
+	requestID int,
+	externalId string,
+	responseBody any,
+	audio []byte,
+	filename string,
+	metrics *LatencyMetrics,
+) error {
+	storeResponseBody := true
+	if policy, err := s.SystemService.StoragePolicy(ctx); err == nil {
+		storeResponseBody = policy.StoreResponseBody
+	} else {
+		log.Warn(ctx, "Failed to get storage policy, defaulting to store response body", log.Cause(err))
+	}
+
+	client := s.entFromContext(ctx)
+
+	req, err := client.Request.Get(ctx, requestID)
+	if err != nil {
+		log.Error(ctx, "Failed to get request", log.Cause(err))
+		return err
+	}
+
+	var dataStorage *ent.DataStorage
+	if req.DataStorageID != 0 {
+		dataStorage, err = s.DataStorageService.GetDataStorageByID(ctx, req.DataStorageID)
+		if err != nil {
+			log.Warn(ctx, "Failed to get data storage", log.Cause(err))
+		}
+	}
+
+	upd := client.Request.UpdateOneID(requestID).
+		SetStatus(request.StatusCompleted).
+		SetExternalID(externalId)
+
+	if metrics != nil {
+		if metrics.LatencyMs != nil {
+			upd = upd.SetMetricsLatencyMs(*metrics.LatencyMs)
+		}
+
+		if metrics.FirstTokenLatencyMs != nil {
+			upd = upd.SetMetricsFirstTokenLatencyMs(*metrics.FirstTokenLatencyMs)
+		}
+
+		if metrics.ReasoningDurationMs != nil {
+			upd = upd.SetMetricsReasoningDurationMs(*metrics.ReasoningDurationMs)
+		}
+	}
+
+	if storeResponseBody {
+		responseBodyBytes, err := xjson.Marshal(responseBody)
+		if err != nil {
+			log.Error(ctx, "Failed to serialize response body", log.Cause(err))
+			return err
+		}
+
+		if s.shouldUseExternalStorage(ctx, dataStorage) {
+			key := GenerateResponseBodyKey(req.ProjectID, requestID)
+			if err := s.DataStorageService.SaveData(ctx, dataStorage, key, responseBodyBytes); err != nil {
+				log.Error(ctx, "Failed to save response body to external storage", log.Cause(err))
+			}
+		} else {
+			upd = upd.SetResponseBody(responseBodyBytes)
+		}
+	}
+
+	if len(audio) > 0 && s.shouldUseExternalStorage(ctx, dataStorage) {
+		key := GenerateAudioKey(req.ProjectID, requestID, filename)
+		if err := s.DataStorageService.SaveData(ctx, dataStorage, key, audio); err != nil {
+			log.Error(ctx, "Failed to save audio to external storage", log.Cause(err))
+		} else {
+			upd = upd.
+				SetContentSaved(true).
+				SetContentStorageID(dataStorage.ID).
+				SetContentStorageKey(key).
+				SetContentSavedAt(time.Now().UTC())
 		}
 	}
 
@@ -718,6 +829,54 @@ type jsonStreamEvent struct {
 	Data        json.RawMessage `json:"data"`
 }
 
+type binaryStreamChunkSummary struct {
+	Object      string `json:"object"`
+	ContentType string `json:"content_type"`
+	Bytes       int    `json:"bytes"`
+}
+
+func isBinaryStreamChunk(chunk *httpclient.StreamEvent) bool {
+	if chunk == nil {
+		return false
+	}
+
+	eventType := strings.ToLower(strings.TrimSpace(chunk.Type))
+
+	return strings.HasPrefix(eventType, "audio/") || eventType == "application/octet-stream"
+}
+
+func shouldSkipStoredStreamChunk(chunk *httpclient.StreamEvent) bool {
+	return chunk == nil ||
+		(!isBinaryStreamChunk(chunk) && bytes.Equal(chunk.Data, llm.DoneStreamEvent.Data)) ||
+		chunk.Type == httpclient.BinaryStreamDoneEventType
+}
+
+func marshalStreamEventForStorage(chunk *httpclient.StreamEvent) (objects.JSONRawMessage, error) {
+	data := json.RawMessage(chunk.Data)
+	if isBinaryStreamChunk(chunk) {
+		byteCount := len(chunk.Data)
+		if byteCount == 0 {
+			byteCount = chunk.Size
+		}
+
+		var err error
+		data, err = json.Marshal(binaryStreamChunkSummary{
+			Object:      "binary.stream_chunk",
+			ContentType: strings.TrimSpace(chunk.Type),
+			Bytes:       byteCount,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return xjson.Marshal(jsonStreamEvent{
+		LastEventID: chunk.LastEventID,
+		Type:        chunk.Type,
+		Data:        data,
+	})
+}
+
 // SaveRequestExecutionChunks saves all response chunks to request execution at once.
 // Only stores chunks if the system StoreChunks setting is enabled.
 func (s *RequestService) SaveRequestExecutionChunks(
@@ -746,15 +905,11 @@ func (s *RequestService) SaveRequestExecutionChunks(
 	var chunkBytes []objects.JSONRawMessage
 
 	for _, chunk := range chunks {
-		if bytes.Equal(chunk.Data, llm.DoneStreamEvent.Data) {
+		if shouldSkipStoredStreamChunk(chunk) {
 			continue
 		}
 
-		b, err := xjson.Marshal(jsonStreamEvent{
-			LastEventID: chunk.LastEventID,
-			Type:        chunk.Type,
-			Data:        chunk.Data,
-		})
+		b, err := marshalStreamEventForStorage(chunk)
 		if err != nil {
 			log.Warn(ctx, "Failed to marshal chunk, skipping", log.Cause(err))
 
@@ -838,15 +993,11 @@ func (s *RequestService) SaveRequestChunks(
 	var chunkBytes []objects.JSONRawMessage
 
 	for _, chunk := range chunks {
-		if bytes.Equal(chunk.Data, llm.DoneStreamEvent.Data) {
+		if shouldSkipStoredStreamChunk(chunk) {
 			continue
 		}
 
-		b, err := xjson.Marshal(jsonStreamEvent{
-			LastEventID: chunk.LastEventID,
-			Type:        chunk.Type,
-			Data:        chunk.Data,
-		})
+		b, err := marshalStreamEventForStorage(chunk)
 		if err != nil {
 			log.Warn(ctx, "Failed to marshal chunk, skipping", log.Cause(err))
 

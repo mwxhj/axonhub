@@ -155,6 +155,16 @@ func Format(v string) predicate.RequestExecution {
 	return predicate.RequestExecution(sql.FieldEQ(FieldFormat, v))
 }
 
+// RequestURL applies equality check predicate on the "request_url" field. It's identical to RequestURLEQ.
+func RequestURL(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldRequestURL, v))
+}
+
+// PassThroughApplied applies equality check predicate on the "pass_through_applied" field. It's identical to PassThroughAppliedEQ.
+func PassThroughApplied(v bool) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldPassThroughApplied, v))
+}
+
 // ErrorMessage applies equality check predicate on the "error_message" field. It's identical to ErrorMessageEQ.
 func ErrorMessage(v string) predicate.RequestExecution {
 	return predicate.RequestExecution(sql.FieldEQ(FieldErrorMessage, v))
@@ -1323,6 +1333,91 @@ func FormatEqualFold(v string) predicate.RequestExecution {
 // FormatContainsFold applies the ContainsFold predicate on the "format" field.
 func FormatContainsFold(v string) predicate.RequestExecution {
 	return predicate.RequestExecution(sql.FieldContainsFold(FieldFormat, v))
+}
+
+// RequestURLEQ applies the EQ predicate on the "request_url" field.
+func RequestURLEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldRequestURL, v))
+}
+
+// RequestURLNEQ applies the NEQ predicate on the "request_url" field.
+func RequestURLNEQ(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNEQ(FieldRequestURL, v))
+}
+
+// RequestURLIn applies the In predicate on the "request_url" field.
+func RequestURLIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIn(FieldRequestURL, vs...))
+}
+
+// RequestURLNotIn applies the NotIn predicate on the "request_url" field.
+func RequestURLNotIn(vs ...string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotIn(FieldRequestURL, vs...))
+}
+
+// RequestURLGT applies the GT predicate on the "request_url" field.
+func RequestURLGT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGT(FieldRequestURL, v))
+}
+
+// RequestURLGTE applies the GTE predicate on the "request_url" field.
+func RequestURLGTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldGTE(FieldRequestURL, v))
+}
+
+// RequestURLLT applies the LT predicate on the "request_url" field.
+func RequestURLLT(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLT(FieldRequestURL, v))
+}
+
+// RequestURLLTE applies the LTE predicate on the "request_url" field.
+func RequestURLLTE(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldLTE(FieldRequestURL, v))
+}
+
+// RequestURLContains applies the Contains predicate on the "request_url" field.
+func RequestURLContains(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContains(FieldRequestURL, v))
+}
+
+// RequestURLHasPrefix applies the HasPrefix predicate on the "request_url" field.
+func RequestURLHasPrefix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasPrefix(FieldRequestURL, v))
+}
+
+// RequestURLHasSuffix applies the HasSuffix predicate on the "request_url" field.
+func RequestURLHasSuffix(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldHasSuffix(FieldRequestURL, v))
+}
+
+// RequestURLIsNil applies the IsNil predicate on the "request_url" field.
+func RequestURLIsNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldIsNull(FieldRequestURL))
+}
+
+// RequestURLNotNil applies the NotNil predicate on the "request_url" field.
+func RequestURLNotNil() predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNotNull(FieldRequestURL))
+}
+
+// RequestURLEqualFold applies the EqualFold predicate on the "request_url" field.
+func RequestURLEqualFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEqualFold(FieldRequestURL, v))
+}
+
+// RequestURLContainsFold applies the ContainsFold predicate on the "request_url" field.
+func RequestURLContainsFold(v string) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldContainsFold(FieldRequestURL, v))
+}
+
+// PassThroughAppliedEQ applies the EQ predicate on the "pass_through_applied" field.
+func PassThroughAppliedEQ(v bool) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldPassThroughApplied, v))
+}
+
+// PassThroughAppliedNEQ applies the NEQ predicate on the "pass_through_applied" field.
+func PassThroughAppliedNEQ(v bool) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNEQ(FieldPassThroughApplied, v))
 }
 
 // ResponseBodyIsNil applies the IsNil predicate on the "response_body" field.

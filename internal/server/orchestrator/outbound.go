@@ -82,7 +82,7 @@ func (ts *OutboundPersistentStream) Next() bool {
 func (ts *OutboundPersistentStream) Current() *httpclient.StreamEvent {
 	event := ts.stream.Current()
 	if event != nil {
-		ts.responseChunks = append(ts.responseChunks, event)
+		ts.responseChunks = append(ts.responseChunks, httpclient.SummarizeBinaryChunk(event))
 		// Check if this is a terminal event, which indicates the stream completed successfully.
 		// For Chat Completions API this is the raw [DONE] event; for Responses API this is
 		// response.completed; for Anthropic Messages API this is message_stop.
@@ -728,6 +728,7 @@ func (p *PersistentOutboundTransformer) NextChannel(ctx context.Context) error {
 
 	// Reset request execution for the new candidate
 	p.state.RequestExec = nil
+	p.state.PassThroughApplied = false
 
 	candidate := p.state.ChannelModelsCandidates[p.state.CurrentCandidateIndex]
 	p.state.CurrentCandidate = candidate
@@ -787,6 +788,7 @@ func (p *PersistentOutboundTransformer) PrepareForFallback(ctx context.Context, 
 		(failedID > 0 || failedFingerprint != "") &&
 		p.hasSameChannelCredentialFallback(0, "") {
 		p.state.RequestExec = nil
+		p.state.PassThroughApplied = false
 		p.state.FallbackTargetSwitches++
 		p.wrapped = selectOutboundForCandidate(p.state.CurrentCandidate)
 
@@ -816,6 +818,7 @@ func (p *PersistentOutboundTransformer) PrepareForFallback(ctx context.Context, 
 	p.state.CurrentCandidateIndex = nextIndex
 	p.state.CurrentModelIndex = 0
 	p.state.RequestExec = nil
+	p.state.PassThroughApplied = false
 	p.state.FallbackTargetSwitches++
 
 	candidate := p.state.ChannelModelsCandidates[p.state.CurrentCandidateIndex]
@@ -919,6 +922,7 @@ func (p *PersistentOutboundTransformer) PrepareForRetry(ctx context.Context) err
 
 	// Reset request execution for the same channel.
 	p.state.RequestExec = nil
+	p.state.PassThroughApplied = false
 
 	// Cancel any in-flight pass-through stream goroutine from the previous attempt
 	// so it exits promptly and releases its upstream HTTP connection.

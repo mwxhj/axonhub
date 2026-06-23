@@ -63,10 +63,13 @@ func TestRequestService_CreateRequestExecutionStoresCredentialFingerprint(t *tes
 		&Channel{Channel: ch},
 		"gpt-4",
 		req,
-		httpclient.Request{JSONBody: []byte(`{}`)},
+		httpclient.Request{URL: "https://api.openai.com/v1/chat/completions", JSONBody: []byte(`{}`)},
 		llm.APIFormatOpenAIChatCompletion,
+		true,
 	)
 	require.NoError(t, err)
+	require.Equal(t, "https://api.openai.com/v1/chat/completions", exec.RequestURL)
+	require.True(t, exec.PassThroughApplied)
 	require.Equal(t, fingerprint, exec.CredentialFingerprint)
 	require.Equal(t, secretFingerprint, exec.SecretFingerprint)
 	require.Equal(t, resourceScopeKey, exec.ResourceScopeKey)
@@ -80,6 +83,8 @@ func TestRequestService_CreateRequestExecutionStoresCredentialFingerprint(t *tes
 
 	fetched, err := client.RequestExecution.Get(context.Background(), exec.ID)
 	require.NoError(t, err)
+	require.Equal(t, "https://api.openai.com/v1/chat/completions", fetched.RequestURL)
+	require.True(t, fetched.PassThroughApplied)
 	require.Equal(t, fingerprint, fetched.CredentialFingerprint)
 	require.Equal(t, secretFingerprint, fetched.SecretFingerprint)
 	require.Equal(t, resourceScopeKey, fetched.ResourceScopeKey)
@@ -127,6 +132,7 @@ func TestRequestService_CreateRequestExecutionRedactsOutboundBodySecrets(t *test
 		req,
 		httpclient.Request{JSONBody: []byte(`{"model":"gpt-4","api_key":"sk-secret","access_token":"token-secret","message":"keep me"}`)},
 		llm.APIFormatOpenAIChatCompletion,
+		false,
 	)
 	require.NoError(t, err)
 	require.JSONEq(t, `{"model":"gpt-4","api_key":"[REDACTED]","access_token":"[REDACTED]","message":"keep me"}`, string(exec.RequestBody))

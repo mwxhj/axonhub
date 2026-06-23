@@ -64,6 +64,10 @@ type RequestExecution struct {
 	CredentialQuotaStatusSnapshot string `json:"credential_quota_status_snapshot,omitempty"`
 	// Format holds the value of the "format" field.
 	Format string `json:"format,omitempty"`
+	// Final upstream request URL used for this execution
+	RequestURL string `json:"request_url,omitempty"`
+	// Whether body/response pass-through was applied for this execution
+	PassThroughApplied bool `json:"pass_through_applied,omitempty"`
 	// RequestBody holds the value of the "request_body" field.
 	RequestBody objects.JSONRawMessage `json:"request_body,omitempty"`
 	// ResponseBody holds the value of the "response_body" field.
@@ -173,11 +177,11 @@ func (*RequestExecution) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case requestexecution.FieldRequestBody, requestexecution.FieldResponseBody, requestexecution.FieldResponseChunks, requestexecution.FieldRequestHeaders:
 			values[i] = new([]byte)
-		case requestexecution.FieldStream:
+		case requestexecution.FieldPassThroughApplied, requestexecution.FieldStream:
 			values[i] = new(sql.NullBool)
 		case requestexecution.FieldID, requestexecution.FieldProjectID, requestexecution.FieldRequestID, requestexecution.FieldChannelID, requestexecution.FieldCredentialID, requestexecution.FieldDataStorageID, requestexecution.FieldQuotaScopeID, requestexecution.FieldResponseStatusCode, requestexecution.FieldMetricsLatencyMs, requestexecution.FieldMetricsFirstTokenLatencyMs, requestexecution.FieldMetricsReasoningDurationMs:
 			values[i] = new(sql.NullInt64)
-		case requestexecution.FieldExternalID, requestexecution.FieldModelID, requestexecution.FieldCredentialFingerprint, requestexecution.FieldSecretFingerprint, requestexecution.FieldResourceScopeKey, requestexecution.FieldQuotaScopeNameSnapshot, requestexecution.FieldQuotaScopeStatusSnapshot, requestexecution.FieldCredentialNameSnapshot, requestexecution.FieldCredentialKeyHint, requestexecution.FieldCredentialSource, requestexecution.FieldCredentialQuotaStatusSnapshot, requestexecution.FieldFormat, requestexecution.FieldErrorMessage, requestexecution.FieldStatus:
+		case requestexecution.FieldExternalID, requestexecution.FieldModelID, requestexecution.FieldCredentialFingerprint, requestexecution.FieldSecretFingerprint, requestexecution.FieldResourceScopeKey, requestexecution.FieldQuotaScopeNameSnapshot, requestexecution.FieldQuotaScopeStatusSnapshot, requestexecution.FieldCredentialNameSnapshot, requestexecution.FieldCredentialKeyHint, requestexecution.FieldCredentialSource, requestexecution.FieldCredentialQuotaStatusSnapshot, requestexecution.FieldFormat, requestexecution.FieldRequestURL, requestexecution.FieldErrorMessage, requestexecution.FieldStatus:
 			values[i] = new(sql.NullString)
 		case requestexecution.FieldCreatedAt, requestexecution.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -321,6 +325,18 @@ func (_m *RequestExecution) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field format", values[i])
 			} else if value.Valid {
 				_m.Format = value.String
+			}
+		case requestexecution.FieldRequestURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field request_url", values[i])
+			} else if value.Valid {
+				_m.RequestURL = value.String
+			}
+		case requestexecution.FieldPassThroughApplied:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field pass_through_applied", values[i])
+			} else if value.Valid {
+				_m.PassThroughApplied = value.Bool
 			}
 		case requestexecution.FieldRequestBody:
 			if value, ok := values[i].(*[]byte); !ok {
@@ -520,6 +536,12 @@ func (_m *RequestExecution) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("format=")
 	builder.WriteString(_m.Format)
+	builder.WriteString(", ")
+	builder.WriteString("request_url=")
+	builder.WriteString(_m.RequestURL)
+	builder.WriteString(", ")
+	builder.WriteString("pass_through_applied=")
+	builder.WriteString(fmt.Sprintf("%v", _m.PassThroughApplied))
 	builder.WriteString(", ")
 	builder.WriteString("request_body=")
 	builder.WriteString(fmt.Sprintf("%v", _m.RequestBody))

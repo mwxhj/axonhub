@@ -142,8 +142,8 @@ func (svc *BackupService) restore(ctx context.Context, db *ent.Client, backupDat
 		}
 	}
 
-	if opts.IncludeUsageStats {
-		if err := svc.restoreUsageStats(ctx, db, backupData.UsageRequests, backupData.RequestExecutions, backupData.UsageLogs, credentialIDMap, quotaScopeIDMap); err != nil {
+	if opts.IncludeUsageStats || opts.IncludeRequestLogs {
+		if err := svc.restoreUsageData(ctx, db, backupData.UsageRequests, backupData.RequestExecutions, backupData.UsageLogs, credentialIDMap, quotaScopeIDMap, opts); err != nil {
 			return err
 		}
 	}
@@ -1237,7 +1237,7 @@ func (svc *BackupService) restoreAPIKeys(ctx context.Context, db *ent.Client, ap
 	return nil
 }
 
-func (svc *BackupService) restoreUsageStats(
+func (svc *BackupService) restoreUsageData(
 	ctx context.Context,
 	db *ent.Client,
 	requestsData []*BackupUsageRequest,
@@ -1245,22 +1245,30 @@ func (svc *BackupService) restoreUsageStats(
 	usageLogs []*BackupUsageLog,
 	credentialIDMap map[int]int,
 	quotaScopeIDMap map[int]int,
+	opts RestoreOptions,
 ) error {
 	resolver, err := newUsageRestoreResolver(ctx, db)
 	if err != nil {
 		return err
 	}
 
-	requestIDMap, err := svc.restoreUsageRequests(ctx, db, requestsData, resolver)
-	if err != nil {
-		return err
+	requestIDMap := map[int]int{}
+	if opts.IncludeRequestLogs {
+		requestIDMap, err = svc.restoreUsageRequests(ctx, db, requestsData, resolver)
+		if err != nil {
+			return err
+		}
+
+		if err := svc.restoreRequestExecutions(ctx, db, requestExecutions, requestIDMap, resolver, credentialIDMap, quotaScopeIDMap); err != nil {
+			return err
+		}
 	}
 
-	if err := svc.restoreRequestExecutions(ctx, db, requestExecutions, requestIDMap, resolver, credentialIDMap, quotaScopeIDMap); err != nil {
-		return err
+	if opts.IncludeUsageStats {
+		return svc.restoreUsageLogs(ctx, db, usageLogs, requestIDMap, resolver, credentialIDMap, quotaScopeIDMap)
 	}
 
-	return svc.restoreUsageLogs(ctx, db, usageLogs, requestIDMap, resolver, credentialIDMap, quotaScopeIDMap)
+	return nil
 }
 
 func (svc *BackupService) restoreUsageRequests(
@@ -1642,6 +1650,8 @@ func (svc *BackupService) restoreRequestExecutions(
 			SetCredentialSource(execData.CredentialSource).
 			SetCredentialQuotaStatusSnapshot(execData.CredentialQuotaStatusSnapshot).
 			SetFormat(format).
+			SetNillableRequestURL(nilIfEmpty(execData.RequestURL)).
+			SetPassThroughApplied(execData.PassThroughApplied).
 			SetRequestBody(jsonOrEmpty(execData.RequestBody)).
 			SetNillableErrorMessage(nilIfEmpty(execData.ErrorMessage)).
 			SetNillableResponseStatusCode(execData.ResponseStatusCode).
@@ -1718,6 +1728,8 @@ func requestExecutionBackupFingerprint(exec *BackupRequestExecution, requestID, 
 		exec.CredentialNameSnapshot,
 		exec.CredentialKeyHint,
 		exec.CredentialSource,
+		exec.RequestURL,
+		fmt.Sprintf("%t", exec.PassThroughApplied),
 	)
 }
 
@@ -1745,6 +1757,8 @@ func requestExecutionExistingFingerprint(exec *ent.RequestExecution) string {
 		exec.CredentialNameSnapshot,
 		exec.CredentialKeyHint,
 		exec.CredentialSource,
+		exec.RequestURL,
+		fmt.Sprintf("%t", exec.PassThroughApplied),
 	)
 }
 
@@ -1766,6 +1780,8 @@ func requestExecutionFingerprint(
 	credentialName string,
 	credentialKeyHint string,
 	credentialSource string,
+	requestURL string,
+	passThroughApplied string,
 ) string {
 	parts := []string{
 		createdAt.UTC().Format(time.RFC3339Nano),
@@ -1785,6 +1801,8 @@ func requestExecutionFingerprint(
 		credentialName,
 		credentialKeyHint,
 		credentialSource,
+		requestURL,
+		passThroughApplied,
 	}
 
 	return strings.Join(parts, "\x00")
@@ -1801,6 +1819,10 @@ func (svc *BackupService) restoreUsageLogs(
 ) error {
 	if len(usageLogs) == 0 {
 		return nil
+	}
+
+	if err := svc.ensureUsageLogRequests(ctx, db, usageLogs, requestIDMap, resolver); err != nil {
+		return err
 	}
 
 	requestIDs := make([]int, 0, len(requestIDMap))
@@ -1951,6 +1973,132 @@ func (svc *BackupService) restoreUsageLogs(
 	}
 
 	return flush()
+}
+
+func (svc *BackupService) ensureUsageLogRequests(
+	ctx context.Context,
+	db *ent.Client,
+	usageLogs []*BackupUsageLog,
+	requestIDMap map[int]int,
+	resolver *usageRestoreResolver,
+) error {
+	shellRequests := usageLogRequestShells(usageLogs, requestIDMap)
+	existingRequests, err := existingUsageRequests(ctx, db, shellRequests)
+	if err != nil {
+		return err
+	}
+
+	for _, usageData := range usageLogs {
+		if usageData == nil || usageData.RequestID == 0 {
+			continue
+		}
+		if _, ok := requestIDMap[usageData.RequestID]; ok {
+			continue
+		}
+
+		projectID, ok := resolver.resolveProjectID(usageData.ProjectID, usageData.ProjectName)
+		if !ok {
+			continue
+		}
+
+		channelID, ok := resolver.resolveChannelID(usageData.ChannelID, usageData.ChannelName)
+		if !ok && hasBackupChannelRef(usageData.ChannelID, usageData.ChannelName) {
+			log.Warn(ctx, "channel not found for restoring usage log request shell, restoring with null channel",
+				log.Int("usage_log_id", usageData.ID),
+				log.Int("channel_id", usageData.ChannelID),
+				log.String("channel", usageData.ChannelName),
+			)
+		}
+
+		apiKeyID, ok := resolver.resolveAPIKeyID(usageData.APIKeyKey)
+		if !ok && usageData.APIKeyKey != "" {
+			log.Warn(ctx, "API key not found for restoring usage log request shell, restoring with null API key",
+				log.Int("usage_log_id", usageData.ID),
+			)
+		}
+
+		shellData := usageLogRequestShell(usageData)
+		if existing, ok := existingRequests.byID[usageData.RequestID]; ok {
+			if sameUsageRequest(existing, shellData, projectID, channelID, apiKeyID) {
+				requestIDMap[usageData.RequestID] = existing.ID
+				continue
+			}
+		}
+		if existing, ok := existingRequests.byFingerprint[usageRequestBackupFingerprint(shellData)]; ok {
+			requestIDMap[usageData.RequestID] = existing.ID
+			continue
+		}
+		if apiKeyID == 0 {
+			shellData.APIKeyKey = ""
+			if existing, ok := existingRequests.byFingerprint[usageRequestBackupFingerprint(shellData)]; ok {
+				requestIDMap[usageData.RequestID] = existing.ID
+				continue
+			}
+		}
+
+		created, err := db.Request.Create().
+			SetCreatedAt(usageData.CreatedAt).
+			SetUpdatedAt(usageData.UpdatedAt).
+			SetProjectID(projectID).
+			SetSource(request.Source(usageData.Source)).
+			SetModelID(usageData.ModelID).
+			SetFormat(usageData.Format).
+			SetRequestBody(objects.JSONRawMessage("{}")).
+			SetStatus(request.StatusCompleted).
+			SetStream(false).
+			SetClientIP("").
+			SetNillableAPIKeyID(nilIfZero(apiKeyID)).
+			SetNillableChannelID(nilIfZero(channelID)).
+			Save(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to create usage log request shell %d: %w", usageData.RequestID, err)
+		}
+
+		requestIDMap[usageData.RequestID] = created.ID
+	}
+
+	return nil
+}
+
+func usageLogRequestShells(usageLogs []*BackupUsageLog, requestIDMap map[int]int) []*BackupUsageRequest {
+	shells := make([]*BackupUsageRequest, 0, len(usageLogs))
+	seen := map[int]struct{}{}
+	for _, usageData := range usageLogs {
+		if usageData == nil || usageData.RequestID == 0 {
+			continue
+		}
+		if _, ok := requestIDMap[usageData.RequestID]; ok {
+			continue
+		}
+		if _, ok := seen[usageData.RequestID]; ok {
+			continue
+		}
+
+		seen[usageData.RequestID] = struct{}{}
+		shells = append(shells, usageLogRequestShell(usageData))
+	}
+
+	return shells
+}
+
+func usageLogRequestShell(usageData *BackupUsageLog) *BackupUsageRequest {
+	return &BackupUsageRequest{
+		Request: ent.Request{
+			ID:          usageData.RequestID,
+			CreatedAt:   usageData.CreatedAt,
+			UpdatedAt:   usageData.UpdatedAt,
+			Source:      request.Source(usageData.Source),
+			ModelID:     usageData.ModelID,
+			Format:      usageData.Format,
+			RequestBody: objects.JSONRawMessage("{}"),
+			Status:      request.StatusCompleted,
+			Stream:      false,
+			ClientIP:    "",
+		},
+		ProjectName: usageData.ProjectName,
+		ChannelName: usageData.ChannelName,
+		APIKeyKey:   usageData.APIKeyKey,
+	}
 }
 
 func nilIfZero(v int) *int {

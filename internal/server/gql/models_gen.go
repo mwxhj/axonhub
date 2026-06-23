@@ -488,6 +488,7 @@ type UpdateAutoBackupSettingsInput struct {
 	IncludeAPIKeys     *bool                `json:"includeAPIKeys,omitempty"`
 	IncludeModelPrices *bool                `json:"includeModelPrices,omitempty"`
 	IncludeUsageStats  *bool                `json:"includeUsageStats,omitempty"`
+	IncludeRequestLogs *bool                `json:"includeRequestLogs,omitempty"`
 	RetentionDays      *int                 `json:"retentionDays,omitempty"`
 }
 
@@ -524,6 +525,11 @@ type UpdateProjectUserInput struct {
 	Scopes        []string        `json:"scopes,omitempty"`
 	AddRoleIDs    []*objects.GUID `json:"addRoleIDs,omitempty"`
 	RemoveRoleIDs []*objects.GUID `json:"removeRoleIDs,omitempty"`
+}
+
+type UpdateSecuritySettingsInput struct {
+	BlockedIPs              []string `json:"blockedIPs,omitempty"`
+	ShowRequestLogIPBanIcon *bool    `json:"showRequestLogIPBanIcon,omitempty"`
 }
 
 type UpdateUserAgentPassThroughSettingsInput struct {

@@ -222,6 +222,15 @@ func (f *ModelFetcher) tryReturnDefaultModels(ctx context.Context, channelType s
 	return nil, false
 }
 
+func fetchModelsInputMatchesChannel(input FetchModelsInput, ch *Channel) bool {
+	if ch == nil || ch.Channel == nil {
+		return false
+	}
+
+	return input.ChannelType == ch.Channel.Type.String() &&
+		strings.TrimRight(input.BaseURL, "/") == strings.TrimRight(ch.Channel.BaseURL, "/")
+}
+
 func (f *ModelFetcher) FetchModels(ctx context.Context, input FetchModelsInput) (*FetchModelsResult, error) {
 	if input.ChannelType == channel.TypeVolcengine.String() {
 		return &FetchModelsResult{
@@ -251,6 +260,13 @@ func (f *ModelFetcher) FetchModels(ctx context.Context, input FetchModelsInput) 
 			}, nil
 		}
 
+		if apiKey == "" && !fetchModelsInputMatchesChannel(input, ch) {
+			return &FetchModelsResult{
+				Models: []ModelIdentify{},
+				Error:  lo.ToPtr("API key is required when channel type or base URL is changed"),
+			}, nil
+		}
+
 		views := ch.CredentialViews()
 		hasOAuth := slices.ContainsFunc(views, func(view ChannelCredentialView) bool {
 			return view.Enabled && normalizeCredentialFingerprintPart(view.AuthKind) == channelCredentialAuthKindOAuth
@@ -272,6 +288,11 @@ func (f *ModelFetcher) FetchModels(ctx context.Context, input FetchModelsInput) 
 				apiKey = strings.TrimSpace(view.Secret.APIKey)
 				break
 			}
+		}
+
+		if apiKey != "" {
+			input.ChannelType = ch.Channel.Type.String()
+			input.BaseURL = ch.Channel.BaseURL
 		}
 
 		if ch.Channel.Settings != nil {

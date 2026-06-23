@@ -306,10 +306,10 @@ export function usePaginationSearch(options: UsePaginationSearchOptions = {}): U
       navigate({
         to: options.to as any,
         params: options.params,
-        search: getSearchParams(),
+        search: { ...search, ...getSearchParams() } as Record<string, unknown>,
       } as any);
     },
-    [navigate, getSearchParams]
+    [navigate, search, getSearchParams]
   );
 
   return {

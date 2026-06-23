@@ -3,7 +3,6 @@ package openai
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,6 +18,7 @@ import (
 
 	"github.com/looplj/axonhub/llm"
 	"github.com/looplj/axonhub/llm/httpclient"
+	"github.com/looplj/axonhub/llm/internal/pkg/xurl"
 	"github.com/looplj/axonhub/llm/streams"
 	"github.com/looplj/axonhub/llm/transformer"
 )
@@ -238,7 +238,7 @@ func parseVideoMultipartRequest(httpReq *httpclient.Request) (*VideoCreateReques
 }
 
 func buildImageDataURL(contentType string, data []byte) string {
-	return fmt.Sprintf("data:%s;base64,%s", contentType, base64.StdEncoding.EncodeToString(data))
+	return xurl.BuildDataURLFromBytes(contentType, data)
 }
 
 type OpenAIVideoError struct {

@@ -51,6 +51,7 @@ func TestChatCompletionOrchestrator_Process_MinuteQuotaExceeded(t *testing.T) {
 			Profiles: []objects.APIKeyProfile{
 				{
 					Name:          "default",
+					RouteTiers:    []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{ch.ID}}},
 					ModelMappings: []objects.ModelMapping{},
 					Quota: &objects.APIKeyQuota{
 						Requests: lo.ToPtr(int64(1)),

@@ -1,7 +1,10 @@
 // Package xurl provides utilities for URL parsing and manipulation.
 package xurl
 
-import "strings"
+import (
+	"encoding/base64"
+	"strings"
+)
 
 // DataURL represents a parsed data URL with its components.
 type DataURL struct {
@@ -105,4 +108,9 @@ func BuildDataURL(mediaType string, data string, isBase64 bool) string {
 	}
 
 	return "data:" + mediaType + "," + data
+}
+
+// BuildDataURLFromBytes constructs a base64 data URL from raw bytes.
+func BuildDataURLFromBytes(mediaType string, data []byte) string {
+	return BuildDataURL(mediaType, base64.StdEncoding.EncodeToString(data), true)
 }

@@ -57,6 +57,10 @@ const (
 	FieldCredentialQuotaStatusSnapshot = "credential_quota_status_snapshot"
 	// FieldFormat holds the string denoting the format field in the database.
 	FieldFormat = "format"
+	// FieldRequestURL holds the string denoting the request_url field in the database.
+	FieldRequestURL = "request_url"
+	// FieldPassThroughApplied holds the string denoting the pass_through_applied field in the database.
+	FieldPassThroughApplied = "pass_through_applied"
 	// FieldRequestBody holds the string denoting the request_body field in the database.
 	FieldRequestBody = "request_body"
 	// FieldResponseBody holds the string denoting the response_body field in the database.
@@ -151,6 +155,8 @@ var Columns = []string{
 	FieldCredentialSource,
 	FieldCredentialQuotaStatusSnapshot,
 	FieldFormat,
+	FieldRequestURL,
+	FieldPassThroughApplied,
 	FieldRequestBody,
 	FieldResponseBody,
 	FieldResponseChunks,
@@ -193,6 +199,10 @@ var (
 	ResourceScopeKeyValidator func(string) error
 	// DefaultFormat holds the default value on creation for the "format" field.
 	DefaultFormat string
+	// RequestURLValidator is a validator for the "request_url" field. It is called by the builders before save.
+	RequestURLValidator func(string) error
+	// DefaultPassThroughApplied holds the default value on creation for the "pass_through_applied" field.
+	DefaultPassThroughApplied bool
 	// DefaultStream holds the default value on creation for the "stream" field.
 	DefaultStream bool
 )
@@ -329,6 +339,16 @@ func ByCredentialQuotaStatusSnapshot(opts ...sql.OrderTermOption) OrderOption {
 // ByFormat orders the results by the format field.
 func ByFormat(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFormat, opts...).ToFunc()
+}
+
+// ByRequestURL orders the results by the request_url field.
+func ByRequestURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRequestURL, opts...).ToFunc()
+}
+
+// ByPassThroughApplied orders the results by the pass_through_applied field.
+func ByPassThroughApplied(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPassThroughApplied, opts...).ToFunc()
 }
 
 // ByErrorMessage orders the results by the error_message field.

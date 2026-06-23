@@ -89,6 +89,39 @@ func userHasScope(ctx context.Context, requiredScope scopes.ScopeSlug) bool {
 		}
 	}
 
+	projectID, hasProjectID := contexts.GetProjectID(ctx)
+	if !hasProjectID {
+		return false
+	}
+
+	hasProjectMembership := false
+	for _, up := range user.Edges.ProjectUsers {
+		if up.ProjectID != projectID {
+			continue
+		}
+
+		hasProjectMembership = true
+		if up.IsOwner || slices.Contains(up.Scopes, string(requiredScope)) {
+			return true
+		}
+
+		break
+	}
+
+	if !hasProjectMembership {
+		return false
+	}
+
+	for _, role := range user.Edges.Roles {
+		if role.IsSystemRole() {
+			continue
+		}
+
+		if role.ProjectID != nil && *role.ProjectID == projectID && slices.Contains(role.Scopes, string(requiredScope)) {
+			return true
+		}
+	}
+
 	return false
 }
 

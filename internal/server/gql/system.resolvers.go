@@ -171,6 +171,36 @@ func (r *mutationResolver) UpdateVideoStorageSettings(ctx context.Context, input
 	return true, nil
 }
 
+// UpdateSecuritySettings is the resolver for the updateSecuritySettings field.
+func (r *mutationResolver) UpdateSecuritySettings(ctx context.Context, input UpdateSecuritySettingsInput) (bool, error) {
+	if !scopes.UserHasScope(ctx, scopes.ScopeWriteSettings) {
+		return false, fmt.Errorf("permission denied: requires write:settings scope")
+	}
+
+	current, err := r.systemService.SecuritySettings(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to read current security settings: %w", err)
+	}
+
+	newSettings := biz.SecuritySettings{
+		BlockedIPs:              current.BlockedIPs,
+		ShowRequestLogIPBanIcon: current.ShowRequestLogIPBanIcon,
+	}
+	if input.BlockedIPs != nil {
+		newSettings.BlockedIPs = input.BlockedIPs
+	}
+	if input.ShowRequestLogIPBanIcon != nil {
+		newSettings.ShowRequestLogIPBanIcon = *input.ShowRequestLogIPBanIcon
+	}
+
+	err = r.systemService.SetSecuritySettings(ctx, newSettings)
+	if err != nil {
+		return false, fmt.Errorf("failed to update security settings: %w", err)
+	}
+
+	return true, nil
+}
+
 // TriggerGcCleanup is the resolver for the triggerGcCleanup field.
 func (r *mutationResolver) TriggerGcCleanup(ctx context.Context, input gc.TriggerGcCleanupInput) (bool, error) {
 	if !scopes.UserHasScope(ctx, scopes.ScopeWriteSettings) {
@@ -422,6 +452,15 @@ func (r *queryResolver) SystemGeneralSettings(ctx context.Context) (*biz.SystemG
 // VideoStorageSettings is the resolver for the videoStorageSettings field.
 func (r *queryResolver) VideoStorageSettings(ctx context.Context) (*biz.VideoStorageSettings, error) {
 	return r.systemService.VideoStorageSettings(ctx)
+}
+
+// SecuritySettings is the resolver for the securitySettings field.
+func (r *queryResolver) SecuritySettings(ctx context.Context) (*biz.SecuritySettings, error) {
+	if !scopes.UserHasScope(ctx, scopes.ScopeReadSettings) {
+		return nil, fmt.Errorf("permission denied: requires read:settings scope")
+	}
+
+	return r.systemService.SecuritySettings(ctx)
 }
 
 // ProxyPresets is the resolver for the proxyPresets field.

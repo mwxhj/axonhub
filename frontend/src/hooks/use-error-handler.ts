@@ -80,6 +80,13 @@ export function useErrorHandler() {
         // Get i18n key and params
         const i18nKey = getErrorI18nKey(code);
         const params = getErrorI18nParams(firstError);
+
+        // Generic NOT_FOUND errors such as relay node lookups may not include
+        // a resource extension. Fill it so the translated placeholder never
+        // leaks into the toast.
+        if (i18nKey === 'common.errors.notFound' && !params.resource) {
+          params.resource = t('common.errors.resourceFallback');
+        }
         
         // Build error message
         let message: string;

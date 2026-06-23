@@ -255,6 +255,25 @@ func TestWriteSSEStream_NoError(t *testing.T) {
 	assert.NotContains(t, body, "event:error")
 }
 
+func TestWriteBinaryStream_WritesRawBytes(t *testing.T) {
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/", nil)
+
+	stream := streams.SliceStream([]*httpclient.StreamEvent{
+		{Type: "audio/mpeg", Data: []byte{0x01, 0x02}},
+		{Type: "audio/mpeg", Data: []byte{0x03}},
+		{Type: httpclient.BinaryStreamDoneEventType},
+	})
+
+	WriteBinaryStream(c, stream)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, "audio/mpeg", w.Header().Get("Content-Type"))
+	require.Equal(t, []byte{0x01, 0x02, 0x03}, w.Body.Bytes())
+	assert.NotContains(t, w.Body.String(), "event:")
+}
+
 func TestFormatStreamError_PlainError(t *testing.T) {
 	err := errors.New("something went wrong")
 	result := FormatStreamError(context.Background(), err)

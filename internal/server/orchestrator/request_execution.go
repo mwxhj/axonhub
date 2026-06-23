@@ -103,6 +103,7 @@ func (m *persistRequestExecutionMiddleware) OnOutboundRawRequest(ctx context.Con
 		state.Request,
 		*request,
 		m.outbound.APIFormat(),
+		state.PassThroughApplied,
 	)
 	if err != nil {
 		return nil, err
@@ -207,11 +208,22 @@ func (m *persistRequestExecutionMiddleware) OnOutboundLlmResponse(ctx context.Co
 		}
 	}
 
+	var (
+		contentType string
+		body        []byte
+	)
+	if m.rawResponse != nil {
+		contentType = m.rawResponse.Headers.Get("Content-Type")
+		body = m.rawResponse.Body
+	}
+
+	responseBody := audioSafeResponseBody(llmResp.RequestType, contentType, body)
+
 	err := state.RequestService.UpdateRequestExecutionCompleted(
 		persistCtx,
 		state.RequestExec.ID,
 		llmResp.ID,
-		m.rawResponse.Body,
+		responseBody,
 		metrics,
 	)
 	if err != nil {

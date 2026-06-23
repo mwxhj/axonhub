@@ -13,6 +13,7 @@ import (
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/enttest"
 	"github.com/looplj/axonhub/internal/ent/request"
+	"github.com/looplj/axonhub/internal/objects"
 	"github.com/looplj/axonhub/internal/server/biz"
 	"github.com/looplj/axonhub/llm/httpclient"
 	"github.com/looplj/axonhub/llm/pipeline"
@@ -34,6 +35,20 @@ func TestChatCompletionOrchestrator_Process_ErrorHandling(t *testing.T) {
 	project := createTestProject(t, ctx, client)
 	ch := createTestChannel(t, ctx, client)
 	channelService, requestService, systemService, usageLogService := setupTestServices(t, client)
+
+	apiKey, err := client.APIKey.Create().
+		SetName("error-route-key").
+		SetKey("error-route-key").
+		SetProjectID(project.ID).
+		SetProfiles(&objects.APIKeyProfiles{
+			ActiveProfile: "default",
+			Profiles: []objects.APIKeyProfile{{
+				Name:       "default",
+				RouteTiers: []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{ch.ID}}},
+			}},
+		}).
+		Save(ctx)
+	require.NoError(t, err)
 
 	// Create mock executor that returns an error
 	executor := &mockExecutor{
@@ -75,6 +90,7 @@ func TestChatCompletionOrchestrator_Process_ErrorHandling(t *testing.T) {
 
 	// Set project ID in context
 	ctx = contexts.WithProjectID(ctx, project.ID)
+	ctx = contexts.WithAPIKey(ctx, apiKey)
 
 	// Execute
 	result, err := orchestrator.Process(ctx, httpRequest)
@@ -159,6 +175,20 @@ func TestChatCompletionOrchestrator_Process_InvalidRequest(t *testing.T) {
 	ch := createTestChannel(t, ctx, client)
 	channelService, requestService, systemService, usageLogService := setupTestServices(t, client)
 
+	apiKey, err := client.APIKey.Create().
+		SetName("invalid-route-key").
+		SetKey("invalid-route-key").
+		SetProjectID(project.ID).
+		SetProfiles(&objects.APIKeyProfiles{
+			ActiveProfile: "default",
+			Profiles: []objects.APIKeyProfile{{
+				Name:       "default",
+				RouteTiers: []objects.APIKeyRouteTier{{Name: "primary", ChannelIDs: []int{ch.ID}}},
+			}},
+		}).
+		Save(ctx)
+	require.NoError(t, err)
+
 	executor := &mockExecutor{}
 
 	outbound, err := openai.NewOutboundTransformer(ch.BaseURL, ch.Credentials.APIKey)
@@ -198,6 +228,7 @@ func TestChatCompletionOrchestrator_Process_InvalidRequest(t *testing.T) {
 	}
 
 	ctx = contexts.WithProjectID(ctx, project.ID)
+	ctx = contexts.WithAPIKey(ctx, apiKey)
 
 	// Execute
 	_, err = orchestrator.Process(ctx, invalidReq)

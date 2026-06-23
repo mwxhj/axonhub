@@ -50,6 +50,7 @@ interface DataTableProps {
   onDateRangeChange: (value: DateTimeRangeValue | undefined) => void;
   onResetFilters?: () => void;
   canWrite?: boolean;
+  canViewCreators?: boolean;
 }
 
 export function ApiKeysTable({
@@ -72,6 +73,7 @@ export function ApiKeysTable({
   onDateRangeChange,
   onResetFilters,
   canWrite = true,
+  canViewCreators = false,
 }: DataTableProps) {
   const { t } = useTranslation();
   const { setResetRowSelection, setSelectedApiKeys, openDialog } = useApiKeysContext();
@@ -96,11 +98,11 @@ export function ApiKeysTable({
     if (statusFilter.length > 0) {
       newFilters.push({ id: 'status', value: statusFilter });
     }
-    if (userFilter.length > 0) {
+    if (canViewCreators && userFilter.length > 0) {
       newFilters.push({ id: 'creator', value: userFilter });
     }
     setColumnFilters(newFilters);
-  }, [searchFilter, statusFilter, userFilter]);
+  }, [canViewCreators, searchFilter, statusFilter, userFilter]);
 
   const handleColumnFiltersChange = (updater: ColumnFiltersState | ((prev: ColumnFiltersState) => ColumnFiltersState)) => {
     const newFilters = typeof updater === 'function' ? updater(columnFilters) : updater;
@@ -180,7 +182,13 @@ export function ApiKeysTable({
 
   return (
     <div className='flex flex-1 flex-col'>
-      <DataTableToolbar table={table} dateRange={dateRange} onDateRangeChange={onDateRangeChange} onResetFilters={onResetFilters} />
+      <DataTableToolbar
+        table={table}
+        dateRange={dateRange}
+        onDateRangeChange={onDateRangeChange}
+        onResetFilters={onResetFilters}
+        canViewCreators={canViewCreators}
+      />
       <div className='shadow-soft relative mt-4 flex-1 overflow-auto rounded-2xl border border-[var(--table-border)]'>
         <Table className='border-separate border-spacing-0 rounded-2xl bg-[var(--table-background)]'>
           <TableHeader className='sticky top-0 z-20 bg-[var(--table-header)] shadow-sm'>

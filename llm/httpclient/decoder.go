@@ -196,4 +196,121 @@ func (s *defaultSSEDecoder) Close() error {
 func init() {
 	RegisterDecoder("text/event-stream", NewDefaultSSEDecoder)
 	RegisterDecoder("text/event-stream; charset=utf-8", NewDefaultSSEDecoder)
+	RegisterDecoder("audio/mpeg", NewBinaryChunkDecoder("audio/mpeg"))
+	RegisterDecoder("audio/mp3", NewBinaryChunkDecoder("audio/mpeg"))
+	RegisterDecoder("audio/wav", NewBinaryChunkDecoder("audio/wav"))
+	RegisterDecoder("audio/x-wav", NewBinaryChunkDecoder("audio/wav"))
+	RegisterDecoder("audio/opus", NewBinaryChunkDecoder("audio/opus"))
+	RegisterDecoder("audio/aac", NewBinaryChunkDecoder("audio/aac"))
+	RegisterDecoder("audio/flac", NewBinaryChunkDecoder("audio/flac"))
+	RegisterDecoder("audio/pcm", NewBinaryChunkDecoder("audio/pcm"))
+	RegisterDecoder("application/octet-stream", NewBinaryChunkDecoder("application/octet-stream"))
+}
+
+// NewBinaryChunkDecoder creates a decoder that yields raw bytes as stream
+// events. It is used for provider streams that do not use SSE framing.
+func NewBinaryChunkDecoder(contentType string) StreamDecoderFactory {
+	return func(ctx context.Context, rc io.ReadCloser) StreamDecoder {
+		return &binaryChunkDecoder{
+			ctx:         ctx,
+			reader:      rc,
+			contentType: contentType,
+			buf:         make([]byte, 32*1024),
+		}
+	}
+}
+
+type binaryChunkDecoder struct {
+	ctx         context.Context
+	reader      io.ReadCloser
+	contentType string
+	buf         []byte
+	current     *StreamEvent
+	err         error
+	pendingErr  error
+	doneSent    bool
+
+	closed    atomic.Bool
+	closeOnce sync.Once
+	closeErr  error
+}
+
+var _ StreamDecoder = (*binaryChunkDecoder)(nil)
+
+func (d *binaryChunkDecoder) Next() bool {
+	if d.err != nil {
+		return false
+	}
+
+	if d.pendingErr != nil {
+		d.err = d.pendingErr
+		d.pendingErr = nil
+
+		return false
+	}
+
+	if d.closed.Load() {
+		return false
+	}
+
+	select {
+	case <-d.ctx.Done():
+		d.err = d.ctx.Err()
+
+		return false
+	default:
+	}
+
+	if d.doneSent {
+		return false
+	}
+
+	n, err := d.reader.Read(d.buf)
+	if n > 0 {
+		d.current = &StreamEvent{
+			Type: d.contentType,
+			Data: append([]byte(nil), d.buf[:n]...),
+		}
+		if err != nil && !errors.Is(err, io.EOF) {
+			d.pendingErr = err
+		}
+
+		return true
+	}
+
+	if errors.Is(err, io.EOF) {
+		d.current = &StreamEvent{Type: BinaryStreamDoneEventType}
+		d.doneSent = true
+
+		return true
+	}
+
+	if err != nil {
+		if ctxErr := d.ctx.Err(); ctxErr != nil {
+			d.err = ctxErr
+		} else {
+			d.err = err
+		}
+	}
+
+	return false
+}
+
+func (d *binaryChunkDecoder) Current() *StreamEvent {
+	return d.current
+}
+
+func (d *binaryChunkDecoder) Err() error {
+	return d.err
+}
+
+func (d *binaryChunkDecoder) Close() error {
+	d.closeOnce.Do(func() {
+		d.closed.Store(true)
+		if d.reader != nil {
+			d.closeErr = d.reader.Close()
+		}
+	})
+
+	return d.closeErr
 }

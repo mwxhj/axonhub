@@ -159,6 +159,30 @@ func TestHttpClientImpl_Do(t *testing.T) {
 	}
 }
 
+func TestHttpClientImpl_Do_PreservesExplicitAccept(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "*/*", r.Header.Get("Accept"))
+
+		w.Header().Set("Content-Type", "audio/mpeg")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte{0x01, 0x02, 0x03})
+	}))
+	defer server.Close()
+
+	client := NewHttpClient()
+	resp, err := client.Do(t.Context(), &Request{
+		Method: http.MethodPost,
+		URL:    server.URL,
+		Headers: http.Header{
+			"Accept": []string{"*/*"},
+		},
+		Body: []byte(`{"model":"tts-1"}`),
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, []byte{0x01, 0x02, 0x03}, resp.Body)
+}
+
 func TestHttpClientImpl_DoStream(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -269,6 +293,39 @@ func TestHttpClientImpl_DoStream(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHttpClientImpl_DoStream_PreservesBinaryAcceptAndParsesContentTypeParams(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "*/*", r.Header.Get("Accept"))
+
+		w.Header().Set("Content-Type", "audio/mpeg; charset=binary")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte{0x01, 0x02, 0x03})
+	}))
+	defer server.Close()
+
+	client := NewHttpClient()
+	stream, err := client.DoStream(t.Context(), &Request{
+		Method: http.MethodPost,
+		URL:    server.URL,
+		Headers: http.Header{
+			"Accept": []string{"*/*"},
+		},
+		Body: []byte(`{"stream_format":"audio"}`),
+	})
+	require.NoError(t, err)
+	defer stream.Close()
+
+	require.True(t, stream.Next())
+	chunk := stream.Current()
+	require.Equal(t, "audio/mpeg", chunk.Type)
+	require.Equal(t, []byte{0x01, 0x02, 0x03}, chunk.Data)
+
+	require.True(t, stream.Next())
+	require.Equal(t, BinaryStreamDoneEventType, stream.Current().Type)
+	require.False(t, stream.Next())
+	require.NoError(t, stream.Err())
 }
 
 func TestNewHttpClient_WithInsecureSkipVerify_PreservesDefaultTransportSettings(t *testing.T) {

@@ -25,6 +25,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 
+	"github.com/looplj/axonhub/internal/authz"
 	"github.com/looplj/axonhub/internal/contexts"
 	"github.com/looplj/axonhub/internal/ent"
 	"github.com/looplj/axonhub/internal/ent/oidcidentity"
@@ -470,18 +471,23 @@ func (s *OIDCService) IsUserRestrictedToOIDC(ctx context.Context, u *ent.User) b
 		return true
 	}
 
-	// 2. Check if any of the user's linked OIDC providers have OIDCLoginOnly enabled
-	identities := u.Edges.OidcIdentities
-	if len(identities) == 0 {
-		// Try to fetch them if not loaded
-		var err error
-		identities, err = s.entFromContext(ctx).OIDCIdentity.Query().
-			Where(oidcidentity.UserID(u.ID)).
-			All(ctx)
+	// 2. Check if any of the user's linked OIDC providers have OIDCLoginOnly enabled.
+	identities, err := u.Edges.OidcIdentitiesOrErr()
+	if ent.IsNotLoaded(err) {
+		// This can run before authentication creates a viewer context. Use an
+		// explicit bypass only for reading the user's own OIDC links.
+		identities, err = authz.RunWithSystemBypass(ctx, "oidc-restriction-check", func(bypassCtx context.Context) ([]*ent.OIDCIdentity, error) {
+			return s.entFromContext(bypassCtx).OIDCIdentity.Query().
+				Where(oidcidentity.UserID(u.ID)).
+				All(bypassCtx)
+		})
 		if err != nil {
 			log.Error(ctx, "failed to query user OIDC identities", zap.Error(err), log.Int("user_id", u.ID))
 			return false
 		}
+	} else if err != nil {
+		log.Error(ctx, "failed to read user OIDC identities", zap.Error(err), log.Int("user_id", u.ID))
+		return false
 	}
 
 	for _, id := range identities {

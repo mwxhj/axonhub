@@ -47,6 +47,8 @@ export const requestExecutionSchema = z.object({
   responseStatusCode: z.number().nullable().optional(),
   status: requestExecutionStatusSchema,
   format: z.string().optional(),
+  requestURL: z.string().nullable().optional(),
+  passThroughApplied: z.boolean().optional(),
   metricsLatencyMs: z.number().nullable().optional(),
   metricsFirstTokenLatencyMs: z.number().nullable().optional(),
   metricsReasoningDurationMs: z.number().nullable().optional(),

@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"mime"
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/looplj/axonhub/llm/streams"
@@ -199,7 +201,9 @@ func (hc *HttpClient) Do(ctx context.Context, request *Request) (*Response, erro
 		return nil, fmt.Errorf("failed to build HTTP request: %w", err)
 	}
 
-	rawReq.Header.Set("Accept", "application/json")
+	if rawReq.Header.Get("Accept") == "" {
+		rawReq.Header.Set("Accept", "application/json")
+	}
 
 	rawResp, err := hc.client.Do(rawReq)
 	if err != nil {
@@ -268,8 +272,12 @@ func (hc *HttpClient) DoStream(ctx context.Context, request *Request) (streams.S
 		return nil, fmt.Errorf("failed to build HTTP request: %w", err)
 	}
 
-	// Add streaming headers
-	rawReq.Header.Set("Accept", "text/event-stream")
+	// Add streaming headers. Keep a caller-provided Accept when a stream uses a
+	// non-SSE framing such as chunked binary audio.
+	accept := rawReq.Header.Get("Accept")
+	if accept == "" || strings.EqualFold(accept, "application/json") {
+		rawReq.Header.Set("Accept", "text/event-stream")
+	}
 	rawReq.Header.Set("Cache-Control", "no-cache")
 	rawReq.Header.Set("Connection", "keep-alive")
 
@@ -320,6 +328,11 @@ func (hc *HttpClient) DoStream(ctx context.Context, request *Request) (streams.S
 
 	// Try to get a registered decoder for the content type
 	decoderFactory, exists := GetDecoder(contentType)
+	if !exists {
+		if mediaType, _, err := mime.ParseMediaType(contentType); err == nil {
+			decoderFactory, exists = GetDecoder(mediaType)
+		}
+	}
 	if !exists {
 		// Fallback to default SSE decoder
 		slog.DebugContext(ctx, "no decoder found for content type, using default SSE", slog.String("content_type", contentType))

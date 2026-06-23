@@ -457,6 +457,8 @@ var schemaGraph = func() *sqlgraph.Schema {
 			requestexecution.FieldCredentialSource:              {Type: field.TypeString, Column: requestexecution.FieldCredentialSource},
 			requestexecution.FieldCredentialQuotaStatusSnapshot: {Type: field.TypeString, Column: requestexecution.FieldCredentialQuotaStatusSnapshot},
 			requestexecution.FieldFormat:                        {Type: field.TypeString, Column: requestexecution.FieldFormat},
+			requestexecution.FieldRequestURL:                    {Type: field.TypeString, Column: requestexecution.FieldRequestURL},
+			requestexecution.FieldPassThroughApplied:            {Type: field.TypeBool, Column: requestexecution.FieldPassThroughApplied},
 			requestexecution.FieldRequestBody:                   {Type: field.TypeJSON, Column: requestexecution.FieldRequestBody},
 			requestexecution.FieldResponseBody:                  {Type: field.TypeJSON, Column: requestexecution.FieldResponseBody},
 			requestexecution.FieldResponseChunks:                {Type: field.TypeJSON, Column: requestexecution.FieldResponseChunks},
@@ -3823,6 +3825,16 @@ func (f *RequestExecutionFilter) WhereCredentialQuotaStatusSnapshot(p entql.Stri
 // WhereFormat applies the entql string predicate on the format field.
 func (f *RequestExecutionFilter) WhereFormat(p entql.StringP) {
 	f.Where(p.Field(requestexecution.FieldFormat))
+}
+
+// WhereRequestURL applies the entql string predicate on the request_url field.
+func (f *RequestExecutionFilter) WhereRequestURL(p entql.StringP) {
+	f.Where(p.Field(requestexecution.FieldRequestURL))
+}
+
+// WherePassThroughApplied applies the entql bool predicate on the pass_through_applied field.
+func (f *RequestExecutionFilter) WherePassThroughApplied(p entql.BoolP) {
+	f.Where(p.Field(requestexecution.FieldPassThroughApplied))
 }
 
 // WhereRequestBody applies the entql json.RawMessage predicate on the request_body field.

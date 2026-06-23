@@ -5166,6 +5166,14 @@ type RequestExecution implements Node {
   """
   credentialQuotaStatusSnapshot: String
   format: String!
+  """
+  Final upstream request URL used for this execution
+  """
+  requestURL: String
+  """
+  Whether body/response pass-through was applied for this execution
+  """
+  passThroughApplied: Boolean!
   requestBody: JSONRawMessage! @goField(forceResolver: true)
   responseBody: JSONRawMessage @goField(forceResolver: true)
   responseChunks: [JSONRawMessage!] @goField(forceResolver: true)
@@ -5469,6 +5477,29 @@ input RequestExecutionWhereInput {
   formatHasSuffix: String
   formatEqualFold: String
   formatContainsFold: String
+  """
+  request_url field predicates
+  """
+  requestURL: String
+  requestURLNEQ: String
+  requestURLIn: [String!]
+  requestURLNotIn: [String!]
+  requestURLGT: String
+  requestURLGTE: String
+  requestURLLT: String
+  requestURLLTE: String
+  requestURLContains: String
+  requestURLHasPrefix: String
+  requestURLHasSuffix: String
+  requestURLIsNil: Boolean
+  requestURLNotNil: Boolean
+  requestURLEqualFold: String
+  requestURLContainsFold: String
+  """
+  pass_through_applied field predicates
+  """
+  passThroughApplied: Boolean
+  passThroughAppliedNEQ: Boolean
   """
   error_message field predicates
   """
