@@ -1,0 +1,5 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/backend/routing-guidelines.md", "reason": "Preserve API key route-tier runtime routing while porting upstream patches."}
+{"file": ".trellis/spec/backend/credential-routing-model.md", "reason": "Prevent provider quota and channel-owned key management from re-entering the product model."}
+{"file": ".trellis/spec/frontend/human-computer-interaction.md", "reason": "Apply local request UI and export masking rules to upstream UI patches."}
+{"file": ".trellis/tasks/06-22-upstream-beta4-safe-patches/research/safe-patch-inventory.md", "reason": "Use the upstream beta4 safe-patch audit as implementation scope control."}
