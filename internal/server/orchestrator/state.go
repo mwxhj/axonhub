@@ -48,20 +48,6 @@ type PersistenceState struct {
 	StickyKeyOK bool
 	// StickyKeyReason explains why sticky extraction did or did not produce a key.
 	StickyKeyReason string
-	// StickyLookups stores ordered sticky-session lookup aliases for routing.
-	StickyLookups []StickyLookup
-	// StickyBindings stores aliases to refresh when the request completes successfully.
-	StickyBindings []StickyLookup
-	// StickyBasePayload stores the routing-time sticky payload before outbound mutates request fields.
-	StickyBasePayload stickyKeyPayload
-	// StickyBasePayloadOK is true when StickyBasePayload contains routing-time identity data.
-	StickyBasePayloadOK bool
-	// StickyResponseID stores the structured upstream response ID captured after response conversion.
-	StickyResponseID string
-	// StickyPreviousResponseID stores the structured upstream previous response ID captured after response conversion.
-	StickyPreviousResponseID string
-	// StickyResponseMessage stores the completed assistant message when available for transcript-prefix binding.
-	StickyResponseMessage *llm.Message
 	// StickyRoutingSource describes which sticky routing semantic path selected the current primary target.
 	StickyRoutingSource string
 	// StickyRoutingDegradeReason explains why sticky routing left its primary rebind policy when known.

@@ -372,9 +372,6 @@ func (p *PersistentOutboundTransformer) TransformRequest(ctx context.Context, ll
 
 	p.state.CurrentCandidate = candidate
 	p.state.StreamCompleted = false
-	p.state.StickyResponseID = ""
-	p.state.StickyPreviousResponseID = ""
-	p.state.StickyResponseMessage = nil
 	p.state.CurrentCredentialID = 0
 	p.state.CurrentCredentialFingerprint = ""
 	p.state.CurrentSecretFingerprint = ""
