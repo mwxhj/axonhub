@@ -27,15 +27,6 @@ func (e fixedStickyExtractor) Extract(ctx context.Context, state *PersistenceSta
 	return e.result
 }
 
-func stickyTestMessage(role, content string) llm.Message {
-	return llm.Message{
-		Role: role,
-		Content: llm.MessageContent{
-			Content: &content,
-		},
-	}
-}
-
 func stickyTestCandidate(id int, priority int, weight int) *ChannelModelsCandidate {
 	return &ChannelModelsCandidate{
 		Channel: &biz.Channel{
@@ -167,96 +158,30 @@ func stickyTestSeedForCredential(t *testing.T, views []biz.ChannelCredentialView
 	return ""
 }
 
-func TestDefaultStickyKeyExtractor_RejectsOnlyLatestUserMessage(t *testing.T) {
+func TestDefaultStickyKeyExtractor_UsesAPIKeyIdentityOnly(t *testing.T) {
 	extractor := NewDefaultStickyKeyExtractor()
+	state := &PersistenceState{APIKey: &ent.APIKey{ID: 11, ProjectID: 22}}
 
-	result := extractor.Extract(context.Background(), nil, &llm.Request{
-		Model: "gpt-4",
-		Messages: []llm.Message{
-			stickyTestMessage("user", "hello"),
-		},
-		APIFormat: llm.APIFormatOpenAIChatCompletion,
-	})
-
-	require.False(t, result.OK)
-	require.Empty(t, result.Key)
-	require.Equal(t, "only latest user message", result.Reason)
-}
-
-func TestDefaultStickyKeyExtractor_UsesStablePrefixNotLatestUserOnly(t *testing.T) {
-	extractor := NewDefaultStickyKeyExtractor()
-
-	first := extractor.Extract(context.Background(), nil, &llm.Request{
-		Model: "gpt-4",
-		Messages: []llm.Message{
-			stickyTestMessage("system", "You are a precise coding assistant."),
-			stickyTestMessage("user", "first turn"),
-		},
-		APIFormat: llm.APIFormatOpenAIChatCompletion,
-	})
-	second := extractor.Extract(context.Background(), nil, &llm.Request{
-		Model: "gpt-4",
-		Messages: []llm.Message{
-			stickyTestMessage("system", "You are a precise coding assistant."),
-			stickyTestMessage("user", "different latest turn"),
-		},
-		APIFormat: llm.APIFormatOpenAIChatCompletion,
-	})
-	changedPrefix := extractor.Extract(context.Background(), nil, &llm.Request{
-		Model: "gpt-4",
-		Messages: []llm.Message{
-			stickyTestMessage("system", "You are a terse coding assistant."),
-			stickyTestMessage("user", "first turn"),
-		},
-		APIFormat: llm.APIFormatOpenAIChatCompletion,
-	})
+	first := extractor.Extract(context.Background(), state, &llm.Request{Model: "gpt-4", APIFormat: llm.APIFormatOpenAIChatCompletion})
+	second := extractor.Extract(context.Background(), state, &llm.Request{Model: "gpt-4", APIFormat: llm.APIFormatOpenAIResponse, PreviousResponseID: ptrString("resp_1")})
+	other := extractor.Extract(context.Background(), &PersistenceState{APIKey: &ent.APIKey{ID: 12, ProjectID: 22}}, &llm.Request{Model: "gpt-4", APIFormat: llm.APIFormatOpenAIChatCompletion})
 
 	require.True(t, first.OK)
 	require.True(t, second.OK)
-	require.True(t, changedPrefix.OK)
 	require.Equal(t, first.Key, second.Key)
-	require.NotEqual(t, first.Key, changedPrefix.Key)
+	require.NotEqual(t, first.Key, other.Key)
+	require.Equal(t, "api key sticky", first.Reason)
+	require.Contains(t, first.Key, "api-key:v2:")
 }
 
-func TestDefaultStickyKeyExtractor_AcceptsExplicitCacheSignals(t *testing.T) {
+func TestDefaultStickyKeyExtractor_RejectsMissingAPIKeyIdentity(t *testing.T) {
 	extractor := NewDefaultStickyKeyExtractor()
-	promptCacheKey := "cache-prefix-1"
 
-	result := extractor.Extract(context.Background(), nil, &llm.Request{
-		Model:          "gpt-4",
-		PromptCacheKey: &promptCacheKey,
-		Messages: []llm.Message{
-			stickyTestMessage("user", "hello"),
-		},
-		APIFormat: llm.APIFormatOpenAIResponse,
-	})
+	result := extractor.Extract(context.Background(), &PersistenceState{}, &llm.Request{Model: "gpt-4", APIFormat: llm.APIFormatOpenAIChatCompletion})
 
-	require.True(t, result.OK)
-	require.NotEmpty(t, result.Key)
-	require.Equal(t, "prompt cache key", result.Reason)
-}
-
-func TestDefaultStickyKeyExtractor_UsesCodexSessionBeforeTranscript(t *testing.T) {
-	extractor := NewDefaultStickyKeyExtractor()
-	req := &httpclient.Request{Headers: make(map[string][]string)}
-	req.Headers.Set("Session_id", "codex-session-1")
-
-	result := extractor.Extract(context.Background(), nil, &llm.Request{
-		Model:      "gpt-4",
-		RawRequest: req,
-		Messages: []llm.Message{
-			stickyTestMessage("user", "first turn with enough content to be independently cacheable and recognizable"),
-			stickyTestMessage("assistant", "tool call"),
-			stickyTestMessage("tool", "tool result"),
-			stickyTestMessage("user", "next turn"),
-		},
-		APIFormat: llm.APIFormatOpenAIResponse,
-	})
-
-	require.True(t, result.OK)
-	require.NotEmpty(t, result.Lookups)
-	require.Equal(t, "session", result.Lookups[0].Kind)
-	require.Equal(t, "codex session", result.Lookups[0].Reason)
+	require.False(t, result.OK)
+	require.Empty(t, result.Key)
+	require.Equal(t, "missing api key identity", result.Reason)
 }
 
 func TestStickySessionBindingStore_TTLAndLatestWriteWins(t *testing.T) {
@@ -293,23 +218,11 @@ func TestStickySessionBindingStore_TargetPreservesCredentialFingerprint(t *testi
 }
 
 func TestStickySessionRouter_UnboundPrimaryPreservesRouteTierOrder(t *testing.T) {
-	router := NewStickySessionRouter(
-		NewStickySessionBindingStore(5*time.Minute),
-		fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}},
-	)
-	candidates := []*ChannelModelsCandidate{
-		stickyTestCandidate(1, 0, 100),
-		stickyTestCandidate(2, 0, 100),
-		stickyTestCandidate(3, 0, 50),
-		stickyTestCandidate(4, 1, 100),
-	}
+	router := NewStickySessionRouter(NewStickySessionBindingStore(5*time.Minute), fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}})
+	candidates := []*ChannelModelsCandidate{stickyTestCandidate(1, 0, 100), stickyTestCandidate(2, 0, 100), stickyTestCandidate(3, 0, 50), stickyTestCandidate(4, 1, 100)}
 
-	state := &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 3}}}
-	ordered := router.Order(context.Background(), StickySessionOrderRequest{
-		Request:    &llm.Request{Model: "gpt-4"},
-		State:      state,
-		Candidates: candidates,
-	})
+	state := &PersistenceState{APIKey: &ent.APIKey{ID: 1}, RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 3}}}
+	ordered := router.Order(context.Background(), StickySessionOrderRequest{Request: &llm.Request{Model: "gpt-4"}, State: state, Candidates: candidates})
 
 	require.NotEmpty(t, ordered)
 	require.Equal(t, []int{1, 2, 3, 4}, stickyCandidateIDs(ordered))
@@ -317,186 +230,68 @@ func TestStickySessionRouter_UnboundPrimaryPreservesRouteTierOrder(t *testing.T)
 	require.True(t, state.StickyKeyOK)
 }
 
-func TestStickySessionRouter_UnboundPrimaryDoesNotUseLoadBalancerWhenQuotaRatiosDiffer(t *testing.T) {
-	resetAt := time.Now().Add(time.Hour)
-	router := NewStickySessionRouter(
-		NewStickySessionBindingStore(5*time.Minute),
-		fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}},
-	)
-	state := &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: false}}}
-	candidates := []*ChannelModelsCandidate{
-		stickyTestQuotaCandidate(1, 0, 10, stickyTestQuotaCredentialView(10, 100, "cred:low", "low-key", "10", "100", resetAt)),
-		stickyTestQuotaCandidate(2, 0, 100, stickyTestQuotaCredentialView(20, 200, "cred:high", "high-key", "80", "100", resetAt)),
-	}
-
-	ordered := router.Order(context.Background(), StickySessionOrderRequest{
-		Request:    &llm.Request{Model: "gpt-4"},
-		State:      state,
-		Candidates: candidates,
-	})
-
-	require.NotEmpty(t, ordered)
-	require.Equal(t, 1, ordered[0].Channel.ID)
-	require.Equal(t, stickyRoutingSourceNormalFirstBind, state.StickyRoutingSource)
-	require.Equal(t, stickyRoutingDegradeNone, state.StickyRoutingDegradeReason)
-	require.Equal(t, 10, state.PreferredCredentialID)
-	require.Equal(t, "cred:low", state.PreferredCredentialFingerprint)
-}
-
-func TestStickySessionRouter_BoundPrimaryUsesBindingWhenQuotaRatiosDiffer(t *testing.T) {
-	resetAt := time.Now().Add(time.Hour)
+func TestStickySessionRouter_BoundPrimaryUsesBinding(t *testing.T) {
 	store := NewStickySessionBindingStore(5 * time.Minute)
 	store.BindTarget("key", StickySessionTarget{ChannelID: 2, CredentialID: 20, CredentialFingerprint: "cred:high"})
 	router := NewStickySessionRouter(store, fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}})
-	state := &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: false}}}
-	candidates := []*ChannelModelsCandidate{
-		stickyTestQuotaCandidate(1, 0, 10, stickyTestQuotaCredentialView(10, 100, "cred:low", "low-key", "10", "100", resetAt)),
-		stickyTestQuotaCandidate(2, 0, 100, stickyTestQuotaCredentialView(20, 200, "cred:high", "high-key", "80", "100", resetAt)),
-	}
+	state := &PersistenceState{APIKey: &ent.APIKey{ID: 1}, RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: false}}}
+	candidates := []*ChannelModelsCandidate{stickyTestQuotaCandidate(1, 0, 10), stickyTestQuotaCandidate(2, 0, 100)}
 
-	ordered := router.Order(context.Background(), StickySessionOrderRequest{
-		Request:    &llm.Request{Model: "gpt-4"},
-		State:      state,
-		Candidates: candidates,
-	})
+	ordered := router.Order(context.Background(), StickySessionOrderRequest{Request: &llm.Request{Model: "gpt-4"}, State: state, Candidates: candidates})
 
 	require.NotEmpty(t, ordered)
 	require.Equal(t, 2, ordered[0].Channel.ID)
 	require.Equal(t, stickyRoutingSourceBinding, state.StickyRoutingSource)
-	require.Equal(t, stickyRoutingDegradeNone, state.StickyRoutingDegradeReason)
 	require.Equal(t, 20, state.PreferredCredentialID)
 	require.Equal(t, "cred:high", state.PreferredCredentialFingerprint)
 }
 
-func TestStickySessionRouter_ExpiredBindingPreservesRouteTierOrder(t *testing.T) {
+func TestStickySessionRouter_ExpiredBindingDeletesAndFallsBackToFirstBind(t *testing.T) {
 	now := time.Date(2026, 6, 3, 23, 22, 35, 0, time.UTC)
-	resetAt := time.Now().Add(time.Hour)
 	store := NewStickySessionBindingStore(5 * time.Minute)
 	store.now = func() time.Time { return now }
 	store.BindTarget("key", StickySessionTarget{ChannelID: 1, CredentialID: 10, CredentialFingerprint: "cred:lite"})
 	now = now.Add(6 * time.Minute)
 
 	router := NewStickySessionRouter(store, fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}})
-	state := &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: false}}}
-	candidates := []*ChannelModelsCandidate{
-		stickyTestQuotaCandidate(1, 0, 100, stickyTestUSDQuotaCredentialView(10, 100, "cred:lite", "lite-key", "59.137625", "100", resetAt)),
-		stickyTestQuotaCandidate(2, 0, 90, stickyTestUSDQuotaCredentialView(20, 200, "cred:air", "air-key", "37.154457", "300", resetAt)),
-		stickyTestQuotaCandidate(3, 0, 80, stickyTestUSDQuotaCredentialView(30, 300, "cred:plus", "plus-key", "10.255685", "500", resetAt)),
-		stickyTestQuotaCandidate(4, 0, 70, stickyTestUSDQuotaCredentialView(40, 400, "cred:std", "std-key", "45.703334", "500", resetAt)),
-	}
+	state := &PersistenceState{APIKey: &ent.APIKey{ID: 1}, RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: false}}}
+	candidates := []*ChannelModelsCandidate{stickyTestQuotaCandidate(1, 0, 100), stickyTestQuotaCandidate(2, 0, 90)}
 
-	ordered := router.Order(context.Background(), StickySessionOrderRequest{
-		Request:    &llm.Request{Model: "gpt-4"},
-		State:      state,
-		Candidates: candidates,
-	})
+	ordered := router.Order(context.Background(), StickySessionOrderRequest{Request: &llm.Request{Model: "gpt-4"}, State: state, Candidates: candidates})
 
 	require.NotEmpty(t, ordered)
 	require.Equal(t, 1, ordered[0].Channel.ID)
 	require.Equal(t, stickyRoutingSourceNormalFirstBind, state.StickyRoutingSource)
-	require.Equal(t, stickyRoutingDegradeNone, state.StickyRoutingDegradeReason)
-	require.Equal(t, 10, state.PreferredCredentialID)
-	require.Equal(t, "cred:lite", state.PreferredCredentialFingerprint)
 	_, ok := store.GetTarget("key")
 	require.False(t, ok)
 }
 
 func TestStickySessionRouter_UnboundPrimaryKeepsSeededCredentialInsideNormalPrimary(t *testing.T) {
-	router := NewStickySessionRouter(
-		NewStickySessionBindingStore(5*time.Minute),
-		fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}},
-	)
-	views := []biz.ChannelCredentialView{
-		stickyTestCredentialView(10, "cred:first", "first-key"),
-		stickyTestCredentialView(11, "cred:second", "second-key"),
-	}
+	router := NewStickySessionRouter(NewStickySessionBindingStore(5*time.Minute), fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}})
+	views := []biz.ChannelCredentialView{stickyTestCredentialView(10, "cred:first", "first-key"), stickyTestCredentialView(11, "cred:second", "second-key")}
 	stickyKey := stickyTestSeedForCredential(t, views, "cred:second")
 	router.extractor = fixedStickyExtractor{result: StickyKeyExtraction{Key: stickyKey, OK: true, Reason: "test"}}
-	state := &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: false}}}
+	state := &PersistenceState{APIKey: &ent.APIKey{ID: 1}, RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: false}}}
 	candidate := stickyTestQuotaCandidate(1, 0, 100, views...)
 	candidates := []*ChannelModelsCandidate{candidate, stickyTestCredentialCandidate(2, 0, 10, "other-key")}
 
-	ordered := router.Order(context.Background(), StickySessionOrderRequest{
-		Request:    &llm.Request{Model: "gpt-4"},
-		State:      state,
-		Candidates: candidates,
-	})
+	ordered := router.Order(context.Background(), StickySessionOrderRequest{Request: &llm.Request{Model: "gpt-4"}, State: state, Candidates: candidates})
 
 	require.NotEmpty(t, ordered)
 	require.Equal(t, 1, ordered[0].Channel.ID)
 	require.Equal(t, stickyRoutingSourceNormalFirstBind, state.StickyRoutingSource)
-	require.Equal(t, stickyRoutingDegradeNone, state.StickyRoutingDegradeReason)
 	require.Equal(t, 11, state.PreferredCredentialID)
 	require.Equal(t, "cred:second", state.PreferredCredentialFingerprint)
 }
 
-func TestStickySessionRouter_DoesNotCrossRouteTierForBoundTarget(t *testing.T) {
-	now := time.Date(2026, 5, 30, 12, 0, 0, 0, time.UTC)
-	store := NewStickySessionBindingStore(5 * time.Minute)
-	store.now = func() time.Time { return now }
-	store.Bind("key", 3)
-	router := NewStickySessionRouter(store, fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}})
-	candidates := []*ChannelModelsCandidate{
-		stickyTestCandidate(1, 0, 100),
-		stickyTestCandidate(2, 0, 100),
-		stickyTestCandidate(3, 1, 50),
-	}
-	state := &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 2}}}
-
-	ordered := router.Order(context.Background(), StickySessionOrderRequest{
-		Request:    &llm.Request{Model: "gpt-4"},
-		State:      state,
-		Candidates: candidates,
-	})
-	require.Contains(t, []int{1, 2}, ordered[0].Channel.ID)
-	require.Equal(t, stickyRoutingSourceNormalFirstBind, state.StickyRoutingSource)
-
-	now = now.Add(6 * time.Minute)
-	ordered = router.Order(context.Background(), StickySessionOrderRequest{
-		Request:    &llm.Request{Model: "gpt-4"},
-		State:      state,
-		Candidates: candidates,
-	})
-	require.Contains(t, []int{1, 2}, ordered[0].Channel.ID)
-	require.Equal(t, stickyRoutingSourceNormalFirstBind, state.StickyRoutingSource)
-}
-
-func TestStickySessionRouter_KeepsCredentialOnSamePriorityChannel(t *testing.T) {
+func TestStickySessionRouter_FirstBindIgnoresLowerPriorityBindingTarget(t *testing.T) {
 	store := NewStickySessionBindingStore(5 * time.Minute)
 	fp := biz.ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://api.openai.com", "shared-key")
 	store.BindTarget("key", StickySessionTarget{ChannelID: 1, CredentialFingerprint: fp})
 
 	router := NewStickySessionRouter(store, fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}})
-	state := &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 2}}}
-	ordered := router.Order(context.Background(), StickySessionOrderRequest{
-		Request: &llm.Request{Model: "gpt-4"},
-		State:   state,
-		Candidates: []*ChannelModelsCandidate{
-			stickyTestCredentialCandidate(2, 0, 100, "shared-key"),
-			stickyTestCredentialCandidate(3, 1, 100, "shared-key"),
-		},
-	})
-
-	require.NotEmpty(t, ordered)
-	require.Equal(t, 2, ordered[0].Channel.ID)
-	require.Equal(t, fp, state.PreferredCredentialFingerprint)
-}
-
-func TestStickySessionRouter_DoesNotUseLowerPriorityCredentialBinding(t *testing.T) {
-	store := NewStickySessionBindingStore(5 * time.Minute)
-	fp := biz.ChannelCredentialFingerprintForAPIKey(channel.TypeOpenai.String(), "https://api.openai.com", "shared-key")
-	store.BindTarget("key", StickySessionTarget{ChannelID: 1, CredentialFingerprint: fp})
-
-	router := NewStickySessionRouter(store, fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}})
-	state := &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 2}}}
-	ordered := router.Order(context.Background(), StickySessionOrderRequest{
-		Request: &llm.Request{Model: "gpt-4"},
-		State:   state,
-		Candidates: []*ChannelModelsCandidate{
-			stickyTestCredentialCandidate(2, 0, 100, "other-key"),
-			stickyTestCredentialCandidate(3, 1, 100, "shared-key"),
-		},
-	})
+	state := &PersistenceState{APIKey: &ent.APIKey{ID: 1}, RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 2}}}
+	ordered := router.Order(context.Background(), StickySessionOrderRequest{Request: &llm.Request{Model: "gpt-4"}, State: state, Candidates: []*ChannelModelsCandidate{stickyTestCredentialCandidate(2, 0, 100, "other-key"), stickyTestCredentialCandidate(3, 1, 100, "shared-key")}})
 
 	require.NotEmpty(t, ordered)
 	require.Equal(t, 2, ordered[0].Channel.ID)
@@ -505,128 +300,19 @@ func TestStickySessionRouter_DoesNotUseLowerPriorityCredentialBinding(t *testing
 	require.NotEqual(t, fp, state.PreferredCredentialFingerprint)
 }
 
-func TestStickySessionRouter_UsesResponsesPreviousResponseIDBeforePrefix(t *testing.T) {
-	store := NewStickySessionBindingStore(5 * time.Minute)
-	previousResponseID := "resp_1"
-	extractor := NewDefaultStickyKeyExtractor()
-	req := &llm.Request{
-		Model:              "gpt-4",
-		PreviousResponseID: &previousResponseID,
-		Messages: []llm.Message{
-			stickyTestMessage("user", "first turn with enough stable content to create a transcript prefix binding"),
-			stickyTestMessage("assistant", "first answer"),
-			stickyTestMessage("user", "second turn"),
-		},
-		APIFormat: llm.APIFormatOpenAIResponse,
-	}
-	extraction := extractor.Extract(context.Background(), nil, req)
-	require.True(t, extraction.OK)
-	require.NotEmpty(t, extraction.Lookups)
-	require.Equal(t, "responses", extraction.Lookups[0].Kind)
-	store.Bind(extraction.Lookups[0].Key, 2)
-
-	router := NewStickySessionRouter(store, extractor)
-	ordered := router.Order(context.Background(), StickySessionOrderRequest{
-		Request: req,
-		State:   &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 1}}},
-		Candidates: []*ChannelModelsCandidate{
-			stickyTestCandidate(1, 0, 100),
-			stickyTestCandidate(2, 0, 100),
-		},
-	})
-
-	require.NotEmpty(t, ordered)
-	require.Equal(t, 2, ordered[0].Channel.ID)
-}
-
-func TestStickySessionRouter_TranscriptPrefixMatchesGrowingChat(t *testing.T) {
-	store := NewStickySessionBindingStore(5 * time.Minute)
-	extractor := NewDefaultStickyKeyExtractor()
-	round1Request := &llm.Request{
-		Model: "gpt-4",
-		Messages: []llm.Message{
-			stickyTestMessage("user", "please analyze this large project context and keep the answer grounded in the exact files"),
-		},
-		APIFormat: llm.APIFormatOpenAIChatCompletion,
-	}
-	round1State := &PersistenceState{
-		LlmRequest:      round1Request,
-		StickyKeyOK:     true,
-		StickyKeyReason: "pending transcript prefix",
-		StickyBindings:  nil,
-		StickyResponseMessage: &llm.Message{
-			Role:    "assistant",
-			Content: llm.MessageContent{Content: ptrString("first answer")},
-		},
-	}
-	bindings := stickyBindingAliases(round1State)
-	require.NotEmpty(t, bindings)
-	store.Bind(bindings[0].Key, 1)
-
-	round2Request := &llm.Request{
-		Model: "gpt-4",
-		Messages: []llm.Message{
-			round1Request.Messages[0],
-			*round1State.StickyResponseMessage,
-			stickyTestMessage("user", "now continue with the next part"),
-		},
-		APIFormat: llm.APIFormatOpenAIChatCompletion,
-	}
-	router := NewStickySessionRouter(store, extractor)
-	ordered := router.Order(context.Background(), StickySessionOrderRequest{
-		Request: round2Request,
-		State:   &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 1}}},
-		Candidates: []*ChannelModelsCandidate{
-			stickyTestCandidate(1, 0, 100),
-			stickyTestCandidate(2, 0, 100),
-		},
-	})
-
-	require.NotEmpty(t, ordered)
-	require.Equal(t, 1, ordered[0].Channel.ID)
-}
-
-func TestStickySessionRouter_StaleBindingIgnoredAndDeleted(t *testing.T) {
+func TestStickySessionRouter_SkipsBoundPrimaryWhenChannelMissing(t *testing.T) {
 	store := NewStickySessionBindingStore(5 * time.Minute)
 	store.Bind("key", 99)
 	router := NewStickySessionRouter(store, fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}})
+	state := &PersistenceState{APIKey: &ent.APIKey{ID: 1}, RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: false}}}
 
-	ordered := router.Order(context.Background(), StickySessionOrderRequest{
-		Request: &llm.Request{Model: "gpt-4"},
-		State:   &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: false}}},
-		Candidates: []*ChannelModelsCandidate{
-			stickyTestCandidate(1, 0, 100),
-			stickyTestCandidate(2, 0, 100),
-		},
-	})
+	ordered := router.Order(context.Background(), StickySessionOrderRequest{Request: &llm.Request{Model: "gpt-4"}, State: state, Candidates: []*ChannelModelsCandidate{stickyTestCandidate(1, 0, 100), stickyTestCandidate(2, 0, 100)}})
 
 	require.NotEmpty(t, ordered)
 	require.Contains(t, []int{1, 2}, ordered[0].Channel.ID)
+	require.Equal(t, stickyRoutingSourceNormalFirstBind, state.StickyRoutingSource)
 	_, ok := store.Get("key")
 	require.False(t, ok)
-}
-
-func TestStickySessionRouter_SkipsBoundPrimaryWhenIneligible(t *testing.T) {
-	store := NewStickySessionBindingStore(5 * time.Minute)
-	store.BindTarget("key", StickySessionTarget{ChannelID: 1, CredentialID: 99, CredentialFingerprint: "missing"})
-	router := NewStickySessionRouter(store, fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}})
-	state := &PersistenceState{RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 1}}}
-
-	ordered := router.Order(context.Background(), StickySessionOrderRequest{
-		Request: &llm.Request{Model: "gpt-4"},
-		State:   state,
-		Candidates: []*ChannelModelsCandidate{
-			stickyTestCredentialCandidate(1, 0, 100, "other-key"),
-			stickyTestCredentialCandidate(2, 0, 100, "next-key"),
-		},
-	})
-
-	require.NotEmpty(t, ordered)
-	require.Equal(t, 1, ordered[0].Channel.ID)
-	require.Equal(t, stickyRoutingSourceNormalFirstBind, state.StickyRoutingSource)
-	channelID, ok := store.Get("key")
-	require.True(t, ok)
-	require.Equal(t, 1, channelID)
 }
 
 func TestStickySessionRouter_DoesNotConsultCircuitBreakerForBoundPrimary(t *testing.T) {
@@ -639,18 +325,7 @@ func TestStickySessionRouter_DoesNotConsultCircuitBreakerForBoundPrimary(t *test
 	require.Equal(t, biz.StateOpen, cb.GetModelCircuitBreakerStats(context.Background(), 1, "gpt-4").State)
 
 	router := NewStickySessionRouter(store, fixedStickyExtractor{result: StickyKeyExtraction{Key: "key", OK: true, Reason: "test"}})
-
-	ordered := router.Order(context.Background(), StickySessionOrderRequest{
-		Request: &llm.Request{Model: "gpt-4"},
-		State: &PersistenceState{
-			OriginalModel:       "gpt-4",
-			RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 1}},
-		},
-		Candidates: []*ChannelModelsCandidate{
-			stickyTestCandidate(1, 0, 100),
-			stickyTestCandidate(2, 0, 100),
-		},
-	})
+	ordered := router.Order(context.Background(), StickySessionOrderRequest{Request: &llm.Request{Model: "gpt-4"}, State: &PersistenceState{APIKey: &ent.APIKey{ID: 1}, OriginalModel: "gpt-4", RetryPolicyProvider: &mockRetryPolicyProvider{policy: &biz.RetryPolicy{Enabled: true, MaxChannelRetries: 1}}}, Candidates: []*ChannelModelsCandidate{stickyTestCandidate(1, 0, 100), stickyTestCandidate(2, 0, 100)}})
 
 	require.NotEmpty(t, ordered)
 	require.Equal(t, 1, ordered[0].Channel.ID)
@@ -659,62 +334,12 @@ func TestStickySessionRouter_DoesNotConsultCircuitBreakerForBoundPrimary(t *test
 	require.Equal(t, 1, channelID)
 }
 
-func TestModelCircuitBreakerMiddleware_SkipsOpenRouteTierTarget(t *testing.T) {
-	cb := biz.NewModelCircuitBreaker()
-	for range 5 {
-		cb.RecordError(context.Background(), 1, "gpt-4")
-	}
-	require.Equal(t, biz.StateOpen, cb.GetModelCircuitBreakerStats(context.Background(), 1, "gpt-4").State)
-
-	outbound := &PersistentOutboundTransformer{
-		state: &PersistenceState{
-			OriginalModel: "gpt-4",
-			CurrentCandidate: &ChannelModelsCandidate{
-				Channel: &biz.Channel{Channel: &ent.Channel{ID: 1, Name: "channel"}},
-			},
-		},
-	}
-	middleware := withModelCircuitBreaker(outbound, cb)
-
-	got, err := middleware.OnOutboundRawRequest(context.Background(), &httpclient.Request{})
-	require.ErrorIs(t, err, errSkipCandidateByCircuitBreaker)
-	require.Nil(t, got)
-}
-
-func TestModelCircuitBreakerMiddleware_RecordsTargetError(t *testing.T) {
-	cb := biz.NewModelCircuitBreaker()
-
-	outbound := &PersistentOutboundTransformer{
-		state: &PersistenceState{
-			OriginalModel: "gpt-4",
-			CurrentCandidate: &ChannelModelsCandidate{
-				Channel: &biz.Channel{Channel: &ent.Channel{ID: 1, Name: "channel"}},
-			},
-		},
-	}
-	middleware := withModelCircuitBreaker(outbound, cb)
-
-	middleware.OnOutboundRawError(context.Background(), errors.New("upstream failed"))
-	require.Equal(t, 1, cb.GetModelCircuitBreakerStats(context.Background(), 1, "gpt-4").ConsecutiveFailures)
-}
-
 func TestStickySessionBindingMiddleware_BindsSuccessfulFallbackChannel(t *testing.T) {
 	store := NewStickySessionBindingStore(5 * time.Minute)
 	store.Bind("key", 1)
 
-	state := &PersistenceState{
-		StickyKey:             "key",
-		StickyKeyOK:           true,
-		StickyKeyReason:       "test",
-		CurrentCandidate:      stickyTestCandidate(3, 1, 50),
-		CurrentModelIndex:     0,
-		CurrentCandidateIndex: 0,
-	}
-	middleware := &stickySessionBindingMiddleware{
-		outbound: &PersistentOutboundTransformer{state: state},
-		store:    store,
-		enabled:  true,
-	}
+	state := &PersistenceState{StickyKey: "key", StickyKeyOK: true, StickyKeyReason: "test", CurrentCandidate: stickyTestCandidate(3, 1, 50), CurrentModelIndex: 0, CurrentCandidateIndex: 0}
+	middleware := &stickySessionBindingMiddleware{outbound: &PersistentOutboundTransformer{state: state}, store: store, enabled: true}
 
 	middleware.bindCurrentChannel(context.Background())
 
@@ -726,20 +351,8 @@ func TestStickySessionBindingMiddleware_BindsSuccessfulFallbackChannel(t *testin
 func TestStickySessionBindingMiddleware_BindsCredentialTarget(t *testing.T) {
 	store := NewStickySessionBindingStore(5 * time.Minute)
 
-	state := &PersistenceState{
-		StickyKey:                    "key",
-		StickyKeyOK:                  true,
-		StickyKeyReason:              "test",
-		CurrentCandidate:             stickyTestCandidate(3, 1, 50),
-		CurrentModelIndex:            0,
-		CurrentCandidateIndex:        0,
-		CurrentCredentialFingerprint: "cred:v1:selected",
-	}
-	middleware := &stickySessionBindingMiddleware{
-		outbound: &PersistentOutboundTransformer{state: state},
-		store:    store,
-		enabled:  true,
-	}
+	state := &PersistenceState{StickyKey: "key", StickyKeyOK: true, StickyKeyReason: "test", CurrentCandidate: stickyTestCandidate(3, 1, 50), CurrentModelIndex: 0, CurrentCandidateIndex: 0, CurrentCredentialFingerprint: "cred:v1:selected"}
+	middleware := &stickySessionBindingMiddleware{outbound: &PersistentOutboundTransformer{state: state}, store: store, enabled: true}
 
 	middleware.bindCurrentChannel(context.Background())
 
@@ -747,47 +360,6 @@ func TestStickySessionBindingMiddleware_BindsCredentialTarget(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, 3, target.ChannelID)
 	require.Equal(t, "cred:v1:selected", target.CredentialFingerprint)
-}
-
-func TestStickySessionBindingMiddleware_BindsResponsesIDAndMigratesActiveAliases(t *testing.T) {
-	store := NewStickySessionBindingStore(5 * time.Minute)
-	previousResponseID := "resp_1"
-	req := &llm.Request{
-		Model:              "gpt-4",
-		PreviousResponseID: &previousResponseID,
-		APIFormat:          llm.APIFormatOpenAIResponse,
-	}
-	extraction := NewDefaultStickyKeyExtractor().Extract(context.Background(), nil, req)
-	require.True(t, extraction.OK)
-	require.NotEmpty(t, extraction.Bindings)
-	store.Bind(extraction.Bindings[0].Key, 1)
-
-	state := &PersistenceState{
-		LlmRequest:               req,
-		StickyKeyOK:              true,
-		StickyKeyReason:          extraction.Reason,
-		StickyBindings:           extraction.Bindings,
-		StickyResponseID:         "resp_2",
-		StickyPreviousResponseID: previousResponseID,
-		CurrentCandidate:         stickyTestCandidate(2, 0, 100),
-		CurrentModelIndex:        0,
-	}
-	middleware := &stickySessionBindingMiddleware{
-		outbound: &PersistentOutboundTransformer{state: state},
-		store:    store,
-		enabled:  true,
-	}
-
-	middleware.bindCurrentChannel(context.Background())
-
-	channelID, ok := store.Get(extraction.Bindings[0].Key)
-	require.True(t, ok)
-	require.Equal(t, 2, channelID)
-
-	responseLookup := stickyValueLookup(stickyKindResponse, "resp_2", stickyStrengthResponse, "response id", stickyBasePayload(state, req))
-	channelID, ok = store.Get(responseLookup.Key)
-	require.True(t, ok)
-	require.Equal(t, 2, channelID)
 }
 
 func TestStickySessionBindingMiddleware_StreamCloseBindsOnlyForOriginalStreamingRequest(t *testing.T) {
@@ -801,26 +373,10 @@ func TestStickySessionBindingMiddleware_StreamCloseBindsOnlyForOriginalStreaming
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			store := NewStickySessionBindingStore(5 * time.Minute)
-			state := &PersistenceState{
-				StickyKey:             "key",
-				StickyKeyOK:           true,
-				StickyKeyReason:       "test",
-				CurrentCandidate:      stickyTestCandidate(3, 1, 50),
-				CurrentModelIndex:     0,
-				CurrentCandidateIndex: 0,
-				StreamCompleted:       true,
-				OriginalRequestStream: &tt.originalStream,
-			}
-			middleware := &stickySessionBindingMiddleware{
-				outbound: &PersistentOutboundTransformer{state: state},
-				store:    store,
-				enabled:  true,
-			}
+			state := &PersistenceState{StickyKey: "key", StickyKeyOK: true, StickyKeyReason: "test", CurrentCandidate: stickyTestCandidate(3, 1, 50), CurrentModelIndex: 0, CurrentCandidateIndex: 0, StreamCompleted: true, OriginalRequestStream: &tt.originalStream}
+			middleware := &stickySessionBindingMiddleware{outbound: &PersistentOutboundTransformer{state: state}, store: store, enabled: true}
 
-			stream, err := middleware.OnInboundRawStream(
-				context.Background(),
-				streams.SliceStream([]*httpclient.StreamEvent{}),
-			)
+			stream, err := middleware.OnInboundRawStream(context.Background(), streams.SliceStream([]*httpclient.StreamEvent{}))
 			require.NoError(t, err)
 			require.NoError(t, stream.Close())
 
@@ -838,31 +394,40 @@ func TestStickySessionBindingMiddleware_StreamCloseBindsOnlyForOriginalStreaming
 func TestStickySessionBindingMiddleware_StreamCloseDoesNotBindIncompleteStream(t *testing.T) {
 	store := NewStickySessionBindingStore(5 * time.Minute)
 	originalStream := true
-	state := &PersistenceState{
-		StickyKey:             "key",
-		StickyKeyOK:           true,
-		StickyKeyReason:       "test",
-		CurrentCandidate:      stickyTestCandidate(3, 1, 50),
-		CurrentModelIndex:     0,
-		CurrentCandidateIndex: 0,
-		StreamCompleted:       false,
-		OriginalRequestStream: &originalStream,
-	}
-	middleware := &stickySessionBindingMiddleware{
-		outbound: &PersistentOutboundTransformer{state: state},
-		store:    store,
-		enabled:  true,
-	}
+	state := &PersistenceState{StickyKey: "key", StickyKeyOK: true, StickyKeyReason: "test", CurrentCandidate: stickyTestCandidate(3, 1, 50), CurrentModelIndex: 0, CurrentCandidateIndex: 0, StreamCompleted: false, OriginalRequestStream: &originalStream}
+	middleware := &stickySessionBindingMiddleware{outbound: &PersistentOutboundTransformer{state: state}, store: store, enabled: true}
 
-	stream, err := middleware.OnInboundRawStream(
-		context.Background(),
-		streams.SliceStream([]*httpclient.StreamEvent{}),
-	)
+	stream, err := middleware.OnInboundRawStream(context.Background(), streams.SliceStream([]*httpclient.StreamEvent{}))
 	require.NoError(t, err)
 	require.NoError(t, stream.Close())
 
 	_, ok := store.Get("key")
 	require.False(t, ok)
+}
+
+func TestModelCircuitBreakerMiddleware_SkipsOpenRouteTierTarget(t *testing.T) {
+	cb := biz.NewModelCircuitBreaker()
+	for range 5 {
+		cb.RecordError(context.Background(), 1, "gpt-4")
+	}
+	require.Equal(t, biz.StateOpen, cb.GetModelCircuitBreakerStats(context.Background(), 1, "gpt-4").State)
+
+	outbound := &PersistentOutboundTransformer{state: &PersistenceState{OriginalModel: "gpt-4", CurrentCandidate: &ChannelModelsCandidate{Channel: &biz.Channel{Channel: &ent.Channel{ID: 1, Name: "channel"}}}}}
+	middleware := withModelCircuitBreaker(outbound, cb)
+
+	got, err := middleware.OnOutboundRawRequest(context.Background(), &httpclient.Request{})
+	require.ErrorIs(t, err, errSkipCandidateByCircuitBreaker)
+	require.Nil(t, got)
+}
+
+func TestModelCircuitBreakerMiddleware_RecordsTargetError(t *testing.T) {
+	cb := biz.NewModelCircuitBreaker()
+
+	outbound := &PersistentOutboundTransformer{state: &PersistenceState{OriginalModel: "gpt-4", CurrentCandidate: &ChannelModelsCandidate{Channel: &biz.Channel{Channel: &ent.Channel{ID: 1, Name: "channel"}}}}}
+	middleware := withModelCircuitBreaker(outbound, cb)
+
+	middleware.OnOutboundRawError(context.Background(), errors.New("upstream failed"))
+	require.Equal(t, 1, cb.GetModelCircuitBreakerStats(context.Background(), 1, "gpt-4").ConsecutiveFailures)
 }
 
 func ptrString(value string) *string {

@@ -1,12 +1,10 @@
 package orchestrator
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"strings"
 	"sync"
 	"time"
 
@@ -16,31 +14,12 @@ import (
 	"github.com/looplj/axonhub/llm/httpclient"
 	"github.com/looplj/axonhub/llm/pipeline"
 	"github.com/looplj/axonhub/llm/streams"
-	"github.com/looplj/axonhub/llm/transformer/anthropic/claudecode"
-	"github.com/looplj/axonhub/llm/transformer/openai/codex"
 )
 
 const (
-	stickySessionBindingTTL     = 5 * time.Minute
-	stickyKeyVersion            = 1
-	stickyMaxPrefixMessages     = 32
-	stickyMaxMessageContentSize = 4096
-)
-
-const (
-	stickyKindSession     = "session"
-	stickyKindResponse    = "responses"
-	stickyKindPromptCache = "prompt-cache"
-	stickyKindPrefix      = "prefix"
-	stickyKindLegacy      = "sticky"
-)
-
-const (
-	stickyStrengthSession     = 100
-	stickyStrengthResponse    = 90
-	stickyStrengthPromptCache = 80
-	stickyStrengthPrefix      = 40
-	stickyMinPrefixTextSize   = 64
+	stickySessionBindingTTL = 5 * time.Minute
+	stickyKeyVersion        = 2
+	stickyKindAPIKey        = "api-key"
 )
 
 type StickySessionBinding struct {
@@ -107,7 +86,6 @@ func (s *StickySessionBindingStore) GetTarget(key string) (StickySessionTarget, 
 	if !ok {
 		return StickySessionTarget{}, false
 	}
-
 	if !binding.ExpiresAt.After(s.now()) {
 		delete(s.bindings, key)
 		return StickySessionTarget{}, false
@@ -152,19 +130,9 @@ func (s *StickySessionBindingStore) Delete(key string) {
 }
 
 type StickyKeyExtraction struct {
-	Key      string
-	OK       bool
-	Reason   string
-	Lookups  []StickyLookup
-	Bindings []StickyLookup
-}
-
-type StickyLookup struct {
-	Key            string
-	Kind           string
-	Strength       int
-	Reason         string
-	PrefixMessages int
+	Key    string
+	OK     bool
+	Reason string
 }
 
 type StickyKeyExtractor interface {
@@ -177,611 +145,75 @@ func NewDefaultStickyKeyExtractor() *DefaultStickyKeyExtractor {
 	return &DefaultStickyKeyExtractor{}
 }
 
-type stickyKeyPayload struct {
-	Version int                `json:"version"`
-	Scope   stickyKeyScope     `json:"scope"`
-	Request stickyKeyRequest   `json:"request"`
-	Signals stickyKeySignals   `json:"signals"`
-	Prefix  []stickyKeyMessage `json:"prefix,omitempty"`
-	Tools   json.RawMessage    `json:"tools,omitempty"`
-	Format  json.RawMessage    `json:"response_format,omitempty"`
-	Choice  json.RawMessage    `json:"tool_choice,omitempty"`
-	Extra   map[string]any     `json:"extra,omitempty"`
-}
-
 type stickyKeyScope struct {
-	APIKeyID           int    `json:"api_key_id,omitempty"`
-	ProjectID          int    `json:"project_id,omitempty"`
-	APIKeyProfile      string `json:"api_key_profile,omitempty"`
-	ProjectProfile     string `json:"project_profile,omitempty"`
-	UnauthenticatedKey string `json:"unauthenticated_key,omitempty"`
+	APIKeyID  int `json:"api_key_id,omitempty"`
+	ProjectID int `json:"project_id,omitempty"`
 }
 
-type stickyKeyRequest struct {
-	Model        string `json:"model"`
-	RequestType  string `json:"request_type"`
-	APIFormat    string `json:"api_format"`
-	ClientFormat string `json:"client_format,omitempty"`
-}
-
-type stickyKeySignals struct {
-	PreviousResponseID string `json:"previous_response_id,omitempty"`
-	PromptCacheKey     string `json:"prompt_cache_key,omitempty"`
-}
-
-type stickyKeyMessage struct {
-	Index      int    `json:"index"`
-	Role       string `json:"role"`
-	Name       string `json:"name,omitempty"`
-	Content    any    `json:"content,omitempty"`
-	ToolCallID string `json:"tool_call_id,omitempty"`
-	ToolCalls  any    `json:"tool_calls,omitempty"`
+type stickyLookupPayload struct {
+	Version int            `json:"version"`
+	Kind    string         `json:"kind"`
+	Scope   stickyKeyScope `json:"scope"`
 }
 
 func (e *DefaultStickyKeyExtractor) Extract(ctx context.Context, state *PersistenceState, req *llm.Request) StickyKeyExtraction {
 	_ = ctx
-
 	if req == nil {
 		return StickyKeyExtraction{OK: false, Reason: "missing request"}
 	}
 
-	payload := stickyBasePayload(state, req)
-	lookups := make([]StickyLookup, 0, 8)
-	bindings := make([]StickyLookup, 0, 8)
-
-	if sessionID, reason := stickyProtocolSessionID(req); sessionID != "" {
-		lookup := stickyValueLookup(stickyKindSession, sessionID, stickyStrengthSession, reason, payload)
-		lookups = append(lookups, lookup)
-		bindings = append(bindings, lookup)
-	}
-
-	if previousResponseID := stringValue(req.PreviousResponseID); previousResponseID != "" {
-		lookup := stickyValueLookup(stickyKindResponse, previousResponseID, stickyStrengthResponse, "previous response id", payload)
-		lookups = append(lookups, lookup)
-		bindings = append(bindings, lookup)
-	}
-
-	if promptCacheKey := stringValue(req.PromptCacheKey); promptCacheKey != "" {
-		lookup := stickyValueLookup(stickyKindPromptCache, promptCacheKey, stickyStrengthPromptCache, "prompt cache key", payload)
-		lookups = append(lookups, lookup)
-		bindings = append(bindings, lookup)
-	}
-
-	prefixLookups := stickyPrefixLookups(payload, req.Messages)
-	lookups = append(lookups, prefixLookups...)
-
-	lookups = uniqueStickyLookups(lookups)
-	bindings = uniqueStickyLookups(bindings)
-	if len(lookups) == 0 && !stickyHasPotentialCompletedPrefix(req.Messages) {
-		return StickyKeyExtraction{OK: false, Reason: stickyNoPrefixReason(req.Messages)}
-	}
-
-	reason := stickyExtractionReason(lookups)
-	if reason == "" {
-		reason = "pending transcript prefix"
-	}
-
-	key := ""
-	if len(lookups) > 0 {
-		key = lookups[0].Key
+	scope := stickyScopeFromState(state)
+	if scope.APIKeyID == 0 {
+		return StickyKeyExtraction{OK: false, Reason: "missing api key identity"}
 	}
 
 	return StickyKeyExtraction{
-		Key:      key,
-		OK:       true,
-		Reason:   reason,
-		Lookups:  lookups,
-		Bindings: bindings,
+		Key:    stickyAPIKeyKey(scope),
+		OK:     true,
+		Reason: "api key sticky",
 	}
 }
 
-func stickyBasePayload(state *PersistenceState, req *llm.Request) stickyKeyPayload {
-	payload := stickyKeyPayload{
+func stickyAPIKeyKey(scope stickyKeyScope) string {
+	payload := stickyLookupPayload{
 		Version: stickyKeyVersion,
-		Scope:   stickyScopeFromState(state),
-		Request: stickyKeyRequest{
-			Model:        req.Model,
-			RequestType:  stickyRequestType(req),
-			APIFormat:    req.APIFormat.String(),
-			ClientFormat: stickyClientFormat(req),
-		},
-		Signals: stickyKeySignals{
-			PreviousResponseID: stringValue(req.PreviousResponseID),
-			PromptCacheKey:     stringValue(req.PromptCacheKey),
-		},
-		Extra: map[string]any{},
+		Kind:    stickyKindAPIKey,
+		Scope:   scope,
 	}
 
-	if req.ParallelToolCalls != nil {
-		payload.Extra["parallel_tool_calls"] = *req.ParallelToolCalls
-	}
-
-	if len(req.Tools) > 0 {
-		payload.Tools = stableJSON(req.Tools)
-	}
-	if format := stableJSON(req.ResponseFormat); len(format) > 0 && string(format) != "null" {
-		payload.Format = format
-	}
-	if choice := stableJSON(req.ToolChoice); len(choice) > 0 && string(choice) != "null" {
-		payload.Choice = choice
-	}
-	if len(payload.Extra) == 0 {
-		payload.Extra = nil
-	}
-
-	return payload
-}
-
-type stickyLookupPayload struct {
-	Version int                `json:"version"`
-	Kind    string             `json:"kind"`
-	Scope   stickyKeyScope     `json:"scope"`
-	Request stickyKeyRequest   `json:"request"`
-	Value   string             `json:"value,omitempty"`
-	Prefix  []stickyKeyMessage `json:"prefix,omitempty"`
-	Tools   json.RawMessage    `json:"tools,omitempty"`
-	Format  json.RawMessage    `json:"response_format,omitempty"`
-	Choice  json.RawMessage    `json:"tool_choice,omitempty"`
-	Extra   map[string]any     `json:"extra,omitempty"`
-}
-
-func stickyValueLookup(kind, value string, strength int, reason string, base stickyKeyPayload) StickyLookup {
-	payload := stickyLookupPayload{
-		Version: base.Version,
-		Kind:    kind,
-		Scope:   base.Scope,
-		Request: base.Request,
-		Value:   strings.TrimSpace(value),
-		Tools:   base.Tools,
-		Format:  base.Format,
-		Choice:  base.Choice,
-		Extra:   base.Extra,
-	}
-
-	return StickyLookup{
-		Key:      stickyLookupKey(kind, payload),
-		Kind:     kind,
-		Strength: strength,
-		Reason:   reason,
-	}
-}
-
-func stickyPrefixLookup(base stickyKeyPayload, prefix []stickyKeyMessage, reason string) StickyLookup {
-	payload := stickyLookupPayload{
-		Version: base.Version,
-		Kind:    stickyKindPrefix,
-		Scope:   base.Scope,
-		Request: base.Request,
-		Prefix:  prefix,
-		Tools:   base.Tools,
-		Format:  base.Format,
-		Choice:  base.Choice,
-		Extra:   base.Extra,
-	}
-
-	return StickyLookup{
-		Key:            stickyLookupKey(stickyKindPrefix, payload),
-		Kind:           stickyKindPrefix,
-		Strength:       stickyStrengthPrefix,
-		Reason:         reason,
-		PrefixMessages: len(prefix),
-	}
-}
-
-func stickyLookupKey(kind string, payload stickyLookupPayload) string {
 	encoded, err := json.Marshal(payload)
 	if err != nil {
 		return ""
 	}
 
 	sum := sha256.Sum256(encoded)
-	if kind == "" {
-		kind = stickyKindLegacy
-	}
-
-	return kind + ":v1:" + hex.EncodeToString(sum[:16])
-}
-
-func stickyProtocolSessionID(req *llm.Request) (string, string) {
-	if req == nil {
-		return "", ""
-	}
-
-	if req.RawRequest != nil && req.RawRequest.Headers != nil {
-		if sessionID := codex.GetSessionIDFromHeaders(req.RawRequest.Headers); sessionID != "" {
-			return sessionID, "codex session"
-		}
-		if windowID := strings.TrimSpace(req.RawRequest.Headers.Get(codex.WindowIDHeader)); windowID != "" {
-			return windowID, "codex window"
-		}
-	}
-
-	if req.Metadata != nil {
-		if uid := claudecode.ParseUserID(req.Metadata["user_id"]); uid != nil && uid.SessionID != "" {
-			return uid.SessionID, "claude-code session"
-		}
-	}
-
-	return "", ""
-}
-
-func stickyPrefixLookups(base stickyKeyPayload, messages []llm.Message) []StickyLookup {
-	prefixes := stickyCanonicalPrefixes(messages, false)
-	result := make([]StickyLookup, 0, len(prefixes))
-	for i := len(prefixes) - 1; i >= 0; i-- {
-		prefix := prefixes[i]
-		if !stickyPrefixSuitable(prefix) {
-			continue
-		}
-		result = append(result, stickyPrefixLookup(base, prefix, "transcript prefix"))
-	}
-	return result
-}
-
-func stickyCompletedPrefixLookup(base stickyKeyPayload, messages []llm.Message) (StickyLookup, bool) {
-	prefixes := stickyCanonicalPrefixes(messages, true)
-	if len(prefixes) == 0 {
-		return StickyLookup{}, false
-	}
-	prefix := prefixes[len(prefixes)-1]
-	if !stickyPrefixSuitable(prefix) {
-		return StickyLookup{}, false
-	}
-	return stickyPrefixLookup(base, prefix, "completed transcript prefix"), true
-}
-
-func stickyCanonicalPrefixes(messages []llm.Message, includeFull bool) [][]stickyKeyMessage {
-	if len(messages) == 0 {
-		return nil
-	}
-
-	limit := len(messages)
-	if !includeFull && limit > 0 {
-		limit--
-	}
-	if limit <= 0 {
-		return nil
-	}
-	if limit > stickyMaxPrefixMessages {
-		limit = stickyMaxPrefixMessages
-	}
-
-	result := make([][]stickyKeyMessage, 0, limit)
-	current := make([]stickyKeyMessage, 0, limit)
-	for i := 0; i < limit; i++ {
-		msg := messages[i]
-		role := normalizeRole(msg.Role)
-		if role == "" {
-			continue
-		}
-		content := stickyMessageContent(msg)
-		if content == nil && len(msg.ToolCalls) == 0 && msg.ToolCallID == nil {
-			continue
-		}
-
-		item := stickyKeyMessage{
-			Index:      i,
-			Role:       role,
-			Name:       stringValue(msg.Name),
-			Content:    content,
-			ToolCallID: stringValue(msg.ToolCallID),
-			ToolCalls:  stickyToolCalls(msg.ToolCalls),
-		}
-		current = append(current, item)
-		copied := append([]stickyKeyMessage(nil), current...)
-		result = append(result, copied)
-	}
-
-	return result
-}
-
-func stickyPrefixSuitable(prefix []stickyKeyMessage) bool {
-	if len(prefix) == 0 {
-		return false
-	}
-
-	hasSystemOrDeveloper := false
-	textSize := 0
-	for _, msg := range prefix {
-		if msg.Role == "system" || msg.Role == "developer" {
-			hasSystemOrDeveloper = true
-		}
-		textSize += stickyContentSize(msg.Content)
-	}
-
-	return (hasSystemOrDeveloper && textSize > 0) || textSize >= stickyMinPrefixTextSize
-}
-
-func stickyHasPotentialCompletedPrefix(messages []llm.Message) bool {
-	if len(messages) == 0 {
-		return false
-	}
-	prefixes := stickyCanonicalPrefixes(messages, true)
-	if len(prefixes) == 0 {
-		return false
-	}
-	return stickyPrefixSuitable(prefixes[len(prefixes)-1])
-}
-
-func stickyNoPrefixReason(messages []llm.Message) string {
-	if len(messages) == 0 {
-		return "no messages"
-	}
-	if len(messages) == 1 && normalizeRole(messages[0].Role) == "user" {
-		return "only latest user message"
-	}
-	return "insufficient stable context"
-}
-
-func uniqueStickyLookups(lookups []StickyLookup) []StickyLookup {
-	if len(lookups) == 0 {
-		return nil
-	}
-	seen := make(map[string]struct{}, len(lookups))
-	result := make([]StickyLookup, 0, len(lookups))
-	for _, lookup := range lookups {
-		if lookup.Key == "" {
-			continue
-		}
-		if _, ok := seen[lookup.Key]; ok {
-			continue
-		}
-		seen[lookup.Key] = struct{}{}
-		result = append(result, lookup)
-	}
-	return result
-}
-
-func stickyExtractionReason(lookups []StickyLookup) string {
-	if len(lookups) == 0 {
-		return ""
-	}
-	return lookups[0].Reason
+	return stickyKindAPIKey + ":v2:" + hex.EncodeToString(sum[:16])
 }
 
 func stickyNormalizeExtraction(extraction StickyKeyExtraction) StickyKeyExtraction {
 	if !extraction.OK {
 		return extraction
 	}
-
-	if len(extraction.Lookups) == 0 && extraction.Key != "" {
-		lookup := StickyLookup{
-			Key:      extraction.Key,
-			Kind:     stickyKindLegacy,
-			Strength: stickyStrengthPrefix,
-			Reason:   extraction.Reason,
-		}
-		extraction.Lookups = []StickyLookup{lookup}
-		if len(extraction.Bindings) == 0 {
-			extraction.Bindings = []StickyLookup{lookup}
-		}
-	}
-	if extraction.Key == "" && len(extraction.Lookups) > 0 {
-		extraction.Key = extraction.Lookups[0].Key
-	}
 	if extraction.Reason == "" {
-		extraction.Reason = stickyExtractionReason(extraction.Lookups)
+		extraction.Reason = "api key sticky"
 	}
-	extraction.Lookups = uniqueStickyLookups(extraction.Lookups)
-	extraction.Bindings = uniqueStickyLookups(extraction.Bindings)
+	if extraction.Key == "" {
+		extraction.OK = false
+		extraction.Reason = "missing sticky key"
+	}
 	return extraction
 }
 
 func stickyScopeFromState(state *PersistenceState) stickyKeyScope {
-	scope := stickyKeyScope{UnauthenticatedKey: "system"}
+	scope := stickyKeyScope{}
 	if state == nil || state.APIKey == nil {
 		return scope
 	}
 
 	apiKey := state.APIKey
-	scope.UnauthenticatedKey = ""
 	scope.APIKeyID = apiKey.ID
 	scope.ProjectID = apiKey.ProjectID
-
-	if apiKey.Profiles != nil {
-		scope.APIKeyProfile = apiKey.Profiles.ActiveProfile
-	}
-
-	if project := apiKey.Edges.Project; project != nil && project.Profiles != nil {
-		scope.ProjectProfile = project.Profiles.ActiveProfile
-	}
-
 	return scope
-}
-
-func stickyRequestType(req *llm.Request) string {
-	if req.RequestType != "" {
-		return req.RequestType.String()
-	}
-
-	return llm.RequestTypeChat.String()
-}
-
-func stickyClientFormat(req *llm.Request) string {
-	if req == nil {
-		return ""
-	}
-
-	if req.RawRequest != nil && req.RawRequest.Headers != nil {
-		if req.RawRequest.Headers.Get(codex.SessionHeader) != "" ||
-			req.RawRequest.Headers.Get(codex.TurnMetadataHeader) != "" ||
-			req.RawRequest.Headers.Get(codex.WindowIDHeader) != "" {
-			return "codex"
-		}
-	}
-
-	if req.Metadata != nil {
-		if uid := claudecode.ParseUserID(req.Metadata["user_id"]); uid != nil {
-			return "claude-code"
-		}
-	}
-
-	if req.RawRequest != nil {
-		path := req.RawRequest.Path
-		if path == "" && req.RawRequest.RawRequest != nil && req.RawRequest.RawRequest.URL != nil {
-			path = req.RawRequest.RawRequest.URL.Path
-		}
-		if strings.Contains(path, "/anthropic/") {
-			return "anthropic"
-		}
-	}
-
-	return req.APIFormat.String()
-}
-
-func stickyMessageContent(msg llm.Message) any {
-	if msg.Content.Content != nil {
-		content := strings.TrimSpace(*msg.Content.Content)
-		if content == "" {
-			return nil
-		}
-		return truncateStickyContent(content)
-	}
-
-	if len(msg.Content.MultipleContent) == 0 {
-		return nil
-	}
-
-	parts := make([]map[string]any, 0, len(msg.Content.MultipleContent))
-	for _, part := range msg.Content.MultipleContent {
-		item := map[string]any{"type": part.Type}
-		switch {
-		case part.Text != nil:
-			text := strings.TrimSpace(*part.Text)
-			if text == "" {
-				continue
-			}
-			item["text"] = truncateStickyContent(text)
-		case part.Compact != nil:
-			item["compact_id"] = part.Compact.ID
-			item["compact_created_by"] = stringValue(part.Compact.CreatedBy)
-			if part.Compact.EncryptedContent != "" {
-				item["compact_encrypted_content_hash"] = stickyContentHash(part.Compact.EncryptedContent)
-			}
-		case part.Document != nil:
-			item["mime_type"] = part.Document.MIMEType
-			if part.Document.URL != "" {
-				item["url_hash"] = stickyContentHash(part.Document.URL)
-			}
-		case part.ImageURL != nil:
-			item["detail"] = stringValue(part.ImageURL.Detail)
-			if part.ImageURL.URL != "" {
-				item["url_hash"] = stickyContentHash(part.ImageURL.URL)
-			}
-		case part.VideoURL != nil:
-			if part.VideoURL.URL != "" {
-				item["url_hash"] = stickyContentHash(part.VideoURL.URL)
-			}
-		case part.InputAudio != nil:
-			item["format"] = part.InputAudio.Format
-			if part.InputAudio.Data != "" {
-				item["data_hash"] = stickyContentHash(part.InputAudio.Data)
-			}
-		default:
-			continue
-		}
-		parts = append(parts, item)
-	}
-
-	if len(parts) == 0 {
-		return nil
-	}
-
-	return parts
-}
-
-func stickyToolCalls(toolCalls []llm.ToolCall) any {
-	if len(toolCalls) == 0 {
-		return nil
-	}
-
-	result := make([]map[string]any, 0, len(toolCalls))
-	for _, toolCall := range toolCalls {
-		item := map[string]any{
-			"id":   toolCall.ID,
-			"type": toolCall.Type,
-		}
-		if toolCall.Function.Name != "" {
-			item["function_name"] = toolCall.Function.Name
-		}
-		if toolCall.Function.Arguments != "" {
-			item["arguments_hash"] = stickyContentHash(toolCall.Function.Arguments)
-		}
-		if toolCall.ResponseCustomToolCall != nil {
-			item["custom_call_id"] = toolCall.ResponseCustomToolCall.CallID
-			item["custom_name"] = toolCall.ResponseCustomToolCall.Name
-			if toolCall.ResponseCustomToolCall.Input != "" {
-				item["custom_input_hash"] = stickyContentHash(toolCall.ResponseCustomToolCall.Input)
-			}
-		}
-		result = append(result, item)
-	}
-	return result
-}
-
-func stickyContentSize(content any) int {
-	switch value := content.(type) {
-	case string:
-		return len(strings.TrimSpace(value))
-	case []map[string]any:
-		total := 0
-		for _, item := range value {
-			if text, ok := item["text"].(string); ok {
-				total += len(strings.TrimSpace(text))
-			}
-		}
-		return total
-	default:
-		return 0
-	}
-}
-
-func truncateStickyContent(value string) string {
-	if len(value) <= stickyMaxMessageContentSize {
-		return value
-	}
-
-	return value[:stickyMaxMessageContentSize]
-}
-
-func stickyContentHash(value string) string {
-	sum := sha256.Sum256([]byte(value))
-	return hex.EncodeToString(sum[:16])
-}
-
-func normalizeRole(role string) string {
-	return strings.ToLower(strings.TrimSpace(role))
-}
-
-func stringValue(value *string) string {
-	if value == nil {
-		return ""
-	}
-
-	return *value
-}
-
-func stableJSON(value any) json.RawMessage {
-	if value == nil {
-		return nil
-	}
-
-	data, err := json.Marshal(value)
-	if err != nil || len(data) == 0 || bytes.Equal(data, []byte("null")) {
-		return nil
-	}
-
-	var normalized any
-	if err := json.Unmarshal(data, &normalized); err != nil {
-		return json.RawMessage(data)
-	}
-
-	normalizedData, err := json.Marshal(normalized)
-	if err != nil || len(normalizedData) == 0 || bytes.Equal(normalizedData, []byte("null")) {
-		return json.RawMessage(data)
-	}
-
-	return json.RawMessage(normalizedData)
 }
 
 type StickySessionOrderRequest struct {
@@ -811,42 +243,13 @@ func NewStickySessionRouter(store StickySessionStore, extractor StickyKeyExtract
 }
 
 func (r *StickySessionRouter) Order(ctx context.Context, req StickySessionOrderRequest) []*ChannelModelsCandidate {
-	if req.State != nil {
-		req.State.StickyKey = ""
-		req.State.StickyKeyOK = false
-		req.State.StickyKeyReason = ""
-		req.State.StickyLookups = nil
-		req.State.StickyBindings = nil
-		req.State.StickyBasePayload = stickyKeyPayload{}
-		req.State.StickyBasePayloadOK = false
-		req.State.StickyResponseID = ""
-		req.State.StickyPreviousResponseID = ""
-		req.State.StickyResponseMessage = nil
-		req.State.StickyRoutingSource = ""
-		req.State.StickyRoutingDegradeReason = ""
-		req.State.PreferredCredentialID = 0
-		req.State.PreferredCredentialFingerprint = ""
-	}
-
-	if len(req.Candidates) == 0 || req.Request == nil {
-		return req.Candidates
-	}
-
-	if r == nil || r.store == nil || r.extractor == nil {
+	resetStickyRoutingState(req.State)
+	if len(req.Candidates) == 0 || req.Request == nil || r == nil || r.store == nil || r.extractor == nil {
 		return req.Candidates
 	}
 
 	extraction := stickyNormalizeExtraction(r.extractor.Extract(ctx, req.State, req.Request))
-	if req.State != nil {
-		req.State.StickyKey = extraction.Key
-		req.State.StickyKeyOK = extraction.OK
-		req.State.StickyKeyReason = extraction.Reason
-		req.State.StickyLookups = extraction.Lookups
-		req.State.StickyBindings = extraction.Bindings
-		req.State.StickyBasePayload = stickyBasePayload(req.State, req.Request)
-		req.State.StickyBasePayloadOK = extraction.OK
-	}
-
+	applyStickyExtraction(req.State, extraction)
 	if !extraction.OK {
 		if log.DebugEnabled(ctx) {
 			log.Debug(ctx, "sticky-session key unavailable",
@@ -856,7 +259,7 @@ func (r *StickySessionRouter) Order(ctx context.Context, req StickySessionOrderR
 		return req.Candidates
 	}
 
-	primary, boundLookup, preferredTarget := r.boundCandidateForLookups(ctx, extraction.Lookups, req.Candidates)
+	primary, preferredTarget := r.boundCandidateForKey(ctx, extraction.Key, req.Candidates)
 	source := stickyRoutingSourceBinding
 	degradeReason := stickyRoutingDegradeNone
 	if primary == nil {
@@ -867,108 +270,104 @@ func (r *StickySessionRouter) Order(ctx context.Context, req StickySessionOrderR
 	}
 
 	ordered := stickyOrderedCandidates(req, primary)
-	if req.State != nil {
-		req.State.StickyRoutingSource = source
-		req.State.StickyRoutingDegradeReason = degradeReason
-		req.State.PreferredCredentialID = preferredTarget.CredentialID
-		req.State.PreferredCredentialFingerprint = preferredTarget.CredentialFingerprint
-	}
-
-	if log.DebugEnabled(ctx) && len(ordered) > 0 && ordered[0] != nil && ordered[0].Channel != nil {
-		reason := extraction.Reason
-		if boundLookup.Reason != "" {
-			reason = boundLookup.Reason
-		}
-		log.Debug(ctx, "sticky-session ordered candidates",
-			log.String("source", source),
-			log.String("degrade_reason", degradeReason),
-			log.String("reason", reason),
-			log.String("sticky_kind", boundLookup.Kind),
-			log.Int("channel_id", ordered[0].Channel.ID),
-			log.String("channel_name", ordered[0].Channel.Name),
-			log.Int("candidate_count", len(ordered)))
-	}
-
+	applyStickyPrimary(req.State, source, degradeReason, preferredTarget)
+	logStickyOrder(ctx, req.Request, ordered, extraction, source, degradeReason)
 	return ordered
 }
 
-func (r *StickySessionRouter) boundCandidateForLookups(
+func resetStickyRoutingState(state *PersistenceState) {
+	if state == nil {
+		return
+	}
+
+	state.StickyKey = ""
+	state.StickyKeyOK = false
+	state.StickyKeyReason = ""
+	state.StickyRoutingSource = ""
+	state.StickyRoutingDegradeReason = ""
+	state.PreferredCredentialID = 0
+	state.PreferredCredentialFingerprint = ""
+}
+
+func applyStickyExtraction(state *PersistenceState, extraction StickyKeyExtraction) {
+	if state == nil {
+		return
+	}
+
+	state.StickyKey = extraction.Key
+	state.StickyKeyOK = extraction.OK
+	state.StickyKeyReason = extraction.Reason
+}
+
+func applyStickyPrimary(
+	state *PersistenceState,
+	source string,
+	degradeReason string,
+	target StickySessionTarget,
+) {
+	if state == nil {
+		return
+	}
+
+	state.StickyRoutingSource = source
+	state.StickyRoutingDegradeReason = degradeReason
+	state.PreferredCredentialID = target.CredentialID
+	state.PreferredCredentialFingerprint = target.CredentialFingerprint
+}
+
+func logStickyOrder(
 	ctx context.Context,
-	lookups []StickyLookup,
-	candidates []*ChannelModelsCandidate,
-) (*ChannelModelsCandidate, StickyLookup, StickySessionTarget) {
-	currentTier, ok := stickyCurrentRouteTier(candidates)
-	if !ok {
-		return nil, StickyLookup{}, StickySessionTarget{}
-	}
-	for _, lookup := range lookups {
-		if lookup.Key == "" {
-			continue
-		}
-		primary, preferredTarget := r.boundCandidate(ctx, lookup.Key, candidates, currentTier)
-		if primary != nil {
-			return primary, lookup, preferredTarget
-		}
+	req *llm.Request,
+	ordered []*ChannelModelsCandidate,
+	extraction StickyKeyExtraction,
+	source string,
+	degradeReason string,
+) {
+	if !log.DebugEnabled(ctx) || len(ordered) == 0 || ordered[0] == nil || ordered[0].Channel == nil {
+		return
 	}
 
-	return nil, StickyLookup{}, StickySessionTarget{}
+	model := ""
+	if req != nil {
+		model = req.Model
+	}
+	log.Debug(ctx, "sticky-session ordered candidates",
+		log.String("source", source),
+		log.String("degrade_reason", degradeReason),
+		log.String("reason", extraction.Reason),
+		log.String("sticky_kind", stickyKindAPIKey),
+		log.Int("channel_id", ordered[0].Channel.ID),
+		log.String("channel_name", ordered[0].Channel.Name),
+		log.String("model", model),
+		log.Int("candidate_count", len(ordered)))
 }
 
-func stickyCurrentRouteTier(candidates []*ChannelModelsCandidate) (int, bool) {
-	for _, candidate := range candidates {
-		if candidate != nil {
-			return candidate.Priority, true
-		}
-	}
-
-	return 0, false
-}
-
-func (r *StickySessionRouter) boundCandidate(
+func (r *StickySessionRouter) boundCandidateForKey(
 	ctx context.Context,
 	key string,
 	candidates []*ChannelModelsCandidate,
-	currentTier int,
 ) (*ChannelModelsCandidate, StickySessionTarget) {
+	if key == "" {
+		return nil, StickySessionTarget{}
+	}
+
 	target, ok := stickyStoreGetTarget(r.store, key)
 	if !ok {
 		return nil, StickySessionTarget{}
 	}
 
-	channelID := target.ChannelID
-	boundChannelPresent := false
-	boundChannelInCurrentTier := false
-
 	for _, candidate := range candidates {
-		if candidate == nil || candidate.Channel == nil || candidate.Channel.ID != channelID {
+		if candidate == nil || candidate.Channel == nil || candidate.Channel.ID != target.ChannelID {
 			continue
 		}
-		boundChannelPresent = true
-		if candidate.Priority != currentTier {
-			continue
-		}
-		boundChannelInCurrentTier = true
-		if stickyCandidateMatchesTarget(candidate, target) {
-			return candidate, target
-		}
-	}
-
-	if boundChannelPresent {
-		if log.DebugEnabled(ctx) {
-			log.Debug(ctx, "sticky-session binding skipped because target is not currently eligible in the active route tier",
-				log.Int("bound_channel_id", channelID),
-				log.Bool("bound_channel_in_current_tier", boundChannelInCurrentTier),
-				log.String("credential_fingerprint", target.CredentialFingerprint))
-		}
-		return nil, target
+		return candidate, target
 	}
 
 	r.store.Delete(key)
 	if log.DebugEnabled(ctx) {
 		log.Debug(ctx, "sticky-session binding ignored because channel is absent from candidates",
-			log.Int("bound_channel_id", channelID))
+			log.Int("bound_channel_id", target.ChannelID))
 	}
-
 	return nil, StickySessionTarget{}
 }
 
@@ -981,24 +380,7 @@ func stickyStoreGetTarget(store StickySessionStore, key string) (StickySessionTa
 	if !ok {
 		return StickySessionTarget{}, false
 	}
-
 	return StickySessionTarget{ChannelID: channelID}, true
-}
-
-func stickyCandidateMatchesTarget(candidate *ChannelModelsCandidate, target StickySessionTarget) bool {
-	if candidate == nil || candidate.Channel == nil {
-		return false
-	}
-
-	if target.CredentialID > 0 && candidate.Channel.HasEnabledCredentialID(target.CredentialID) {
-		return true
-	}
-
-	if target.CredentialFingerprint == "" {
-		return true
-	}
-
-	return candidate.Channel.HasEnabledCredentialFingerprint(target.CredentialFingerprint)
 }
 
 func stickyOrderedCandidates(
@@ -1017,13 +399,7 @@ func stickyOrderedCandidates(
 		remaining = append(remaining, candidate)
 	}
 
-	if len(remaining) == 0 {
-		return result
-	}
-
-	result = append(result, remaining...)
-
-	return result
+	return append(result, remaining...)
 }
 
 func stickyFirstBindCandidate(
@@ -1050,28 +426,6 @@ func stickyCandidatePreferredTarget(candidate *ChannelModelsCandidate, stickyKey
 	}
 
 	return stickyTargetFromCredentialView(candidate, view)
-}
-
-func stickyTargetCredentialView(candidate *ChannelModelsCandidate, target StickySessionTarget) (biz.ChannelCredentialView, bool) {
-	views := stickyEnabledCredentialViews(candidate)
-	if len(views) == 0 {
-		return biz.ChannelCredentialView{}, false
-	}
-
-	for _, view := range views {
-		if target.CredentialID > 0 && view.CredentialID == target.CredentialID {
-			return view, true
-		}
-		if target.CredentialFingerprint != "" && view.Fingerprint == target.CredentialFingerprint {
-			return view, true
-		}
-	}
-
-	if len(views) == 1 {
-		return views[0], true
-	}
-
-	return biz.ChannelCredentialView{}, false
 }
 
 func stickySeededCredentialView(candidate *ChannelModelsCandidate, stickyKey string) (biz.ChannelCredentialView, bool) {
@@ -1135,39 +489,13 @@ func (m *stickySessionBindingMiddleware) Name() string {
 	return "sticky-session-binding"
 }
 
-func (m *stickySessionBindingMiddleware) OnOutboundLlmResponse(ctx context.Context, response *llm.Response) (*llm.Response, error) {
-	if !m.enabled {
-		return response, nil
-	}
-	m.captureLlmResponse(response)
-	return response, nil
-}
-
-func (m *stickySessionBindingMiddleware) OnOutboundLlmStream(ctx context.Context, stream streams.Stream[*llm.Response]) (streams.Stream[*llm.Response], error) {
-	if !m.enabled {
-		return stream, nil
-	}
-	if m.outbound == nil || m.outbound.state == nil {
-		return stream, nil
-	}
-
-	return &stickyLlmStream{
-		stream:  stream,
-		capture: m.captureLlmResponse,
-		state:   m.outbound.state,
-	}, nil
-}
-
 func (m *stickySessionBindingMiddleware) OnInboundRawResponse(ctx context.Context, response *httpclient.Response) (*httpclient.Response, error) {
 	m.bindCurrentChannel(ctx)
 	return response, nil
 }
 
 func (m *stickySessionBindingMiddleware) OnInboundRawStream(ctx context.Context, stream streams.Stream[*httpclient.StreamEvent]) (streams.Stream[*httpclient.StreamEvent], error) {
-	if !m.enabled {
-		return stream, nil
-	}
-	if m.outbound == nil || m.outbound.state == nil {
+	if !m.enabled || m.outbound == nil || m.outbound.state == nil {
 		return stream, nil
 	}
 
@@ -1185,7 +513,7 @@ func (m *stickySessionBindingMiddleware) bindCurrentChannel(ctx context.Context)
 	}
 
 	state := m.outbound.state
-	if !state.StickyKeyOK {
+	if !state.StickyKeyOK || state.StickyKey == "" {
 		return
 	}
 
@@ -1194,22 +522,15 @@ func (m *stickySessionBindingMiddleware) bindCurrentChannel(ctx context.Context)
 		return
 	}
 
-	bindings := stickyBindingAliases(state)
-	if len(bindings) == 0 {
-		return
+	target := StickySessionTarget{
+		CredentialID:          state.CurrentCredentialID,
+		ChannelID:             channel.ID,
+		CredentialFingerprint: state.CurrentCredentialFingerprint,
 	}
-
-	for _, binding := range bindings {
-		target := StickySessionTarget{
-			CredentialID:          state.CurrentCredentialID,
-			ChannelID:             channel.ID,
-			CredentialFingerprint: state.CurrentCredentialFingerprint,
-		}
-		if targetStore, ok := m.store.(StickySessionTargetStore); ok {
-			targetStore.BindTarget(binding.Key, target)
-		} else {
-			m.store.Bind(binding.Key, channel.ID)
-		}
+	if targetStore, ok := m.store.(StickySessionTargetStore); ok {
+		targetStore.BindTarget(state.StickyKey, target)
+	} else {
+		m.store.Bind(state.StickyKey, channel.ID)
 	}
 
 	if log.DebugEnabled(ctx) {
@@ -1217,186 +538,7 @@ func (m *stickySessionBindingMiddleware) bindCurrentChannel(ctx context.Context)
 			log.Int("channel_id", channel.ID),
 			log.String("channel_name", channel.Name),
 			log.String("reason", state.StickyKeyReason),
-			log.Int("alias_count", len(bindings)))
-	}
-}
-
-func (m *stickySessionBindingMiddleware) captureLlmResponse(response *llm.Response) {
-	if m == nil || m.outbound == nil || m.outbound.state == nil || response == nil {
-		return
-	}
-
-	state := m.outbound.state
-	if response.ID != "" {
-		state.StickyResponseID = response.ID
-	}
-	if response.PreviousResponseID != nil && *response.PreviousResponseID != "" {
-		state.StickyPreviousResponseID = *response.PreviousResponseID
-	}
-	if msg := stickyAssistantMessageFromResponse(response); msg != nil {
-		state.StickyResponseMessage = msg
-	}
-}
-
-func stickyAssistantMessageFromResponse(response *llm.Response) *llm.Message {
-	if response == nil {
-		return nil
-	}
-	for _, choice := range response.Choices {
-		if choice.Message != nil {
-			msg := *choice.Message
-			if normalizeRole(msg.Role) == "" {
-				msg.Role = "assistant"
-			}
-			return &msg
-		}
-	}
-	return nil
-}
-
-func stickyBindingAliases(state *PersistenceState) []StickyLookup {
-	if state == nil || state.LlmRequest == nil {
-		if state == nil {
-			return nil
-		}
-		return stickyBindingsWithLegacyFallback(state.StickyBindings, state.StickyKey, state.StickyKeyReason)
-	}
-
-	base := stickyBindingBasePayload(state)
-	aliases := make([]StickyLookup, 0, len(state.StickyBindings)+4)
-	aliases = append(aliases, state.StickyBindings...)
-	if len(aliases) == 0 && state.StickyKey != "" {
-		aliases = append(aliases, stickyLegacyLookup(state.StickyKey, state.StickyKeyReason))
-	}
-
-	if state.StickyResponseID != "" {
-		aliases = append(aliases, stickyValueLookup(stickyKindResponse, state.StickyResponseID, stickyStrengthResponse, "response id", base))
-	}
-	if state.StickyPreviousResponseID != "" {
-		aliases = append(aliases, stickyValueLookup(stickyKindResponse, state.StickyPreviousResponseID, stickyStrengthResponse, "previous response id refresh", base))
-	}
-	if lookup, ok := stickyCompletedPrefixLookup(base, state.LlmRequest.Messages); ok {
-		aliases = append(aliases, lookup)
-	}
-	if completed := stickyCompletedMessages(state); len(completed) > 0 {
-		if lookup, ok := stickyCompletedPrefixLookup(base, completed); ok {
-			aliases = append(aliases, lookup)
-		}
-	}
-
-	return uniqueStickyLookups(aliases)
-}
-
-func stickyBindingBasePayload(state *PersistenceState) stickyKeyPayload {
-	if state == nil {
-		return stickyKeyPayload{}
-	}
-	if state.StickyBasePayloadOK {
-		return state.StickyBasePayload
-	}
-	if state.LlmRequest != nil {
-		return stickyBasePayload(state, state.LlmRequest)
-	}
-	return stickyKeyPayload{}
-}
-
-func stickyBindingsWithLegacyFallback(bindings []StickyLookup, key, reason string) []StickyLookup {
-	if len(bindings) == 0 && key != "" {
-		bindings = append(bindings, stickyLegacyLookup(key, reason))
-	}
-	return uniqueStickyLookups(bindings)
-}
-
-func stickyLegacyLookup(key, reason string) StickyLookup {
-	return StickyLookup{
-		Key:      key,
-		Kind:     stickyKindLegacy,
-		Strength: stickyStrengthPrefix,
-		Reason:   reason,
-	}
-}
-
-func stickyCompletedMessages(state *PersistenceState) []llm.Message {
-	if state == nil || state.LlmRequest == nil || state.StickyResponseMessage == nil {
-		return nil
-	}
-	messages := append([]llm.Message(nil), state.LlmRequest.Messages...)
-	messages = append(messages, *state.StickyResponseMessage)
-	return messages
-}
-
-type stickyLlmStream struct {
-	stream streams.Stream[*llm.Response]
-	state  *PersistenceState
-
-	capture func(*llm.Response)
-	role    string
-	text    strings.Builder
-}
-
-func (s *stickyLlmStream) Next() bool {
-	return s.stream.Next()
-}
-
-func (s *stickyLlmStream) Current() *llm.Response {
-	response := s.stream.Current()
-	if s.capture != nil && response != nil {
-		s.capture(response)
-	}
-	s.captureDelta(response)
-	return response
-}
-
-func (s *stickyLlmStream) Err() error {
-	return s.stream.Err()
-}
-
-func (s *stickyLlmStream) Close() error {
-	return s.stream.Close()
-}
-
-func (s *stickyLlmStream) captureDelta(response *llm.Response) {
-	if s == nil || s.state == nil || response == nil {
-		return
-	}
-
-	for _, choice := range response.Choices {
-		if choice.Delta != nil {
-			delta := choice.Delta
-			if role := normalizeRole(delta.Role); role != "" {
-				s.role = role
-			}
-			if delta.Content.Content != nil {
-				s.text.WriteString(*delta.Content.Content)
-			}
-			for _, part := range delta.Content.MultipleContent {
-				if part.Text != nil {
-					s.text.WriteString(*part.Text)
-				}
-			}
-		}
-		if choice.FinishReason != nil {
-			s.setCompletedMessage()
-		}
-	}
-}
-
-func (s *stickyLlmStream) setCompletedMessage() {
-	if s == nil || s.state == nil || s.state.StickyResponseMessage != nil {
-		return
-	}
-
-	content := strings.TrimSpace(s.text.String())
-	if content == "" {
-		return
-	}
-	role := s.role
-	if role == "" {
-		role = "assistant"
-	}
-	s.state.StickyResponseMessage = &llm.Message{
-		Role:    role,
-		Content: llm.MessageContent{Content: &content},
+			log.String("sticky_kind", stickyKindAPIKey))
 	}
 }
 
