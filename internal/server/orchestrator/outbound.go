@@ -83,9 +83,10 @@ func (ts *OutboundPersistentStream) Current() *httpclient.StreamEvent {
 	event := ts.stream.Current()
 	if event != nil {
 		ts.responseChunks = append(ts.responseChunks, httpclient.SummarizeBinaryChunk(event))
-		// Check if this is a terminal event, which indicates the stream completed successfully.
-		// For Chat Completions API this is the raw [DONE] event; for Responses API this is
-		// response.completed; for Anthropic Messages API this is message_stop.
+		// Check if this is a terminal event, which indicates the stream reached a terminal state.
+		// For Chat Completions API this is the raw [DONE] event; for Responses API this includes
+		// response.completed, response.failed, response.cancelled, and response.incomplete;
+		// for Anthropic Messages API this is message_stop.
 		if isTerminalStreamEvent(event) {
 			ts.state.StreamCompleted = true
 		}
@@ -111,13 +112,13 @@ func (ts *OutboundPersistentStream) Close() error {
 	streamErr := ts.stream.Err()
 	ctxErr := ctx.Err()
 
-	// If we received the [DONE] event, treat the stream as successfully completed
+	// If we received a terminal event, treat the stream as successfully completed
 	// even if there's a context cancellation error. This handles the case where
 	// the client disconnects immediately after receiving the last chunk.
 	if ts.state.StreamCompleted {
 		ts.logFinalizationDecision(ctx, "terminal_event_completed", streamErr, ctxErr, true, nil)
 		// Stream completed successfully - perform final persistence
-		log.Debug(ctx, "Stream completed successfully (received [DONE]), performing final persistence")
+		log.Debug(ctx, "Stream completed successfully (received terminal event), performing final persistence")
 		ts.persistResponseChunks(ctx)
 
 		return ts.stream.Close()

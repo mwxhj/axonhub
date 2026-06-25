@@ -1306,6 +1306,67 @@ func TestOutboundPersistentStream_Close_AggregatedResponsesCompletionHandling(t 
 		require.Equal(t, "resp_codex_like", dbExec.ExternalID)
 		require.True(t, state.StreamCompleted)
 	})
+
+	t.Run("response.failed terminal event is treated as completed stream", func(t *testing.T) {
+		client := enttest.NewEntClient(t, "sqlite3", "file:ent?mode=memory&_fk=0")
+		defer client.Close()
+
+		ctx := ent.NewContext(ctx, client)
+		project := createTestProject(t, ctx, client)
+		ch := createTestChannel(t, ctx, client)
+		_, requestService, _, usageLogService := setupTestServices(t, client)
+
+		req, err := client.Request.Create().
+			SetProjectID(project.ID).
+			SetChannelID(ch.ID).
+			SetModelID("gpt-4.1").
+			SetStatus(request.StatusPending).
+			SetRequestBody([]byte(`{"stream":true}`)).
+			Save(ctx)
+		require.NoError(t, err)
+
+		exec, err := client.RequestExecution.Create().
+			SetRequestID(req.ID).
+			SetProjectID(project.ID).
+			SetChannelID(ch.ID).
+			SetModelID("gpt-4.1").
+			SetRequestBody([]byte(`{"stream":true}`)).
+			SetFormat("openai/responses").
+			SetStatus(requestexecution.StatusPending).
+			SetStream(true).
+			Save(ctx)
+		require.NoError(t, err)
+
+		stream := &sliceEventStream{
+			events: []*httpclient.StreamEvent{
+				{
+					Type: "response.failed",
+					Data: []byte(`{"type":"response.failed","response":{"id":"resp_failed","object":"response","created_at":1700000000,"model":"gpt-5","status":"failed","output":[],"error":{"type":"server_error","code":"stream_error","message":"upstream boom"}}}`),
+				},
+			},
+		}
+		transformer := &mockTransformer{
+			apiFormat:          llm.APIFormatOpenAIResponse,
+			aggregatedResponse: []byte(`{"id":"resp_failed","status":"failed","output":[]}`),
+			aggregatedMeta: llm.ResponseMeta{
+				ID: "resp_failed",
+			},
+		}
+		state := &PersistenceState{}
+
+		persistentStream := NewOutboundPersistentStream(ctx, stream, req, exec, requestService, usageLogService, transformer, nil, state)
+		for persistentStream.Next() {
+			_ = persistentStream.Current()
+		}
+		require.NoError(t, persistentStream.Close())
+
+		dbExec, err := client.RequestExecution.Get(ctx, exec.ID)
+		require.NoError(t, err)
+		require.Equal(t, requestexecution.StatusCompleted, dbExec.Status)
+		require.JSONEq(t, `{"id":"resp_failed","status":"failed","output":[]}`, string(dbExec.ResponseBody))
+		require.Equal(t, "resp_failed", dbExec.ExternalID)
+		require.True(t, state.StreamCompleted)
+	})
 }
 
 func TestPersistentOutboundTransformer_TransformRequest_WithPrepopulatedState(t *testing.T) {

@@ -76,13 +76,18 @@ func (ts *InboundPersistentStream) Current() *httpclient.StreamEvent {
 	return event
 }
 
-// isTerminalStreamEvent checks if the event represents the end of a successfully completed stream.
-// For Chat Completions API this is the raw [DONE] event; for Responses API this is response.completed.
+// isTerminalStreamEvent checks if the event represents a terminal stream event.
+// For Chat Completions API this is the raw [DONE] event; for Responses API this includes
+// response.completed, response.failed, response.cancelled, and response.incomplete.
 func isTerminalStreamEvent(event *httpclient.StreamEvent) bool {
 	// For chat completions, check for [DONE] event
 	return bytes.Equal(event.Data, llm.DoneStreamEvent.Data) ||
 		// For Responses API, check for response.completed event
 		event.Type == "response.completed" ||
+		// Responses API terminal states also end the stream.
+		event.Type == "response.failed" ||
+		event.Type == "response.cancelled" ||
+		event.Type == "response.incomplete" ||
 		// For Anthropic Messages API, check for message_stop event
 		event.Type == "message_stop" ||
 		// For raw binary audio stream, check for the synthetic done event.

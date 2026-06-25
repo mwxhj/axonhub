@@ -71,3 +71,51 @@ url := fmt.Sprintf("data:%s;base64,%s", contentType, encoded)
 url := xurl.BuildDataURL(contentType, encoded, true)
 ```
 
+## Scenario: Streaming terminal event handling
+
+### 1. Scope / Trigger
+- Trigger: changing inbound/outbound streaming persistence for OpenAI Responses, Chat Completions, Anthropic Messages, Gemini, or audio streams.
+- This includes stream close handling, request execution status updates, and persisted request chunks.
+
+### 2. Signatures
+- `internal/server/orchestrator/isTerminalStreamEvent(event *httpclient.StreamEvent) bool`
+- `internal/server/orchestrator/InboundPersistentStream.Close()`
+- `internal/server/orchestrator/OutboundPersistentStream.Close()`
+
+### 3. Contracts
+- `response.completed` is a terminal Responses API event.
+- `response.failed`, `response.cancelled`, and `response.incomplete` are also terminal Responses API events.
+- Terminal does not mean "successful completion"; it means the stream is finished and must not be treated as an incomplete transport loss.
+
+### 4. Validation & Error Matrix
+| Condition | Required Behavior |
+|-----------|-------------------|
+| Responses stream ends with `response.completed` | Mark stream completed and persist normally. |
+| Responses stream ends with `response.failed` | Mark stream completed and persist terminal response state. |
+| Responses stream ends with `response.cancelled` | Mark stream completed and persist terminal response state. |
+| Responses stream ends with `response.incomplete` | Mark stream completed and persist terminal response state. |
+| Stream ends without any recognized terminal event and cannot be aggregated to a complete response | Report `stream ended without terminal event or completed response`. |
+
+### 5. Good/Base/Bad Cases
+- Good: a Responses stream with `response.failed` is stored as a finished request execution with failed response body.
+- Base: a Responses stream with `response.completed` stores as completed.
+- Bad: a valid Responses terminal state is misclassified as transport EOF and surfaces the generic incomplete-stream error.
+
+### 6. Tests Required
+- Unit test the terminal-event helper for all Responses terminal states.
+- Add a persistence regression that proves `response.failed` does not trip the incomplete-stream path.
+- Keep existing aggregation-complete tests for terminal-less but fully aggregatable streams.
+
+### 7. Wrong vs Correct
+#### Wrong
+```go
+return event.Type == "response.completed"
+```
+
+#### Correct
+```go
+return event.Type == "response.completed" ||
+	event.Type == "response.failed" ||
+	event.Type == "response.cancelled" ||
+	event.Type == "response.incomplete"
+```

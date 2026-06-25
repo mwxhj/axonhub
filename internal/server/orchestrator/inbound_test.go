@@ -18,6 +18,24 @@ import (
 	"github.com/looplj/axonhub/llm/transformer"
 )
 
+func TestIsTerminalStreamEvent_ResponsesTerminalStates(t *testing.T) {
+	tests := []struct {
+		name string
+		typ  string
+	}{
+		{name: "response.completed", typ: "response.completed"},
+		{name: "response.failed", typ: "response.failed"},
+		{name: "response.cancelled", typ: "response.cancelled"},
+		{name: "response.incomplete", typ: "response.incomplete"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.True(t, isTerminalStreamEvent(&httpclient.StreamEvent{Type: tt.typ}))
+		})
+	}
+}
+
 // mockInboundTransformer is a mock transformer for testing.
 type mockInboundTransformer struct {
 	aggregateResponseBody []byte
