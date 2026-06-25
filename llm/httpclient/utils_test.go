@@ -225,20 +225,6 @@ func TestMaskSensitiveHeaders_MasksKnownAndKeyLikeHeaders(t *testing.T) {
 	require.Equal(t, "Bearer upstream-key", headers.Get("Authorization"))
 }
 
-func TestRedactSensitiveBody_RedactsCommonSecretFields(t *testing.T) {
-	body := []byte(`{"model":"gpt-4","api_key":"sk-secret","nested":{"access_token":"tok-secret"},"authorization":"Bearer raw-token","message":"keep me"}`)
-
-	got := string(RedactSensitiveBody(body))
-
-	require.Contains(t, got, `"api_key":"[REDACTED]"`)
-	require.Contains(t, got, `"access_token":"[REDACTED]"`)
-	require.Contains(t, got, `"authorization":"[REDACTED]`)
-	require.Contains(t, got, `"message":"keep me"`)
-	require.NotContains(t, got, "sk-secret")
-	require.NotContains(t, got, "tok-secret")
-	require.NotContains(t, got, "raw-token")
-}
-
 func TestReadHTTPRequest_InvalidGzipData(t *testing.T) {
 	invalidData := []byte("this is not valid gzip compressed data")
 	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", bytes.NewReader(invalidData))

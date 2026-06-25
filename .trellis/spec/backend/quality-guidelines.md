@@ -162,6 +162,71 @@ When changing routing, quota, sticky-session, retry, or credential selection:
 If a test only proves that "a request still succeeded", it is not enough for
 semantic features. The test must prove why that target was selected.
 
+## Scenario: Persisting Request Bodies
+
+### 1. Scope / Trigger
+
+- Trigger: changing request/request-execution persistence, body masking, trace
+  snapshots, or any code that saves outbound request payloads to the database
+  or external storage.
+
+### 2. Signatures
+
+- `internal/server/biz.(*RequestService).CreateRequest`
+- `internal/server/biz.(*RequestService).CreateRequestExecution`
+- `llm/httpclient.MaskSensitiveHeaders(http.Header) http.Header`
+
+### 3. Contracts
+
+- Persisted `request_body` and `request_execution.request_body` must remain
+  valid JSON when the source payload is valid JSON.
+- Header masking may replace sensitive header values because headers are stored
+  as structured key/value metadata.
+- Request body persistence must not mutate message/prompt text by applying
+  regex or free-text replacement across the serialized JSON document.
+- If a request body cannot be stored, the code must surface that as a
+  persistence failure, not as a fake content diagnosis.
+
+### 4. Validation & Error Matrix
+
+- Valid JSON request body -> stored as valid JSON.
+- Sensitive header present -> header value masked in persisted headers.
+- Body contains strings like `api_key`, `secret`, `authorization`, or prompt
+  text mentioning those tokens -> persistence must still preserve valid JSON.
+- Body persistence fails -> log/store a persistence error; do not treat the
+  body content itself as `invalid text`.
+
+### 5. Good / Base / Bad Cases
+
+- Good: execution request body stores the exact outbound JSON payload while
+  request headers store masked auth values.
+- Base: a normal OpenAI/Responses JSON body is persisted unchanged.
+- Bad: regex-based body masking rewrites prompt text and produces invalid JSON
+  before inserting into `jsonb`.
+
+### 6. Tests Required
+
+- Unit test that `CreateRequestExecution` preserves a JSON body containing
+  secret-shaped field names and values.
+- Unit test that header masking still hides sensitive header values.
+- Regression coverage for request bodies containing long prompt text with words
+  like `api_key`, `access_token`, or `secret`.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```go
+requestBodyBytes = objects.JSONRawMessage(httpclient.RedactSensitiveBody(requestBodyBytes))
+```
+
+#### Correct
+
+```go
+requestBodyBytes = channelRequest.JSONBody
+requestHeadersBytes, _ = xjson.Marshal(httpclient.MaskSensitiveHeaders(channelRequest.Headers))
+```
+
 ---
 
 ## Code Review Checklist

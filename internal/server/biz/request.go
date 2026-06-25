@@ -288,8 +288,6 @@ func (s *RequestService) CreateRequestExecution(
 
 			requestBodyBytes = b
 		}
-		requestBodyBytes = objects.JSONRawMessage(httpclient.RedactSensitiveBody(requestBodyBytes))
-
 		if len(channelRequest.Headers) > 0 {
 			requestHeadersBytes, _ = xjson.Marshal(httpclient.MaskSensitiveHeaders(channelRequest.Headers))
 		}

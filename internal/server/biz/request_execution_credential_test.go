@@ -97,7 +97,7 @@ func TestRequestService_CreateRequestExecutionStoresCredentialFingerprint(t *tes
 	require.Equal(t, quotaScope.Status.String(), fetched.QuotaScopeStatusSnapshot)
 }
 
-func TestRequestService_CreateRequestExecutionRedactsOutboundBodySecrets(t *testing.T) {
+func TestRequestService_CreateRequestExecutionPreservesOutboundBody(t *testing.T) {
 	svc, client, ctx := setupTestRequestService(t)
 	defer client.Close()
 
@@ -135,7 +135,5 @@ func TestRequestService_CreateRequestExecutionRedactsOutboundBodySecrets(t *test
 		false,
 	)
 	require.NoError(t, err)
-	require.JSONEq(t, `{"model":"gpt-4","api_key":"[REDACTED]","access_token":"[REDACTED]","message":"keep me"}`, string(exec.RequestBody))
-	require.NotContains(t, string(exec.RequestBody), "sk-secret")
-	require.NotContains(t, string(exec.RequestBody), "token-secret")
+	require.JSONEq(t, `{"model":"gpt-4","api_key":"sk-secret","access_token":"token-secret","message":"keep me"}`, string(exec.RequestBody))
 }

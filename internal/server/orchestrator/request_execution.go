@@ -22,13 +22,13 @@ var (
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 )
 
-// sanitizeResponseBody redacts obvious secrets and truncates the body for safe logging.
+// sanitizeResponseBody truncates the body for logs and redacts email addresses.
 func sanitizeResponseBody(body []byte, maxLen int) []byte {
 	if len(body) == 0 {
 		return body
 	}
 
-	str := string(httpclient.RedactSensitiveBody(body))
+	str := string(body)
 
 	// Redact email addresses
 	str = emailRegex.ReplaceAllString(str, "[EMAIL REDACTED]")
