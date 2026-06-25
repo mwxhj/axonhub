@@ -2,7 +2,6 @@ package orchestrator
 
 import (
 	"context"
-	"regexp"
 	"time"
 
 	"github.com/tidwall/gjson"
@@ -17,21 +16,13 @@ import (
 	"github.com/looplj/axonhub/llm/pipeline"
 )
 
-// Precompiled regex patterns for sanitizeResponseBody to avoid recompiling on each call.
-var (
-	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
-)
-
-// sanitizeResponseBody truncates the body for logs and redacts email addresses.
+// sanitizeResponseBody truncates the body for logs.
 func sanitizeResponseBody(body []byte, maxLen int) []byte {
 	if len(body) == 0 {
 		return body
 	}
 
 	str := string(body)
-
-	// Redact email addresses
-	str = emailRegex.ReplaceAllString(str, "[EMAIL REDACTED]")
 
 	// Truncate if too long
 	if len(str) > maxLen {
