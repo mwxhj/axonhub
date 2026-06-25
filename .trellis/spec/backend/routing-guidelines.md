@@ -849,55 +849,58 @@ Sticky-session state is internal server state. Clients must not provide a sticky
 
 ```go
 type StickySessionTarget struct {
+    CredentialID          int
     ChannelID             int
-    CredentialID          *int
     CredentialFingerprint string
 }
 
 type StickySessionBinding struct {
-    StickyKey string
-    Target    StickySessionTarget
-    ExpiresAt time.Time
+    CredentialID          int
+    ChannelID             int
+    CredentialFingerprint string
+    ExpiresAt             time.Time
 }
 ```
 
 Required runtime meaning:
 
-- `stickyKey -> target`, not `request -> target`.
-- `target` means the successful execution target. When credential identity is known, it includes both channel and upstream credential identity.
-- TTL is 5 minutes. Expiry intentionally lets the current API-key route-tier
-  order and hard availability rules regain control.
-- Bindings are soft. They may be ignored when the target is not eligible for the current candidate tier.
+- `stickyKey -> channel target`, not `request -> target`.
+- `target` means the successful execution target. When credential identity is
+  known, the binding may also carry safe credential snapshot data, but sticky
+  lookup is still by key and channel.
+- TTL is 5 minutes.
+- Bindings are soft. They may be ignored when the bound channel is absent from
+  the current candidate list.
 
 ### 3. Contracts
 
 - Candidate channels still come from the active API key route profile, model,
   API-format, credential local quota, and hard eligibility rules.
-- Sticky-session must not cross route tiers to preserve stickiness. It can only
-  reorder eligible candidates inside the current route tier.
-- First unbound selection starts from the existing API-key route-tier order for
-  that tier. It must not call load-balanced ordering or add sticky-specific
-  stable channel scoring.
+- Sticky-session works on the candidate list already produced by the API-key
+  route profile. It can reorder that list, but it must not synthesize new
+  candidates, read response-chain state, or introduce a second routing policy
+  under the `sticky-session` name.
+- First unbound selection starts from the existing route-profile order. It must
+  not call load-balanced ordering or add sticky-specific stable channel
+  scoring.
 - First unbound selection must not apply sticky-specific quota-ratio balancing. If local quota balancing is needed later, expose it as a separate explicit routing policy or sub-policy.
 - A binding is created or refreshed only after an upstream request succeeds.
 - A selected target must not be written to the binding store before upstream success.
 - If the bound target fails and fallback succeeds, refresh the binding to the successful fallback target.
 - If all attempts fail, keep the previous binding until TTL expiry and return the real retry/upstream error.
-- Sticky-session may keep the same credential only when the bound target remains
-  eligible inside the current route tier. It must not move to a lower route tier
-  only to keep the credential.
-- If retry/fallback has already entered a lower route tier and that tier
-  succeeds, binding may refresh to that successful target. The 5-minute TTL is
-  what prevents permanent route-tier bypass.
+- Credential choice inside the selected channel is handled separately via the
+  credential selection seed. Sticky binding itself stays channel-level.
+- If fallback succeeds on a different channel, binding may refresh to that
+  successful target.
 - Sticky-session semantic states must stay explicit: binding hit, binding ignored, and normal first-bind. Do not silently change from sticky behavior to quota balancing or another routing policy under the same strategy name.
 
 ### 4. Validation & Error Matrix
 
 | Condition | Required Behavior |
 |-----------|-------------------|
-| No qualified sticky key can be generated | Preserve route-tier order. Do not create a binding. |
-| Binding exists and target is eligible in the current tier | Place that target first for the current attempt. |
-| Binding target is disabled, deleted, model-ineligible, quota-ineligible, or outside the current route tier | Ignore the binding for this attempt. Route-tier order continues. |
+| No qualified sticky key can be generated | Preserve the current candidate order. Do not create a binding. |
+| Binding exists and target is eligible in the current candidate list | Place that target first for the current attempt. |
+| Binding target is absent from the current candidate list | Ignore the binding for this attempt. Route/profile order continues. |
 | Bound target returns network error, timeout, 5xx, empty response, retryable 429, or queue-full error | Let existing retry/fallback escape. Do not migrate on failed execution alone. |
 | Fallback target succeeds | Refresh binding to the successful target. |
 | All targets fail | Keep old binding until TTL. Return the real upstream/retry result. |
@@ -909,15 +912,17 @@ Required runtime meaning:
 - Good: no binding exists, route-tier order selects channel A, upstream
   succeeds, binding becomes `stickyKey -> A`.
 - Good: binding points to A, A fails once, retry/fallback reaches B and B succeeds, binding refreshes to B.
-- Good: binding points to C from a lower-tier fallback, TTL expires after 5
-  minutes, the next request returns to route-tier selection.
-- Base: no qualified sticky key exists, request preserves API-key route-tier
-  order.
+- Good: binding points to C from a fallback target, and later requests keep
+  hitting C until TTL expiry or a hard eligibility change removes C from the
+  candidate list.
+- Base: no qualified sticky key exists, request preserves API-key route
+  ordering.
 - Bad: binding to A before A succeeds.
 - Bad: using `hash(stickyKey + channelID)`, rendezvous hashing, load-balancer
-  score, or display order to override API-key route-tier order inside
-  sticky-session.
-- Bad: crossing from tier A/B to lower tier C only because C has the old binding.
+  score, response-chain identity, transcript prefixes, or prompt-cache
+  fingerprints to define sticky identity.
+- Bad: keeping one product label while silently switching to another routing
+  contract underneath it.
 - Bad: returning `failed to apply raw request middlewares: skip candidate by
   circuit breaker` as the client-visible 500 for sticky-session routing.
 
@@ -928,10 +933,9 @@ When changing sticky-session or neighboring routing behavior, add or update test
 - No binding write before upstream success.
 - Successful fallback refreshes binding to the successful target.
 - Failed fallback does not migrate or delete the old binding.
-- Sticky-session does not cross route tiers before retry/fallback reaches that tier.
 - Circuit-breaker hard skips are surfaced explicitly, not as raw middleware wrappers.
 - No executable candidate returns an explicit routing/unavailable error instead of a raw middleware wrapper.
-- Credential-aware sticky routing keeps the same credential only among eligible same-tier candidates.
+- Sticky key extraction depends on API-key scope only, not on response chains or request fingerprints.
 - Sticky first-bind does not perform quota-ratio balancing under the `sticky-session` strategy name.
 
 ### 7. Wrong vs Correct
@@ -949,7 +953,7 @@ This binds on selection instead of success and lets sticky-session introduce its
 ```text
 candidate list
 -> API-key route-tier selection
--> sticky binding reorders eligible same-tier candidates only
+-> sticky binding reorders the current candidate list
 -> send upstream through existing retry/fallback
 -> on success, bind stickyKey to the successful target for 5 minutes
 ```
@@ -957,30 +961,9 @@ candidate list
 This keeps sticky-session focused on cache locality while route tiers, quota,
 health, retry, and fallback remain owned by the normal routing pipeline.
 
----
-
-## Responses API Chain Routing
-
-Responses API requests with `previous_response_id` are stronger than ordinary sticky-session hints. The upstream response ID may be provider-local state.
-
-Required behavior:
-
-- Track response chains internally: if `resp_2` was created from `previous_response_id=resp_1`, then `resp_2` inherits the successful target used for that chain.
-- Prefer the chain target before generic request fingerprinting.
-- If the chain target fails and fallback succeeds by reconstructing a complete request, bind the new response ID to the successful target.
-- If the request still depends on provider-local previous response state that cannot be reconstructed, do not blindly cross providers or credentials.
-
-Tests must distinguish:
-
-- Chain target success.
-- Chain target fail plus reconstructed fallback success.
-- Chain target fail with unreconstructable provider-local state.
-
----
-
 ## Sticky Key Extraction
 
-Sticky keys are generated from stable server-visible context. They are not client-supplied and do not have a confidence score.
+Sticky keys are generated from stable server-visible API-key scope. They are not client-supplied and do not have a confidence score.
 
 Extractor shape:
 
@@ -994,12 +977,13 @@ type StickyKeyResult struct {
 
 Rules:
 
-- `OK=false` leaves the current API key route-tier order unchanged. Do not force
-  stickiness from weak material.
-- Prefer explicit stable session identity from Codex, Claude Code, agent, project, window, or similar internal context when available.
-- For Responses API, prefer response-chain identity over prompt fingerprinting.
-- For chat/completions without a session ID, build a root-session fingerprint from API key/profile scope, model scope, client format, system/developer prompt, tool schema, and early stable user context.
-- Do not hash the latest user message or the entire conversation history. That drifts every turn and destroys cache locality.
+- `OK=false` leaves the current API key route ordering unchanged.
+- The key derives from API-key scope only. In this codebase that means the
+  stable API-key scope currently available to the server (`APIKeyID` plus
+  namespace data such as `ProjectID`).
+- Request shape, `previous_response_id`, prompt cache, transcript prefixes,
+  tool schema, and latest-message fingerprints do not contribute to sticky
+  identity.
 - Do not expose `stickyKey` in API responses, logs at unsafe verbosity, or client-visible errors.
 
 ---
