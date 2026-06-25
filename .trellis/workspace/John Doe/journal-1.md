@@ -372,3 +372,38 @@ Completed upstream beta4 safe patch port, added request observability and LLM tr
 ### Next Steps
 
 - None - task complete
+
+
+## Session 12: Sticky-session key-level simplification
+
+**Date**: 2026-06-25
+**Task**: Sticky-session key-level simplification
+**Branch**: `unstable`
+
+### Summary
+
+Simplified sticky-session to API-key scope only, removed legacy response-chain sticky state, and aligned backend Trellis routing docs with the new contract.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ccc1b253` | (see git log) |
+| `947158bc` | (see git log) |
+| `4e04c5fc` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
