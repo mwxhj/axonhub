@@ -146,6 +146,7 @@ func TestMutationResolver_UpdateResponseQualityGuardSettings_MergesWithoutOverwr
 		Rules: []biz.ResponseQualityGuardRule{
 			{
 				ModelMatch:                []string{"gpt-5.4", "gpt-5-codex"},
+				ReasoningTokensComparison: biz.ResponseQualityGuardReasoningComparisonEQ,
 				ReasoningTokensLTE:        516,
 				ApplyToStream:             true,
 				ApplyToNonStream:          true,
@@ -169,6 +170,7 @@ func TestMutationResolver_UpdateResponseQualityGuardSettings_MergesWithoutOverwr
 	require.Equal(t, "retry_on_match", policy.ResponseQualityGuard.Mode)
 	require.Len(t, policy.ResponseQualityGuard.Rules, 1)
 	require.Equal(t, []string{"gpt-5.4", "gpt-5-codex"}, policy.ResponseQualityGuard.Rules[0].ModelMatch)
+	require.Equal(t, biz.ResponseQualityGuardReasoningComparisonEQ, policy.ResponseQualityGuard.Rules[0].ReasoningTokensComparison)
 	require.Equal(t, int64(516), policy.ResponseQualityGuard.Rules[0].ReasoningTokensLTE)
 	require.True(t, policy.ResponseQualityGuard.Rules[0].ApplyToStream)
 	require.True(t, policy.ResponseQualityGuard.Rules[0].ApplyToNonStream)

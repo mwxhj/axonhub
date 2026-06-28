@@ -97,7 +97,7 @@ func (m *responseQualityGate) OnOutboundRawResponse(ctx context.Context, respons
 	}
 
 	reasoningTokens, ok := responseReasoningTokens(unified)
-	if !ok || reasoningTokens > rule.ReasoningTokensLTE {
+	if !ok || !matchesResponseQualityGuardRule(rule, reasoningTokens) {
 		return response, nil
 	}
 
@@ -131,7 +131,7 @@ func (m *responseQualityGate) OnOutboundRawStream(ctx context.Context, stream st
 	if err != nil {
 		return nil, err
 	}
-	if !ok || reasoningTokens > rule.ReasoningTokensLTE {
+	if !ok || !matchesResponseQualityGuardRule(rule, reasoningTokens) {
 		return streams.SliceStream(buffered), nil
 	}
 
@@ -181,6 +181,7 @@ func (m *responseQualityGate) failOrObserve(
 		log.String("actual_model", actualModel),
 		log.Bool("stream", stream),
 		log.Int64("reasoning_tokens", reasoningTokens),
+		log.String("reasoning_tokens_comparison", string(rule.ReasoningTokensComparison)),
 		log.Int64("reasoning_tokens_lte", rule.ReasoningTokensLTE),
 		log.String("mode", m.config.Mode),
 	}
@@ -218,6 +219,7 @@ func (m *responseQualityGate) failOrObserveStream(
 		log.String("actual_model", actualModel),
 		log.Bool("stream", true),
 		log.Int64("reasoning_tokens", reasoningTokens),
+		log.String("reasoning_tokens_comparison", string(rule.ReasoningTokensComparison)),
 		log.Int64("reasoning_tokens_lte", rule.ReasoningTokensLTE),
 		log.String("mode", m.config.Mode),
 	}
@@ -286,6 +288,17 @@ func responseReasoningTokens(response *llm.Response) (int64, bool) {
 	}
 
 	return response.Usage.CompletionTokensDetails.ReasoningTokens, true
+}
+
+func matchesResponseQualityGuardRule(rule biz.ResponseQualityGuardRule, reasoningTokens int64) bool {
+	switch rule.ReasoningTokensComparison {
+	case biz.ResponseQualityGuardReasoningComparisonEQ:
+		return reasoningTokens == rule.ReasoningTokensLTE
+	case "", biz.ResponseQualityGuardReasoningComparisonLTE:
+		return reasoningTokens <= rule.ReasoningTokensLTE
+	default:
+		return reasoningTokens <= rule.ReasoningTokensLTE
+	}
 }
 
 func httpclientResponseHeadersJSON() http.Header {

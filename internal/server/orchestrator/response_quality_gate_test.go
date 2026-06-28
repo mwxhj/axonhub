@@ -91,6 +91,59 @@ func TestResponseQualityGate_OnOutboundRawResponse_RetryBeforeSuccessSideEffects
 	assert.True(t, IsResponseQualityGuardMatchedError(err))
 }
 
+func TestResponseQualityGate_OnOutboundRawResponse_EqualityComparisonMatchesExactValue(t *testing.T) {
+	outbound := newResponseQualityGateOutbound("gpt-5.4")
+	gate := withResponseQualityGate(outbound, outbound.state, &biz.RetryPolicy{
+		ResponseQualityGuard: biz.ResponseQualityGuard{
+			Enabled: true,
+			Mode:    responseQualityGuardModeRetryOnMatch,
+			Rules: []biz.ResponseQualityGuardRule{
+				{
+					ModelMatch:                []string{"gpt-5.4"},
+					ReasoningTokensComparison: biz.ResponseQualityGuardReasoningComparisonEQ,
+					ReasoningTokensLTE:        100,
+					ApplyToNonStream:          true,
+				},
+			},
+		},
+	}).(*responseQualityGate)
+
+	resp, err := gate.OnOutboundRawResponse(context.Background(), &httpclient.Response{
+		StatusCode: http.StatusOK,
+		Headers:    http.Header{"Content-Type": []string{"application/json"}},
+		Body:       []byte(`{"ok":true}`),
+	})
+	require.Error(t, err)
+	assert.Nil(t, resp)
+	assert.True(t, IsResponseQualityGuardMatchedError(err))
+}
+
+func TestResponseQualityGate_OnOutboundRawResponse_EqualityComparisonSkipsDifferentValue(t *testing.T) {
+	outbound := newResponseQualityGateOutbound("gpt-5.4")
+	gate := withResponseQualityGate(outbound, outbound.state, &biz.RetryPolicy{
+		ResponseQualityGuard: biz.ResponseQualityGuard{
+			Enabled: true,
+			Mode:    responseQualityGuardModeRetryOnMatch,
+			Rules: []biz.ResponseQualityGuardRule{
+				{
+					ModelMatch:                []string{"gpt-5.4"},
+					ReasoningTokensComparison: biz.ResponseQualityGuardReasoningComparisonEQ,
+					ReasoningTokensLTE:        99,
+					ApplyToNonStream:          true,
+				},
+			},
+		},
+	}).(*responseQualityGate)
+
+	resp, err := gate.OnOutboundRawResponse(context.Background(), &httpclient.Response{
+		StatusCode: http.StatusOK,
+		Headers:    http.Header{"Content-Type": []string{"application/json"}},
+		Body:       []byte(`{"ok":true}`),
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+}
+
 func TestResponseQualityGate_OnOutboundRawStream_RetryAfterBufferedVerdict(t *testing.T) {
 	outbound := newResponseQualityGateOutbound("gpt-5.4")
 	streamRequested := true

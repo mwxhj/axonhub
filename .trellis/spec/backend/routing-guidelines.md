@@ -1310,8 +1310,11 @@ type ResponseQualityGuard struct {
     Rules    []ResponseQualityGuardRule `json:"rules"`
 }
 
+type ResponseQualityGuardReasoningComparison string
+
 type ResponseQualityGuardRule struct {
     ModelMatch []string `json:"model_match"`
+    ReasoningTokensComparison ResponseQualityGuardReasoningComparison `json:"reasoning_tokens_comparison"` // lte | eq
     ReasoningTokensLTE int64 `json:"reasoning_tokens_lte"`
     ApplyToStream bool `json:"apply_to_stream"`
     ApplyToNonStream bool `json:"apply_to_non_stream"`
@@ -1389,11 +1392,11 @@ type ResponseQualityGuardStats struct {
 | Condition | Required Behavior |
 |-----------|-------------------|
 | Non-stream response reasoning tokens missing | Treat as not matched; pass response through. |
-| Non-stream response reasoning tokens `<= threshold` and `retry_on_match` | Return `ResponseQualityGuardMatchedError`; same-target retry eligible; no success hooks. |
-| Non-stream response reasoning tokens `<= threshold` and `observe_only` | Log match and continue original response. |
+| Non-stream response reasoning tokens match configured comparison (`lte` or `eq`) and `retry_on_match` | Return `ResponseQualityGuardMatchedError`; same-target retry eligible; no success hooks. |
+| Non-stream response reasoning tokens match configured comparison (`lte` or `eq`) and `observe_only` | Log match and continue original response. |
 | Stream rule matched but `BufferStreamUntilDecision=false` | Do not inspect buffered usage; pass stream through unchanged. |
-| Stream buffered, aggregate succeeds, reasoning tokens `<= threshold`, `retry_on_match` | Return `ResponseQualityGuardMatchedError`; no pass-through fan-out or success hooks should start after the gate. |
-| Stream buffered, aggregate succeeds, reasoning tokens `<= threshold`, `observe_only` | Replay original buffered raw events to downstream consumers. |
+| Stream buffered, aggregate succeeds, reasoning tokens match configured comparison (`lte` or `eq`), `retry_on_match` | Return `ResponseQualityGuardMatchedError`; no pass-through fan-out or success hooks should start after the gate. |
+| Stream buffered, aggregate succeeds, reasoning tokens match configured comparison (`lte` or `eq`), `observe_only` | Replay original buffered raw events to downstream consumers. |
 | Stream buffered but outbound aggregate/transform cannot produce unified usage | Treat as not matched only if usage is absent after a successful transform; propagate real aggregate/transform errors. |
 | Guard error reaches retry planner | `CanRetry=true`, `isRetryableError=true`, `isFallbackableError=false`. |
 | Guard error reaches circuit breaker / performance raw-error hook | Must not record model error or performance success/failure side effects for the channel. |
@@ -1402,8 +1405,9 @@ type ResponseQualityGuardStats struct {
 
 ### 5. Good / Base / Bad Cases
 
-- Good: a `gpt-5.4` response returns `reasoning_tokens=100`, the raw gate rejects
-  the attempt before pass-through capture starts, and the retry loop replays the
+- Good: a `gpt-5.4` response returns `reasoning_tokens=100`, and a rule with
+  `comparison=lte threshold=516` or `comparison=eq threshold=100` rejects the
+  attempt before pass-through capture starts, and the retry loop replays the
   same concrete target.
 - Good: a client asked for non-stream, provider execution was internally forced to
   stream for auto-aggregation, and `ApplyToNonStream=true` still controls the rule.

@@ -282,11 +282,21 @@ type ResponseQualityGuard struct {
 	Rules []ResponseQualityGuardRule `json:"rules"`
 }
 
+type ResponseQualityGuardReasoningComparison string
+
+const (
+	ResponseQualityGuardReasoningComparisonLTE ResponseQualityGuardReasoningComparison = "lte"
+	ResponseQualityGuardReasoningComparisonEQ  ResponseQualityGuardReasoningComparison = "eq"
+)
+
 type ResponseQualityGuardRule struct {
 	// ModelMatch contains exact or regex-like model patterns matched against actual upstream model ID.
 	ModelMatch []string `json:"model_match"`
 
-	// ReasoningTokensLTE triggers when observed reasoning tokens are less than or equal to this threshold.
+	// ReasoningTokensComparison controls how reasoning tokens are compared against ReasoningTokensLTE.
+	ReasoningTokensComparison ResponseQualityGuardReasoningComparison `json:"reasoning_tokens_comparison"`
+
+	// ReasoningTokensLTE stores the threshold or exact target used by ReasoningTokensComparison.
 	ReasoningTokensLTE int64 `json:"reasoning_tokens_lte"`
 
 	// ApplyToStream enables this rule for streaming requests.
@@ -297,6 +307,37 @@ type ResponseQualityGuardRule struct {
 
 	// BufferStreamUntilDecision forces stream buffering so the final usage can be inspected before release.
 	BufferStreamUntilDecision bool `json:"buffer_stream_until_decision"`
+}
+
+func (c ResponseQualityGuardReasoningComparison) MarshalGQL(w io.Writer) {
+	var s string
+
+	switch c {
+	case ResponseQualityGuardReasoningComparisonEQ:
+		s = "EQ"
+	default:
+		s = "LTE"
+	}
+
+	_, _ = io.WriteString(w, `"`+s+`"`)
+}
+
+func (c *ResponseQualityGuardReasoningComparison) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("ResponseQualityGuardReasoningComparison must be a string")
+	}
+
+	switch str {
+	case "LTE":
+		*c = ResponseQualityGuardReasoningComparisonLTE
+	case "EQ":
+		*c = ResponseQualityGuardReasoningComparisonEQ
+	default:
+		return fmt.Errorf("invalid ResponseQualityGuardReasoningComparison: %s", str)
+	}
+
+	return nil
 }
 
 type UpstreamErrorPolicy struct {
@@ -1031,6 +1072,13 @@ func normalizeRetryPolicy(policy *RetryPolicy) {
 		rule := &policy.ResponseQualityGuard.Rules[i]
 		if rule.ModelMatch == nil {
 			rule.ModelMatch = []string{}
+		}
+		switch rule.ReasoningTokensComparison {
+		case "", ResponseQualityGuardReasoningComparisonLTE:
+			rule.ReasoningTokensComparison = ResponseQualityGuardReasoningComparisonLTE
+		case ResponseQualityGuardReasoningComparisonEQ:
+		default:
+			rule.ReasoningTokensComparison = ResponseQualityGuardReasoningComparisonLTE
 		}
 		if rule.ReasoningTokensLTE < 0 {
 			rule.ReasoningTokensLTE = 0

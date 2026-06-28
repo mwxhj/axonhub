@@ -1456,6 +1456,7 @@ type ComplexityRoot struct {
 		ApplyToStream             func(childComplexity int) int
 		BufferStreamUntilDecision func(childComplexity int) int
 		ModelMatch                func(childComplexity int) int
+		ReasoningTokensComparison func(childComplexity int) int
 		ReasoningTokensLTE        func(childComplexity int) int
 	}
 
@@ -8788,6 +8789,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ResponseQualityGuardRule.ModelMatch(childComplexity), true
+	case "ResponseQualityGuardRule.reasoningTokensComparison":
+		if e.complexity.ResponseQualityGuardRule.ReasoningTokensComparison == nil {
+			break
+		}
+
+		return e.complexity.ResponseQualityGuardRule.ReasoningTokensComparison(childComplexity), true
 	case "ResponseQualityGuardRule.reasoningTokensLTE":
 		if e.complexity.ResponseQualityGuardRule.ReasoningTokensLTE == nil {
 			break
@@ -47779,6 +47786,8 @@ func (ec *executionContext) fieldContext_ResponseQualityGuard_rules(_ context.Co
 			switch field.Name {
 			case "modelMatch":
 				return ec.fieldContext_ResponseQualityGuardRule_modelMatch(ctx, field)
+			case "reasoningTokensComparison":
+				return ec.fieldContext_ResponseQualityGuardRule_reasoningTokensComparison(ctx, field)
 			case "reasoningTokensLTE":
 				return ec.fieldContext_ResponseQualityGuardRule_reasoningTokensLTE(ctx, field)
 			case "applyToStream":
@@ -47818,6 +47827,35 @@ func (ec *executionContext) fieldContext_ResponseQualityGuardRule_modelMatch(_ c
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ResponseQualityGuardRule_reasoningTokensComparison(ctx context.Context, field graphql.CollectedField, obj *biz.ResponseQualityGuardRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ResponseQualityGuardRule_reasoningTokensComparison,
+		func(ctx context.Context) (any, error) {
+			return obj.ReasoningTokensComparison, nil
+		},
+		nil,
+		ec.marshalNResponseQualityGuardReasoningComparison2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuardReasoningComparison,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ResponseQualityGuardRule_reasoningTokensComparison(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ResponseQualityGuardRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ResponseQualityGuardReasoningComparison does not have child fields")
 		},
 	}
 	return fc, nil
@@ -79679,7 +79717,7 @@ func (ec *executionContext) unmarshalInputResponseQualityGuardRuleInput(ctx cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"modelMatch", "reasoningTokensLTE", "applyToStream", "applyToNonStream", "bufferStreamUntilDecision"}
+	fieldsInOrder := [...]string{"modelMatch", "reasoningTokensComparison", "reasoningTokensLTE", "applyToStream", "applyToNonStream", "bufferStreamUntilDecision"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -79693,6 +79731,13 @@ func (ec *executionContext) unmarshalInputResponseQualityGuardRuleInput(ctx cont
 				return it, err
 			}
 			it.ModelMatch = data
+		case "reasoningTokensComparison":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("reasoningTokensComparison"))
+			data, err := ec.unmarshalOResponseQualityGuardReasoningComparison2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuardReasoningComparison(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ReasoningTokensComparison = data
 		case "reasoningTokensLTE":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("reasoningTokensLTE"))
 			data, err := ec.unmarshalNInt2int64(ctx, v)
@@ -103352,6 +103397,11 @@ func (ec *executionContext) _ResponseQualityGuardRule(ctx context.Context, sel a
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "reasoningTokensComparison":
+			out.Values[i] = ec._ResponseQualityGuardRule_reasoningTokensComparison(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "reasoningTokensLTE":
 			out.Values[i] = ec._ResponseQualityGuardRule_reasoningTokensLTE(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -113861,6 +113911,16 @@ func (ec *executionContext) unmarshalNResponseQualityGuardInput2githubᚗcomᚋl
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalNResponseQualityGuardReasoningComparison2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuardReasoningComparison(ctx context.Context, v any) (biz.ResponseQualityGuardReasoningComparison, error) {
+	var res biz.ResponseQualityGuardReasoningComparison
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNResponseQualityGuardReasoningComparison2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuardReasoningComparison(ctx context.Context, sel ast.SelectionSet, v biz.ResponseQualityGuardReasoningComparison) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) marshalNResponseQualityGuardRule2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuardRule(ctx context.Context, sel ast.SelectionSet, v biz.ResponseQualityGuardRule) graphql.Marshaler {
 	return ec._ResponseQualityGuardRule(ctx, sel, &v)
 }
@@ -120787,6 +120847,16 @@ func (ec *executionContext) unmarshalORequestWhereInput2ᚖgithubᚗcomᚋlooplj
 	}
 	res, err := ec.unmarshalInputRequestWhereInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOResponseQualityGuardReasoningComparison2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuardReasoningComparison(ctx context.Context, v any) (biz.ResponseQualityGuardReasoningComparison, error) {
+	var res biz.ResponseQualityGuardReasoningComparison
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOResponseQualityGuardReasoningComparison2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuardReasoningComparison(ctx context.Context, sel ast.SelectionSet, v biz.ResponseQualityGuardReasoningComparison) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) marshalORole2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐRole(ctx context.Context, sel ast.SelectionSet, v *ent.Role) graphql.Marshaler {

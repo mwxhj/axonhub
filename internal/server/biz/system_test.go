@@ -130,6 +130,25 @@ func TestSystemService_SetGeneralSettingsValidatesCredentialQuotaResetTime(t *te
 	require.NoError(t, err)
 }
 
+func TestNormalizeRetryPolicy_DefaultsResponseQualityGuardComparisonToLTE(t *testing.T) {
+	policy := &RetryPolicy{
+		ResponseQualityGuard: ResponseQualityGuard{
+			Mode: "observe_only",
+			Rules: []ResponseQualityGuardRule{
+				{
+					ModelMatch:         []string{"gpt-5.4"},
+					ReasoningTokensLTE: 100,
+				},
+			},
+		},
+	}
+
+	normalizeRetryPolicy(policy)
+
+	require.Len(t, policy.ResponseQualityGuard.Rules, 1)
+	require.Equal(t, ResponseQualityGuardReasoningComparisonLTE, policy.ResponseQualityGuard.Rules[0].ReasoningTokensComparison)
+}
+
 func TestSystemService_WithRedisCache(t *testing.T) {
 	mr := miniredis.RunT(t)
 	defer mr.Close()

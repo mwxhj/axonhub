@@ -118,8 +118,14 @@ input UpstreamErrorPolicyInput {
   customMessage: String
 }
 
+enum ResponseQualityGuardReasoningComparison {
+  LTE
+  EQ
+}
+
 type ResponseQualityGuardRule {
   modelMatch: [String!]!
+  reasoningTokensComparison: ResponseQualityGuardReasoningComparison!
   reasoningTokensLTE: Int!
   applyToStream: Boolean!
   applyToNonStream: Boolean!
@@ -128,6 +134,7 @@ type ResponseQualityGuardRule {
 
 input ResponseQualityGuardRuleInput {
   modelMatch: [String!]!
+  reasoningTokensComparison: ResponseQualityGuardReasoningComparison
   reasoningTokensLTE: Int!
   applyToStream: Boolean!
   applyToNonStream: Boolean!

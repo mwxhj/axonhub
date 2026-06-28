@@ -131,6 +131,7 @@ const RESPONSE_QUALITY_GUARD_SETTINGS_QUERY = `
       mode
       rules {
         modelMatch
+        reasoningTokensComparison
         reasoningTokensLTE
         applyToStream
         applyToNonStream
@@ -324,8 +325,11 @@ export interface UpstreamErrorPolicy {
   customMessage: string;
 }
 
+export type ResponseQualityGuardReasoningComparison = 'LTE' | 'EQ';
+
 export interface ResponseQualityGuardRule {
   modelMatch: string[];
+  reasoningTokensComparison: ResponseQualityGuardReasoningComparison;
   reasoningTokensLTE: number;
   applyToStream: boolean;
   applyToNonStream: boolean;

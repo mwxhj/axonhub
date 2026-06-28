@@ -208,6 +208,9 @@ models:
   ResponseQualityGuardRuleInput:
     model:
       - github.com/looplj/axonhub/internal/server/biz.ResponseQualityGuardRule
+  ResponseQualityGuardReasoningComparison:
+    model:
+      - github.com/looplj/axonhub/internal/server/biz.ResponseQualityGuardReasoningComparison
   ResponseQualityGuardStats:
     model:
       - github.com/looplj/axonhub/internal/server/gql.ResponseQualityGuardStats

@@ -13,6 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useSystemContext } from '../context/system-context';
 import {
+  type ResponseQualityGuardReasoningComparison,
   type ResponseQualityGuardRule,
   useResponseQualityGuardStats,
   useResponseQualityGuardSettings,
@@ -20,10 +21,14 @@ import {
 } from '../data/system';
 
 const RESPONSE_QUALITY_GUARD_MODES = ['observe_only', 'retry_on_match'] as const;
+const RESPONSE_QUALITY_GUARD_COMPARISONS = ['LTE', 'EQ'] as const satisfies readonly ResponseQualityGuardReasoningComparison[];
 
 function normalizeRule(rule: ResponseQualityGuardRule): ResponseQualityGuardRule {
   return {
     modelMatch: rule.modelMatch.map((item) => item.trim()).filter(Boolean),
+    reasoningTokensComparison: RESPONSE_QUALITY_GUARD_COMPARISONS.includes(rule.reasoningTokensComparison)
+      ? rule.reasoningTokensComparison
+      : 'LTE',
     reasoningTokensLTE: Math.max(0, Number.isFinite(rule.reasoningTokensLTE) ? Math.trunc(rule.reasoningTokensLTE) : 0),
     applyToStream: Boolean(rule.applyToStream),
     applyToNonStream: Boolean(rule.applyToNonStream),
@@ -38,6 +43,7 @@ function normalizeRules(rules: ResponseQualityGuardRule[]): ResponseQualityGuard
 function createEmptyRule(): ResponseQualityGuardRule {
   return {
     modelMatch: [],
+    reasoningTokensComparison: 'LTE',
     reasoningTokensLTE: 516,
     applyToStream: true,
     applyToNonStream: true,
@@ -209,22 +215,40 @@ export function RetrySettings() {
 
                 <div className='grid gap-4 md:grid-cols-2'>
                   <div className='grid gap-2'>
-                    <Label htmlFor={`rqg-threshold-${index}`}>{t('system.retry.responseQualityGuard.rules.reasoningTokensLTE.label')}</Label>
-                    <Input
-                      id={`rqg-threshold-${index}`}
-                      type='number'
-                      min={0}
-                      step={1}
-                      value={rule.reasoningTokensLTE}
-                      onChange={(event) =>
-                        updateRule(index, {
-                          reasoningTokensLTE: event.target.value === '' ? 0 : Number.parseInt(event.target.value, 10) || 0,
-                        })
-                      }
-                      disabled={updateSettings.isPending}
-                    />
+                    <Label>{t('system.retry.responseQualityGuard.rules.reasoningTokens.label')}</Label>
+                    <div className='grid gap-3 sm:grid-cols-[140px_minmax(0,1fr)]'>
+                      <Select
+                        value={rule.reasoningTokensComparison}
+                        onValueChange={(value) =>
+                          updateRule(index, {
+                            reasoningTokensComparison: value as ResponseQualityGuardReasoningComparison,
+                          })
+                        }
+                      >
+                        <SelectTrigger disabled={updateSettings.isPending}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='LTE'>{t('system.retry.responseQualityGuard.rules.reasoningTokensComparison.options.lte')}</SelectItem>
+                          <SelectItem value='EQ'>{t('system.retry.responseQualityGuard.rules.reasoningTokensComparison.options.eq')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        id={`rqg-threshold-${index}`}
+                        type='number'
+                        min={0}
+                        step={1}
+                        value={rule.reasoningTokensLTE}
+                        onChange={(event) =>
+                          updateRule(index, {
+                            reasoningTokensLTE: event.target.value === '' ? 0 : Number.parseInt(event.target.value, 10) || 0,
+                          })
+                        }
+                        disabled={updateSettings.isPending}
+                      />
+                    </div>
                     <div className='text-muted-foreground text-sm'>
-                      {t('system.retry.responseQualityGuard.rules.reasoningTokensLTE.description')}
+                      {t('system.retry.responseQualityGuard.rules.reasoningTokens.description')}
                     </div>
                   </div>
 
