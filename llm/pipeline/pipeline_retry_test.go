@@ -14,6 +14,56 @@ import (
 	"github.com/looplj/axonhub/llm/transformer"
 )
 
+type gateTrackingMiddleware struct {
+	DummyMiddleware
+
+	rawResponseErr error
+	rawStreamErr   error
+
+	rawResponseCalls *[]string
+	rawStreamCalls   *[]string
+	label            string
+
+	outboundLlmResponseCalled bool
+	outboundLlmStreamCalled   bool
+}
+
+func (m *gateTrackingMiddleware) Name() string {
+	return "gate-tracking"
+}
+
+func (m *gateTrackingMiddleware) OnOutboundRawResponse(ctx context.Context, response *httpclient.Response) (*httpclient.Response, error) {
+	if m.rawResponseCalls != nil {
+		*m.rawResponseCalls = append(*m.rawResponseCalls, m.label)
+	}
+	if m.rawResponseErr != nil {
+		return nil, m.rawResponseErr
+	}
+
+	return response, nil
+}
+
+func (m *gateTrackingMiddleware) OnOutboundLlmResponse(ctx context.Context, response *llm.Response) (*llm.Response, error) {
+	m.outboundLlmResponseCalled = true
+	return response, nil
+}
+
+func (m *gateTrackingMiddleware) OnOutboundRawStream(ctx context.Context, stream streams.Stream[*httpclient.StreamEvent]) (streams.Stream[*httpclient.StreamEvent], error) {
+	if m.rawStreamCalls != nil {
+		*m.rawStreamCalls = append(*m.rawStreamCalls, m.label)
+	}
+	if m.rawStreamErr != nil {
+		return nil, m.rawStreamErr
+	}
+
+	return stream, nil
+}
+
+func (m *gateTrackingMiddleware) OnOutboundLlmStream(ctx context.Context, stream streams.Stream[*llm.Response]) (streams.Stream[*llm.Response], error) {
+	m.outboundLlmStreamCalled = true
+	return stream, nil
+}
+
 type mockInbound struct {
 	transformer.Inbound
 
@@ -447,6 +497,142 @@ func TestPipeline_Process_RetryLogic(t *testing.T) {
 		require.Nil(t, res)
 		require.Equal(t, 4, execCalls)
 	})
+}
+
+func TestPipeline_RawResponseGateStopsBeforeLlmSuccessHooks(t *testing.T) {
+	ctx := context.Background()
+
+	executor := &mockExecutor{
+		do: func(ctx context.Context, req *httpclient.Request) (*httpclient.Response, error) {
+			return &httpclient.Response{}, nil
+		},
+	}
+	outbound := &mockOutbound{
+		transformResponse: func(ctx context.Context, resp *httpclient.Response) (*llm.Response, error) {
+			return &llm.Response{}, nil
+		},
+	}
+	gate := &gateTrackingMiddleware{rawResponseErr: errors.New("gate retry")}
+
+	p := &pipeline{
+		Executor:    executor,
+		Inbound:     &mockInbound{},
+		Outbound:    outbound,
+		middlewares: []Middleware{gate},
+	}
+
+	result, err := p.Process(ctx, &httpclient.Request{})
+	require.Error(t, err)
+	require.Nil(t, result)
+	require.False(t, gate.outboundLlmResponseCalled)
+}
+
+func TestPipeline_RawStreamGateStopsBeforeLlmStreamHooks(t *testing.T) {
+	ctx := context.Background()
+	streamEnabled := true
+
+	executor := &mockExecutor{
+		doStream: func(ctx context.Context, req *httpclient.Request) (streams.Stream[*httpclient.StreamEvent], error) {
+			return streams.SliceStream([]*httpclient.StreamEvent{{Data: []byte(`chunk`)}}), nil
+		},
+	}
+	outbound := &mockOutbound{
+		transformRequest: func(ctx context.Context, req *llm.Request) (*httpclient.Request, error) {
+			return &httpclient.Request{}, nil
+		},
+		transformStream: func(ctx context.Context, req *httpclient.Request, stream streams.Stream[*httpclient.StreamEvent]) (streams.Stream[*llm.Response], error) {
+			return streams.SliceStream([]*llm.Response{{ID: "1"}}), nil
+		},
+	}
+	gate := &gateTrackingMiddleware{rawStreamErr: errors.New("gate retry")}
+
+	p := &pipeline{
+		Executor:    executor,
+		Inbound:     &mockInbound{},
+		Outbound:    outbound,
+		middlewares: []Middleware{gate},
+	}
+
+	result, err := p.processRequest(ctx, &llm.Request{Stream: &streamEnabled, RawRequest: &httpclient.Request{}})
+	require.Error(t, err)
+	require.Nil(t, result)
+	require.False(t, gate.outboundLlmStreamCalled)
+}
+
+func TestPipeline_RawResponseMiddlewares_RunInReverseOrder(t *testing.T) {
+	ctx := context.Background()
+	order := make([]string, 0, 3)
+
+	executor := &mockExecutor{
+		do: func(ctx context.Context, req *httpclient.Request) (*httpclient.Response, error) {
+			return &httpclient.Response{}, nil
+		},
+	}
+	outbound := &mockOutbound{
+		transformResponse: func(ctx context.Context, resp *httpclient.Response) (*llm.Response, error) {
+			return &llm.Response{}, nil
+		},
+	}
+
+	first := &gateTrackingMiddleware{label: "first", rawResponseCalls: &order}
+	second := &gateTrackingMiddleware{label: "second", rawResponseCalls: &order}
+	third := &gateTrackingMiddleware{label: "third", rawResponseCalls: &order}
+
+	p := &pipeline{
+		Executor: executor,
+		Inbound:  &mockInbound{},
+		Outbound: outbound,
+		middlewares: []Middleware{
+			first,
+			second,
+			third,
+		},
+	}
+
+	result, err := p.Process(ctx, &httpclient.Request{})
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Equal(t, []string{"third", "second", "first"}, order)
+}
+
+func TestPipeline_RawStreamMiddlewares_RunInReverseOrder(t *testing.T) {
+	ctx := context.Background()
+	streamEnabled := true
+	order := make([]string, 0, 3)
+
+	executor := &mockExecutor{
+		doStream: func(ctx context.Context, req *httpclient.Request) (streams.Stream[*httpclient.StreamEvent], error) {
+			return streams.SliceStream([]*httpclient.StreamEvent{{Data: []byte(`chunk`)}}), nil
+		},
+	}
+	outbound := &mockOutbound{
+		transformRequest: func(ctx context.Context, req *llm.Request) (*httpclient.Request, error) {
+			return &httpclient.Request{}, nil
+		},
+		transformStream: func(ctx context.Context, req *httpclient.Request, stream streams.Stream[*httpclient.StreamEvent]) (streams.Stream[*llm.Response], error) {
+			return streams.SliceStream([]*llm.Response{{ID: "1"}}), nil
+		},
+	}
+
+	first := &gateTrackingMiddleware{label: "first", rawStreamCalls: &order}
+	second := &gateTrackingMiddleware{label: "second", rawStreamCalls: &order}
+	third := &gateTrackingMiddleware{label: "third", rawStreamCalls: &order}
+
+	p := &pipeline{
+		Executor: executor,
+		Inbound:  &mockInbound{},
+		Outbound: outbound,
+		middlewares: []Middleware{
+			first,
+			second,
+			third,
+		},
+	}
+
+	result, err := p.processRequest(ctx, &llm.Request{Stream: &streamEnabled, RawRequest: &httpclient.Request{}})
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Equal(t, []string{"third", "second", "first"}, order)
 }
 
 func TestPipeline_Process_RetryPreservesOriginalStreamIntent(t *testing.T) {

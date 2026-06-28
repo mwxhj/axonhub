@@ -13,13 +13,6 @@ import (
 	"github.com/looplj/axonhub/llm/httpclient"
 )
 
-// mockChannelService is a mock implementation of ChannelService for testing
-type mockChannelService struct{}
-
-func (m *mockChannelService) AsyncRecordPerformance(ctx context.Context, perf *biz.PerformanceRecord) {
-	// No-op for testing
-}
-
 // TestPerformanceRecording_OnInboundLlmRequest_SetsStreamFlag verifies that
 // the Stream flag is correctly set based on the request's Stream field.
 func TestPerformanceRecording_OnInboundLlmRequest_SetsStreamFlag(t *testing.T) {
@@ -271,6 +264,28 @@ func TestPerformanceRecording_OnOutboundRawRequest_NoChannel(t *testing.T) {
 	assert.Equal(t, request, result)
 	// Perf should remain unchanged since we returned early
 	assert.True(t, state.Perf.Stream)
+}
+
+func TestPerformanceRecording_OnOutboundRawError_SkipsResponseQualityGuard(t *testing.T) {
+	channel := &biz.Channel{
+		Channel:  &ent.Channel{ID: 1, Name: "test-channel"},
+		Outbound: &mockTransformer{},
+	}
+
+	state := &PersistenceState{
+		Perf: &biz.PerformanceRecord{},
+		CurrentCandidate: &ChannelModelsCandidate{
+			Channel: channel,
+		},
+	}
+	outbound := &PersistentOutboundTransformer{state: state}
+	middleware := &performanceRecording{outbound: outbound}
+
+	assert.NotPanics(t, func() {
+		middleware.OnOutboundRawError(context.Background(), &ResponseQualityGuardMatchedError{})
+	})
+
+	assert.False(t, state.Perf.RequestCompleted)
 }
 
 // TestPerformanceRecording_StreamFlagBugRegression is specifically designed to

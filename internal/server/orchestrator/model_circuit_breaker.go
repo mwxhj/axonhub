@@ -99,6 +99,10 @@ func (m *modelCircuitBreakerTracker) OnOutboundRawError(ctx context.Context, err
 		return
 	}
 
+	if IsResponseQualityGuardMatchedError(err) {
+		return
+	}
+
 	// Local queue rejections never reached upstream — must not count as model errors.
 	if isChannelQueueError(err) {
 		return

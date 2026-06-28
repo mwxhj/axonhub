@@ -10,6 +10,7 @@ import (
 	"github.com/looplj/axonhub/internal/server/biz"
 	"github.com/looplj/axonhub/llm"
 	"github.com/looplj/axonhub/llm/httpclient"
+	"github.com/looplj/axonhub/llm/pipeline"
 )
 
 func TestStickySessionEnabled(t *testing.T) {
@@ -126,6 +127,11 @@ func TestIsRetryableError(t *testing.T) {
 			expected: true,
 		},
 		{
+			name:     "response quality guard error is retryable",
+			err:      &ResponseQualityGuardMatchedError{},
+			expected: true,
+		},
+		{
 			name:     "generic error is not retryable",
 			err:      errors.New("generic error"),
 			expected: false,
@@ -136,6 +142,36 @@ func TestIsRetryableError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := isRetryableError(tt.err)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestIsFallbackableError(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "nil error",
+			err:      nil,
+			expected: false,
+		},
+		{
+			name:     "response quality guard error is not fallbackable",
+			err:      &ResponseQualityGuardMatchedError{},
+			expected: false,
+		},
+		{
+			name:     "empty response remains fallbackable",
+			err:      pipeline.ErrEmptyResponse,
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, isFallbackableError(tt.err))
 		})
 	}
 }

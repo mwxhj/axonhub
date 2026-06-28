@@ -243,10 +243,15 @@ func (processor *ChatCompletionOrchestrator) Process(ctx context.Context, reques
 		// upstream Retry-After cooldown observation.
 		withRateLimitTracking(outbound, processor.rateLimitTracker),
 
-		// Response pass-through capture middlewares must be last in the outbound list
-		// so they run first in reverse order (before any other OnOutboundRawResponse/OnOutboundRawStream handlers).
+		// Response pass-through capture middlewares run near the tail so they still execute
+		// before most raw middlewares, but response quality gate remains the reverse-order
+		// entry point for raw verdicts.
 		captureRawProviderResponse(outbound, processor.SystemService),
 		captureRawProviderStream(outbound, processor.SystemService),
+
+		// Raw response quality gating must be appended last so it runs first in reverse order
+		// before pass-through capture or any success-side-effect middleware.
+		withResponseQualityGate(outbound, state, retryPolicy),
 	)
 
 	pipelineOpts = append(pipelineOpts, pipeline.WithMiddlewares(middlewares...))

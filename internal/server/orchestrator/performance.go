@@ -134,6 +134,10 @@ func (m *performanceRecording) OnOutboundRawError(ctx context.Context, err error
 		return
 	}
 
+	if IsResponseQualityGuardMatchedError(err) {
+		return
+	}
+
 	perf := m.outbound.state.Perf
 	if errors.Is(err, context.Canceled) {
 		perf.MarkCanceled()

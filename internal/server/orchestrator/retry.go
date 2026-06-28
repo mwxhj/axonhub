@@ -15,6 +15,10 @@ func isRetryableError(err error) bool {
 		return false
 	}
 
+	if IsResponseQualityGuardMatchedError(err) {
+		return true
+	}
+
 	return httpclient.IsHTTPStatusCodeRetryable(ExtractStatusCodeFromError(err))
 }
 
@@ -36,6 +40,10 @@ func isCredentialScopedFallbackError(err error) bool {
 
 func isFallbackableError(err error) bool {
 	if err == nil {
+		return false
+	}
+
+	if IsResponseQualityGuardMatchedError(err) {
 		return false
 	}
 

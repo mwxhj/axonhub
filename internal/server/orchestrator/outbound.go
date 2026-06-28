@@ -862,6 +862,15 @@ func (p *PersistentOutboundTransformer) CanRetry(err error) bool {
 		return false
 	}
 
+	if IsResponseQualityGuardMatchedError(err) {
+		log.Warn(context.Background(), "response quality guard requested same-target retry",
+			log.Int("channel_id", p.state.CurrentCandidate.Channel.ID),
+			log.String("actual_model", p.GetCurrentModelID()),
+		)
+
+		return true
+	}
+
 	// Empty response detection: allow same-target retry so the pipeline can
 	// re-execute the same concrete target.
 	if errors.Is(err, pipeline.ErrEmptyResponse) ||

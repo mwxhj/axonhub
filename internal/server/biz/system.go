@@ -265,6 +265,38 @@ type RetryPolicy struct {
 
 	// UpstreamErrorPolicy controls how provider errors are exposed to API users.
 	UpstreamErrorPolicy UpstreamErrorPolicy `json:"upstream_error_policy"`
+
+	// ResponseQualityGuard defines optional response quality observation/retry rules.
+	ResponseQualityGuard ResponseQualityGuard `json:"response_quality_guard"`
+}
+
+type ResponseQualityGuard struct {
+	// Enabled controls whether response quality guard is active.
+	Enabled bool `json:"enabled"`
+
+	// Mode controls whether matching responses are only observed or retried.
+	// Supported values: "observe_only", "retry_on_match".
+	Mode string `json:"mode"`
+
+	// Rules defines model-scoped matching rules.
+	Rules []ResponseQualityGuardRule `json:"rules"`
+}
+
+type ResponseQualityGuardRule struct {
+	// ModelMatch contains exact or regex-like model patterns matched against actual upstream model ID.
+	ModelMatch []string `json:"model_match"`
+
+	// ReasoningTokensLTE triggers when observed reasoning tokens are less than or equal to this threshold.
+	ReasoningTokensLTE int64 `json:"reasoning_tokens_lte"`
+
+	// ApplyToStream enables this rule for streaming requests.
+	ApplyToStream bool `json:"apply_to_stream"`
+
+	// ApplyToNonStream enables this rule for non-streaming requests.
+	ApplyToNonStream bool `json:"apply_to_non_stream"`
+
+	// BufferStreamUntilDecision forces stream buffering so the final usage can be inspected before release.
+	BufferStreamUntilDecision bool `json:"buffer_stream_until_decision"`
 }
 
 type UpstreamErrorPolicy struct {
@@ -979,6 +1011,30 @@ func normalizeRetryPolicy(policy *RetryPolicy) {
 	if policy.UpstreamErrorPolicy.Mode == UpstreamErrorModeCustom &&
 		strings.TrimSpace(policy.UpstreamErrorPolicy.CustomMessage) == "" {
 		policy.UpstreamErrorPolicy.Mode = UpstreamErrorModeHidden
+	}
+
+	switch policy.ResponseQualityGuard.Mode {
+	case "", "observe_only", "retry_on_match":
+	default:
+		policy.ResponseQualityGuard.Mode = defaultRetryPolicy.ResponseQualityGuard.Mode
+	}
+
+	if policy.ResponseQualityGuard.Mode == "" {
+		policy.ResponseQualityGuard.Mode = defaultRetryPolicy.ResponseQualityGuard.Mode
+	}
+
+	if policy.ResponseQualityGuard.Rules == nil {
+		policy.ResponseQualityGuard.Rules = []ResponseQualityGuardRule{}
+	}
+
+	for i := range policy.ResponseQualityGuard.Rules {
+		rule := &policy.ResponseQualityGuard.Rules[i]
+		if rule.ModelMatch == nil {
+			rule.ModelMatch = []string{}
+		}
+		if rule.ReasoningTokensLTE < 0 {
+			rule.ReasoningTokensLTE = 0
+		}
 	}
 }
 

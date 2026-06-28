@@ -28,6 +28,11 @@ var defaultRetryPolicy = RetryPolicy{
 	UpstreamErrorPolicy: UpstreamErrorPolicy{
 		Mode: UpstreamErrorModePassthrough,
 	},
+	ResponseQualityGuard: ResponseQualityGuard{
+		Enabled: false,
+		Mode:    "observe_only",
+		Rules:   []ResponseQualityGuardRule{},
+	},
 }
 
 var defaultModelSettings = SystemModelSettings{

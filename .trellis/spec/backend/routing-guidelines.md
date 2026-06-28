@@ -1276,3 +1276,165 @@ archive action = explicit confirmation -> archive mutation -> refs preserved for
 restore action = set status enabled -> old refs can become routable again
 delete action = explicit confirmation -> delete mutation -> refs removed + credential soft-deleted
 ```
+
+---
+
+## Response Quality Gate Contract
+
+### 1. Scope / Trigger
+
+Read this section before changing:
+
+- response-quality retry/observe policies,
+- outbound raw-response/raw-stream middleware ordering,
+- pass-through stream capture,
+- request execution / performance / circuit-breaker success hooks,
+- any feature that rejects an upstream attempt after the provider already returned `200` or opened a stream.
+
+This contract applies to the attempt-verdict boundary between "provider returned a
+successful transport response" and "the system accepts the attempt as a successful
+upstream result".
+
+### 2. Signatures
+
+Retry policy config:
+
+```go
+type RetryPolicy struct {
+    ResponseQualityGuard ResponseQualityGuard `json:"response_quality_guard"`
+}
+
+type ResponseQualityGuard struct {
+    Enabled bool   `json:"enabled"`
+    Mode    string `json:"mode"` // observe_only | retry_on_match
+    Rules    []ResponseQualityGuardRule `json:"rules"`
+}
+
+type ResponseQualityGuardRule struct {
+    ModelMatch []string `json:"model_match"`
+    ReasoningTokensLTE int64 `json:"reasoning_tokens_lte"`
+    ApplyToStream bool `json:"apply_to_stream"`
+    ApplyToNonStream bool `json:"apply_to_non_stream"`
+    BufferStreamUntilDecision bool `json:"buffer_stream_until_decision"`
+}
+```
+
+Attempt gate and retry surface:
+
+```go
+func withResponseQualityGate(outbound *PersistentOutboundTransformer, state *PersistenceState, policy *biz.RetryPolicy) pipeline.Middleware
+
+type ResponseQualityGuardMatchedError struct {
+    RequestedModel  string
+    ActualModel     string
+    Stream          bool
+    ReasoningTokens int64
+    Threshold       int64
+    GuardMode       string
+}
+
+func IsResponseQualityGuardMatchedError(err error) bool
+```
+
+### 3. Contracts
+
+- Response-quality verdict happens in `OnOutboundRawResponse` / `OnOutboundRawStream`,
+  not `OnOutboundLlmResponse` / `OnOutboundLlmStream`.
+- The quality gate middleware must be appended last in the outbound middleware list
+  so it runs first in reverse order, before pass-through capture and before any
+  success-side-effect middleware.
+- `Mode=retry_on_match` rejects the current attempt with
+  `ResponseQualityGuardMatchedError`. This is a same-target retry signal, not a
+  fallback signal.
+- `Mode=observe_only` logs the match and lets the original response/stream continue.
+- Rule `ApplyToStream` / `ApplyToNonStream` is based on the client's original
+  stream intent, not on provider-side forced streaming used for internal
+  auto-aggregation.
+- Buffered stream inspection must aggregate provider chunks through the outbound
+  transformer's `AggregateStreamChunks` contract, then parse unified usage via
+  `TransformResponse`. Do not hardcode provider-specific aggregators inside the
+  gate.
+- A rejected attempt must not record success-side effects:
+  - no usage-log success path,
+  - no request/request-execution completed status,
+  - no performance success record,
+  - no circuit-breaker success,
+  - no sticky-session success binding.
+- If the attempt already created a `request_execution` row before the raw verdict,
+  the row must still be closed as a failed attempt. Do not leave `processing`
+  executions behind when the gate asks for retry.
+- Guard matches are local retry control, not upstream failures. They must not be
+  counted as model errors or performance successes.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required Behavior |
+|-----------|-------------------|
+| Non-stream response reasoning tokens missing | Treat as not matched; pass response through. |
+| Non-stream response reasoning tokens `<= threshold` and `retry_on_match` | Return `ResponseQualityGuardMatchedError`; same-target retry eligible; no success hooks. |
+| Non-stream response reasoning tokens `<= threshold` and `observe_only` | Log match and continue original response. |
+| Stream rule matched but `BufferStreamUntilDecision=false` | Do not inspect buffered usage; pass stream through unchanged. |
+| Stream buffered, aggregate succeeds, reasoning tokens `<= threshold`, `retry_on_match` | Return `ResponseQualityGuardMatchedError`; no pass-through fan-out or success hooks should start after the gate. |
+| Stream buffered, aggregate succeeds, reasoning tokens `<= threshold`, `observe_only` | Replay original buffered raw events to downstream consumers. |
+| Stream buffered but outbound aggregate/transform cannot produce unified usage | Treat as not matched only if usage is absent after a successful transform; propagate real aggregate/transform errors. |
+| Guard error reaches retry planner | `CanRetry=true`, `isRetryableError=true`, `isFallbackableError=false`. |
+| Guard error reaches circuit breaker / performance raw-error hook | Must not record model error or performance success/failure side effects for the channel. |
+| Guard error reaches request execution raw-error hook after execution row exists | Mark execution failed with the guard error message so no `processing` row remains. |
+
+### 5. Good / Base / Bad Cases
+
+- Good: a `gpt-5.4` response returns `reasoning_tokens=100`, the raw gate rejects
+  the attempt before pass-through capture starts, and the retry loop replays the
+  same concrete target.
+- Good: a client asked for non-stream, provider execution was internally forced to
+  stream for auto-aggregation, and `ApplyToNonStream=true` still controls the rule.
+- Good: buffered stream inspection uses the outbound transformer's own aggregate
+  contract, so composite/provider-specific routing still works.
+- Base: usage is absent, so the gate observes nothing and the response proceeds.
+- Bad: gate runs in `OnOutboundLlmResponse`, after request execution and
+  performance have already been marked successful.
+- Bad: gate hardcodes OpenAI stream aggregation and silently stops working for
+  other outbound formats.
+- Bad: gate-triggered retries leave `request_execution.status=processing`.
+- Bad: gate-triggered retries refresh sticky-session binding or record circuit
+  breaker success as if the attempt had been accepted.
+
+### 6. Tests Required
+
+When changing this contract, add or update tests for:
+
+- raw response gate stops before any LLM success hook runs;
+- raw stream gate stops before any LLM stream success hook runs;
+- raw response/raw stream middleware order remains reverse-order, proving the
+  last-registered gate runs first;
+- stream inspection uses outbound `AggregateStreamChunks`, not provider-specific
+  hardcoded aggregators;
+- guard errors are retryable but not fallbackable;
+- performance raw-error hook ignores guard errors;
+- request execution rows created before the gate are marked failed, not left
+  `processing`;
+- observe-only buffered stream path replays the original raw events intact.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```text
+provider 200 / stream open
+-> transform to unified response
+-> mark request execution/performance/circuit breaker success
+-> quality guard decides to retry
+```
+
+This treats a rejected attempt as successful before the verdict exists.
+
+#### Correct
+
+```text
+provider 200 / stream open
+-> raw response/raw stream gate decides accept or retry
+-> only accepted attempts continue into pass-through capture and success hooks
+-> rejected attempts close execution state and retry same target
+```
+
+This keeps attempt verdict, observability, and recovery aligned to one boundary.
