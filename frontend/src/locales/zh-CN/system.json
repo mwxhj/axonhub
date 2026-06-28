@@ -136,6 +136,8 @@
   "system.retry.responseQualityGuard.rules.appliesTo.nonStream": "非流式请求",
   "system.retry.responseQualityGuard.rules.bufferStreamUntilDecision.label": "等待最终判定后再释放流",
   "system.retry.responseQualityGuard.rules.bufferStreamUntilDecision.description": "对流式请求先缓冲到拿到最终 usage，再决定是否放行输出。",
+  "system.retry.responseQualityGuard.stats.matchedCount.label": "保护命中次数",
+  "system.retry.responseQualityGuard.stats.matchedCount.description": "统计被响应质量保护命中过的执行次数。",
   "system.brand.title": "品牌设置",
   "system.brand.description": "配置系统的基本信息和品牌设置",
   "system.brand.brandName.label": "品牌名称",

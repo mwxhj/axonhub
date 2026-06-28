@@ -216,6 +216,9 @@ func (m *persistRequestExecutionMiddleware) OnOutboundLlmResponse(ctx context.Co
 		llmResp.ID,
 		responseBody,
 		metrics,
+		&biz.RequestExecutionUpdateOptions{
+			ResponseQualityGuardMatched: state.RequestExec.ResponseQualityGuardMatched,
+		},
 	)
 	if err != nil {
 		log.Warn(persistCtx, "Failed to update request execution status to completed", log.Cause(err))
@@ -260,6 +263,9 @@ func (m *persistRequestExecutionMiddleware) OnOutboundRawError(ctx context.Conte
 		state.RequestExec.ID,
 		ExtractErrorMessage(err),
 		ExtractErrorInfo(err),
+		&biz.RequestExecutionUpdateOptions{
+			ResponseQualityGuardMatched: state.RequestExec.ResponseQualityGuardMatched || IsResponseQualityGuardMatchedError(err),
+		},
 	)
 	if updateErr != nil {
 		log.Warn(persistCtx, "Failed to update request execution status to failed", log.Cause(updateErr))

@@ -1336,6 +1336,18 @@ type ResponseQualityGuardMatchedError struct {
 func IsResponseQualityGuardMatchedError(err error) bool
 ```
 
+Execution persistence and stats:
+
+```go
+type RequestExecution struct {
+    ResponseQualityGuardMatched bool `json:"response_quality_guard_matched"`
+}
+
+type ResponseQualityGuardStats struct {
+    MatchedCount int
+}
+```
+
 ### 3. Contracts
 
 - Response-quality verdict happens in `OnOutboundRawResponse` / `OnOutboundRawStream`,
@@ -1363,6 +1375,12 @@ func IsResponseQualityGuardMatchedError(err error) bool
 - If the attempt already created a `request_execution` row before the raw verdict,
   the row must still be closed as a failed attempt. Do not leave `processing`
   executions behind when the gate asks for retry.
+- A guard-matched execution attempt must persist
+  `request_execution.response_quality_guard_matched=true`. This applies to both
+  `observe_only` and `retry_on_match`.
+- Product-facing or admin-facing guard-match statistics must count the explicit
+  `response_quality_guard_matched` field. Do not make `error_message contains
+  "response quality guard matched"` part of the product contract.
 - Guard matches are local retry control, not upstream failures. They must not be
   counted as model errors or performance successes.
 
@@ -1380,6 +1398,7 @@ func IsResponseQualityGuardMatchedError(err error) bool
 | Guard error reaches retry planner | `CanRetry=true`, `isRetryableError=true`, `isFallbackableError=false`. |
 | Guard error reaches circuit breaker / performance raw-error hook | Must not record model error or performance success/failure side effects for the channel. |
 | Guard error reaches request execution raw-error hook after execution row exists | Mark execution failed with the guard error message so no `processing` row remains. |
+| Guard-match stats are shown in system settings | Count `request_execution.response_quality_guard_matched=true`, not `error_message` text matches. |
 
 ### 5. Good / Base / Bad Cases
 
@@ -1390,12 +1409,15 @@ func IsResponseQualityGuardMatchedError(err error) bool
   stream for auto-aggregation, and `ApplyToNonStream=true` still controls the rule.
 - Good: buffered stream inspection uses the outbound transformer's own aggregate
   contract, so composite/provider-specific routing still works.
+- Good: system settings "guard matched count" reads explicit execution flags, so
+  changing error text does not change product stats.
 - Base: usage is absent, so the gate observes nothing and the response proceeds.
 - Bad: gate runs in `OnOutboundLlmResponse`, after request execution and
   performance have already been marked successful.
 - Bad: gate hardcodes OpenAI stream aggregation and silently stops working for
   other outbound formats.
 - Bad: gate-triggered retries leave `request_execution.status=processing`.
+- Bad: guard-match stats depend on `error_message` substring matching.
 - Bad: gate-triggered retries refresh sticky-session binding or record circuit
   breaker success as if the attempt had been accepted.
 
@@ -1413,6 +1435,8 @@ When changing this contract, add or update tests for:
 - performance raw-error hook ignores guard errors;
 - request execution rows created before the gate are marked failed, not left
   `processing`;
+- guard-matched executions persist `response_quality_guard_matched=true`;
+- guard-match stats query counts explicit execution flags rather than error text;
 - observe-only buffered stream path replays the original raw events intact.
 
 ### 7. Wrong vs Correct

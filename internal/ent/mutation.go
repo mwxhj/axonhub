@@ -19218,6 +19218,7 @@ type RequestExecutionMutation struct {
 	appendresponse_body               objects.JSONRawMessage
 	response_chunks                   *[]objects.JSONRawMessage
 	appendresponse_chunks             []objects.JSONRawMessage
+	response_quality_guard_matched    *bool
 	error_message                     *string
 	response_status_code              *int
 	addresponse_status_code           *int
@@ -20533,6 +20534,42 @@ func (m *RequestExecutionMutation) ResetResponseChunks() {
 	delete(m.clearedFields, requestexecution.FieldResponseChunks)
 }
 
+// SetResponseQualityGuardMatched sets the "response_quality_guard_matched" field.
+func (m *RequestExecutionMutation) SetResponseQualityGuardMatched(b bool) {
+	m.response_quality_guard_matched = &b
+}
+
+// ResponseQualityGuardMatched returns the value of the "response_quality_guard_matched" field in the mutation.
+func (m *RequestExecutionMutation) ResponseQualityGuardMatched() (r bool, exists bool) {
+	v := m.response_quality_guard_matched
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResponseQualityGuardMatched returns the old "response_quality_guard_matched" field's value of the RequestExecution entity.
+// If the RequestExecution object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RequestExecutionMutation) OldResponseQualityGuardMatched(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResponseQualityGuardMatched is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResponseQualityGuardMatched requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResponseQualityGuardMatched: %w", err)
+	}
+	return oldValue.ResponseQualityGuardMatched, nil
+}
+
+// ResetResponseQualityGuardMatched resets all changes to the "response_quality_guard_matched" field.
+func (m *RequestExecutionMutation) ResetResponseQualityGuardMatched() {
+	m.response_quality_guard_matched = nil
+}
+
 // SetErrorMessage sets the "error_message" field.
 func (m *RequestExecutionMutation) SetErrorMessage(s string) {
 	m.error_message = &s
@@ -21168,7 +21205,7 @@ func (m *RequestExecutionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RequestExecutionMutation) Fields() []string {
-	fields := make([]string, 0, 33)
+	fields := make([]string, 0, 34)
 	if m.created_at != nil {
 		fields = append(fields, requestexecution.FieldCreatedAt)
 	}
@@ -21243,6 +21280,9 @@ func (m *RequestExecutionMutation) Fields() []string {
 	}
 	if m.response_chunks != nil {
 		fields = append(fields, requestexecution.FieldResponseChunks)
+	}
+	if m.response_quality_guard_matched != nil {
+		fields = append(fields, requestexecution.FieldResponseQualityGuardMatched)
 	}
 	if m.error_message != nil {
 		fields = append(fields, requestexecution.FieldErrorMessage)
@@ -21326,6 +21366,8 @@ func (m *RequestExecutionMutation) Field(name string) (ent.Value, bool) {
 		return m.ResponseBody()
 	case requestexecution.FieldResponseChunks:
 		return m.ResponseChunks()
+	case requestexecution.FieldResponseQualityGuardMatched:
+		return m.ResponseQualityGuardMatched()
 	case requestexecution.FieldErrorMessage:
 		return m.ErrorMessage()
 	case requestexecution.FieldResponseStatusCode:
@@ -21401,6 +21443,8 @@ func (m *RequestExecutionMutation) OldField(ctx context.Context, name string) (e
 		return m.OldResponseBody(ctx)
 	case requestexecution.FieldResponseChunks:
 		return m.OldResponseChunks(ctx)
+	case requestexecution.FieldResponseQualityGuardMatched:
+		return m.OldResponseQualityGuardMatched(ctx)
 	case requestexecution.FieldErrorMessage:
 		return m.OldErrorMessage(ctx)
 	case requestexecution.FieldResponseStatusCode:
@@ -21600,6 +21644,13 @@ func (m *RequestExecutionMutation) SetField(name string, value ent.Value) error 
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetResponseChunks(v)
+		return nil
+	case requestexecution.FieldResponseQualityGuardMatched:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResponseQualityGuardMatched(v)
 		return nil
 	case requestexecution.FieldErrorMessage:
 		v, ok := value.(string)
@@ -21984,6 +22035,9 @@ func (m *RequestExecutionMutation) ResetField(name string) error {
 		return nil
 	case requestexecution.FieldResponseChunks:
 		m.ResetResponseChunks()
+		return nil
+	case requestexecution.FieldResponseQualityGuardMatched:
+		m.ResetResponseQualityGuardMatched()
 		return nil
 	case requestexecution.FieldErrorMessage:
 		m.ResetErrorMessage()

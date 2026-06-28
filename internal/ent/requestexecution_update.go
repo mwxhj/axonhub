@@ -93,6 +93,20 @@ func (_u *RequestExecutionUpdate) ClearResponseChunks() *RequestExecutionUpdate 
 	return _u
 }
 
+// SetResponseQualityGuardMatched sets the "response_quality_guard_matched" field.
+func (_u *RequestExecutionUpdate) SetResponseQualityGuardMatched(v bool) *RequestExecutionUpdate {
+	_u.mutation.SetResponseQualityGuardMatched(v)
+	return _u
+}
+
+// SetNillableResponseQualityGuardMatched sets the "response_quality_guard_matched" field if the given value is not nil.
+func (_u *RequestExecutionUpdate) SetNillableResponseQualityGuardMatched(v *bool) *RequestExecutionUpdate {
+	if v != nil {
+		_u.SetResponseQualityGuardMatched(*v)
+	}
+	return _u
+}
+
 // SetErrorMessage sets the "error_message" field.
 func (_u *RequestExecutionUpdate) SetErrorMessage(v string) *RequestExecutionUpdate {
 	_u.mutation.SetErrorMessage(v)
@@ -391,6 +405,9 @@ func (_u *RequestExecutionUpdate) sqlSave(ctx context.Context) (_node int, err e
 	if _u.mutation.ResponseChunksCleared() {
 		_spec.ClearField(requestexecution.FieldResponseChunks, field.TypeJSON)
 	}
+	if value, ok := _u.mutation.ResponseQualityGuardMatched(); ok {
+		_spec.SetField(requestexecution.FieldResponseQualityGuardMatched, field.TypeBool, value)
+	}
 	if value, ok := _u.mutation.ErrorMessage(); ok {
 		_spec.SetField(requestexecution.FieldErrorMessage, field.TypeString, value)
 	}
@@ -528,6 +545,20 @@ func (_u *RequestExecutionUpdateOne) AppendResponseChunks(v []objects.JSONRawMes
 // ClearResponseChunks clears the value of the "response_chunks" field.
 func (_u *RequestExecutionUpdateOne) ClearResponseChunks() *RequestExecutionUpdateOne {
 	_u.mutation.ClearResponseChunks()
+	return _u
+}
+
+// SetResponseQualityGuardMatched sets the "response_quality_guard_matched" field.
+func (_u *RequestExecutionUpdateOne) SetResponseQualityGuardMatched(v bool) *RequestExecutionUpdateOne {
+	_u.mutation.SetResponseQualityGuardMatched(v)
+	return _u
+}
+
+// SetNillableResponseQualityGuardMatched sets the "response_quality_guard_matched" field if the given value is not nil.
+func (_u *RequestExecutionUpdateOne) SetNillableResponseQualityGuardMatched(v *bool) *RequestExecutionUpdateOne {
+	if v != nil {
+		_u.SetResponseQualityGuardMatched(*v)
+	}
 	return _u
 }
 
@@ -858,6 +889,9 @@ func (_u *RequestExecutionUpdateOne) sqlSave(ctx context.Context) (_node *Reques
 	}
 	if _u.mutation.ResponseChunksCleared() {
 		_spec.ClearField(requestexecution.FieldResponseChunks, field.TypeJSON)
+	}
+	if value, ok := _u.mutation.ResponseQualityGuardMatched(); ok {
+		_spec.SetField(requestexecution.FieldResponseQualityGuardMatched, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.ErrorMessage(); ok {
 		_spec.SetField(requestexecution.FieldErrorMessage, field.TypeString, value)

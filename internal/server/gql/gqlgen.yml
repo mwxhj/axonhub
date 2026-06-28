@@ -208,6 +208,9 @@ models:
   ResponseQualityGuardRuleInput:
     model:
       - github.com/looplj/axonhub/internal/server/biz.ResponseQualityGuardRule
+  ResponseQualityGuardStats:
+    model:
+      - github.com/looplj/axonhub/internal/server/gql.ResponseQualityGuardStats
   UpdateAPIKeyProfilesInput:
     model:
       - github.com/looplj/axonhub/internal/objects.APIKeyProfiles

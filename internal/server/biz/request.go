@@ -69,9 +69,15 @@ func (s *RequestService) shouldUseExternalStorage(_ context.Context, ds *ent.Dat
 // _InvalidRequestBodyJSON returns a JSON object indicating invalid text.
 var _InvalidRequestBodyJSON = objects.JSONRawMessage(`{"message":"invalid text"}`)
 
+const responseQualityGuardMatchedPrefix = "response quality guard matched"
+
 // GenerateRequestBodyKey generates the storage key for request body.
 func GenerateRequestBodyKey(projectID, requestID int) string {
 	return fmt.Sprintf("/%d/requests/%d/request_body.json", projectID, requestID)
+}
+
+func isResponseQualityGuardMatched(err error) bool {
+	return err != nil && strings.HasPrefix(err.Error(), responseQualityGuardMatchedPrefix)
 }
 
 // GenerateResponseBodyKey generates the storage key for response body.
@@ -682,6 +688,7 @@ func (s *RequestService) UpdateRequestExecutionCompleted(
 	externalId string,
 	responseBody any,
 	metrics *LatencyMetrics,
+	opts *RequestExecutionUpdateOptions,
 ) error {
 	// Decide whether to store the final response body for execution
 	storeResponseBody := true
@@ -748,6 +755,9 @@ func (s *RequestService) UpdateRequestExecutionCompleted(
 			upd = upd.SetResponseBody(responseBodyBytes)
 		}
 	}
+	if opts != nil {
+		upd = upd.SetResponseQualityGuardMatched(opts.ResponseQualityGuardMatched)
+	}
 
 	_, err = upd.Save(ctx)
 	if err != nil {
@@ -764,12 +774,16 @@ func (s *RequestService) UpdateRequestExecutionCanceled(
 	executionID int,
 	errorMsg string,
 ) error {
-	return s.UpdateRequestExecutionStatus(ctx, executionID, requestexecution.StatusCanceled, errorMsg, nil)
+	return s.UpdateRequestExecutionStatus(ctx, executionID, requestexecution.StatusCanceled, errorMsg, nil, nil)
 }
 
 // ExecutionErrorInfo holds error details for a failed request execution.
 type ExecutionErrorInfo struct {
 	StatusCode *int
+}
+
+type RequestExecutionUpdateOptions struct {
+	ResponseQualityGuardMatched bool
 }
 
 // UpdateRequestExecutionFailed updates request execution status to failed with error message and optional error details.
@@ -778,8 +792,9 @@ func (s *RequestService) UpdateRequestExecutionFailed(
 	executionID int,
 	errorMsg string,
 	errorInfo *ExecutionErrorInfo,
+	opts *RequestExecutionUpdateOptions,
 ) error {
-	return s.UpdateRequestExecutionStatus(ctx, executionID, requestexecution.StatusFailed, errorMsg, errorInfo)
+	return s.UpdateRequestExecutionStatus(ctx, executionID, requestexecution.StatusFailed, errorMsg, errorInfo, opts)
 }
 
 // UpdateRequestExecutionStatus updates request execution status to the provided value (e.g., canceled or failed), with optional error message.
@@ -789,6 +804,7 @@ func (s *RequestService) UpdateRequestExecutionStatus(
 	status requestexecution.Status,
 	errorMsg string,
 	errorInfo *ExecutionErrorInfo,
+	opts *RequestExecutionUpdateOptions,
 ) error {
 	client := s.entFromContext(ctx)
 
@@ -800,6 +816,9 @@ func (s *RequestService) UpdateRequestExecutionStatus(
 
 	if errorInfo != nil && errorInfo.StatusCode != nil {
 		upd = upd.SetResponseStatusCode(*errorInfo.StatusCode)
+	}
+	if opts != nil {
+		upd = upd.SetResponseQualityGuardMatched(opts.ResponseQualityGuardMatched)
 	}
 
 	_, err := upd.Save(ctx)
@@ -818,7 +837,9 @@ func (s *RequestService) UpdateRequestExecutionStatusFromError(ctx context.Conte
 		status = requestexecution.StatusCanceled
 	}
 
-	return s.UpdateRequestExecutionStatus(ctx, executionID, status, rawErr.Error(), nil)
+	return s.UpdateRequestExecutionStatus(ctx, executionID, status, rawErr.Error(), nil, &RequestExecutionUpdateOptions{
+		ResponseQualityGuardMatched: isResponseQualityGuardMatched(rawErr),
+	})
 }
 
 type jsonStreamEvent struct {

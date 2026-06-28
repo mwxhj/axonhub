@@ -338,6 +338,10 @@ export interface ResponseQualityGuardSettings {
   rules: ResponseQualityGuardRule[];
 }
 
+export interface ResponseQualityGuardStats {
+  matchedCount: number;
+}
+
 export interface AutoDisableChannelStatusInput {
   status: number;
   times: number;
@@ -574,6 +578,34 @@ export function useUpdateResponseQualityGuardSettings() {
     },
     onError: () => {
       toast.error(i18n.t('common.errors.systemUpdateFailed'));
+    },
+  });
+}
+
+export function useResponseQualityGuardStats(options?: { projectId?: string | null; enabled?: boolean }) {
+  const { handleError } = useErrorHandler();
+  const projectId = options?.projectId ?? null;
+
+  return useQuery({
+    queryKey: ['responseQualityGuardStats', projectId, options?.enabled],
+    enabled: options?.enabled ?? true,
+    queryFn: async () => {
+      try {
+        const query = `
+          query ResponseQualityGuardStats {
+            responseQualityGuardStats {
+              matchedCount
+            }
+          }
+        `;
+
+        const headers = projectId ? { 'X-Project-ID': projectId } : undefined;
+        const data = await graphqlRequest<{ responseQualityGuardStats: ResponseQualityGuardStats }>(query, undefined, headers);
+        return data.responseQualityGuardStats;
+      } catch (error) {
+        handleError(error, i18n.t('common.errors.internalServerError'));
+        throw error;
+      }
     },
   });
 }

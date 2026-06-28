@@ -13,6 +13,7 @@ import (
 	"github.com/looplj/axonhub/internal/authz"
 	"github.com/looplj/axonhub/internal/build"
 	"github.com/looplj/axonhub/internal/contexts"
+	"github.com/looplj/axonhub/internal/ent/requestexecution"
 	"github.com/looplj/axonhub/internal/objects"
 	"github.com/looplj/axonhub/internal/scopes"
 	"github.com/looplj/axonhub/internal/server/biz"
@@ -379,6 +380,29 @@ func (r *queryResolver) ResponseQualityGuardSettings(ctx context.Context) (*biz.
 	}
 
 	return &policy.ResponseQualityGuard, nil
+}
+
+// ResponseQualityGuardStats is the resolver for the responseQualityGuardStats field.
+func (r *queryResolver) ResponseQualityGuardStats(ctx context.Context) (*ResponseQualityGuardStats, error) {
+	if !scopes.UserHasScope(ctx, scopes.ScopeReadSettings) {
+		return nil, fmt.Errorf("permission denied: requires read:settings scope")
+	}
+
+	query := r.client.RequestExecution.Query().
+		Where(requestexecution.ResponseQualityGuardMatched(true))
+
+	if projectID, ok := contexts.GetProjectID(ctx); ok {
+		query = query.Where(requestexecution.ProjectIDEQ(projectID))
+	}
+
+	matchedCount, err := query.Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count response quality guard matches: %w", err)
+	}
+
+	return &ResponseQualityGuardStats{
+		MatchedCount: matchedCount,
+	}, nil
 }
 
 // SystemModelSettings is the resolver for the systemModelSettings field.

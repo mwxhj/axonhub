@@ -338,6 +338,20 @@ func (_c *RequestExecutionCreate) SetResponseChunks(v []objects.JSONRawMessage) 
 	return _c
 }
 
+// SetResponseQualityGuardMatched sets the "response_quality_guard_matched" field.
+func (_c *RequestExecutionCreate) SetResponseQualityGuardMatched(v bool) *RequestExecutionCreate {
+	_c.mutation.SetResponseQualityGuardMatched(v)
+	return _c
+}
+
+// SetNillableResponseQualityGuardMatched sets the "response_quality_guard_matched" field if the given value is not nil.
+func (_c *RequestExecutionCreate) SetNillableResponseQualityGuardMatched(v *bool) *RequestExecutionCreate {
+	if v != nil {
+		_c.SetResponseQualityGuardMatched(*v)
+	}
+	return _c
+}
+
 // SetErrorMessage sets the "error_message" field.
 func (_c *RequestExecutionCreate) SetErrorMessage(v string) *RequestExecutionCreate {
 	_c.mutation.SetErrorMessage(v)
@@ -514,6 +528,10 @@ func (_c *RequestExecutionCreate) defaults() {
 		v := requestexecution.DefaultPassThroughApplied
 		_c.mutation.SetPassThroughApplied(v)
 	}
+	if _, ok := _c.mutation.ResponseQualityGuardMatched(); !ok {
+		v := requestexecution.DefaultResponseQualityGuardMatched
+		_c.mutation.SetResponseQualityGuardMatched(v)
+	}
 	if _, ok := _c.mutation.Stream(); !ok {
 		v := requestexecution.DefaultStream
 		_c.mutation.SetStream(v)
@@ -564,6 +582,9 @@ func (_c *RequestExecutionCreate) check() error {
 	}
 	if _, ok := _c.mutation.RequestBody(); !ok {
 		return &ValidationError{Name: "request_body", err: errors.New(`ent: missing required field "RequestExecution.request_body"`)}
+	}
+	if _, ok := _c.mutation.ResponseQualityGuardMatched(); !ok {
+		return &ValidationError{Name: "response_quality_guard_matched", err: errors.New(`ent: missing required field "RequestExecution.response_quality_guard_matched"`)}
 	}
 	if _, ok := _c.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "RequestExecution.status"`)}
@@ -685,6 +706,10 @@ func (_c *RequestExecutionCreate) createSpec() (*RequestExecution, *sqlgraph.Cre
 	if value, ok := _c.mutation.ResponseChunks(); ok {
 		_spec.SetField(requestexecution.FieldResponseChunks, field.TypeJSON, value)
 		_node.ResponseChunks = value
+	}
+	if value, ok := _c.mutation.ResponseQualityGuardMatched(); ok {
+		_spec.SetField(requestexecution.FieldResponseQualityGuardMatched, field.TypeBool, value)
+		_node.ResponseQualityGuardMatched = value
 	}
 	if value, ok := _c.mutation.ErrorMessage(); ok {
 		_spec.SetField(requestexecution.FieldErrorMessage, field.TypeString, value)
@@ -918,6 +943,18 @@ func (u *RequestExecutionUpsert) UpdateResponseChunks() *RequestExecutionUpsert 
 // ClearResponseChunks clears the value of the "response_chunks" field.
 func (u *RequestExecutionUpsert) ClearResponseChunks() *RequestExecutionUpsert {
 	u.SetNull(requestexecution.FieldResponseChunks)
+	return u
+}
+
+// SetResponseQualityGuardMatched sets the "response_quality_guard_matched" field.
+func (u *RequestExecutionUpsert) SetResponseQualityGuardMatched(v bool) *RequestExecutionUpsert {
+	u.Set(requestexecution.FieldResponseQualityGuardMatched, v)
+	return u
+}
+
+// UpdateResponseQualityGuardMatched sets the "response_quality_guard_matched" field to the value that was provided on create.
+func (u *RequestExecutionUpsert) UpdateResponseQualityGuardMatched() *RequestExecutionUpsert {
+	u.SetExcluded(requestexecution.FieldResponseQualityGuardMatched)
 	return u
 }
 
@@ -1247,6 +1284,20 @@ func (u *RequestExecutionUpsertOne) UpdateResponseChunks() *RequestExecutionUpse
 func (u *RequestExecutionUpsertOne) ClearResponseChunks() *RequestExecutionUpsertOne {
 	return u.Update(func(s *RequestExecutionUpsert) {
 		s.ClearResponseChunks()
+	})
+}
+
+// SetResponseQualityGuardMatched sets the "response_quality_guard_matched" field.
+func (u *RequestExecutionUpsertOne) SetResponseQualityGuardMatched(v bool) *RequestExecutionUpsertOne {
+	return u.Update(func(s *RequestExecutionUpsert) {
+		s.SetResponseQualityGuardMatched(v)
+	})
+}
+
+// UpdateResponseQualityGuardMatched sets the "response_quality_guard_matched" field to the value that was provided on create.
+func (u *RequestExecutionUpsertOne) UpdateResponseQualityGuardMatched() *RequestExecutionUpsertOne {
+	return u.Update(func(s *RequestExecutionUpsert) {
+		s.UpdateResponseQualityGuardMatched()
 	})
 }
 
@@ -1766,6 +1817,20 @@ func (u *RequestExecutionUpsertBulk) UpdateResponseChunks() *RequestExecutionUps
 func (u *RequestExecutionUpsertBulk) ClearResponseChunks() *RequestExecutionUpsertBulk {
 	return u.Update(func(s *RequestExecutionUpsert) {
 		s.ClearResponseChunks()
+	})
+}
+
+// SetResponseQualityGuardMatched sets the "response_quality_guard_matched" field.
+func (u *RequestExecutionUpsertBulk) SetResponseQualityGuardMatched(v bool) *RequestExecutionUpsertBulk {
+	return u.Update(func(s *RequestExecutionUpsert) {
+		s.SetResponseQualityGuardMatched(v)
+	})
+}
+
+// UpdateResponseQualityGuardMatched sets the "response_quality_guard_matched" field to the value that was provided on create.
+func (u *RequestExecutionUpsertBulk) UpdateResponseQualityGuardMatched() *RequestExecutionUpsertBulk {
+	return u.Update(func(s *RequestExecutionUpsert) {
+		s.UpdateResponseQualityGuardMatched()
 	})
 }
 

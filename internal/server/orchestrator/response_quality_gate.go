@@ -170,6 +170,10 @@ func (m *responseQualityGate) failOrObserve(
 	rule biz.ResponseQualityGuardRule,
 	onObserve func() *httpclient.Response,
 ) (*httpclient.Response, error) {
+	if m.state != nil && m.state.RequestExec != nil {
+		m.state.RequestExec.ResponseQualityGuardMatched = true
+	}
+
 	actualModel := m.outbound.GetCurrentModelID()
 	requestedModel := m.state.OriginalModel
 	fields := []log.Field{
@@ -203,6 +207,10 @@ func (m *responseQualityGate) failOrObserveStream(
 	rule biz.ResponseQualityGuardRule,
 	buffered []*httpclient.StreamEvent,
 ) (streams.Stream[*httpclient.StreamEvent], error) {
+	if m.state != nil && m.state.RequestExec != nil {
+		m.state.RequestExec.ResponseQualityGuardMatched = true
+	}
+
 	actualModel := m.outbound.GetCurrentModelID()
 	requestedModel := m.state.OriginalModel
 	fields := []log.Field{

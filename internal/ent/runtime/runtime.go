@@ -733,8 +733,12 @@ func init() {
 	requestexecutionDescPassThroughApplied := requestexecutionFields[19].Descriptor()
 	// requestexecution.DefaultPassThroughApplied holds the default value on creation for the pass_through_applied field.
 	requestexecution.DefaultPassThroughApplied = requestexecutionDescPassThroughApplied.Default.(bool)
+	// requestexecutionDescResponseQualityGuardMatched is the schema descriptor for response_quality_guard_matched field.
+	requestexecutionDescResponseQualityGuardMatched := requestexecutionFields[23].Descriptor()
+	// requestexecution.DefaultResponseQualityGuardMatched holds the default value on creation for the response_quality_guard_matched field.
+	requestexecution.DefaultResponseQualityGuardMatched = requestexecutionDescResponseQualityGuardMatched.Default.(bool)
 	// requestexecutionDescStream is the schema descriptor for stream field.
-	requestexecutionDescStream := requestexecutionFields[26].Descriptor()
+	requestexecutionDescStream := requestexecutionFields[27].Descriptor()
 	// requestexecution.DefaultStream holds the default value on creation for the stream field.
 	requestexecution.DefaultStream = requestexecutionDescStream.Default.(bool)
 	roleMixin := schema.Role{}.Mixin()

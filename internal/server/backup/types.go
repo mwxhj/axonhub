@@ -175,6 +175,7 @@ func (e BackupRequestExecution) MarshalJSON() ([]byte, error) {
 		RequestBody                   objects.JSONRawMessage   `json:"request_body,omitempty"`
 		ResponseBody                  objects.JSONRawMessage   `json:"response_body,omitempty"`
 		ResponseChunks                []objects.JSONRawMessage `json:"response_chunks,omitempty"`
+		ResponseQualityGuardMatched   bool                     `json:"response_quality_guard_matched,omitempty"`
 		ErrorMessage                  string                   `json:"error_message,omitempty"`
 		ResponseStatusCode            *int                     `json:"response_status_code,omitempty"`
 		Status                        requestexecution.Status  `json:"status,omitempty"`
@@ -214,6 +215,7 @@ func (e BackupRequestExecution) MarshalJSON() ([]byte, error) {
 		RequestBody:                   e.RequestBody,
 		ResponseBody:                  e.ResponseBody,
 		ResponseChunks:                e.ResponseChunks,
+		ResponseQualityGuardMatched:   e.ResponseQualityGuardMatched,
 		ErrorMessage:                  e.ErrorMessage,
 		ResponseStatusCode:            e.ResponseStatusCode,
 		Status:                        e.Status,

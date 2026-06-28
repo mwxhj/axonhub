@@ -136,6 +136,8 @@
   "system.retry.responseQualityGuard.rules.appliesTo.nonStream": "Non-streaming requests",
   "system.retry.responseQualityGuard.rules.bufferStreamUntilDecision.label": "Buffer stream until final verdict",
   "system.retry.responseQualityGuard.rules.bufferStreamUntilDecision.description": "For streaming requests, hold chunks until final usage is available so the guard can decide before releasing output.",
+  "system.retry.responseQualityGuard.stats.matchedCount.label": "Guard matched count",
+  "system.retry.responseQualityGuard.stats.matchedCount.description": "Counts execution attempts marked as matched by the response quality guard.",
   "system.brand.title": "Brand Settings",
   "system.brand.description": "Configure basic system information and branding settings",
   "system.brand.brandName.label": "Brand Name",

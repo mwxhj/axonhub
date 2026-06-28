@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useSystemContext } from '../context/system-context';
 import {
   type ResponseQualityGuardRule,
+  useResponseQualityGuardStats,
   useResponseQualityGuardSettings,
   useUpdateResponseQualityGuardSettings,
 } from '../data/system';
@@ -51,6 +52,7 @@ function sameRules(left: ResponseQualityGuardRule[], right: ResponseQualityGuard
 export function RetrySettings() {
   const { t } = useTranslation();
   const { data: settings, isLoading: isLoadingSettings } = useResponseQualityGuardSettings();
+  const { data: stats, isLoading: isLoadingStats } = useResponseQualityGuardStats();
   const updateSettings = useUpdateResponseQualityGuardSettings();
   const { isLoading, setIsLoading } = useSystemContext();
 
@@ -114,6 +116,18 @@ export function RetrySettings() {
           <CardDescription>{t('system.retry.description')}</CardDescription>
         </CardHeader>
         <CardContent className='space-y-6'>
+          <div className='grid gap-4 md:grid-cols-2'>
+            <div className='rounded-lg border p-4'>
+              <div className='text-muted-foreground text-sm'>{t('system.retry.responseQualityGuard.stats.matchedCount.label')}</div>
+              <div className='mt-2 text-3xl font-semibold'>
+                {isLoadingStats ? <Loader2 className='h-6 w-6 animate-spin' /> : stats?.matchedCount ?? 0}
+              </div>
+              <div className='text-muted-foreground mt-2 text-sm'>
+                {t('system.retry.responseQualityGuard.stats.matchedCount.description')}
+              </div>
+            </div>
+          </div>
+
           <div className='flex items-center justify-between gap-4'>
             <div className='space-y-0.5'>
               <Label htmlFor='response-quality-guard-enabled'>{t('system.retry.responseQualityGuard.enabled.label')}</Label>

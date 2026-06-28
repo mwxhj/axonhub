@@ -647,6 +647,7 @@ var (
 		{Name: "request_body", Type: field.TypeJSON},
 		{Name: "response_body", Type: field.TypeJSON, Nullable: true},
 		{Name: "response_chunks", Type: field.TypeJSON, Nullable: true},
+		{Name: "response_quality_guard_matched", Type: field.TypeBool, Default: false},
 		{Name: "error_message", Type: field.TypeString, Nullable: true},
 		{Name: "response_status_code", Type: field.TypeInt, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "processing", "completed", "failed", "canceled"}},
@@ -669,31 +670,31 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "request_executions_channels_executions",
-				Columns:    []*schema.Column{RequestExecutionsColumns[29]},
+				Columns:    []*schema.Column{RequestExecutionsColumns[30]},
 				RefColumns: []*schema.Column{ChannelsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "request_executions_credential_quota_scopes_executions",
-				Columns:    []*schema.Column{RequestExecutionsColumns[30]},
+				Columns:    []*schema.Column{RequestExecutionsColumns[31]},
 				RefColumns: []*schema.Column{CredentialQuotaScopesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "request_executions_data_storages_executions",
-				Columns:    []*schema.Column{RequestExecutionsColumns[31]},
+				Columns:    []*schema.Column{RequestExecutionsColumns[32]},
 				RefColumns: []*schema.Column{DataStoragesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "request_executions_requests_executions",
-				Columns:    []*schema.Column{RequestExecutionsColumns[32]},
+				Columns:    []*schema.Column{RequestExecutionsColumns[33]},
 				RefColumns: []*schema.Column{RequestsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "request_executions_upstream_credentials_executions",
-				Columns:    []*schema.Column{RequestExecutionsColumns[33]},
+				Columns:    []*schema.Column{RequestExecutionsColumns[34]},
 				RefColumns: []*schema.Column{UpstreamCredentialsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -702,22 +703,22 @@ var (
 			{
 				Name:    "request_executions_by_request_id_status_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{RequestExecutionsColumns[32], RequestExecutionsColumns[23], RequestExecutionsColumns[1]},
+				Columns: []*schema.Column{RequestExecutionsColumns[33], RequestExecutionsColumns[24], RequestExecutionsColumns[1]},
 			},
 			{
 				Name:    "request_executions_by_request_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{RequestExecutionsColumns[32], RequestExecutionsColumns[1]},
+				Columns: []*schema.Column{RequestExecutionsColumns[33], RequestExecutionsColumns[1]},
 			},
 			{
 				Name:    "request_executions_by_channel_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{RequestExecutionsColumns[29], RequestExecutionsColumns[1]},
+				Columns: []*schema.Column{RequestExecutionsColumns[30], RequestExecutionsColumns[1]},
 			},
 			{
 				Name:    "request_executions_by_credential_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{RequestExecutionsColumns[33], RequestExecutionsColumns[1]},
+				Columns: []*schema.Column{RequestExecutionsColumns[34], RequestExecutionsColumns[1]},
 			},
 			{
 				Name:    "request_executions_by_credential_fingerprint_created_at",
@@ -737,7 +738,12 @@ var (
 			{
 				Name:    "request_executions_by_quota_scope_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{RequestExecutionsColumns[30], RequestExecutionsColumns[1]},
+				Columns: []*schema.Column{RequestExecutionsColumns[31], RequestExecutionsColumns[1]},
+			},
+			{
+				Name:    "request_executions_by_project_id_response_quality_guard_matched",
+				Unique:  false,
+				Columns: []*schema.Column{RequestExecutionsColumns[3], RequestExecutionsColumns[21]},
 			},
 		},
 	}

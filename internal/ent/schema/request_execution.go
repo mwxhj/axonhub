@@ -41,6 +41,8 @@ func (RequestExecution) Indexes() []ent.Index {
 			StorageKey("request_executions_by_resource_scope_key_created_at"),
 		index.Fields("quota_scope_id", "created_at").
 			StorageKey("request_executions_by_quota_scope_id_created_at"),
+		index.Fields("project_id", "response_quality_guard_matched").
+			StorageKey("request_executions_by_project_id_response_quality_guard_matched"),
 	}
 }
 
@@ -146,6 +148,12 @@ func (RequestExecution) Fields() []ent.Field {
 		field.JSON("response_chunks", []objects.JSONRawMessage{}).Optional().Annotations(
 			entgql.Directives(forceResolver()),
 		),
+		field.Bool("response_quality_guard_matched").
+			Default(false).
+			Comment("Whether this execution attempt matched the response quality guard").
+			Annotations(
+				entgql.Skip(entgql.SkipType, entgql.SkipWhereInput, entgql.SkipOrderField, entgql.SkipMutationCreateInput, entgql.SkipMutationUpdateInput),
+			),
 		field.String("error_message").Optional(),
 		field.Int("response_status_code").Optional().Nillable().
 			Comment("HTTP status code from the upstream provider"),

@@ -1653,6 +1653,7 @@ func (svc *BackupService) restoreRequestExecutions(
 			SetNillableRequestURL(nilIfEmpty(execData.RequestURL)).
 			SetPassThroughApplied(execData.PassThroughApplied).
 			SetRequestBody(jsonOrEmpty(execData.RequestBody)).
+			SetResponseQualityGuardMatched(execData.ResponseQualityGuardMatched).
 			SetNillableErrorMessage(nilIfEmpty(execData.ErrorMessage)).
 			SetNillableResponseStatusCode(execData.ResponseStatusCode).
 			SetStatus(status).

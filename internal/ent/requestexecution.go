@@ -74,6 +74,8 @@ type RequestExecution struct {
 	ResponseBody objects.JSONRawMessage `json:"response_body,omitempty"`
 	// ResponseChunks holds the value of the "response_chunks" field.
 	ResponseChunks []objects.JSONRawMessage `json:"response_chunks,omitempty"`
+	// Whether this execution attempt matched the response quality guard
+	ResponseQualityGuardMatched bool `json:"response_quality_guard_matched,omitempty"`
 	// ErrorMessage holds the value of the "error_message" field.
 	ErrorMessage string `json:"error_message,omitempty"`
 	// HTTP status code from the upstream provider
@@ -177,7 +179,7 @@ func (*RequestExecution) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case requestexecution.FieldRequestBody, requestexecution.FieldResponseBody, requestexecution.FieldResponseChunks, requestexecution.FieldRequestHeaders:
 			values[i] = new([]byte)
-		case requestexecution.FieldPassThroughApplied, requestexecution.FieldStream:
+		case requestexecution.FieldPassThroughApplied, requestexecution.FieldResponseQualityGuardMatched, requestexecution.FieldStream:
 			values[i] = new(sql.NullBool)
 		case requestexecution.FieldID, requestexecution.FieldProjectID, requestexecution.FieldRequestID, requestexecution.FieldChannelID, requestexecution.FieldCredentialID, requestexecution.FieldDataStorageID, requestexecution.FieldQuotaScopeID, requestexecution.FieldResponseStatusCode, requestexecution.FieldMetricsLatencyMs, requestexecution.FieldMetricsFirstTokenLatencyMs, requestexecution.FieldMetricsReasoningDurationMs:
 			values[i] = new(sql.NullInt64)
@@ -361,6 +363,12 @@ func (_m *RequestExecution) assignValues(columns []string, values []any) error {
 				if err := json.Unmarshal(*value, &_m.ResponseChunks); err != nil {
 					return fmt.Errorf("unmarshal field response_chunks: %w", err)
 				}
+			}
+		case requestexecution.FieldResponseQualityGuardMatched:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field response_quality_guard_matched", values[i])
+			} else if value.Valid {
+				_m.ResponseQualityGuardMatched = value.Bool
 			}
 		case requestexecution.FieldErrorMessage:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -551,6 +559,9 @@ func (_m *RequestExecution) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("response_chunks=")
 	builder.WriteString(fmt.Sprintf("%v", _m.ResponseChunks))
+	builder.WriteString(", ")
+	builder.WriteString("response_quality_guard_matched=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ResponseQualityGuardMatched))
 	builder.WriteString(", ")
 	builder.WriteString("error_message=")
 	builder.WriteString(_m.ErrorMessage)

@@ -291,6 +291,9 @@ func (ts *OutboundPersistentStream) persistAggregatedResponse(ctx context.Contex
 		meta.ID,
 		responseBody,
 		metrics,
+		&biz.RequestExecutionUpdateOptions{
+			ResponseQualityGuardMatched: ts.requestExec.ResponseQualityGuardMatched,
+		},
 	)
 	if err != nil {
 		log.Warn(

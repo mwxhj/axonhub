@@ -262,5 +262,6 @@ func TestPersistRequestExecution_OnOutboundRawError_ResponseQualityGuardMarksExe
 	dbExec, err := client.RequestExecution.Get(ctx, execRow.ID)
 	require.NoError(t, err)
 	assert.Equal(t, requestexecution.StatusFailed, dbExec.Status)
+	assert.True(t, dbExec.ResponseQualityGuardMatched)
 	assert.Contains(t, dbExec.ErrorMessage, "response quality guard matched")
 }

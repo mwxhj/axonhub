@@ -67,6 +67,8 @@ const (
 	FieldResponseBody = "response_body"
 	// FieldResponseChunks holds the string denoting the response_chunks field in the database.
 	FieldResponseChunks = "response_chunks"
+	// FieldResponseQualityGuardMatched holds the string denoting the response_quality_guard_matched field in the database.
+	FieldResponseQualityGuardMatched = "response_quality_guard_matched"
 	// FieldErrorMessage holds the string denoting the error_message field in the database.
 	FieldErrorMessage = "error_message"
 	// FieldResponseStatusCode holds the string denoting the response_status_code field in the database.
@@ -160,6 +162,7 @@ var Columns = []string{
 	FieldRequestBody,
 	FieldResponseBody,
 	FieldResponseChunks,
+	FieldResponseQualityGuardMatched,
 	FieldErrorMessage,
 	FieldResponseStatusCode,
 	FieldStatus,
@@ -203,6 +206,8 @@ var (
 	RequestURLValidator func(string) error
 	// DefaultPassThroughApplied holds the default value on creation for the "pass_through_applied" field.
 	DefaultPassThroughApplied bool
+	// DefaultResponseQualityGuardMatched holds the default value on creation for the "response_quality_guard_matched" field.
+	DefaultResponseQualityGuardMatched bool
 	// DefaultStream holds the default value on creation for the "stream" field.
 	DefaultStream bool
 )
@@ -349,6 +354,11 @@ func ByRequestURL(opts ...sql.OrderTermOption) OrderOption {
 // ByPassThroughApplied orders the results by the pass_through_applied field.
 func ByPassThroughApplied(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPassThroughApplied, opts...).ToFunc()
+}
+
+// ByResponseQualityGuardMatched orders the results by the response_quality_guard_matched field.
+func ByResponseQualityGuardMatched(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldResponseQualityGuardMatched, opts...).ToFunc()
 }
 
 // ByErrorMessage orders the results by the error_message field.

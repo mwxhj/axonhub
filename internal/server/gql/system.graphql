@@ -140,6 +140,10 @@ type ResponseQualityGuard {
   rules: [ResponseQualityGuardRule!]!
 }
 
+type ResponseQualityGuardStats {
+  matchedCount: Int!
+}
+
 input ResponseQualityGuardInput {
   enabled: Boolean!
   mode: String!
@@ -408,6 +412,7 @@ extend type Query {
   storagePolicy: StoragePolicy!
   webhookNotifierConfig: WebhookNotifierConfig!
   responseQualityGuardSettings: ResponseQualityGuard!
+  responseQualityGuardStats: ResponseQualityGuardStats!
   systemModelSettings: SystemModelSettings!
   defaultDataStorageID: ID
   onboardingInfo: OnboardingInfo

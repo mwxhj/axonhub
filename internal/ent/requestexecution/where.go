@@ -165,6 +165,11 @@ func PassThroughApplied(v bool) predicate.RequestExecution {
 	return predicate.RequestExecution(sql.FieldEQ(FieldPassThroughApplied, v))
 }
 
+// ResponseQualityGuardMatched applies equality check predicate on the "response_quality_guard_matched" field. It's identical to ResponseQualityGuardMatchedEQ.
+func ResponseQualityGuardMatched(v bool) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldResponseQualityGuardMatched, v))
+}
+
 // ErrorMessage applies equality check predicate on the "error_message" field. It's identical to ErrorMessageEQ.
 func ErrorMessage(v string) predicate.RequestExecution {
 	return predicate.RequestExecution(sql.FieldEQ(FieldErrorMessage, v))
@@ -1438,6 +1443,16 @@ func ResponseChunksIsNil() predicate.RequestExecution {
 // ResponseChunksNotNil applies the NotNil predicate on the "response_chunks" field.
 func ResponseChunksNotNil() predicate.RequestExecution {
 	return predicate.RequestExecution(sql.FieldNotNull(FieldResponseChunks))
+}
+
+// ResponseQualityGuardMatchedEQ applies the EQ predicate on the "response_quality_guard_matched" field.
+func ResponseQualityGuardMatchedEQ(v bool) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldEQ(FieldResponseQualityGuardMatched, v))
+}
+
+// ResponseQualityGuardMatchedNEQ applies the NEQ predicate on the "response_quality_guard_matched" field.
+func ResponseQualityGuardMatchedNEQ(v bool) predicate.RequestExecution {
+	return predicate.RequestExecution(sql.FieldNEQ(FieldResponseQualityGuardMatched, v))
 }
 
 // ErrorMessageEQ applies the EQ predicate on the "error_message" field.

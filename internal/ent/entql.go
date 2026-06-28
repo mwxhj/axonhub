@@ -462,6 +462,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			requestexecution.FieldRequestBody:                   {Type: field.TypeJSON, Column: requestexecution.FieldRequestBody},
 			requestexecution.FieldResponseBody:                  {Type: field.TypeJSON, Column: requestexecution.FieldResponseBody},
 			requestexecution.FieldResponseChunks:                {Type: field.TypeJSON, Column: requestexecution.FieldResponseChunks},
+			requestexecution.FieldResponseQualityGuardMatched:   {Type: field.TypeBool, Column: requestexecution.FieldResponseQualityGuardMatched},
 			requestexecution.FieldErrorMessage:                  {Type: field.TypeString, Column: requestexecution.FieldErrorMessage},
 			requestexecution.FieldResponseStatusCode:            {Type: field.TypeInt, Column: requestexecution.FieldResponseStatusCode},
 			requestexecution.FieldStatus:                        {Type: field.TypeEnum, Column: requestexecution.FieldStatus},
@@ -3850,6 +3851,11 @@ func (f *RequestExecutionFilter) WhereResponseBody(p entql.BytesP) {
 // WhereResponseChunks applies the entql json.RawMessage predicate on the response_chunks field.
 func (f *RequestExecutionFilter) WhereResponseChunks(p entql.BytesP) {
 	f.Where(p.Field(requestexecution.FieldResponseChunks))
+}
+
+// WhereResponseQualityGuardMatched applies the entql bool predicate on the response_quality_guard_matched field.
+func (f *RequestExecutionFilter) WhereResponseQualityGuardMatched(p entql.BoolP) {
+	f.Where(p.Field(requestexecution.FieldResponseQualityGuardMatched))
 }
 
 // WhereErrorMessage applies the entql string predicate on the error_message field.
