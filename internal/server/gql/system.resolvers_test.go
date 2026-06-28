@@ -89,3 +89,60 @@ func TestMutationResolver_UpdateSystemChannelSettings_MergesProbeWithoutOverwrit
 	require.Equal(t, biz.ProbeFrequency1Hour, setting.Probe.Frequency)
 	require.Equal(t, biz.AutoSyncFrequencySixHours, setting.AutoSync.Frequency)
 }
+
+func TestMutationResolver_UpdateResponseQualityGuardSettings_MergesWithoutOverwritingRetryPolicy(t *testing.T) {
+	resolver, ctx, client := setupTestSystemMutationResolver(t)
+	defer client.Close()
+
+	err := resolver.systemService.SetRetryPolicy(ctx, &biz.RetryPolicy{
+		Enabled:                 true,
+		MaxChannelRetries:       5,
+		MaxSingleChannelRetries: 3,
+		RetryDelayMs:            1200,
+		EmptyResponseDetection:  true,
+		UpstreamErrorPolicy: biz.UpstreamErrorPolicy{
+			Mode:          biz.UpstreamErrorModeCustom,
+			CustomMessage: "custom upstream error",
+		},
+		ResponseQualityGuard: biz.ResponseQualityGuard{
+			Enabled: false,
+			Mode:    "observe_only",
+			Rules:   []biz.ResponseQualityGuardRule{},
+		},
+	})
+	require.NoError(t, err)
+
+	ok, err := resolver.UpdateResponseQualityGuardSettings(ctx, biz.ResponseQualityGuard{
+		Enabled: true,
+		Mode:    "retry_on_match",
+		Rules: []biz.ResponseQualityGuardRule{
+			{
+				ModelMatch:                []string{"gpt-5.4", "gpt-5-codex"},
+				ReasoningTokensLTE:        516,
+				ApplyToStream:             true,
+				ApplyToNonStream:          true,
+				BufferStreamUntilDecision: true,
+			},
+		},
+	})
+	require.NoError(t, err)
+	require.True(t, ok)
+
+	policy, err := resolver.systemService.RetryPolicy(ctx)
+	require.NoError(t, err)
+	require.True(t, policy.Enabled)
+	require.Equal(t, 5, policy.MaxChannelRetries)
+	require.Equal(t, 3, policy.MaxSingleChannelRetries)
+	require.Equal(t, 1200, policy.RetryDelayMs)
+	require.True(t, policy.EmptyResponseDetection)
+	require.Equal(t, biz.UpstreamErrorModeCustom, policy.UpstreamErrorPolicy.Mode)
+	require.Equal(t, "custom upstream error", policy.UpstreamErrorPolicy.CustomMessage)
+	require.True(t, policy.ResponseQualityGuard.Enabled)
+	require.Equal(t, "retry_on_match", policy.ResponseQualityGuard.Mode)
+	require.Len(t, policy.ResponseQualityGuard.Rules, 1)
+	require.Equal(t, []string{"gpt-5.4", "gpt-5-codex"}, policy.ResponseQualityGuard.Rules[0].ModelMatch)
+	require.Equal(t, int64(516), policy.ResponseQualityGuard.Rules[0].ReasoningTokensLTE)
+	require.True(t, policy.ResponseQualityGuard.Rules[0].ApplyToStream)
+	require.True(t, policy.ResponseQualityGuard.Rules[0].ApplyToNonStream)
+	require.True(t, policy.ResponseQualityGuard.Rules[0].BufferStreamUntilDecision)
+}

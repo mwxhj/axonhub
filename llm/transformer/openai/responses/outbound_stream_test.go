@@ -156,6 +156,111 @@ func TestOutboundTransformer_TransformStream_ResponseCancelledCompletes(t *testi
 	require.Equal(t, "cancelled", *responses[1].Choices[0].FinishReason)
 }
 
+func TestOutboundTransformer_TransformStream_BackfillsFunctionCallArgumentsFromFinalItem(t *testing.T) {
+	trans, err := NewOutboundTransformer("https://api.openai.com", "test-api-key")
+	require.NoError(t, err)
+
+	events := []*httpclient.StreamEvent{
+		{
+			Type: "response.created",
+			Data: []byte(`{
+				"type":"response.created",
+				"response":{
+					"id":"resp_tool_final_only",
+					"object":"response",
+					"created_at":1700000000,
+					"model":"gpt-5",
+					"status":"in_progress",
+					"output":[]
+				}
+			}`),
+		},
+		{
+			Type: "response.output_item.added",
+			Data: []byte(`{
+				"type":"response.output_item.added",
+				"output_index":0,
+				"item":{
+					"id":"fc_item_1",
+					"type":"function_call",
+					"status":"in_progress",
+					"call_id":"call_tool_1",
+					"name":"spawn_agent"
+				}
+			}`),
+		},
+		{
+			Type: "response.output_item.done",
+			Data: []byte(`{
+				"type":"response.output_item.done",
+				"output_index":0,
+				"item":{
+					"id":"fc_item_1",
+					"type":"function_call",
+					"status":"completed",
+					"call_id":"call_tool_1",
+					"name":"spawn_agent",
+					"arguments":"{\"task_name\":\"test_subagent\",\"fork_turns\":\"3\",\"message\":\"ciphertext\"}"
+				}
+			}`),
+		},
+		{
+			Type: "response.completed",
+			Data: []byte(`{
+				"type":"response.completed",
+				"response":{
+					"id":"resp_tool_final_only",
+					"object":"response",
+					"created_at":1700000000,
+					"model":"gpt-5",
+					"status":"completed",
+					"output":[]
+				}
+			}`),
+		},
+	}
+
+	stream, err := trans.TransformStream(context.Background(), nil, streams.SliceStream(events))
+	require.NoError(t, err)
+
+	actual, err := streams.All(stream)
+	require.NoError(t, err)
+	require.NotEmpty(t, actual)
+
+	var (
+		toolInitChunk *llm.Response
+		toolArgsChunk *llm.Response
+	)
+
+	for _, resp := range actual {
+		if resp == llm.DoneResponse {
+			continue
+		}
+		for _, choice := range resp.Choices {
+			if choice.Delta == nil || len(choice.Delta.ToolCalls) == 0 {
+				continue
+			}
+			tc := choice.Delta.ToolCalls[0]
+			if tc.Function.Name == "spawn_agent" && tc.Function.Arguments == "" {
+				toolInitChunk = resp
+			}
+			if tc.Function.Arguments != "" {
+				toolArgsChunk = resp
+			}
+		}
+	}
+
+	require.NotNil(t, toolInitChunk, "expected function_call init chunk")
+	require.NotNil(t, toolArgsChunk, "expected synthesized arguments chunk")
+	require.Len(t, toolArgsChunk.Choices, 1)
+	require.Len(t, toolArgsChunk.Choices[0].Delta.ToolCalls, 1)
+	require.Equal(
+		t,
+		`{"task_name":"test_subagent","fork_turns":"3","message":"ciphertext"}`,
+		toolArgsChunk.Choices[0].Delta.ToolCalls[0].Function.Arguments,
+	)
+}
+
 func TestOutboundTransformer_TransformStream_PreservesFinalItemAnnotations(t *testing.T) {
 	trans, err := NewOutboundTransformer("https://api.openai.com", "test-api-key")
 	require.NoError(t, err)

@@ -995,6 +995,7 @@ type ComplexityRoot struct {
 		UpdatePromptProtectionRule           func(childComplexity int, id objects.GUID, input ent.UpdatePromptProtectionRuleInput) int
 		UpdatePromptProtectionRuleStatus     func(childComplexity int, id objects.GUID, status promptprotectionrule.Status) int
 		UpdatePromptStatus                   func(childComplexity int, id objects.GUID, status prompt.Status) int
+		UpdateResponseQualityGuardSettings   func(childComplexity int, input biz.ResponseQualityGuard) int
 		UpdateRole                           func(childComplexity int, id objects.GUID, input ent.UpdateRoleInput) int
 		UpdateSecuritySettings               func(childComplexity int, input UpdateSecuritySettingsInput) int
 		UpdateStoragePolicy                  func(childComplexity int, input biz.StoragePolicy) int
@@ -1286,6 +1287,7 @@ type ComplexityRoot struct {
 		RequestStatsByChannel        func(childComplexity int, timeWindow *string) int
 		RequestStatsByModel          func(childComplexity int, timeWindow *string) int
 		Requests                     func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.RequestOrder, where *ent.RequestWhereInput) int
+		ResponseQualityGuardSettings func(childComplexity int) int
 		Roles                        func(childComplexity int, after *entgql.Cursor[int], first *int, before *entgql.Cursor[int], last *int, orderBy *ent.RoleOrder, where *ent.RoleWhereInput) int
 		SecuritySettings             func(childComplexity int) int
 		StoragePolicy                func(childComplexity int) int
@@ -1440,6 +1442,20 @@ type ComplexityRoot struct {
 	RequestStatsByModel struct {
 		Count   func(childComplexity int) int
 		ModelID func(childComplexity int) int
+	}
+
+	ResponseQualityGuard struct {
+		Enabled func(childComplexity int) int
+		Mode    func(childComplexity int) int
+		Rules   func(childComplexity int) int
+	}
+
+	ResponseQualityGuardRule struct {
+		ApplyToNonStream          func(childComplexity int) int
+		ApplyToStream             func(childComplexity int) int
+		BufferStreamUntilDecision func(childComplexity int) int
+		ModelMatch                func(childComplexity int) int
+		ReasoningTokensLTE        func(childComplexity int) int
 	}
 
 	RestorePayload struct {
@@ -2136,6 +2152,7 @@ type MutationResolver interface {
 	UpdateBrandSettings(ctx context.Context, input UpdateBrandSettingsInput) (bool, error)
 	UpdateStoragePolicy(ctx context.Context, input biz.StoragePolicy) (bool, error)
 	UpdateWebhookNotifierConfig(ctx context.Context, input biz.WebhookNotifierConfig) (bool, error)
+	UpdateResponseQualityGuardSettings(ctx context.Context, input biz.ResponseQualityGuard) (bool, error)
 	UpdateSystemModelSettings(ctx context.Context, input biz.SystemModelSettings) (bool, error)
 	UpdateDefaultDataStorage(ctx context.Context, input UpdateDefaultDataStorageInput) (bool, error)
 	CompleteOnboarding(ctx context.Context, input CompleteOnboardingInput) (bool, error)
@@ -2253,6 +2270,7 @@ type QueryResolver interface {
 	BrandSettings(ctx context.Context) (*BrandSettings, error)
 	StoragePolicy(ctx context.Context) (*biz.StoragePolicy, error)
 	WebhookNotifierConfig(ctx context.Context) (*biz.WebhookNotifierConfig, error)
+	ResponseQualityGuardSettings(ctx context.Context) (*biz.ResponseQualityGuard, error)
 	SystemModelSettings(ctx context.Context) (*biz.SystemModelSettings, error)
 	DefaultDataStorageID(ctx context.Context) (*objects.GUID, error)
 	OnboardingInfo(ctx context.Context) (*OnboardingInfo, error)
@@ -6420,6 +6438,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.UpdatePromptStatus(childComplexity, args["id"].(objects.GUID), args["status"].(prompt.Status)), true
+	case "Mutation.updateResponseQualityGuardSettings":
+		if e.complexity.Mutation.UpdateResponseQualityGuardSettings == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateResponseQualityGuardSettings_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateResponseQualityGuardSettings(childComplexity, args["input"].(biz.ResponseQualityGuard)), true
 	case "Mutation.updateRole":
 		if e.complexity.Mutation.UpdateRole == nil {
 			break
@@ -7917,6 +7946,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.Requests(childComplexity, args["after"].(*entgql.Cursor[int]), args["first"].(*int), args["before"].(*entgql.Cursor[int]), args["last"].(*int), args["orderBy"].(*ent.RequestOrder), args["where"].(*ent.RequestWhereInput)), true
+	case "Query.responseQualityGuardSettings":
+		if e.complexity.Query.ResponseQualityGuardSettings == nil {
+			break
+		}
+
+		return e.complexity.Query.ResponseQualityGuardSettings(childComplexity), true
 	case "Query.roles":
 		if e.complexity.Query.Roles == nil {
 			break
@@ -8697,6 +8732,56 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.RequestStatsByModel.ModelID(childComplexity), true
+
+	case "ResponseQualityGuard.enabled":
+		if e.complexity.ResponseQualityGuard.Enabled == nil {
+			break
+		}
+
+		return e.complexity.ResponseQualityGuard.Enabled(childComplexity), true
+	case "ResponseQualityGuard.mode":
+		if e.complexity.ResponseQualityGuard.Mode == nil {
+			break
+		}
+
+		return e.complexity.ResponseQualityGuard.Mode(childComplexity), true
+	case "ResponseQualityGuard.rules":
+		if e.complexity.ResponseQualityGuard.Rules == nil {
+			break
+		}
+
+		return e.complexity.ResponseQualityGuard.Rules(childComplexity), true
+
+	case "ResponseQualityGuardRule.applyToNonStream":
+		if e.complexity.ResponseQualityGuardRule.ApplyToNonStream == nil {
+			break
+		}
+
+		return e.complexity.ResponseQualityGuardRule.ApplyToNonStream(childComplexity), true
+	case "ResponseQualityGuardRule.applyToStream":
+		if e.complexity.ResponseQualityGuardRule.ApplyToStream == nil {
+			break
+		}
+
+		return e.complexity.ResponseQualityGuardRule.ApplyToStream(childComplexity), true
+	case "ResponseQualityGuardRule.bufferStreamUntilDecision":
+		if e.complexity.ResponseQualityGuardRule.BufferStreamUntilDecision == nil {
+			break
+		}
+
+		return e.complexity.ResponseQualityGuardRule.BufferStreamUntilDecision(childComplexity), true
+	case "ResponseQualityGuardRule.modelMatch":
+		if e.complexity.ResponseQualityGuardRule.ModelMatch == nil {
+			break
+		}
+
+		return e.complexity.ResponseQualityGuardRule.ModelMatch(childComplexity), true
+	case "ResponseQualityGuardRule.reasoningTokensLTE":
+		if e.complexity.ResponseQualityGuardRule.ReasoningTokensLTE == nil {
+			break
+		}
+
+		return e.complexity.ResponseQualityGuardRule.ReasoningTokensLTE(childComplexity), true
 
 	case "RestorePayload.message":
 		if e.complexity.RestorePayload.Message == nil {
@@ -10980,6 +11065,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputRequestExecutionWhereInput,
 		ec.unmarshalInputRequestOrder,
 		ec.unmarshalInputRequestWhereInput,
+		ec.unmarshalInputResponseQualityGuardInput,
+		ec.unmarshalInputResponseQualityGuardRuleInput,
 		ec.unmarshalInputRestoreOptionsInput,
 		ec.unmarshalInputRoleOrder,
 		ec.unmarshalInputRoleWhereInput,
@@ -12716,6 +12803,17 @@ func (ec *executionContext) field_Mutation_updatePrompt_args(ctx context.Context
 		return nil, err
 	}
 	args["input"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateResponseQualityGuardSettings_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNResponseQualityGuardInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuard)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -34205,6 +34303,47 @@ func (ec *executionContext) fieldContext_Mutation_updateWebhookNotifierConfig(ct
 	return fc, nil
 }
 
+func (ec *executionContext) _Mutation_updateResponseQualityGuardSettings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_updateResponseQualityGuardSettings,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().UpdateResponseQualityGuardSettings(ctx, fc.Args["input"].(biz.ResponseQualityGuard))
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateResponseQualityGuardSettings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateResponseQualityGuardSettings_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_updateSystemModelSettings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -43182,6 +43321,43 @@ func (ec *executionContext) fieldContext_Query_webhookNotifierConfig(_ context.C
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_responseQualityGuardSettings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_responseQualityGuardSettings,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().ResponseQualityGuardSettings(ctx)
+		},
+		nil,
+		ec.marshalNResponseQualityGuard2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuard,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_responseQualityGuardSettings(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "enabled":
+				return ec.fieldContext_ResponseQualityGuard_enabled(ctx, field)
+			case "mode":
+				return ec.fieldContext_ResponseQualityGuard_mode(ctx, field)
+			case "rules":
+				return ec.fieldContext_ResponseQualityGuard_rules(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ResponseQualityGuard", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_systemModelSettings(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -47462,6 +47638,250 @@ func (ec *executionContext) fieldContext_RequestStatsByModel_count(_ context.Con
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ResponseQualityGuard_enabled(ctx context.Context, field graphql.CollectedField, obj *biz.ResponseQualityGuard) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ResponseQualityGuard_enabled,
+		func(ctx context.Context) (any, error) {
+			return obj.Enabled, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ResponseQualityGuard_enabled(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ResponseQualityGuard",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ResponseQualityGuard_mode(ctx context.Context, field graphql.CollectedField, obj *biz.ResponseQualityGuard) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ResponseQualityGuard_mode,
+		func(ctx context.Context) (any, error) {
+			return obj.Mode, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ResponseQualityGuard_mode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ResponseQualityGuard",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ResponseQualityGuard_rules(ctx context.Context, field graphql.CollectedField, obj *biz.ResponseQualityGuard) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ResponseQualityGuard_rules,
+		func(ctx context.Context) (any, error) {
+			return obj.Rules, nil
+		},
+		nil,
+		ec.marshalNResponseQualityGuardRule2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuardRuleᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ResponseQualityGuard_rules(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ResponseQualityGuard",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "modelMatch":
+				return ec.fieldContext_ResponseQualityGuardRule_modelMatch(ctx, field)
+			case "reasoningTokensLTE":
+				return ec.fieldContext_ResponseQualityGuardRule_reasoningTokensLTE(ctx, field)
+			case "applyToStream":
+				return ec.fieldContext_ResponseQualityGuardRule_applyToStream(ctx, field)
+			case "applyToNonStream":
+				return ec.fieldContext_ResponseQualityGuardRule_applyToNonStream(ctx, field)
+			case "bufferStreamUntilDecision":
+				return ec.fieldContext_ResponseQualityGuardRule_bufferStreamUntilDecision(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ResponseQualityGuardRule", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ResponseQualityGuardRule_modelMatch(ctx context.Context, field graphql.CollectedField, obj *biz.ResponseQualityGuardRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ResponseQualityGuardRule_modelMatch,
+		func(ctx context.Context) (any, error) {
+			return obj.ModelMatch, nil
+		},
+		nil,
+		ec.marshalNString2ᚕstringᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ResponseQualityGuardRule_modelMatch(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ResponseQualityGuardRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ResponseQualityGuardRule_reasoningTokensLTE(ctx context.Context, field graphql.CollectedField, obj *biz.ResponseQualityGuardRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ResponseQualityGuardRule_reasoningTokensLTE,
+		func(ctx context.Context) (any, error) {
+			return obj.ReasoningTokensLTE, nil
+		},
+		nil,
+		ec.marshalNInt2int64,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ResponseQualityGuardRule_reasoningTokensLTE(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ResponseQualityGuardRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ResponseQualityGuardRule_applyToStream(ctx context.Context, field graphql.CollectedField, obj *biz.ResponseQualityGuardRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ResponseQualityGuardRule_applyToStream,
+		func(ctx context.Context) (any, error) {
+			return obj.ApplyToStream, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ResponseQualityGuardRule_applyToStream(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ResponseQualityGuardRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ResponseQualityGuardRule_applyToNonStream(ctx context.Context, field graphql.CollectedField, obj *biz.ResponseQualityGuardRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ResponseQualityGuardRule_applyToNonStream,
+		func(ctx context.Context) (any, error) {
+			return obj.ApplyToNonStream, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ResponseQualityGuardRule_applyToNonStream(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ResponseQualityGuardRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ResponseQualityGuardRule_bufferStreamUntilDecision(ctx context.Context, field graphql.CollectedField, obj *biz.ResponseQualityGuardRule) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ResponseQualityGuardRule_bufferStreamUntilDecision,
+		func(ctx context.Context) (any, error) {
+			return obj.BufferStreamUntilDecision, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ResponseQualityGuardRule_bufferStreamUntilDecision(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ResponseQualityGuardRule",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -79130,6 +79550,102 @@ func (ec *executionContext) unmarshalInputRequestWhereInput(ctx context.Context,
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputResponseQualityGuardInput(ctx context.Context, obj any) (biz.ResponseQualityGuard, error) {
+	var it biz.ResponseQualityGuard
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"enabled", "mode", "rules"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "enabled":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("enabled"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Enabled = data
+		case "mode":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("mode"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Mode = data
+		case "rules":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("rules"))
+			data, err := ec.unmarshalNResponseQualityGuardRuleInput2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuardRuleᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Rules = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputResponseQualityGuardRuleInput(ctx context.Context, obj any) (biz.ResponseQualityGuardRule, error) {
+	var it biz.ResponseQualityGuardRule
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"modelMatch", "reasoningTokensLTE", "applyToStream", "applyToNonStream", "bufferStreamUntilDecision"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "modelMatch":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("modelMatch"))
+			data, err := ec.unmarshalNString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ModelMatch = data
+		case "reasoningTokensLTE":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("reasoningTokensLTE"))
+			data, err := ec.unmarshalNInt2int64(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ReasoningTokensLTE = data
+		case "applyToStream":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("applyToStream"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ApplyToStream = data
+		case "applyToNonStream":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("applyToNonStream"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ApplyToNonStream = data
+		case "bufferStreamUntilDecision":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("bufferStreamUntilDecision"))
+			data, err := ec.unmarshalNBoolean2bool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.BufferStreamUntilDecision = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputRestoreOptionsInput(ctx context.Context, obj any) (backup.RestoreOptions, error) {
 	var it backup.RestoreOptions
 	asMap := map[string]any{}
@@ -96896,6 +97412,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "updateResponseQualityGuardSettings":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateResponseQualityGuardSettings(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "updateSystemModelSettings":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_updateSystemModelSettings(ctx, field)
@@ -100531,6 +101054,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "responseQualityGuardSettings":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_responseQualityGuardSettings(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "systemModelSettings":
 			field := field
 
@@ -102613,6 +103158,114 @@ func (ec *executionContext) _RequestStatsByModel(ctx context.Context, sel ast.Se
 			}
 		case "count":
 			out.Values[i] = ec._RequestStatsByModel_count(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var responseQualityGuardImplementors = []string{"ResponseQualityGuard"}
+
+func (ec *executionContext) _ResponseQualityGuard(ctx context.Context, sel ast.SelectionSet, obj *biz.ResponseQualityGuard) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, responseQualityGuardImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ResponseQualityGuard")
+		case "enabled":
+			out.Values[i] = ec._ResponseQualityGuard_enabled(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "mode":
+			out.Values[i] = ec._ResponseQualityGuard_mode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "rules":
+			out.Values[i] = ec._ResponseQualityGuard_rules(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var responseQualityGuardRuleImplementors = []string{"ResponseQualityGuardRule"}
+
+func (ec *executionContext) _ResponseQualityGuardRule(ctx context.Context, sel ast.SelectionSet, obj *biz.ResponseQualityGuardRule) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, responseQualityGuardRuleImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ResponseQualityGuardRule")
+		case "modelMatch":
+			out.Values[i] = ec._ResponseQualityGuardRule_modelMatch(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "reasoningTokensLTE":
+			out.Values[i] = ec._ResponseQualityGuardRule_reasoningTokensLTE(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "applyToStream":
+			out.Values[i] = ec._ResponseQualityGuardRule_applyToStream(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "applyToNonStream":
+			out.Values[i] = ec._ResponseQualityGuardRule_applyToNonStream(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "bufferStreamUntilDecision":
+			out.Values[i] = ec._ResponseQualityGuardRule_bufferStreamUntilDecision(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -113045,6 +113698,93 @@ func (ec *executionContext) marshalNRequestStatus2githubᚗcomᚋloopljᚋaxonhu
 func (ec *executionContext) unmarshalNRequestWhereInput2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋentᚐRequestWhereInput(ctx context.Context, v any) (*ent.RequestWhereInput, error) {
 	res, err := ec.unmarshalInputRequestWhereInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNResponseQualityGuard2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuard(ctx context.Context, sel ast.SelectionSet, v biz.ResponseQualityGuard) graphql.Marshaler {
+	return ec._ResponseQualityGuard(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNResponseQualityGuard2ᚖgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuard(ctx context.Context, sel ast.SelectionSet, v *biz.ResponseQualityGuard) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ResponseQualityGuard(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNResponseQualityGuardInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuard(ctx context.Context, v any) (biz.ResponseQualityGuard, error) {
+	res, err := ec.unmarshalInputResponseQualityGuardInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNResponseQualityGuardRule2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuardRule(ctx context.Context, sel ast.SelectionSet, v biz.ResponseQualityGuardRule) graphql.Marshaler {
+	return ec._ResponseQualityGuardRule(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNResponseQualityGuardRule2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuardRuleᚄ(ctx context.Context, sel ast.SelectionSet, v []biz.ResponseQualityGuardRule) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNResponseQualityGuardRule2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuardRule(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) unmarshalNResponseQualityGuardRuleInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuardRule(ctx context.Context, v any) (biz.ResponseQualityGuardRule, error) {
+	res, err := ec.unmarshalInputResponseQualityGuardRuleInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNResponseQualityGuardRuleInput2ᚕgithubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuardRuleᚄ(ctx context.Context, v any) ([]biz.ResponseQualityGuardRule, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]biz.ResponseQualityGuardRule, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNResponseQualityGuardRuleInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbizᚐResponseQualityGuardRule(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
 }
 
 func (ec *executionContext) unmarshalNRestoreOptionsInput2githubᚗcomᚋloopljᚋaxonhubᚋinternalᚋserverᚋbackupᚐRestoreOptions(ctx context.Context, v any) (backup.RestoreOptions, error) {

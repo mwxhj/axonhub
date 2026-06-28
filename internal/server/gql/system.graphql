@@ -118,6 +118,34 @@ input UpstreamErrorPolicyInput {
   customMessage: String
 }
 
+type ResponseQualityGuardRule {
+  modelMatch: [String!]!
+  reasoningTokensLTE: Int!
+  applyToStream: Boolean!
+  applyToNonStream: Boolean!
+  bufferStreamUntilDecision: Boolean!
+}
+
+input ResponseQualityGuardRuleInput {
+  modelMatch: [String!]!
+  reasoningTokensLTE: Int!
+  applyToStream: Boolean!
+  applyToNonStream: Boolean!
+  bufferStreamUntilDecision: Boolean!
+}
+
+type ResponseQualityGuard {
+  enabled: Boolean!
+  mode: String!
+  rules: [ResponseQualityGuardRule!]!
+}
+
+input ResponseQualityGuardInput {
+  enabled: Boolean!
+  mode: String!
+  rules: [ResponseQualityGuardRuleInput!]!
+}
+
 input AutoDisableChannelStatusInput {
   status: Int!
   times: Int!
@@ -313,6 +341,7 @@ extend type Mutation {
   updateBrandSettings(input: UpdateBrandSettingsInput!): Boolean!
   updateStoragePolicy(input: UpdateStoragePolicyInput!): Boolean!
   updateWebhookNotifierConfig(input: WebhookNotifierConfigInput!): Boolean!
+  updateResponseQualityGuardSettings(input: ResponseQualityGuardInput!): Boolean!
   updateSystemModelSettings(input: UpdateSystemModelSettingsInput!): Boolean!
   updateDefaultDataStorage(input: UpdateDefaultDataStorageInput!): Boolean!
   completeOnboarding(input: CompleteOnboardingInput!): Boolean!
@@ -378,6 +407,7 @@ extend type Query {
   brandSettings: BrandSettings!
   storagePolicy: StoragePolicy!
   webhookNotifierConfig: WebhookNotifierConfig!
+  responseQualityGuardSettings: ResponseQualityGuard!
   systemModelSettings: SystemModelSettings!
   defaultDataStorageID: ID
   onboardingInfo: OnboardingInfo

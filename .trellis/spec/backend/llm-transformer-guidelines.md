@@ -119,3 +119,75 @@ return event.Type == "response.completed" ||
 	event.Type == "response.cancelled" ||
 	event.Type == "response.incomplete"
 ```
+
+## Scenario: Responses function-call argument backfill in streaming output
+
+### 1. Scope / Trigger
+- Trigger: changing OpenAI Responses outbound stream transformation for
+  `function_call` items, tool-call delta emission, or final-item reconciliation.
+
+### 2. Signatures
+- `llm/transformer/openai/responses.(*responsesOutboundStream).transformStreamChunk(...)`
+- `llm/transformer/openai/responses.(*responsesOutboundStream).enqueueFunctionCallArgumentsDelta(...)`
+- `llm/transformer/openai/responses.(*responsesOutboundStream).backfillFunctionCallArguments(...)`
+
+### 3. Contracts
+- Do not assume tool-call arguments always arrive as incremental delta events
+  before `response.output_item.done`.
+- For Responses API streams, the only available arguments may appear in the
+  final `function_call` item or in `response.function_call_arguments.done`.
+- The outbound transformer must preserve a valid Chat Completions style delta
+  stream even when the provider only supplies final arguments at the end.
+- If prior streamed arguments are a prefix of the final arguments, emit only the
+  missing suffix as a synthesized delta before updating final tool-call state.
+- If no prior arguments were emitted, synthesize one arguments delta with the
+  full final payload.
+- Tool-call identity resolution must prefer explicit `call_id`, then the
+  `item.id -> call_id` mapping recorded from earlier stream items, and only then
+  fall back to `item.id`.
+
+### 4. Validation & Error Matrix
+| Condition | Required Behavior |
+|-----------|-------------------|
+| Arguments stream in normally before final item | Keep existing deltas; do not duplicate them. |
+| Final item contains a longer arguments string than accumulated state | Emit only the missing suffix delta, then update stored final arguments. |
+| No arguments delta ever arrived, but final item includes arguments | Emit one synthesized arguments delta with the full final JSON string. |
+| Final item has no `call_id` but earlier item established `item.id -> call_id` | Resolve via the mapping and backfill the correct tool call. |
+| Final arguments do not extend accumulated arguments | Do not invent a diff; update state only if needed. |
+
+### 5. Good / Base / Bad Cases
+- Good: `response.output_item.done` for a `function_call` carries the only
+  arguments payload, and the client still receives a tool-call arguments delta.
+- Good: partial arguments streamed first, final item adds the missing tail, and
+  only the tail is synthesized.
+- Base: normal `response.function_call_arguments.delta` streams continue to work
+  without extra emitted chunks.
+- Bad: the client sees `function_call.arguments == ""` even though the final
+  Responses item included valid JSON arguments.
+
+### 6. Tests Required
+- Add a stream regression where `response.output_item.done` is the only source
+  of tool-call arguments and assert a synthesized arguments delta is emitted.
+- Keep a coverage point for terminal stream completion so the synthesized delta
+  path still ends in a finished stream.
+- When changing call-id resolution, assert the emitted delta uses the existing
+  tool-call index for the original tool call rather than creating a phantom one.
+
+### 7. Wrong vs Correct
+#### Wrong
+```go
+case StreamEventTypeOutputItemDone:
+	if streamEvent.Item.Type == "function_call" {
+		return nil
+	}
+```
+
+#### Correct
+```go
+case StreamEventTypeOutputItemDone:
+	if streamEvent.Item.Type == "function_call" {
+		callID := s.resolveToolCallID(streamEvent.Item.CallID, lo.ToPtr(streamEvent.Item.ID))
+		s.backfillFunctionCallArguments(callID, streamEvent.Item.Name, streamEvent.Item.Arguments)
+		return nil
+	}
+```

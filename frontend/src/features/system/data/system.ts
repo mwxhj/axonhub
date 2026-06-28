@@ -124,6 +124,28 @@ const UPDATE_WEBHOOK_NOTIFIER_CONFIG_MUTATION = `
   }
 `;
 
+const RESPONSE_QUALITY_GUARD_SETTINGS_QUERY = `
+  query ResponseQualityGuardSettings {
+    responseQualityGuardSettings {
+      enabled
+      mode
+      rules {
+        modelMatch
+        reasoningTokensLTE
+        applyToStream
+        applyToNonStream
+        bufferStreamUntilDecision
+      }
+    }
+  }
+`;
+
+const UPDATE_RESPONSE_QUALITY_GUARD_SETTINGS_MUTATION = `
+  mutation UpdateResponseQualityGuardSettings($input: ResponseQualityGuardInput!) {
+    updateResponseQualityGuardSettings(input: $input)
+  }
+`;
+
 const DEFAULT_DATA_STORAGE_QUERY = `
   query DefaultDataStorageID {
     defaultDataStorageID
@@ -300,6 +322,20 @@ export interface WebhookNotifierConfig {
 export interface UpstreamErrorPolicy {
   mode: string;
   customMessage: string;
+}
+
+export interface ResponseQualityGuardRule {
+  modelMatch: string[];
+  reasoningTokensLTE: number;
+  applyToStream: boolean;
+  applyToNonStream: boolean;
+  bufferStreamUntilDecision: boolean;
+}
+
+export interface ResponseQualityGuardSettings {
+  enabled: boolean;
+  mode: string;
+  rules: ResponseQualityGuardRule[];
 }
 
 export interface AutoDisableChannelStatusInput {
@@ -493,6 +529,47 @@ export function useUpdateWebhookNotifierConfig() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['webhookNotifierConfig'] });
+      toast.success(i18n.t('common.success.systemUpdated'));
+    },
+    onError: () => {
+      toast.error(i18n.t('common.errors.systemUpdateFailed'));
+    },
+  });
+}
+
+export function useResponseQualityGuardSettings() {
+  const { handleError } = useErrorHandler();
+
+  return useQuery({
+    queryKey: ['responseQualityGuardSettings'],
+    queryFn: async () => {
+      try {
+        const data = await graphqlRequest<{ responseQualityGuardSettings: ResponseQualityGuardSettings }>(
+          RESPONSE_QUALITY_GUARD_SETTINGS_QUERY
+        );
+        return data.responseQualityGuardSettings;
+      } catch (error) {
+        handleError(error, i18n.t('common.errors.internalServerError'));
+        throw error;
+      }
+    },
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useUpdateResponseQualityGuardSettings() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: ResponseQualityGuardSettings) => {
+      const data = await graphqlRequest<{ updateResponseQualityGuardSettings: boolean }>(
+        UPDATE_RESPONSE_QUALITY_GUARD_SETTINGS_MUTATION,
+        { input }
+      );
+      return data.updateResponseQualityGuardSettings;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['responseQualityGuardSettings'] });
       toast.success(i18n.t('common.success.systemUpdated'));
     },
     onError: () => {

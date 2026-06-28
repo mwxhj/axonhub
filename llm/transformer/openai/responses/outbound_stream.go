@@ -91,6 +91,100 @@ func (s *responsesOutboundStream) enqueue(resp *llm.Response) {
 	s.eventQueue = append(s.eventQueue, resp)
 }
 
+func (s *responsesOutboundStream) resolveToolCallID(callID string, itemID *string) string {
+	if callID != "" {
+		return callID
+	}
+
+	if itemID == nil || *itemID == "" {
+		return ""
+	}
+
+	if mapped, ok := s.state.itemToCallID[*itemID]; ok && mapped != "" {
+		return mapped
+	}
+
+	return *itemID
+}
+
+func missingStreamDelta(current, final string) (string, bool) {
+	if final == "" || current == final {
+		return "", false
+	}
+
+	if current == "" {
+		return final, true
+	}
+
+	if strings.HasPrefix(final, current) {
+		suffix := strings.TrimPrefix(final, current)
+		if suffix == "" {
+			return "", false
+		}
+
+		return suffix, true
+	}
+
+	return "", false
+}
+
+func (s *responsesOutboundStream) enqueueFunctionCallArgumentsDelta(callID, delta string) {
+	if delta == "" {
+		return
+	}
+
+	toolCallIdx, ok := s.state.toolCallIndex[callID]
+	if !ok {
+		return
+	}
+
+	s.enqueue(&llm.Response{
+		Object:             "chat.completion.chunk",
+		ID:                 s.state.responseID,
+		Model:              s.state.responseModel,
+		Created:            s.state.created,
+		PreviousResponseID: s.state.previousResponseID,
+		Choices: []llm.Choice{
+			{
+				Index: 0,
+				Delta: &llm.Message{
+					ToolCalls: []llm.ToolCall{
+						{
+							Index: toolCallIdx,
+							Function: llm.FunctionCall{
+								Arguments: delta,
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+}
+
+func (s *responsesOutboundStream) backfillFunctionCallArguments(callID, name, finalArgs string) {
+	if callID == "" {
+		return
+	}
+
+	tc, ok := s.state.toolCalls[callID]
+	if !ok {
+		return
+	}
+
+	if name != "" {
+		tc.Function.Name = name
+	}
+
+	if delta, ok := missingStreamDelta(tc.Function.Arguments, finalArgs); ok {
+		s.enqueueFunctionCallArgumentsDelta(callID, delta)
+	}
+
+	if finalArgs != "" {
+		tc.Function.Arguments = finalArgs
+	}
+}
+
 func (s *responsesOutboundStream) Next() bool {
 	// If we have events in the queue, return them first
 	if s.queueIndex < len(s.eventQueue) {
@@ -338,13 +432,9 @@ func (s *responsesOutboundStream) transformStreamChunk(event *httpclient.StreamE
 		}
 
 	case StreamEventTypeFunctionCallArgumentsDone:
-		// Function call completed - update state but don't emit an event
-		if streamEvent.CallID != "" {
-			if tc, ok := s.state.toolCalls[streamEvent.CallID]; ok {
-				tc.Function.Name = streamEvent.Name
-				tc.Function.Arguments = streamEvent.Arguments
-			}
-		}
+		// Function call completed - backfill any missing delta before updating final state.
+		callID := s.resolveToolCallID(streamEvent.CallID, streamEvent.ItemID)
+		s.backfillFunctionCallArguments(callID, streamEvent.Name, streamEvent.Arguments)
 
 		return nil // Intentionally skip this event
 
@@ -444,6 +534,13 @@ func (s *responsesOutboundStream) transformStreamChunk(event *httpclient.StreamE
 			appendResponseWebSearchCallMetadata(s.state.transformerMetadata, *streamEvent.Item)
 			return nil // Intentionally skip this event
 		}
+
+		if streamEvent.Item.Type == "function_call" {
+			callID := s.resolveToolCallID(streamEvent.Item.CallID, lo.ToPtr(streamEvent.Item.ID))
+			s.backfillFunctionCallArguments(callID, streamEvent.Item.Name, streamEvent.Item.Arguments)
+			return nil // Intentionally skip this event
+		}
+
 		if streamEvent.Item.Type != "message" {
 			return nil // Intentionally skip this event
 		}

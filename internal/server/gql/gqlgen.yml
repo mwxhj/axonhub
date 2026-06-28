@@ -196,6 +196,18 @@ models:
   UpstreamErrorPolicyInput:
     model:
       - github.com/looplj/axonhub/internal/server/biz.UpstreamErrorPolicy
+  ResponseQualityGuard:
+    model:
+      - github.com/looplj/axonhub/internal/server/biz.ResponseQualityGuard
+  ResponseQualityGuardInput:
+    model:
+      - github.com/looplj/axonhub/internal/server/biz.ResponseQualityGuard
+  ResponseQualityGuardRule:
+    model:
+      - github.com/looplj/axonhub/internal/server/biz.ResponseQualityGuardRule
+  ResponseQualityGuardRuleInput:
+    model:
+      - github.com/looplj/axonhub/internal/server/biz.ResponseQualityGuardRule
   UpdateAPIKeyProfilesInput:
     model:
       - github.com/looplj/axonhub/internal/objects.APIKeyProfiles

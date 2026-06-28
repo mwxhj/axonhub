@@ -66,6 +66,23 @@ func (r *mutationResolver) UpdateWebhookNotifierConfig(ctx context.Context, inpu
 	return true, nil
 }
 
+// UpdateResponseQualityGuardSettings is the resolver for the updateResponseQualityGuardSettings field.
+func (r *mutationResolver) UpdateResponseQualityGuardSettings(ctx context.Context, input biz.ResponseQualityGuard) (bool, error) {
+	current, err := r.systemService.RetryPolicy(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to get current retry policy: %w", err)
+	}
+
+	current.ResponseQualityGuard = input
+
+	err = r.systemService.SetRetryPolicy(ctx, current)
+	if err != nil {
+		return false, fmt.Errorf("failed to update response quality guard settings: %w", err)
+	}
+
+	return true, nil
+}
+
 // UpdateSystemModelSettings is the resolver for the updateSystemModelSettings field.
 func (r *mutationResolver) UpdateSystemModelSettings(ctx context.Context, input biz.SystemModelSettings) (bool, error) {
 	// Older clients may update the model toggles without sending developer rules.
@@ -352,6 +369,16 @@ func (r *queryResolver) StoragePolicy(ctx context.Context) (*biz.StoragePolicy, 
 // WebhookNotifierConfig is the resolver for the webhookNotifierConfig field.
 func (r *queryResolver) WebhookNotifierConfig(ctx context.Context) (*biz.WebhookNotifierConfig, error) {
 	return r.systemService.WebhookNotifierConfig(ctx)
+}
+
+// ResponseQualityGuardSettings is the resolver for the responseQualityGuardSettings field.
+func (r *queryResolver) ResponseQualityGuardSettings(ctx context.Context) (*biz.ResponseQualityGuard, error) {
+	policy, err := r.systemService.RetryPolicy(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get retry policy: %w", err)
+	}
+
+	return &policy.ResponseQualityGuard, nil
 }
 
 // SystemModelSettings is the resolver for the systemModelSettings field.
